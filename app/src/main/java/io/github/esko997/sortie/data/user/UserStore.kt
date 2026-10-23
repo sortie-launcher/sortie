@@ -41,6 +41,10 @@ class UserStore(private val file: File, private val scope: CoroutineScope = Coro
         update { it.copy(profileOverrides = if (profileId == null) it.profileOverrides - id else it.profileOverrides + (id to profileId)) }
 
     fun hide(id: String, hidden: Boolean) = update { it.copy(hidden = if (hidden) it.hidden + id else it.hidden - id) }
+
+    fun setHomeLayout(layout: String) = update { it.copy(homeLayout = layout) }
+
+    fun setGridColumns(n: Int) = update { it.copy(gridColumns = n.coerceIn(2, 10)) }
 }
 
 private fun <T> MutableStateFlow<T>.updateAndGet(f: (T) -> T): T {

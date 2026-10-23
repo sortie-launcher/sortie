@@ -16,7 +16,22 @@ object Selection {
     /** Debug navigation requests from adb (`--es open diagnostics`). */
     val openRoute = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 1) // replay: emitted before the NavHost exists on cold start
 
+    /** Candidates for the idle hero rotation (set by the view model). */
+    val heroes = MutableStateFlow<List<GameEntity>>(emptyList())
+
     fun set(game: GameEntity?) {
         _current.value = game
+    }
+
+    /** What the companion screen shows: the selected game, else a hero that changes every few seconds. */
+    fun panel(): kotlinx.coroutines.flow.Flow<GameEntity?> {
+        val ticker = kotlinx.coroutines.flow.flow {
+            var i = 0
+            while (true) {
+                emit(i++)
+                kotlinx.coroutines.delay(9_000)
+            }
+        }
+        return kotlinx.coroutines.flow.combine(current, heroes, ticker) { cur, hs, i -> cur ?: hs.getOrNull(if (hs.isEmpty()) 0 else i % hs.size) }
     }
 }

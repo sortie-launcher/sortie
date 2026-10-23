@@ -2,6 +2,7 @@ package io.github.esko997.sortie
 
 import android.app.Application
 import android.os.StrictMode
+import io.github.esko997.sortie.data.apps.AppsRepository
 import io.github.esko997.sortie.data.db.SortieDb
 import io.github.esko997.sortie.data.folders.FolderRepository
 import io.github.esko997.sortie.data.index.DeviceState
@@ -28,6 +29,7 @@ class SortieApp : Application() {
         val folders = FolderRepository(db, manifests, user.data)
         val deviceState = DeviceState(manifests)
         val screenMover = ScreenMover(app)
+        val apps = AppsRepository(app)
     }
 
     override fun onCreate() {

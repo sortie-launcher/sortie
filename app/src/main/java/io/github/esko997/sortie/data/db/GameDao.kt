@@ -74,6 +74,9 @@ interface GameDao {
     @Query("SELECT * FROM games WHERE placeholder = 0 AND variantOf IS NULL")
     suspend fun allPlayable(): List<GameEntity>
 
+    @Query("SELECT * FROM games WHERE placeholder = 0 AND variantOf IS NULL AND fit >= 4 AND screenshot IS NOT NULL ORDER BY RANDOM() LIMIT 120")
+    suspend fun heroes(): List<GameEntity>
+
     @Query("SELECT COUNT(*) FROM games WHERE placeholder = 0 AND variantOf IS NULL")
     fun total(): Flow<Int>
 

@@ -15,7 +15,7 @@ class CompanionActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val view = CompanionView(this)
         setContentView(view.root)
-        lifecycleScope.launch { Selection.current.collect(view::show) }
+        lifecycleScope.launch { Selection.panel().collect(view::show) }
         lifecycleScope.launch { Selection.closeCompanion.collect { finishAndRemoveTask() } }
     }
 }

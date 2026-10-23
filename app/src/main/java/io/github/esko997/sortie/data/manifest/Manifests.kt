@@ -93,5 +93,8 @@ data class GuideEntry(
 data class UserData(
     val favourites: Set<String> = emptySet(),
     val hidden: Set<String> = emptySet(),
-    val profileOverrides: Map<String, String> = emptyMap()
+    val profileOverrides: Map<String, String> = emptyMap(),
+    /** Home layout: "list" or "grid"; grid columns are editable here or cycled on the device. */
+    val homeLayout: String = "list",
+    val gridColumns: Int = 5
 )

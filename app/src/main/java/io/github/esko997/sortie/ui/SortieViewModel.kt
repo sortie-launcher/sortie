@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.esko997.sortie.SortieApp
+import io.github.esko997.sortie.data.apps.AppEntry
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.db.byIds
@@ -50,7 +51,29 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
         if (manifests.value.errors.isNotEmpty()) graph.manifests.reload()
         reindex()
         viewModelScope.launch { graph.deviceState.refresh() }
+        refreshApps()
+        refreshHeroes()
     }
+
+    private val _apps = MutableStateFlow<List<AppEntry>>(emptyList())
+    val apps: StateFlow<List<AppEntry>> = _apps
+
+    fun refreshApps() = viewModelScope.launch { _apps.value = graph.apps.list() }
+
+    fun appIcon(pkg: String) = graph.apps.icon(pkg)
+
+    fun launchApp(app: AppEntry) = viewModelScope.launch {
+        runCatching { getApplication<Application>().startActivity(graph.apps.launchIntent(app)) }
+            .onSuccess { graph.playLog.start(app.id, null, "same") }
+            .onFailure { android.util.Log.w("SortieLaunch", "app ${app.pkg}", it) }
+    }
+
+    fun setHomeLayout(layout: String) = graph.user.setHomeLayout(layout)
+
+    fun setGridColumns(n: Int) = graph.user.setGridColumns(n)
+
+    /** Hero rotation for the idle companion screen: well-rated, unplayed-ish games with a screenshot. */
+    fun refreshHeroes() = viewModelScope.launch { Selection.heroes.value = dao.heroes().shuffled().take(60) }
 
     val shizuku = graph.screenMover.status
     val moveResult = graph.screenMover.lastResult

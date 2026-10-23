@@ -55,7 +55,9 @@ fun SortieNav(vm: SortieViewModel) {
         composable("home") {
             HomeScreen(vm, onSystem = {
                 nav.navigate("system/${enc(it)}")
-            }, onFolder = { nav.navigate("folder/$it") }, onSearch = { nav.navigate("search") }, onDiagnostics = { nav.navigate("diagnostics") })
+            }, onFolder = {
+                nav.navigate("folder/$it")
+            }, onSearch = { nav.navigate("search") }, onDiagnostics = { nav.navigate("diagnostics") }, onApps = { nav.navigate("apps") })
         }
         composable("system/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
             val id = entry.arguments?.getString("id") ?: return@composable

@@ -18,7 +18,7 @@ class CompanionPresentation(context: Context, display: Display, private val owne
         super.onCreate(savedInstanceState)
         val view = CompanionView(context)
         setContentView(view.root)
-        job = owner.lifecycleScope.launch { Selection.current.collect(view::show) }
+        job = owner.lifecycleScope.launch { Selection.panel().collect(view::show) }
     }
 
     override fun onStop() {

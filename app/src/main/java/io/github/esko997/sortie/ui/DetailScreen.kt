@@ -47,74 +47,77 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel) {
         onDispose { Hotkeys.release(setOf(Hotkeys.Key.FAVOURITE)) }
     }
     LaunchedEffect(game.id) { Hotkeys.events.collect { if (it == Hotkeys.Key.FAVOURITE) vm.toggleFavourite(game.id) } }
-    Row(Modifier.fillMaxSize().background(palette?.backdrop ?: Ink).padding(16.dp)) {
-        Cover(game, width = 200, height = 260)
-        Column(Modifier.padding(start = 20.dp).verticalScroll(rememberScrollState())) {
-            Text(game.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Row {
-                Stars(game.fit)
-                Text(
-                    "  " + listOfNotNull(
-                        game.systemId.uppercase(), game.year?.toString(), game.developer,
-                        game.players?.let {
-                            "$it players"
-                        }
-                    ).joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            game.hook?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = accent, modifier = Modifier.padding(top = 8.dp)) }
-            stats[game.id]?.let { Text("Played ${it.minutes} min", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp)) }
-            Row(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = {
-                        vm.launch(game)
-                    },
-                    enabled = !game.placeholder,
-                    modifier = Modifier.focusRequester(
-                        launchFocus
-                    ),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = accent, contentColor = Ink)
-                ) {
-                    Text("Sortie")
+    Column(Modifier.fillMaxSize().background(palette?.backdrop ?: Ink)) {
+        Row(Modifier.weight(1f).padding(16.dp)) {
+            Cover(game, width = 200, height = 260)
+            Column(Modifier.padding(start = 20.dp).verticalScroll(rememberScrollState())) {
+                Text(game.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Row {
+                    Stars(game.fit)
+                    Text(
+                        "  " + listOfNotNull(
+                            game.systemId.uppercase(), game.year?.toString(), game.developer,
+                            game.players?.let {
+                                "$it players"
+                            }
+                        ).joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                OutlinedButton(onClick = { showProfiles = !showProfiles }) { Text("Launch with…") }
-                OutlinedButton(onClick = { vm.toggleFavourite(game.id) }) { Text(if (fav) "★ Favourite" else "☆ Favourite") }
-            }
-            if (showProfiles) {
-                profiles.forEach { (p, installed) ->
-                    FocusRow(onClick = {
-                        if (installed) {
-                            vm.setOverride(game.id, p.id)
-                            vm.launch(game, p)
-                        }
-                    }) {
-                        Text(
-                            (if (user.profileOverrides[game.id] == p.id) "● " else "○ ") + p.label + if (installed) "" else "  (not installed)",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                game.hook?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = accent, modifier = Modifier.padding(top = 8.dp)) }
+                stats[game.id]?.let { Text("Played ${it.minutes} min", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp)) }
+                Row(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            vm.launch(game)
+                        },
+                        enabled = !game.placeholder,
+                        modifier = Modifier.focusRequester(
+                            launchFocus
+                        ),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = accent, contentColor = Ink)
+                    ) {
+                        Text("Sortie")
                     }
+                    OutlinedButton(onClick = { showProfiles = !showProfiles }) { Text("Launch with…") }
+                    OutlinedButton(onClick = { vm.toggleFavourite(game.id) }) { Text(if (fav) "★ Favourite" else "☆ Favourite") }
                 }
-                FocusRow(onClick = { vm.setOverride(game.id, null) }) { Text("Clear override", style = MaterialTheme.typography.bodySmall) }
-                FocusRow(onClick = { vm.hide(game.id, true) }) { Text("Hide this game from folders", style = MaterialTheme.typography.bodySmall) }
+                if (showProfiles) {
+                    profiles.forEach { (p, installed) ->
+                        FocusRow(onClick = {
+                            if (installed) {
+                                vm.setOverride(game.id, p.id)
+                                vm.launch(game, p)
+                            }
+                        }) {
+                            Text(
+                                (if (user.profileOverrides[game.id] == p.id) "● " else "○ ") + p.label + if (installed) "" else "  (not installed)",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                    FocusRow(onClick = { vm.setOverride(game.id, null) }) { Text("Clear override", style = MaterialTheme.typography.bodySmall) }
+                    FocusRow(onClick = { vm.hide(game.id, true) }) { Text("Hide this game from folders", style = MaterialTheme.typography.bodySmall) }
+                }
+                if (game.flags.isNotBlank() || game.tags.isNotBlank()) {
+                    Row { (game.flags.split(',') + game.tags.split(',')).filter { it.isNotBlank() }.distinct().take(8).forEach { Badge(it) } }
+                }
+                val variants by remember(game.id) { vm.variantsOf(game.id) }.collectAsState(emptyList())
+                if (variants.isNotEmpty()) {
+                    Text(
+                        "Also: " + variants.joinToString(" · ") { it.fileName },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    variants.forEach { v -> FocusRow(onClick = { vm.launch(v) }) { Text("Sortie ${v.fileName}", style = MaterialTheme.typography.bodySmall) } }
+                }
+                Spacer(Modifier.height(8.dp))
+                game.desc?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                Spacer(Modifier.height(8.dp))
+                Text(game.fileName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (game.flags.isNotBlank() || game.tags.isNotBlank()) {
-                Row { (game.flags.split(',') + game.tags.split(',')).filter { it.isNotBlank() }.distinct().take(8).forEach { Badge(it) } }
-            }
-            val variants by remember(game.id) { vm.variantsOf(game.id) }.collectAsState(emptyList())
-            if (variants.isNotEmpty()) {
-                Text(
-                    "Also: " + variants.joinToString(" · ") { it.fileName },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                variants.forEach { v -> FocusRow(onClick = { vm.launch(v) }) { Text("Sortie ${v.fileName}", style = MaterialTheme.typography.bodySmall) } }
-            }
-            Spacer(Modifier.height(8.dp))
-            game.desc?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
-            Spacer(Modifier.height(8.dp))
-            Text(game.fileName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        HintBar("A" to "sortie", "Y" to "favourite", "Select" to "launch with…", "B" to "back")
     }
 }
