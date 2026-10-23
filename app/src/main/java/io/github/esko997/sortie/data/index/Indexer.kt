@@ -171,10 +171,13 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
         private val PLAYERS_RX = Regex("\\d+")
         private val TAG_RX = Regex("\\s*[(\\[][^)\\]]*[)\\]]")
 
+        private val ARTICLE_RX = Regex("""^(.*?), (The|A|An)(?=$| - )(.*)$""")
+
+        /** "Legend of Zelda, The - Spirit Tracks (USA)" -> "The Legend of Zelda - Spirit Tracks". */
         fun cleanTitle(stem: String): String {
-            var t = stem.replace(TAG_RX, "").trim()
-            if (t.endsWith(", The")) t = "The " + t.removeSuffix(", The")
-            return t.ifBlank { stem }
+            val t = stem.replace(TAG_RX, "").trim()
+            val fixed = ARTICLE_RX.replace(t) { m -> "${m.groupValues[2]} ${m.groupValues[1]}${m.groupValues[3]}" }
+            return fixed.ifBlank { stem }
         }
 
         fun sortKey(title: String): String = title.lowercase(Locale.ROOT).removePrefix("the ").removePrefix("a ").trim()
