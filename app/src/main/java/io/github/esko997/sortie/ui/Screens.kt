@@ -40,6 +40,12 @@ fun HomeScreen(vm: SortieViewModel, onSystem: (String) -> Unit, onFolder: (Strin
     val folders by vm.folders.collectAsState()
     val biosMissing by vm.biosMissing.collectAsState()
     androidx.compose.runtime.LaunchedEffect(Unit) { Selection.set(null) }
+    // Y opens search from Home: the Start button is intercepted by Android while Sortie is the home app.
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        Hotkeys.handle(setOf(Hotkeys.Key.FAVOURITE))
+        onDispose { Hotkeys.release(setOf(Hotkeys.Key.FAVOURITE)) }
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) { Hotkeys.events.collect { if (it == Hotkeys.Key.FAVOURITE) onSearch() } }
     val total by vm.total.collectAsState()
     val index by vm.index.collectAsState()
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp)) {
@@ -53,7 +59,7 @@ fun HomeScreen(vm: SortieViewModel, onSystem: (String) -> Unit, onFolder: (Strin
                     CircularProgressIndicator(Modifier.height(18.dp).width(18.dp), strokeWidth = 2.dp)
                 }
                 Spacer(Modifier.weight(1f))
-                OutlinedButton(onClick = onSearch) { Text("Search") }
+                OutlinedButton(onClick = onSearch) { Text("Search (Y)") }
                 Spacer(Modifier.width(8.dp))
                 OutlinedButton(onClick = onDiagnostics) { Text("Diagnostics") }
             }
