@@ -72,8 +72,8 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
         rules: LibraryRules,
         force: Boolean
     ): SystemResult {
-        val gamelistFile = sys.gamelist?.let { File(root, it) }?.takeIf { it.isFile }
-        val mediaDir = sys.media?.let { File(root, it) }?.takeIf { it.isDirectory }
+        val gamelistFile = sys.gamelist?.let { if (it.startsWith("/")) File(it) else File(root, it) }?.takeIf { it.isFile }
+        val mediaDir = sys.media?.let { if (it.startsWith("/")) File(it) else File(root, it) }?.takeIf { it.isDirectory }
         val meta = IndexMetaEntity(sys.id, gamelistFile?.lastModified() ?: 0L, guideStamp, mediaDir?.lastModified() ?: 0L)
         val metaChanged = force || dao.meta(sys.id) != meta
         val existing = dao.signatures(sys.id).associateBy { it.id }
@@ -84,7 +84,7 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
         val arriving = HashSet<String>()
         var unreadable = false
         for (rootRel in sys.roots) {
-            val dir = File(root, rootRel)
+            val dir = if (rootRel.startsWith("/")) File(rootRel) else File(root, rootRel) // a root may live on another volume
             if (!dir.isDirectory) continue
             val listing = dir.listFiles() ?: run {
                 unreadable = true

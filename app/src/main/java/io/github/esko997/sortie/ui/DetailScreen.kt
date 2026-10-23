@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,6 +37,8 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel) {
     val snap by vm.manifests.collectAsState()
     val profiles = remember(game.id, user.profileOverrides[game.id], snap.loadedAt) { vm.profilesFor(game) }
     val fav = game.id in user.favourites
+    val palette = rememberPalette(game.cover ?: game.screenshot)
+    val accent = palette?.accent ?: Amber
     val launchFocus = remember { FocusRequester() }
     LaunchedEffect(game.id) { Selection.set(game) }
     LaunchedEffect(game.id) { runCatching { launchFocus.requestFocus() } }
@@ -44,7 +47,7 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel) {
         onDispose { Hotkeys.release(setOf(Hotkeys.Key.FAVOURITE)) }
     }
     LaunchedEffect(game.id) { Hotkeys.events.collect { if (it == Hotkeys.Key.FAVOURITE) vm.toggleFavourite(game.id) } }
-    Row(Modifier.fillMaxSize().padding(16.dp)) {
+    Row(Modifier.fillMaxSize().background(palette?.backdrop ?: Ink).padding(16.dp)) {
         Cover(game, width = 200, height = 260)
         Column(Modifier.padding(start = 20.dp).verticalScroll(rememberScrollState())) {
             Text(game.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -61,10 +64,21 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            game.hook?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = Amber, modifier = Modifier.padding(top = 8.dp)) }
+            game.hook?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = accent, modifier = Modifier.padding(top = 8.dp)) }
             stats[game.id]?.let { Text("Played ${it.minutes} min", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp)) }
             Row(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { vm.launch(game) }, enabled = !game.placeholder, modifier = Modifier.focusRequester(launchFocus)) { Text("Sortie") }
+                Button(
+                    onClick = {
+                        vm.launch(game)
+                    },
+                    enabled = !game.placeholder,
+                    modifier = Modifier.focusRequester(
+                        launchFocus
+                    ),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = accent, contentColor = Ink)
+                ) {
+                    Text("Sortie")
+                }
                 OutlinedButton(onClick = { showProfiles = !showProfiles }) { Text("Launch with…") }
                 OutlinedButton(onClick = { vm.toggleFavourite(game.id) }) { Text(if (fav) "★ Favourite" else "☆ Favourite") }
             }

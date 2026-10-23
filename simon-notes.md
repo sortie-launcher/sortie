@@ -10,3 +10,4 @@
     - Can target recommendations to specific genres,platforms,device performance criteria (eg runs well on Ayn Thor)
 - "Horizontal" folder scrolling/view
   - Option to orient folders as 1:1 aspect ratio squares in a grid, allow arrangement in arbitrary verical and horizontal dimensions
+- While function is definitely way more important than form, we should add a bit of juice/pizzaz as possible, without taking on noticable perf degradation
