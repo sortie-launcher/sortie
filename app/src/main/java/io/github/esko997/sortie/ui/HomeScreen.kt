@@ -285,9 +285,12 @@ fun HomeScreen(
                 delay(40)
             }
         }
+        // Focusable only while lifting: a permanently focusable container swallows D-pad focus itself (no tile outline, no
+        // up/down between tiles).
+        val liftFocus = if (lifted != null) Modifier.focusRequester(gridFocus).onFocusChanged { gridFocused = it.isFocused }.focusable() else Modifier
         LazyVerticalGrid(
             GridCells.Fixed(cols),
-            Modifier.weight(1f).focusRequester(gridFocus).onFocusChanged { gridFocused = it.isFocused }.focusable().then(liftKeys),
+            Modifier.weight(1f).then(liftFocus).then(liftKeys),
             state = gridState,
             contentPadding = PaddingValues(12.dp),
             verticalArrangement = Arrangement.spacedBy(if (grid) 10.dp else 2.dp),

@@ -120,6 +120,7 @@ fun SwitcherScreen(keys: Flow<Hotkeys.Key> = Hotkeys.events, claimHotkeys: Boole
             ScreenRow("Top screen", TaskSwitcher.TOP, state, switcher, requesters[TaskSwitcher.TOP], onFocus, onBlur)
             if (secondary != null) ScreenRow("Bottom screen", secondary, state, switcher, requesters[secondary], onFocus, onBlur)
             Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { switcher.goHome(focusedScreen) }, enabled = !state.busy) { Text("Sortie") }
                 if (secondary != null) {
                     OutlinedButton(onClick = { switcher.quickSwap(TaskSwitcher.TOP, secondary) }, enabled = !state.busy && state.entries.isNotEmpty()) {
                         Text("Quick swap")

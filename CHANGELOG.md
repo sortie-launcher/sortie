@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Small fixes (feedback round 4): hold-A works on the controller (`Modifier.keyLongPress`: the first key repeat is the long
+  press; `combinedClickable` only hears touch) — context sheets on tiles, rows, apps; the home grid is focusable only while a tile
+  is lifted (a permanently focusable grid had swallowed the tile outline and D-pad up/down); hero and Now-playing titles drop
+  file-name noise (`displayTitle`: regions, `[tags]`, versions, revisions) and tapping the card opens the game on the other
+  screen; the switcher has a "Sortie" entry (raise Sortie's navigation where it runs, controller follows); Diagnostics has a
+  Wireless debugging button (Developer options scrolled to the toggle). docs/RECOMMENDATIONS.md files the offline Play-next idea
+  as a smart-folder rule, not an engine.
 - Home and browse layout (feedback round 3): home Sort chips — Alphabetical, Game count, Generation (generated) and Custom
   (`user.layout`: systems, folders, Apps, games, apps, shortcuts, exactly as placed); hold A → Move (lifted tile, D-pad one slot,
   A drop, B cancel) · Remove on Custom tiles; "Add to / Remove from home" in a hold-A context sheet on every openable item

@@ -121,6 +121,26 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
     }
 
     /**
+     * "Sortie" from the switcher: raise Sortie's navigation where it already runs (its task is kept out of the carousels) and
+     * give that display the controller; start it on [displayId] when none exists. Closes the switcher.
+     */
+    fun goHome(displayId: Int) = act(dismiss = true) {
+        pendingAnchor = null
+        val nav = mover.rootTasks().firstOrNull { it.component == "${context.packageName}/${MainActivity::class.java.name}" }
+        if (nav != null) {
+            mover.focusTask(nav) && anchor(nav.displayId)
+        } else {
+            val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId)
+            runCatching {
+                context.startActivity(
+                    Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    options.toBundle()
+                )
+            }.isSuccess
+        }
+    }
+
+    /**
      * Moves [entry] to [displayId] and raises it there. Normally the switcher stays open: the display it left is marked
      * [State.freed] so its carousel offers every running window as a replacement, and the controller stays with the switcher
      * (a moved focused task drags display focus along, so the overlay's display is anchored again). A move *into* the freed

@@ -1,5 +1,7 @@
 package io.github.esko997.sortie.ui
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -33,6 +36,15 @@ fun DiagnosticsScreen(vm: SortieViewModel) {
                 Button(onClick = { vm.reindex(force = true) }, enabled = !index.running) { Text(if (index.running) "Indexing…" else "Re-index everything") }
                 Spacer(Modifier.width(8.dp))
                 OutlinedButton(onClick = { vm.reloadManifests() }) { Text("Reload manifests") }
+                Spacer(Modifier.width(8.dp))
+                val context = LocalContext.current
+                OutlinedButton(onClick = {
+                    // Developer options, scrolled to Wireless debugging (the fragment arg Settings itself uses)
+                    val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+                        .putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    runCatching { context.startActivity(intent) }
+                }) { Text("Wireless debugging") }
             }
             Text(
                 "Manifests: ${snap.systems.size} systems · ${snap.profiles.size} profiles · ${snap.folders.size} folders · guide ${snap.guide.size}",

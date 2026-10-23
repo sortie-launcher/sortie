@@ -2,6 +2,7 @@ package io.github.esko997.sortie.ui
 
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.widget.ImageView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -95,11 +96,19 @@ private fun HeroPanel() {
     val panel = remember { Selection.panel() }
     val game by panel.collectAsState(null)
     val g = game
-    Panel(title = g?.title ?: "Sortie", subtitle = g?.let(::gameLine).orEmpty()) {
+    Panel(title = g?.let(::displayTitle) ?: "Sortie", subtitle = g?.let(::gameLine).orEmpty(), onTap = g?.let { openOnOtherScreen(it) }) {
         val art = g?.screenshot ?: g?.cover
         if (art != null) CoverImage(art, Modifier.fillMaxSize(), ContentScale.Fit)
     }
 }
+
+/** The title without the file-name noise: "(USA)", "[!]", "v1.1.1", "Rev A" … */
+fun displayTitle(g: GameEntity): String = g.title.replace(TITLE_NOISE, " ").replace(Regex("\\s{2,}"), " ").trim().ifEmpty { g.title }
+
+private val TITLE_NOISE = Regex("""\s*(\([^)]*\)|\[[^]]*]|\bv\d+(\.\d+)*[a-z]?\b|\bRev\s?[A-Z0-9]+\b)""", RegexOption.IGNORE_CASE)
+
+/** Tapping the hero or now-playing card opens the game's entry in Sortie's navigation, which lives on the other screen. */
+private fun openOnOtherScreen(g: GameEntity): () -> Unit = { Selection.openRoute.tryEmit("game/${Uri.encode(g.id)}") }
 
 /** The open session: a game's art and hook, or an app's/shortcut's icon and label, with the minutes played so far. */
 @Composable
@@ -109,7 +118,14 @@ private fun NowPlaying(graph: SortieApp.Graph, session: SessionEntity) {
     if (LibraryItem.isGameId(id)) {
         val game by produceState<GameEntity?>(null, id) { value = graph.db.games().byId(id) }
         val g = game
-        Panel(title = g?.title ?: id.substringAfterLast('/'), subtitle = g?.let(::gameLine).orEmpty(), status = status) {
+        Panel(
+            title = g?.let(::displayTitle) ?: id.substringAfterLast('/'),
+            subtitle = g?.let(::gameLine).orEmpty(),
+            status = status,
+            onTap = g?.let {
+                openOnOtherScreen(it)
+            }
+        ) {
             val art = g?.screenshot ?: g?.cover
             if (art != null) CoverImage(art, Modifier.fillMaxSize(), ContentScale.Fit)
         }
@@ -144,8 +160,9 @@ private fun playingMinutes(startedAt: Long): Long {
 
 /** Art area on top, then an optional status line, the title and a subtitle; text keeps clear of the corner button. */
 @Composable
-private fun Panel(title: String, subtitle: String, status: String? = null, art: @Composable () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+private fun Panel(title: String, subtitle: String, status: String? = null, onTap: (() -> Unit)? = null, art: @Composable () -> Unit) {
+    val tap = if (onTap != null) Modifier.clickable(onClick = onTap) else Modifier
+    Column(Modifier.fillMaxSize().then(tap).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { art() }
         if (status != null) {
             Text(
@@ -323,6 +340,7 @@ fun TouchSwitcher(switcher: TaskSwitcher, state: TaskSwitcher.State, displayId: 
             }
         }
         Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { switcher.goHome(displayId) }, enabled = !state.busy) { Text("Sortie") }
             OutlinedButton(onClick = { switcher.anchor(displayId) }, enabled = state.entries.isNotEmpty()) { Text("Controller here") }
             OutlinedButton(onClick = { switcher.close() }) { Text("Close") }
         }

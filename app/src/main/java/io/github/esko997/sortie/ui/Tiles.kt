@@ -88,6 +88,7 @@ fun SquareTile(
             .aspectRatio(1f)
             .clip(shape)
             .background(colour?.copy(alpha = 0.22f) ?: Slate)
+            .keyLongPress(onLongClick)
             .combinedClickable(interactionSource = interaction, indication = null, onClick = onClick, onLongClick = onLongClick)
     ) {
         if (icon != null) {

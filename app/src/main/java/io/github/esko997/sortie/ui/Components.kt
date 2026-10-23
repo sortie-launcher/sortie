@@ -24,7 +24,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +41,11 @@ import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -111,6 +118,37 @@ fun Modifier.focusGlow(focused: Boolean, shape: Shape, colour: Color = Amber, fo
         .border(3.dp, colour, shape)
 }
 
+/**
+ * Hold-A for the controller. `combinedClickable`'s long press only listens to touch; on a held key Android repeats the key-down
+ * (first repeat after ~500 ms), so the first repeat is the long press. Every release that follows is swallowed so it does not
+ * also click: the gamepad's BUTTON_A arrives twice, raw and as the framework's DPAD_CENTER fallback, and the framework sends
+ * the fallback's key-up regardless of whether the raw key-up was handled. A fresh press (repeat 0) re-arms.
+ */
+@Composable
+fun Modifier.keyLongPress(onLongClick: (() -> Unit)?): Modifier {
+    if (onLongClick == null) return this
+    var fired by remember { mutableStateOf(false) }
+    return onPreviewKeyEvent { e ->
+        val isA = e.key == Key.ButtonA || e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
+        if (!isA) return@onPreviewKeyEvent false
+        when {
+            e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0 -> {
+                // a fresh press: the previous hold is over (its key-ups, however many, have passed)
+                if (fired && e.key == Key.ButtonA) fired = false
+                fired
+            }
+            e.type == KeyEventType.KeyDown -> {
+                if (!fired) {
+                    fired = true
+                    onLongClick()
+                }
+                true
+            }
+            else -> fired
+        }
+    }
+}
+
 /** A focus-aware row: [focusGlow] outline in [colour] plus a subtle surface when focused (D-pad). Long press = context menu. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -124,6 +162,7 @@ fun FocusRow(onClick: () -> Unit, modifier: Modifier = Modifier, onLongClick: ((
             .fillMaxWidth()
             .clip(shape)
             .background(if (focused) Slate else Color.Transparent)
+            .keyLongPress(onLongClick)
             .combinedClickable(
                 interactionSource = interaction,
                 indication = null,
