@@ -39,13 +39,12 @@ import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import coil3.compose.AsyncImage
 import io.github.esko997.sortie.data.db.GameEntity
-import java.io.File
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlinx.coroutines.delay
@@ -147,7 +146,7 @@ fun Cover(game: GameEntity, width: Int = 56, height: Int = 72, modifier: Modifie
     val path = game.cover ?: game.screenshot
     Box(modifier.size(width.dp, height.dp).clip(RoundedCornerShape(6.dp)).background(Slate), contentAlignment = Alignment.Center) {
         if (path != null) {
-            AsyncImage(model = File(path), contentDescription = null, modifier = Modifier.size(width.dp, height.dp))
+            CoverImage(path, Modifier.size(width.dp, height.dp), contentScale = ContentScale.Fit)
         } else {
             Text(game.title.take(1), style = MaterialTheme.typography.titleLarge, color = Color(0xFF4A525C))
         }

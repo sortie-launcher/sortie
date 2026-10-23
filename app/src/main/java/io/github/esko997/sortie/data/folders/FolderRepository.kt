@@ -51,7 +51,8 @@ class FolderRepository(
             val items = buildList<LibraryItem> {
                 games.mapTo(this) { LibraryItem.Game(it) }
                 appList.mapTo(this) { LibraryItem.App(it) }
-                shortcutList.mapTo(this) { LibraryItem.Shortcut(it) }
+                // only shortcuts the user chose: opted in to Apps, favourited or placed on home (not every app's manifest action)
+                shortcutList.filter { it.id in u.shortcuts || it.id in u.favourites || it.id in u.layout }.mapTo(this) { LibraryItem.Shortcut(it) }
             }.filter { it.id !in u.hidden }
             val byId = items.associateBy { it.id }
             val subjects = items.map { subjectOf(it, stats[it.id], it.id in u.favourites, now) }

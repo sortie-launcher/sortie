@@ -10,7 +10,7 @@ JSON, UTF-8, trailing commas not allowed. Unknown keys are ignored so files can 
 | `launchers.json` | desktop | launch profiles: how to start a file with an app |
 | `folders.json` | desktop | smart and manual folders |
 | `guide.json` | desktop (build_guide.py) | taste layer: fit, hook, flags, tags per game |
-| `user.json` | device | favourites, per-game overrides, hidden entries |
+| `user.json` | device | favourites, overrides, hidden entries, home sort and custom layout, list/grid choices, opted-in shortcuts ([user.md](user.md)) |
 | `playlog.jsonl` | device | one JSON object per play session, append-only |
 
 See `../../examples/` for complete sample files.

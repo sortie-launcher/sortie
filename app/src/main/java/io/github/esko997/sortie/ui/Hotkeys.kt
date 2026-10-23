@@ -16,12 +16,21 @@ object Hotkeys {
     /** Keys some visible screen currently handles; everything else falls through to the framework. */
     val handled = kotlinx.coroutines.flow.MutableStateFlow<Set<Key>>(emptySet())
 
-    fun handle(keys: Set<Key>) {
-        handled.value = handled.value + keys
+    // Reference counts: during a navigation transition the entering screen handles a key before the leaving screen releases it,
+    // so a plain set would drop the key the new screen just claimed.
+    private val owners = HashMap<Key, Int>()
+
+    fun handle(keys: Set<Key>) = synchronized(owners) {
+        keys.forEach { owners[it] = (owners[it] ?: 0) + 1 }
+        handled.value = owners.keys.toSet()
     }
 
-    fun release(keys: Set<Key>) {
-        handled.value = handled.value - keys
+    fun release(keys: Set<Key>) = synchronized(owners) {
+        for (k in keys) {
+            val n = (owners[k] ?: 0) - 1
+            if (n <= 0) owners.remove(k) else owners[k] = n
+        }
+        handled.value = owners.keys.toSet()
     }
 
     /** Returns true when the key was a hotkey that a screen consumes. */

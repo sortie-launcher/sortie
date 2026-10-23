@@ -2,6 +2,11 @@ package io.github.esko997.sortie
 
 import android.app.Application
 import android.os.StrictMode
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.memory.MemoryCache
+import coil3.request.crossfade
 import io.github.esko997.sortie.data.apps.AppsRepository
 import io.github.esko997.sortie.data.apps.ShortcutsRepository
 import io.github.esko997.sortie.data.db.SortieDb
@@ -17,7 +22,9 @@ import io.github.esko997.sortie.shell.TaskSwitcher
 import java.io.File
 
 /** Hand-rolled service locator; small enough that a DI framework would be more code than it saves. */
-class SortieApp : Application() {
+class SortieApp :
+    Application(),
+    SingletonImageLoader.Factory {
     val graph: Graph by lazy { Graph(this) }
 
     class Graph(app: SortieApp) {
@@ -42,6 +49,19 @@ class SortieApp : Application() {
         // StrictMode check, which is what launcher frontends do. Keep everything else in the default policy.
         StrictMode.setVmPolicy(StrictMode.VmPolicy.Builder().build())
     }
+
+    /**
+     * Coil's process-wide loader. Covers are local files, so a disk cache would only copy the SD card into app storage: off.
+     * The memory cache is a fixed 96 MB rather than a share of the heap: decodes land in hardware bitmaps that live in graphics
+     * memory, so a percentage of the Dalvik class heap measures the wrong pool and varies by device. 96 MB holds roughly 170
+     * INEXACT-decoded grid covers (~550 KB each at ~300x450 ARGB), about eight screens of back-scroll, and is under 1% of the
+     * Thor's 12 GB. Crossfade is off so a loaded image costs one frame, not an animation.
+     */
+    override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)
+        .memoryCache { MemoryCache.Builder().maxSizeBytes(96L * 1024 * 1024).build() }
+        .diskCache(null)
+        .crossfade(false)
+        .build()
 
     companion object {
         /** The card root is not known until device.json is read, so look for `sortie/device.json` on every mounted volume. */

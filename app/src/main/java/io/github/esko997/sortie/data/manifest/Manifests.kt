@@ -96,5 +96,16 @@ data class UserData(
     val profileOverrides: Map<String, String> = emptyMap(),
     /** Home layout: "list" or "grid"; grid columns are editable here or cycled on the device. */
     val homeLayout: String = "list",
-    val gridColumns: Int = 5
+    val gridColumns: Int = 5,
+    /** Browse screens (system, folder, apps, search): "list" or "grid". */
+    val browseLayout: String = "list",
+    /** Home tile order: "alpha", "count", "generation" (all generated, fixed) or "custom" (the user's [layout]). */
+    val homeSort: String = "alpha",
+    /**
+     * The custom home layout, in order. Tile ids: `system:<systemId>`, `folder:<folderId>`, a game id, `app:<pkg>`,
+     * `shortcut:<pkg>/<shortcutId>`. Only this layout can hold games, apps and shortcuts; the generated sorts cannot.
+     */
+    val layout: List<String> = emptyList(),
+    /** Shortcuts the user opted in to (ids `shortcut:<pkg>/<id>`); every other launcher shortcut stays out of the lists. */
+    val shortcuts: Set<String> = emptySet()
 )

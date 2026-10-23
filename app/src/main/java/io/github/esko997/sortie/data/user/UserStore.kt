@@ -45,6 +45,19 @@ class UserStore(private val file: File, private val scope: CoroutineScope = Coro
     fun setHomeLayout(layout: String) = update { it.copy(homeLayout = layout) }
 
     fun setGridColumns(n: Int) = update { it.copy(gridColumns = n.coerceIn(2, 10)) }
+
+    fun setBrowseLayout(layout: String) = update { it.copy(browseLayout = layout) }
+
+    fun setHomeSort(sort: String) = update { it.copy(homeSort = sort) }
+
+    /** Appends to the custom layout (no duplicates). */
+    fun addToLayout(id: String) = update { if (id in it.layout) it else it.copy(layout = it.layout + id) }
+
+    fun removeFromLayout(id: String) = update { it.copy(layout = it.layout - id) }
+
+    fun setLayout(ids: List<String>) = update { it.copy(layout = ids.distinct()) }
+
+    fun showShortcut(id: String, shown: Boolean) = update { it.copy(shortcuts = if (shown) it.shortcuts + id else it.shortcuts - id) }
 }
 
 private fun <T> MutableStateFlow<T>.updateAndGet(f: (T) -> T): T {

@@ -105,17 +105,19 @@ class ShortcutsRepository(private val context: Context) {
 
     /**
      * Accepts a pin request carried by [intent] (CONFIRM_PIN_SHORTCUT, or an `ACTION_CREATE_SHORTCUT` result built with
-     * `ShortcutManager.createShortcutResultIntent`). Returns the shortcut label, or null when there is no valid shortcut request
-     * (widgets and legacy `EXTRA_SHORTCUT_*` results are not supported).
+     * `ShortcutManager.createShortcutResultIntent`). Returns the pinned shortcut (callers opt it in to the Apps screen, see
+     * `UserData.shortcuts`), or null when there is no valid shortcut request (widgets and legacy `EXTRA_SHORTCUT_*` results are
+     * not supported).
      */
-    fun accept(intent: Intent?): String? {
+    fun accept(intent: Intent?): ShortcutEntry? {
         val request = intent?.let { runCatching { launcherApps.getPinItemRequest(it) }.getOrNull() } ?: return null
         if (request.requestType != LauncherApps.PinItemRequest.REQUEST_TYPE_SHORTCUT || !request.isValid) return null
         val info = request.shortcutInfo ?: return null
         val ok = runCatching { request.accept() }.onFailure { Log.w(TAG, "pin accept failed", it) }.getOrDefault(false)
         if (!ok) return null
         refreshAsync()
-        return (info.shortLabel ?: info.longLabel)?.toString() ?: info.id
+        val label = (info.shortLabel ?: info.longLabel)?.toString()?.takeIf { it.isNotBlank() } ?: info.id
+        return ShortcutEntry(info.`package`, info.id, label, manifestOnly = false)
     }
 
     /** Apps that answer `ACTION_CREATE_SHORTCUT` (DroidDeck does), for the Apps screen's "Add shortcut from…" list. */

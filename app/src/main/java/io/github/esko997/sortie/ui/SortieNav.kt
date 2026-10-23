@@ -42,7 +42,7 @@ fun SortieNav(vm: SortieViewModel) {
                         launchSingleTop = true
                     }
                 }
-                else -> Unit // FAVOURITE and CONTEXT are screen-local (see DetailScreen / GameListScreen)
+                else -> Unit // FAVOURITE and CONTEXT are screen-local (see HomeScreen, DetailScreen, BrowseLayoutHotkey)
             }
         }
     }
@@ -53,11 +53,15 @@ fun SortieNav(vm: SortieViewModel) {
     }
     NavHost(nav, startDestination = "home") {
         composable("home") {
-            HomeScreen(vm, onSystem = {
-                nav.navigate("system/${enc(it)}")
-            }, onFolder = {
-                nav.navigate("folder/$it")
-            }, onSearch = { nav.navigate("search") }, onDiagnostics = { nav.navigate("diagnostics") }, onApps = { nav.navigate("apps") })
+            HomeScreen(
+                vm,
+                onSystem = { nav.navigate("system/${enc(it)}") },
+                onFolder = { nav.navigate("folder/$it") },
+                onGame = { nav.navigate("game/${enc(it)}") },
+                onSearch = { nav.navigate("search") },
+                onDiagnostics = { nav.navigate("diagnostics") },
+                onApps = { nav.navigate("apps") }
+            )
         }
         composable("system/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
             val id = entry.arguments?.getString("id") ?: return@composable

@@ -1,6 +1,26 @@
 # Changelog
 
 ## Unreleased
+- Home and browse layout (feedback round 3): home Sort chips — Alphabetical, Game count, Generation (generated) and Custom
+  (`user.layout`: systems, folders, Apps, games, apps, shortcuts, exactly as placed); hold A → Move (lifted tile, D-pad one slot,
+  A drop, B cancel) · Remove on Custom tiles; "Add to / Remove from home" in a hold-A context sheet on every openable item
+  (apps keep Favourite there). System lists, folders, search and Apps share a Select list↔grid toggle (`user.browseLayout`)
+  with 1:1 cropped-cover tiles and palette focus glow. Shortcuts are opt-in (`user.shortcuts`): pinned / "Add shortcut from…"
+  ones are opted in automatically, "Browse all shortcuts…" toggles the rest, folders only see opted-in, favourited or placed
+  ones. Hotkey claims are reference-counted so a screen entering during a transition keeps Select/Y. docs/formats/user.md.
+- Image memory (feedback round 3): every cover goes through `ui/Images.kt` `CoverImage` (decode sized to the layout, INEXACT,
+  hardware bitmap, no crossfade); `SortieApp` is Coil's `SingletonImageLoader.Factory` with a fixed 96 MB memory cache and no
+  disk cache (covers are local files). Palette extraction keeps its own 1/8-scale software decode and recycles it.
+- Companion screen (feedback round 3): a corner '+' on the idle panel opens a touch grid of apps and opted-in shortcuts that
+  start on that display (`LaunchManager.launchExternal(displayId = …)`: logged, no play session, Sortie stays put; the
+  controller is handed back to the other screen). While a play session is open (`PlayLog.current`) the panel shows the game
+  (or app) with "Playing · N min", ticking once a minute; the hero rotation runs only when nothing is being played.
+  Scope note for RetroArch/RetroAchievements companion controls: docs/NOW_PLAYING.md (not built).
+- Idle cost (feedback round 3): the focus glow pulses for 3 s after focus lands and then holds (an endless frame-clock pulse
+  kept Sortie redrawing at 120 Hz, ~70% of a core while idle; the blurred glow is rasterised once per size). Measured: home
+  idle 0% CPU and 0 frames; companion visible while a game runs: ~3 frames per hero change, none while "Now playing".
+  Context sheets and the lifted-tile move take key focus reliably (keyboard input mode requested, retried until the dialog
+  window has focus; the grid holds focus while a tile is lifted). Switcher seeds focus once so its buttons are reachable.
 - Feedback round 2 (2026-10-23):
   - App switcher (needs Shizuku): Home while something runs opens it on both screens — controller carousels per screen on the
     navigation screen (A to front / bring to a free screen, Y other screen, Select close app, Quick swap, Controller → top/bottom),

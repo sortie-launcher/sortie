@@ -39,7 +39,8 @@ Canonical inputs (read-only for Sortie):
 Outputs (owned by Sortie, append-only or small):
 
 - `sortie/playlog.jsonl` : one line per session (see formats).
-- `sortie/user.json` : favourites, per-game overrides, hidden entries, last-selected positions.
+- `sortie/user.json` : favourites, per-game overrides, hidden entries, home sort and custom layout, list/grid choices,
+  opted-in launcher shortcuts (see formats/user.md).
 
 Entities: System, Game (a launchable file with metadata), App (an installed Android app treated as
 a launchable), Folder (a system folder, a smart folder, or a manual folder), LaunchProfile.
@@ -72,6 +73,19 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - App switcher (Shizuku): Home while something runs shows each screen's running apps on both screens; apps can be raised,
   moved between screens, swapped or closed. Companion-side carousel is touch, navigation-side is controller.
 
+### Home and browse layout (feedback round 3)
+- Home sorts: Alphabetical, Game count, Generation (generated, fixed; systems and folders only) and Custom (exactly the tiles
+  the user placed, in order; may also hold games, apps and shortcuts). Chosen with the Sort chips under the home header.
+- "Add to home" / "Remove from home" on every openable item (hold A or long press): systems and folders on Home, games,
+  apps and shortcuts on the browse screens and Apps. Custom tiles: hold A → Move · Remove; a moved tile is lifted (blue glow,
+  larger), the D-pad moves it one slot per press, A drops, B cancels; touch drops it on the tapped tile.
+- Browse screens (system lists, folders, search, Apps) share one list↔grid setting. Grid tiles are 1:1: cropped cover with
+  the title over a bottom gradient, ★ when favourited, focus glow in the cover's palette accent; apps and shortcuts show their
+  icon on slate with the label below. Columns = `gridColumns`.
+- Launcher shortcuts are opt-in: Apps lists only `user.shortcuts` (pinned to Sortie or added with "Add shortcut from…" are
+  opted in automatically; "Browse all shortcuts…" toggles the rest). Smart folders see a shortcut only if it is opted in,
+  favourited or placed on home.
+
 ### Library hygiene (M3)
 - Multi-disc grouping (.m3u or disc tags), duplicate-format hiding (PBP next to CHD), hacks
   grouped under base game, badges for missing BIOS, present save, arriving file, placeholder.
@@ -86,6 +100,9 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 Scraping, cloud sync, RetroAchievements UI, themes marketplace, video previews, any network use.
 
 ## Controller grammar
-A select/launch · B back · X swap screen roles · Y favourite toggle (on a game) / search (on Home) / other screen (switcher) ·
-Start search (not available while Sortie is the home app: Android intercepts it) · Select launch-profile sheet / close app
-(switcher) · L1/R1 previous/next system · Home (physical) app switcher when something is running.
+A select/launch · hold A context sheet (Favourite · Add to / Remove from home on games, apps and shortcuts; Add to home on
+Home's systems and folders; Move · Remove on Custom home tiles) · B back · X swap screen roles · Y favourite toggle (detail) /
+search (on Home) / other screen (switcher) · Start search (not available while Sortie is the home app: Android intercepts it) ·
+Select launch-profile sheet (detail) / list↔grid (Home, system and folder lists, search, Apps) / close app (switcher) · L1/R1
+previous/next system · Home (physical) app switcher when something is running. Moving a Custom home tile: D-pad one slot per
+press, A drop, B cancel. Long press = hold A for touch.

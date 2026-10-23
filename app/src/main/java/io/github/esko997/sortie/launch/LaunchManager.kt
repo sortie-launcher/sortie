@@ -104,9 +104,16 @@ class LaunchManager(
      * Starts an installed app or a launcher shortcut ([id] `app:…`/`shortcut:…`) under the same rules as a game: the "same"
      * display rule (top screen when navigation lives on the bottom one), the activity hooks, the launch log and the play log.
      * [start] performs the actual start with the ActivityOptions bundle, or null for "wherever the system puts it".
+     * A [displayId] overrides the display rule for a side launch from a companion screen: the app opens on that display next to
+     * whatever runs on the other one, so it neither opens a play session (that would abandon the running game's) nor fires
+     * [afterLaunch] (Sortie's navigation stays where it is).
      */
-    suspend fun launchExternal(id: String, command: String, start: (Bundle?) -> Unit): Boolean {
-        val (options, displayId, displayNote) = displayOptions("same")
+    suspend fun launchExternal(id: String, command: String, displayId: Int? = null, start: (Bundle?) -> Unit): Boolean {
+        val (options, targetId, displayNote) = if (displayId != null) {
+            Triple(ActivityOptions.makeBasic().setLaunchDisplayId(displayId), displayId, "companion")
+        } else {
+            displayOptions("same")
+        }
         val outcome = try {
             start(options?.toBundle())
             null
@@ -116,13 +123,14 @@ class LaunchManager(
             "${e.javaClass.simpleName}: ${e.message}"
         }
         val launched = outcome == null
-        val described = command + (displayId?.let { " --display $it" } ?: "")
+        val described = command + (targetId?.let { " --display $it" } ?: "")
         val attempt = Attempt(id.substringBefore(':'), described, outcome ?: ("started" + (displayNote?.let { " ($it)" } ?: "")))
         _log.update { (listOf(LogEntry(LocalTime.now().format(TS), id, listOf(attempt), launched)) + it).take(50) }
         Log.i("SortieLaunch", "$id: ${attempt.outcome} | ${attempt.command}")
         if (!launched) return false
+        if (displayId != null) return true
         runCatching { playLog.start(id, null, "same") }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
-        afterLaunch?.invoke(displayId) // last: the activity may finish itself here
+        afterLaunch?.invoke(targetId) // last: the activity may finish itself here
         return true
     }
 

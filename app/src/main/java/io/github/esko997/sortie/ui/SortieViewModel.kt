@@ -111,12 +111,44 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
 
     fun createShortcutIntent(c: ShortcutCreator): Intent = Intent(Intent.ACTION_CREATE_SHORTCUT).setComponent(c.component)
 
-    /** Result of an `ACTION_CREATE_SHORTCUT` activity: accept its pin request. Returns the new shortcut's label, or null. */
-    fun acceptShortcut(result: Intent?): String? = graph.shortcuts.accept(result)
+    /**
+     * Result of an `ACTION_CREATE_SHORTCUT` activity: accept its pin request and opt the shortcut in to the Apps screen (asking
+     * an app for a shortcut is the user's explicit act). Returns the new shortcut's label, or null.
+     */
+    fun acceptShortcut(result: Intent?): String? = graph.shortcuts.accept(result)?.let {
+        graph.user.showShortcut(it.id, true)
+        it.label
+    }
+
+    /** Opts a launcher shortcut in to (or out of) the Apps screen. */
+    fun showShortcut(id: String, shown: Boolean) = graph.user.showShortcut(id, shown)
 
     fun setHomeLayout(layout: String) = graph.user.setHomeLayout(layout)
 
     fun setGridColumns(n: Int) = graph.user.setGridColumns(n)
+
+    /** List or grid for every browse screen (system, folder, search, apps); one setting, separate from home. */
+    fun setBrowseLayout(layout: String) = graph.user.setBrowseLayout(layout)
+
+    fun setHomeSort(sort: String) = graph.user.setHomeSort(sort)
+
+    fun setLayout(ids: List<String>) = graph.user.setLayout(ids)
+
+    fun removeFromLayout(id: String) = graph.user.removeFromLayout(id)
+
+    /** Places [id] on the custom home layout, or takes it off when already placed. Returns true when it is placed now. */
+    fun toggleHome(id: String): Boolean {
+        val placed = id in user.value.layout
+        if (placed) graph.user.removeFromLayout(id) else graph.user.addToLayout(id)
+        return !placed
+    }
+
+    /** Games placed on the custom home layout, by id; re-read when the layout's game ids or the index change. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val layoutGames: StateFlow<Map<String, GameEntity>> =
+        combine(user.map { u -> u.layout.filter { HomeIds.isGame(it) } }.distinctUntilChanged(), dao.total()) { ids, _ -> ids }
+            .flatMapLatest { ids -> flow { emit(if (ids.isEmpty()) emptyMap() else dao.byIds(ids).associateBy { it.id }) } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     /** Hero rotation for the idle companion screen: well-rated, unplayed-ish games with a screenshot. */
     fun refreshHeroes() = viewModelScope.launch { Selection.heroes.value = dao.heroes().shuffled().take(60) }

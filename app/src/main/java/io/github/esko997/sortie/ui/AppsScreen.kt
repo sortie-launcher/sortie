@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,21 +38,30 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.apps.ShortcutCreator
 
 /**
- * Installed apps plus launcher shortcuts other apps handed to Sortie (pinned via ShortcutPinActivity, or pulled here with
- * "Add shortcut from…", which starts an app's `ACTION_CREATE_SHORTCUT` activity and accepts the pin request it returns).
+ * Installed apps plus the launcher shortcuts the user opted in to (`user.shortcuts`): ones pinned via ShortcutPinActivity or
+ * pulled here with "Add shortcut from…" (an app's `ACTION_CREATE_SHORTCUT` activity) are opted in automatically; "Browse all
+ * shortcuts…" lists every pinned, dynamic and manifest shortcut with a toggle. Select switches list↔grid (`user.browseLayout`),
+ * hold A opens Favourite · Add to home.
  */
 @Composable
 fun AppsScreen(vm: SortieViewModel) {
     val apps by vm.apps.collectAsState()
     val allShortcuts by vm.shortcuts.collectAsState()
     val user by vm.user.collectAsState()
+    val stats by vm.playStats.collectAsState()
     val context = LocalContext.current
-    val shortcuts = remember(allShortcuts) { allShortcuts.filter { !it.manifestOnly } }
+    val shortcuts = remember(allShortcuts, user.shortcuts) { allShortcuts.filter { it.id in user.shortcuts } }
     val appLabels = remember(apps) { apps.associate { it.pkg to it.label } }
+    val appLabel = { pkg: String -> appLabels[pkg] ?: pkg }
     var showCreators by rememberSaveable { mutableStateOf(false) }
+    var showAll by rememberSaveable { mutableStateOf(false) }
+    var sheet by remember { mutableStateOf<LibraryItem?>(null) }
+    val grid = user.browseLayout == "grid"
+    BrowseLayoutHotkey(vm, grid)
     val creators by produceState(emptyList<ShortcutCreator>(), showCreators) { if (showCreators) value = vm.shortcutCreators() }
     val createShortcut = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
         if (r.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
@@ -60,49 +71,84 @@ fun AppsScreen(vm: SortieViewModel) {
         if (label != null) showCreators = false
     }
     Column(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            item { Text("Apps · ${apps.size}", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp)) }
-            item(key = "add-shortcut") {
-                FocusRow(onClick = { showCreators = !showCreators }) {
-                    Text(
-                        (if (showCreators) "▾ " else "▸ ") + "Add shortcut from…",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                }
-            }
+        LazyVerticalGrid(
+            GridCells.Fixed(if (grid) user.gridColumns.coerceAtLeast(1) else 1),
+            Modifier.weight(1f),
+            contentPadding = PaddingValues(12.dp),
+            verticalArrangement = Arrangement.spacedBy(if (grid) 10.dp else 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            fullItem("title") { Text("Apps · ${apps.size}", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp)) }
+            fullItem("add-shortcut") { Expander("Add shortcut from…", showCreators) { showCreators = !showCreators } }
             if (showCreators) {
-                items(creators, key = { "create:" + it.component.flattenToShortString() }) { c ->
+                items(creators, key = { "create:" + it.component.flattenToShortString() }, span = { GridItemSpan(maxLineSpan) }) { c ->
                     LauncherRow(c.label, c.component.packageName, favourite = false, onClick = {
                         runCatching { createShortcut.launch(vm.createShortcutIntent(c)) }
                             .onFailure { Toast.makeText(context, "Can't open ${c.label}: ${it.message}", Toast.LENGTH_SHORT).show() }
                     }) { vm.appIcon(c.component.packageName) }
                 }
             }
-            if (shortcuts.isNotEmpty()) {
-                item { SectionTitle("Shortcuts · ${shortcuts.size}") }
-                items(shortcuts, key = { it.id }) { s ->
+            fullItem("browse-shortcuts") { Expander("Browse all shortcuts… (${allShortcuts.size})", showAll) { showAll = !showAll } }
+            if (showAll) {
+                if (allShortcuts.isEmpty()) {
+                    fullItem("no-shortcuts") {
+                        Text(
+                            "No launcher shortcuts (Sortie must be the default home app to read them).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                }
+                items(allShortcuts, key = { "all:" + it.id }, span = { GridItemSpan(maxLineSpan) }) { s ->
+                    val shown = s.id in user.shortcuts
                     LauncherRow(
-                        s.label,
-                        "shortcut · ${appLabels[s.pkg] ?: s.pkg}",
-                        favourite = s.id in user.favourites,
-                        onClick = { vm.launchShortcut(s) },
-                        onLongClick = { vm.toggleFavourite(s.id) }
+                        (if (shown) "☑ " else "☐ ") + s.label,
+                        (if (s.manifestOnly) "app action" else "shortcut") + " · ${appLabel(s.pkg)}" + if (shown) " · in Apps" else "",
+                        favourite = false,
+                        onClick = { vm.showShortcut(s.id, !shown) }
                     ) { vm.shortcutIcon(s) }
                 }
-                item { SectionTitle("Apps") }
+            }
+            if (shortcuts.isNotEmpty()) {
+                fullItem("h-shortcuts") { SectionTitle("Shortcuts · ${shortcuts.size}") }
+                items(shortcuts, key = { it.id }) { s ->
+                    val item = LibraryItem.Shortcut(s)
+                    ItemCell(
+                        item,
+                        grid,
+                        vm,
+                        favourite = s.id in user.favourites,
+                        minutes = stats[s.id]?.minutes,
+                        onClick = { vm.launchShortcut(s) },
+                        onLongClick = { sheet = item },
+                        appLabel = appLabel
+                    )
+                }
+                fullItem("h-apps") { SectionTitle("Apps") }
             }
             items(apps, key = { it.id }) { app ->
-                LauncherRow(
-                    app.label,
-                    app.pkg,
+                val item = LibraryItem.App(app)
+                ItemCell(
+                    item,
+                    grid,
+                    vm,
                     favourite = app.id in user.favourites,
+                    minutes = stats[app.id]?.minutes,
                     onClick = { vm.launchApp(app) },
-                    onLongClick = { vm.toggleFavourite(app.id) }
-                ) { vm.appIcon(app.pkg) }
+                    onLongClick = { sheet = item }
+                )
             }
         }
-        HintBar("A" to "open", "hold A" to "favourite", "B" to "back")
+        HintBar("A" to "open / toggle", "hold A" to "favourite / add to home", "Select" to if (grid) "list view" else "grid view", "B" to "back")
+    }
+    sheet?.let { ItemSheet(it, vm) { sheet = null } }
+}
+
+@Composable
+private fun Expander(label: String, open: Boolean, onClick: () -> Unit) {
+    FocusRow(onClick = onClick) {
+        Text((if (open) "▾ " else "▸ ") + label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 8.dp))
     }
 }
 
@@ -146,6 +192,6 @@ fun LauncherRow(
 }
 
 @Composable
-private fun IconView(icon: () -> Drawable?, size: Int) {
+internal fun IconView(icon: () -> Drawable?, size: Int) {
     AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(size.dp)) { it.setImageDrawable(icon()) }
 }
