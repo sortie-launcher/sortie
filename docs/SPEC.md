@@ -82,5 +82,5 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 Scraping, cloud sync, RetroAchievements UI, themes marketplace, video previews, any network use.
 
 ## Controller grammar (draft)
-A select/launch · B back · X context menu · Y favourite toggle · Start search · Select swap screen
-roles · L1/R1 previous/next folder · L2/R2 page · Hold A: launch with profile picker.
+A select/launch · B back · X swap screen roles · Y favourite toggle · Start search · Select context
+menu · L1/R1 previous/next folder · L2/R2 page · Hold A: launch with profile picker.
