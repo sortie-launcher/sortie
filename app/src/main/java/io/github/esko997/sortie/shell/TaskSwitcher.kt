@@ -36,7 +36,9 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
         val busy: Boolean = false,
         val ready: Boolean = false,
         /** A display an app was just moved away from: its carousel offers every running window as the replacement. */
-        val freed: Int? = null
+        val freed: Int? = null,
+        /** The display the user is picking an installed app for (the app picker is shown instead of the carousels). */
+        val picking: Int? = null
     ) {
         fun on(displayId: Int): List<Entry> = entries.filter { it.task.displayId == displayId }
 
@@ -67,13 +69,13 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
 
     fun open(overlay: Boolean = false, focusDisplay: Int? = null) {
         overlayDisplay = if (overlay) focusDisplay else null
-        _state.update { it.copy(open = true, overlay = overlay, freed = null) }
+        _state.update { it.copy(open = true, overlay = overlay, freed = null, picking = null) }
         refresh()
     }
 
     fun close() {
         if (_state.value.overlay) dismisser?.invoke()
-        _state.update { it.copy(open = false, overlay = false, freed = null) }
+        _state.update { it.copy(open = false, overlay = false, freed = null, picking = null) }
         overlayDisplay = null
         pendingAnchor?.let { anchor(it) }
         pendingAnchor = null
@@ -84,6 +86,17 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
 
     /** Display to hand the controller to when the overlay closes (set by a move while the overlay keeps the controller). */
     private var pendingAnchor: Int? = null
+
+    /** "Open app…" for [displayId]: both screens show the picker. */
+    fun startPicking(displayId: Int) = _state.update { it.copy(picking = displayId) }
+
+    fun stopPicking() = _state.update { it.copy(picking = null) }
+
+    /** An app was started on [displayId] from the picker: the switcher closes and the controller goes to that display. */
+    fun picked(displayId: Int) {
+        pendingAnchor = displayId
+        close()
+    }
 
     fun refresh() = scope.launch { reload() }
 

@@ -24,6 +24,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -42,6 +43,7 @@ import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.shell.TaskSwitcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 /**
  * Sortie's app switcher, controller-driven: one carousel per screen with the apps running there. A raises the focused app on
@@ -79,6 +81,16 @@ fun SwitcherScreen(keys: Flow<Hotkeys.Key> = Hotkeys.events, claimHotkeys: Boole
         } finally {
             if (claimHotkeys) Hotkeys.release(setOf(Hotkeys.Key.FAVOURITE, Hotkeys.Key.CONTEXT))
         }
+    }
+    val picking = state.picking
+    if (picking != null) {
+        val context = LocalContext.current
+        val graph = (context.applicationContext as SortieApp).graph
+        val scope = rememberCoroutineScope()
+        AppPicker(graph, "Open on the ${if (picking == TaskSwitcher.TOP) "top" else "bottom"} screen", columns = 6, onClose = switcher::stopPicking) { item ->
+            scope.launch { if (launchOn(context, graph, item, picking)) switcher.picked(picking) else switcher.stopPicking() }
+        }
+        return
     }
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)) {
@@ -121,6 +133,7 @@ fun SwitcherScreen(keys: Flow<Hotkeys.Key> = Hotkeys.events, claimHotkeys: Boole
             if (secondary != null) ScreenRow("Bottom screen", secondary, state, switcher, requesters[secondary], onFocus, onBlur)
             Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { switcher.goHome(focusedScreen) }, enabled = !state.busy) { Text("Sortie") }
+                OutlinedButton(onClick = { switcher.startPicking(state.freed ?: focusedScreen) }, enabled = !state.busy) { Text("Open app…") }
                 if (secondary != null) {
                     OutlinedButton(onClick = { switcher.quickSwap(TaskSwitcher.TOP, secondary) }, enabled = !state.busy && state.entries.isNotEmpty()) {
                         Text("Quick swap")

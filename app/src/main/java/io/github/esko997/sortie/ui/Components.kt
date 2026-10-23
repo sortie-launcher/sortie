@@ -174,6 +174,11 @@ fun FocusRow(onClick: () -> Unit, modifier: Modifier = Modifier, onLongClick: ((
     ) { content() }
 }
 
+/** The title without the file-name noise: "(USA)", "[!]", "v1.1.1", "Rev A" … */
+fun displayTitle(g: GameEntity): String = g.title.replace(TITLE_NOISE, " ").replace(Regex("\\s{2,}"), " ").trim().ifEmpty { g.title }
+
+private val TITLE_NOISE = Regex("""\s*(\([^)]*\)|\[[^]]*]|\bv\d+(\.\d+)*[a-z]?\b|\bRev\s?[A-Z0-9]+\b)""", RegexOption.IGNORE_CASE)
+
 @Composable
 fun Stars(fit: Int, modifier: Modifier = Modifier) {
     if (fit <= 0) return
@@ -198,7 +203,13 @@ fun GameRow(game: GameEntity, minutes: Int?, onClick: () -> Unit, onLongClick: (
         Row(verticalAlignment = Alignment.CenterVertically) {
             Cover(game)
             Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                Text(game.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+                Text(
+                    displayTitle(game),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.SemiBold
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Stars(game.fit)
                     val meta = listOfNotNull(game.year?.toString(), game.players?.let { "$it P" }, game.genre?.substringBefore(',')?.take(24))

@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,21 +28,21 @@ class UserStore(private val file: File, private val scope: CoroutineScope = Coro
     private val _data = MutableStateFlow(load())
     val data: StateFlow<UserData> = _data
 
-    /** One slot: a burst of updates collapses into a single write of whatever [_data] holds when the writer gets to it. */
-    private val dirty = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    /** One slot that is kept until the writer takes it (a SharedFlow would drop a signal emitted before the writer subscribes). */
+    private val dirty = Channel<Unit>(Channel.CONFLATED)
 
     /** Completes after each write; tests await it to observe the file. */
     val written = MutableSharedFlow<UserData>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     init {
-        scope.launch { dirty.collect { write(_data.value) } }
+        scope.launch { for (unit in dirty) write(_data.value) }
     }
 
     private fun load(): UserData = runCatching { json.decodeFromString(UserData.serializer(), file.readText()) }.getOrDefault(UserData())
 
     private fun update(f: (UserData) -> UserData) {
         _data.update(f)
-        dirty.tryEmit(Unit)
+        dirty.trySend(Unit)
     }
 
     private fun write(snapshot: UserData) {

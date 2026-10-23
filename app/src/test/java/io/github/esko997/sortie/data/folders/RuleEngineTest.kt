@@ -123,6 +123,24 @@ class RuleEngineTest {
         assertEquals(listOf("ps2/B.iso", "app:com.android.chrome"), RuleEngine.evaluate(def, subjects).subjects.map { it.id })
     }
 
+    @Test
+    fun `recentTags matches unplayed games sharing tags with the last played window`() {
+        val played = listOf(
+            subj(game("P1", tags = "a,b"), minutes = 30, last = NOW - DAY * 3),
+            subj(game("P2", tags = "b,c"), minutes = 30, last = NOW - DAY * 2),
+            subj(game("P3", tags = "d"), minutes = 30, last = NOW - DAY)
+        )
+        val subjects = played + subj(game("B", tags = "b")) + subj(game("Z", tags = "z")) + app("com.android.chrome", "Chrome")
+        fun folder(json: String) = FolderDef("next", rule = Json.parseToJsonElement(json), apps = true)
+        val wide = RuleEngine.evaluate(folder("""{"playMinutes":{"eq":0},"recentTags":{"minShared":1,"window":3}}"""), subjects)
+        assertEquals(listOf("ps2/B.iso"), wide.subjects.map { it.id })
+        assertTrue(wide.problems.isEmpty())
+        val newest = RuleEngine.evaluate(folder("""{"playMinutes":{"eq":0},"recentTags":{"minShared":1,"window":1}}"""), subjects)
+        assertTrue(newest.subjects.isEmpty())
+        val defaults = RuleEngine.evaluate(folder("""{"recentTags":{}}"""), subjects)
+        assertFalse(defaults.subjects.any { it.kind == Subject.Kind.APP })
+    }
+
     private fun app(pkg: String, label: String) = Subject("app:$pkg", Subject.Kind.APP, label, pkg = pkg, now = NOW)
 
     private fun shortcut(pkg: String, id: String, label: String) =

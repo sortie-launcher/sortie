@@ -29,7 +29,26 @@ Smart and manual folders. A folder is a query over the index plus optional manua
 Predicates: `name`, `path`, `system` (`regex`, `eq`, `in`); `genre`, `developer` (`regex`);
 `players` (`gte`, `lte`); `year` (`gte`, `lte`); `fit` (`gte`, `lte`, `eq`); `playMinutes`,
 `daysSincePlayed`, `daysSinceAdded` (`gte`, `lte`, `eq`); `tags`/`flags` (`has`, `hasAny`,
-`hasAll`); `favourite` (bool); `hack` (bool). Combinators: `all`, `any`, `not`.
+`hasAll`); `favourite` (bool); `hack` (bool); `recentTags` (below). Combinators: `all`, `any`, `not`.
+
+Sort keys: `fit`, `title`, `year`, `lastPlayed`, `playMinutes`, `added`, `system`, each `:asc` (default) or
+`:desc`, comma-separated. `random` shuffles the members each time the folder is re-evaluated (library, play
+data, favourites or manifests changed); next to other keys it is the final tiebreaker (`fit:desc,random`).
+
+## Recently played tags (`recentTags`)
+
+`{ "recentTags": { "minShared": 1, "window": 3 } }` matches a game whose guide `tags` share at least
+`minShared` entries (default 1) with the union of the tags of the `window` (default 3) most recently played
+games (latest start in the play log). Only `tags` count, not `genre` text. The recent set is computed once per
+evaluation from the same candidates the folder sees, so hidden games do not count, and with nothing played yet
+nothing matches. Game-only: apps and shortcuts never match. With `playMinutes` and `fit` it makes the offline
+"what next" folder `gen_manifests.py` ships ("Pick one" on it is the recommendation):
+
+```json
+{ "id": "play-next", "label": "Play next",
+  "rule": { "all": [ { "playMinutes": { "eq": 0 } }, { "fit": { "gte": 4 } }, { "recentTags": { "minShared": 1, "window": 3 } } ] },
+  "sort": "random" }
+```
 
 ## Apps and launcher shortcuts (`apps: true`)
 

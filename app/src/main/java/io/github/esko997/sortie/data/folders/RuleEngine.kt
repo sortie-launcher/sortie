@@ -52,8 +52,9 @@ data class Subject(
  * field predicates `{field: {op: value}}`, or booleans `favourite`/`hack`. Unknown fields or operators evaluate false and are
  * reported through [problems], never thrown, so a typo in a manifest cannot crash the launcher. A field the subject does not
  * have (a game-only field on an app or shortcut, `package` on a game) is a non-match, not a problem.
+ * [pool] is the whole candidate list, read once at compile time by rules that look across subjects (`recentTags`).
  */
-class RuleEngine(rule: JsonElement?) {
+class RuleEngine(rule: JsonElement?, private val pool: List<Subject> = emptyList()) {
     private val issues = mutableListOf<String>() // must be initialised before compile() runs
     private val compiled: Node = compile(rule)
     val problems: List<String> get() = issues
@@ -92,7 +93,24 @@ class RuleEngine(rule: JsonElement?) {
             val want = v.bool();
             { s -> s.game?.let { it.handWritten == want } ?: false }
         }
+        "recentTags" -> compileRecentTags(v)
         else -> compileField(key, v)
+    }
+
+    /**
+     * Games sharing at least `minShared` tags with the union of tags of the `window` most recently played games in [pool].
+     * The recent set is built once here, not per subject; apps and shortcuts never match.
+     */
+    private fun compileRecentTags(v: JsonElement): Node {
+        val o = v as? JsonObject ?: return bad("recentTags: expected {minShared, window}")
+        (o.keys - setOf("minShared", "window")).forEach { issues += "recentTags: unknown key $it" }
+        val minShared = o["minShared"]?.let { it.num() ?: return bad("recentTags.minShared: expected a number") }?.toInt() ?: 1
+        val window = o["window"]?.let { it.num() ?: return bad("recentTags.window: expected a number") }?.toInt() ?: 3
+        val recent = pool.filter { it.game != null && it.lastPlayed != null }
+            .sortedByDescending { it.lastPlayed }
+            .take(window.coerceAtLeast(0))
+            .flatMapTo(HashSet()) { tagsOf(it).orEmpty() }
+        return { s -> tagsOf(s)?.let { tags -> tags.count { it in recent } >= minShared } ?: false }
     }
 
     private fun compileField(field: String, v: JsonElement): Node {
@@ -127,7 +145,7 @@ class RuleEngine(rule: JsonElement?) {
             else -> null
         }
         val list: ((Subject) -> List<String>?)? = when (field) {
-            "tags" -> { s -> s.game?.tags?.split(',')?.filter { it.isNotBlank() } }
+            "tags" -> ::tagsOf
             "flags" -> { s -> s.game?.flags?.split(',')?.filter { it.isNotBlank() } }
             else -> null
         }
@@ -210,13 +228,15 @@ class RuleEngine(rule: JsonElement?) {
          * with `apps: true`; `include` and `exclude` list ids of any kind and always win.
          */
         fun evaluate(def: FolderDef, subjects: List<Subject>): Evaluation {
-            val engine = RuleEngine(def.rule)
+            val engine = RuleEngine(def.rule, subjects)
             val include = def.include.toSet()
             val exclude = def.exclude.toSet()
             val matched = subjects.filter { s ->
                 s.id !in exclude && (s.id in include || (def.rule != null && (def.apps || s.kind == Subject.Kind.GAME) && engine.matches(s)))
             }
-            val sorted = matched.sortedWith(comparator(def.sort)).let { if (def.limit > 0) it.take(def.limit) else it }
+            // a `random` key shuffles first; the stable sort by the other keys then leaves it as the final tiebreaker
+            val shuffled = if (def.sort.split(',').any { it.substringBefore(':').trim() == "random" }) matched.shuffled() else matched
+            val sorted = shuffled.sortedWith(comparator(def.sort)).let { if (def.limit > 0) it.take(def.limit) else it }
             return Evaluation(sorted, engine.problems)
         }
 
@@ -234,6 +254,7 @@ class RuleEngine(rule: JsonElement?) {
                     "playMinutes" -> compareBy { it.playMinutes }
                     "added" -> compareBy(nullsFirst()) { it.game?.addedAt }
                     "system" -> compareBy(nullsFirst()) { it.game?.systemId }
+                    "random" -> Comparator { _, _ -> 0 } // order comes from the shuffle in evaluate()
                     else -> compareBy { it.sortLabel }
                 }
                 val d = if (dir == "desc") c.reversed() else c
@@ -245,3 +266,5 @@ class RuleEngine(rule: JsonElement?) {
 }
 
 private typealias Node = (Subject) -> Boolean
+
+private fun tagsOf(s: Subject): List<String>? = s.game?.tags?.split(',')?.filter { it.isNotBlank() }

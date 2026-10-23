@@ -100,7 +100,7 @@ fun ItemCell(
         is LibraryItem.Game -> {
             val g = item.game
             if (grid) {
-                SquareTile(g.title, onClick, cover = g.cover ?: g.screenshot, paletteGlow = true, favourite = favourite, onLongClick = onLongClick)
+                SquareTile(displayTitle(g), onClick, cover = g.cover ?: g.screenshot, paletteGlow = true, favourite = favourite, onLongClick = onLongClick)
             } else {
                 GameRow(g, minutes, onClick = onClick, onLongClick = onLongClick, hasSave = hasSave)
             }

@@ -3,6 +3,8 @@ package io.github.esko997.sortie.data.user
 import io.github.esko997.sortie.data.manifest.UserData
 import java.io.File
 import java.nio.file.Files
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -33,5 +35,32 @@ class UserStoreTest {
         assertEquals(ids.reversed(), onDisk.layout)
         assertEquals(ids.take(50).toSet(), onDisk.favourites)
         assertEquals(expected, UserStore(file).data.value)
+    }
+
+    /** An edit made before the writer coroutine ever ran must still be saved once it runs. */
+    @Test
+    fun editBeforeTheWriterStartsIsSaved() {
+        val file = fresh()
+        val gate = Gate()
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + gate))
+        store.setHomeSort("custom")
+        assertEquals(false, file.exists())
+        gate.open()
+        assertEquals("custom", UserStore(file).data.value.homeSort)
+    }
+
+    /** Holds every dispatched block until [open]; then runs them inline on the calling thread. */
+    private class Gate : CoroutineDispatcher() {
+        private val queue = ArrayDeque<Runnable>()
+        private var opened = false
+
+        override fun dispatch(context: CoroutineContext, block: Runnable) {
+            if (opened) block.run() else queue += block
+        }
+
+        fun open() {
+            opened = true
+            while (queue.isNotEmpty()) queue.removeFirst().run()
+        }
     }
 }

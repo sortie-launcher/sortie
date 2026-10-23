@@ -64,7 +64,7 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel) {
         Row(Modifier.weight(1f).padding(16.dp)) {
             Cover(game, width = 200, height = 260)
             Column(Modifier.padding(start = 20.dp).verticalScroll(rememberScrollState())) {
-                Text(game.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(displayTitle(game), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Row {
                     Stars(game.fit)
                     Text(

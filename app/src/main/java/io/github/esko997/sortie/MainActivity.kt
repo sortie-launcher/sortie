@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.lifecycleScope
 import io.github.esko997.sortie.shell.TaskSwitcher
+import io.github.esko997.sortie.ui.AmbientBackground
 import io.github.esko997.sortie.ui.Hotkeys
 import io.github.esko997.sortie.ui.Selection
 import io.github.esko997.sortie.ui.SortieNav
@@ -53,7 +55,7 @@ class MainActivity : ComponentActivity() {
         }
         Hotkeys.handle(setOf(Hotkeys.Key.SWAP_SCREENS))
         lifecycleScope.launch { Hotkeys.events.collect { if (it == Hotkeys.Key.SWAP_SCREENS) swapScreens() } }
-        setContent { SortieTheme { Surface(Modifier.fillMaxSize().safeDrawingPadding()) { SortieNav(vm) } } }
+        setContent { SortieTheme { AmbientBackground { Surface(Modifier.fillMaxSize().safeDrawingPadding(), color = Color.Transparent) { SortieNav(vm) } } } }
         if (savedInstanceState == null) handleIntent(intent) // never re-fire a launch on activity recreation
     }
 

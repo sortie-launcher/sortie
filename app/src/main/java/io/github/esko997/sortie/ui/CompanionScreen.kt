@@ -1,7 +1,5 @@
 package io.github.esko997.sortie.ui
 
-import android.content.Context
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.widget.ImageView
 import androidx.compose.foundation.background
@@ -17,8 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -55,7 +51,6 @@ import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.apps.ShortcutEntry
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.db.SessionEntity
-import io.github.esko997.sortie.launch.IntentBuilder
 import io.github.esko997.sortie.shell.TaskSwitcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -96,16 +91,13 @@ private fun HeroPanel() {
     val panel = remember { Selection.panel() }
     val game by panel.collectAsState(null)
     val g = game
+    val palette = rememberPalette(g?.cover ?: g?.screenshot)
+    LaunchedEffect(palette) { Selection.heroPalette.value = palette }
     Panel(title = g?.let(::displayTitle) ?: "Sortie", subtitle = g?.let(::gameLine).orEmpty(), onTap = g?.let { openOnOtherScreen(it) }) {
         val art = g?.screenshot ?: g?.cover
         if (art != null) CoverImage(art, Modifier.fillMaxSize(), ContentScale.Fit)
     }
 }
-
-/** The title without the file-name noise: "(USA)", "[!]", "v1.1.1", "Rev A" … */
-fun displayTitle(g: GameEntity): String = g.title.replace(TITLE_NOISE, " ").replace(Regex("\\s{2,}"), " ").trim().ifEmpty { g.title }
-
-private val TITLE_NOISE = Regex("""\s*(\([^)]*\)|\[[^]]*]|\bv\d+(\.\d+)*[a-z]?\b|\bRev\s?[A-Z0-9]+\b)""", RegexOption.IGNORE_CASE)
 
 /** Tapping the hero or now-playing card opens the game's entry in Sortie's navigation, which lives on the other screen. */
 private fun openOnOtherScreen(g: GameEntity): () -> Unit = { Selection.openRoute.tryEmit("game/${Uri.encode(g.id)}") }
@@ -215,81 +207,20 @@ private fun CornerPlus(modifier: Modifier, onClick: () -> Unit) {
 @Composable
 private fun TouchLauncher(graph: SortieApp.Graph, displayId: Int, scope: CoroutineScope, onClose: () -> Unit) {
     val context = LocalContext.current
-    val apps by graph.apps.apps.collectAsState()
-    val allShortcuts by graph.shortcuts.shortcuts.collectAsState()
-    val user by graph.user.data.collectAsState()
-    LaunchedEffect(Unit) { graph.apps.refresh() }
-    val entries = remember(apps, allShortcuts, user.shortcuts) {
-        allShortcuts.filter { it.id in user.shortcuts }.map { LibraryItem.Shortcut(it) } + apps.map { LibraryItem.App(it) }
-    }
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "Open on this screen",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f)
-            )
-            OutlinedButton(onClick = onClose) { Text("Close") }
-        }
-        if (entries.isEmpty()) Text("No apps", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(vertical = 4.dp),
-            modifier = Modifier.weight(1f)
-        ) {
-            items(entries, key = { it.id }) { item ->
-                Column(
-                    Modifier.clip(RoundedCornerShape(12.dp)).background(Slate).clickable {
-                        onClose()
-                        scope.launch {
-                            if (!launchHere(context, graph, item, displayId)) return@launch
-                            delay(HAND_OFF_DELAY_MS)
-                            if (!graph.switcher.anchoredRecently()) graph.switcher.handOff(displayId)
-                        }
-                    }.padding(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(56.dp)) { it.setImageDrawable(iconOf(graph, item)) }
-                    Text(
-                        item.label,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 6.dp)
-                    )
-                }
-            }
+    AppPicker(graph, "Open on this screen", onClose = onClose) { item ->
+        onClose()
+        scope.launch {
+            if (!launchOn(context, graph, item, displayId)) return@launch
+            delay(HAND_OFF_DELAY_MS)
+            if (!graph.switcher.anchoredRecently()) graph.switcher.handOff(displayId)
         }
     }
-}
-
-/** Starts [item] on [displayId] through LaunchManager's side-launch path (logged; no play session, Sortie stays put). */
-private suspend fun launchHere(context: Context, graph: SortieApp.Graph, item: LibraryItem, displayId: Int): Boolean = when (item) {
-    is LibraryItem.App -> {
-        val intent = graph.apps.launchIntent(item.app)
-        graph.launcher.launchExternal(item.id, IntentBuilder.describe(intent), displayId) { opts -> context.startActivity(intent, opts) }
-    }
-    is LibraryItem.Shortcut -> {
-        val s = item.shortcut
-        graph.launcher.launchExternal(s.id, "startShortcut ${s.pkg}/${s.shortcutId}", displayId) { opts -> graph.shortcuts.launch(s, opts) }
-    }
-    is LibraryItem.Game -> false
 }
 
 private fun resolve(id: String, apps: List<AppEntry>, shortcuts: List<ShortcutEntry>): LibraryItem? = when {
     id.startsWith(LibraryItem.APP_PREFIX) -> apps.firstOrNull { it.id == id }?.let { LibraryItem.App(it) }
     id.startsWith(LibraryItem.SHORTCUT_PREFIX) -> shortcuts.firstOrNull { it.id == id }?.let { LibraryItem.Shortcut(it) }
     else -> null
-}
-
-private fun iconOf(graph: SortieApp.Graph, item: LibraryItem): Drawable? = when (item) {
-    is LibraryItem.App -> graph.apps.icon(item.app.pkg)
-    is LibraryItem.Shortcut -> graph.shortcuts.icon(item.shortcut)
-    is LibraryItem.Game -> null
 }
 
 private const val MINUTE = 60_000L
@@ -303,6 +234,15 @@ private const val HAND_OFF_DELAY_MS = 500L
  */
 @Composable
 fun TouchSwitcher(switcher: TaskSwitcher, state: TaskSwitcher.State, displayId: Int) {
+    if (state.picking == displayId) {
+        val context = LocalContext.current
+        val graph = (context.applicationContext as SortieApp).graph
+        val scope = rememberCoroutineScope()
+        AppPicker(graph, "Open on this screen", onClose = switcher::stopPicking) { item ->
+            scope.launch { if (launchOn(context, graph, item, displayId)) switcher.picked(displayId) else switcher.stopPicking() }
+        }
+        return
+    }
     val (shown, bringing) = state.offers(displayId)
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text(
@@ -341,6 +281,7 @@ fun TouchSwitcher(switcher: TaskSwitcher, state: TaskSwitcher.State, displayId: 
         }
         Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { switcher.goHome(displayId) }, enabled = !state.busy) { Text("Sortie") }
+            OutlinedButton(onClick = { switcher.startPicking(displayId) }, enabled = !state.busy) { Text("Open app…") }
             OutlinedButton(onClick = { switcher.anchor(displayId) }, enabled = state.entries.isNotEmpty()) { Text("Controller here") }
             OutlinedButton(onClick = { switcher.close() }) { Text("Close") }
         }

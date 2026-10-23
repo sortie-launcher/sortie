@@ -192,7 +192,7 @@ fun HomeScreen(
                 }
                 else -> layoutGames[id]?.let { g ->
                     val system = systemById[g.systemId]?.def?.label ?: g.systemId
-                    HomeTile(id, g.title, system, 0, "", cover = g.cover ?: g.screenshot, item = LibraryItem.Game(g)) { onGame(g.id) }
+                    HomeTile(id, displayTitle(g), system, 0, "", cover = g.cover ?: g.screenshot, item = LibraryItem.Game(g)) { onGame(g.id) }
                 }
             }
         }

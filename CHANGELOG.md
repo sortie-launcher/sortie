@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Round 4b: `AppPicker` (search field + icon grid) opens any installed app or opted-in shortcut on a chosen display — the
+  companion '+' launcher, and "Open app…" in both switcher sides (the switcher closes and the controller follows). Titles drop
+  file-name noise everywhere (rows, tiles, detail header; the file name stays on its own line). `AmbientBackground`: the
+  navigation screen's gradient is tinted by the companion's hero/selected game and blends over 2.5 s at 20 Hz when it changes,
+  static otherwise; hero rotation slowed to 20 s. `UserStore` keeps a pending save in a conflated channel (an edit before the
+  writer coroutine ran was dropped); deterministic test with a gated dispatcher.
+- "Play next" smart folder (offline recommendation): new rule field `recentTags {minShared, window}` (tags shared with the last
+  K played games, computed once per evaluation from the subjects' last-played times) and `sort: random`; `gen_manifests.py`
+  ships `play-next` (unplayed · fit ≥ 4 · recentTags 1/3), `validate_folders.py` mirrors both from the pulled play log.
 - user.json writes are serialised (one collector writes the newest state); concurrent per-update writers could leave an older
   state on disk after a burst of layout moves or favourites. Regression test `UserStoreTest`.
 - Small fixes (feedback round 4): hold-A works on the controller (`Modifier.keyLongPress`: the first key repeat is the long

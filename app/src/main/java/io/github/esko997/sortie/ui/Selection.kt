@@ -16,6 +16,9 @@ object Selection {
     /** Debug navigation requests from adb (`--es open diagnostics`). */
     val openRoute = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 1) // replay: emitted before the NavHost exists on cold start
 
+    /** Palette of the game shown on the companion screen (set by its hero panel); tints the navigation screen's background. */
+    val heroPalette = MutableStateFlow<GamePalette?>(null)
+
     /** Candidates for the idle hero rotation (set by the view model). */
     val heroes = MutableStateFlow<List<GameEntity>>(emptyList())
 
@@ -23,13 +26,13 @@ object Selection {
         _current.value = game
     }
 
-    /** What the companion screen shows: the selected game, else a hero that changes every few seconds. */
+    /** What the companion screen shows: the selected game, else a hero that changes every 20 s. */
     fun panel(): kotlinx.coroutines.flow.Flow<GameEntity?> {
         val ticker = kotlinx.coroutines.flow.flow {
             var i = 0
             while (true) {
                 emit(i++)
-                kotlinx.coroutines.delay(9_000)
+                kotlinx.coroutines.delay(20_000) // slow enough that the ambient background has settled long before the next change
             }
         }
         return kotlinx.coroutines.flow.combine(current, heroes, ticker) { cur, hs, i -> cur ?: hs.getOrNull(if (hs.isEmpty()) 0 else i % hs.size) }
