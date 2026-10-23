@@ -34,7 +34,7 @@ class SwitcherHost(private val graph: SortieApp.Graph) {
         if (!overlay.available) return false
         val switcher = graph.switcher
         val displays = listOfNotNull(TaskSwitcher.TOP, switcher.secondaryDisplay()).distinct()
-        switcher.open(overlay = true)
+        switcher.open(overlay = true, focusDisplay = focusDisplay)
         overlay.show(displays, focusDisplay, onClose = switcher::close, onHotkey = { keys.tryEmit(it) }) { displayId, controller ->
             SortieTheme {
                 Surface(Modifier.fillMaxSize().safeDrawingPadding(), color = Color(0xDD0B0D10), contentColor = MaterialTheme.colorScheme.onSurface) {

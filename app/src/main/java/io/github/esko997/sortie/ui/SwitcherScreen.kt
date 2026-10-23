@@ -62,11 +62,14 @@ fun SwitcherScreen(keys: Flow<Hotkeys.Key> = Hotkeys.events, claimHotkeys: Boole
             onDispose { switcher.close() }
         }
     }
+    // The focused card's entry is a snapshot from when it took focus; a move may have changed its display since, so act on
+    // the entry with the same task id in the current state.
+    val current = { focused?.let { f -> state.entries.firstOrNull { it.task.id == f.task.id } } }
     LaunchedEffect(Unit) {
         if (claimHotkeys) Hotkeys.handle(setOf(Hotkeys.Key.FAVOURITE, Hotkeys.Key.CONTEXT))
         try {
             keys.collect { key ->
-                val e = focused ?: return@collect
+                val e = current() ?: return@collect
                 when (key) {
                     Hotkeys.Key.FAVOURITE -> switcher.other(e.task.displayId)?.let { switcher.moveTo(e, it) }
                     Hotkeys.Key.CONTEXT -> switcher.closeApp(e)
@@ -90,29 +93,32 @@ fun SwitcherScreen(keys: Flow<Hotkeys.Key> = Hotkeys.events, claimHotkeys: Boole
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
-            // The first card takes the controller focus once, when the list first has cards (coming back from a game leaves
-            // nothing focused and Y / Select would act on nothing). Leaving a card for the buttons below must not pull it back.
-            val first = remember { FocusRequester() }
+            // The first card takes the controller focus when the list first has cards (coming back from a game leaves nothing
+            // focused and Y / Select would act on nothing) and again on the freed row after a move. Leaving a card for the
+            // buttons below must not pull it back. In the overlay the window gains focus only after the controller is anchored
+            // to its display, a few hundred ms later; keep asking (and leave touch input mode) until a card reports focus.
+            val requesters = remember { listOfNotNull(TaskSwitcher.TOP, secondary).associateWith { FocusRequester() } }
             val onFocus = { e: TaskSwitcher.Entry, d: Int ->
                 focused = e
                 focusedScreen = d
             }
             val onBlur = { e: TaskSwitcher.Entry, _: Int -> if (focused === e) focused = null }
-            // In the overlay the window gains focus only after the controller is anchored to its display, a few hundred ms
-            // later; keep asking (and leave touch input mode) until a card reports focus.
             val inputMode = LocalInputModeManager.current
-            LaunchedEffect(state.entries.isNotEmpty()) {
+            LaunchedEffect(state.entries.isNotEmpty(), state.freed) {
                 if (state.entries.isEmpty()) return@LaunchedEffect
+                val target = requesters[state.freed ?: TaskSwitcher.TOP] ?: return@LaunchedEffect
+                // after a move the card that was focused may have left its row (or stayed, same key: no focus event either way)
+                if (state.freed != null && focusedScreen != state.freed) focused = null
                 repeat(50) {
                     if (focused != null) return@LaunchedEffect
                     @OptIn(ExperimentalComposeUiApi::class)
                     inputMode.requestInputMode(InputMode.Keyboard)
-                    runCatching { first.requestFocus() }
+                    runCatching { target.requestFocus() }
                     delay(40)
                 }
             }
-            ScreenRow("Top screen", TaskSwitcher.TOP, state, switcher, first, onFocus, onBlur)
-            if (secondary != null) ScreenRow("Bottom screen", secondary, state, switcher, null, onFocus, onBlur)
+            ScreenRow("Top screen", TaskSwitcher.TOP, state, switcher, requesters[TaskSwitcher.TOP], onFocus, onBlur)
+            if (secondary != null) ScreenRow("Bottom screen", secondary, state, switcher, requesters[secondary], onFocus, onBlur)
             Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (secondary != null) {
                     OutlinedButton(onClick = { switcher.quickSwap(TaskSwitcher.TOP, secondary) }, enabled = !state.busy && state.entries.isNotEmpty()) {
@@ -124,8 +130,9 @@ fun SwitcherScreen(keys: Flow<Hotkeys.Key> = Hotkeys.events, claimHotkeys: Boole
                 OutlinedButton(onClick = { switcher.refresh() }, enabled = !state.busy) { Text("Refresh") }
             }
         }
+        val cur = current()
         HintBar(
-            "A" to (if (focused != null && focused!!.task.displayId != focusedScreen) "bring here" else "to front"),
+            "A" to (if (cur != null && cur.task.displayId != focusedScreen) "bring here" else "to front"),
             "Y" to "other screen",
             "Select" to "close app",
             "B" to "back"
@@ -147,11 +154,13 @@ private fun ScreenRow(
     onFocus: (TaskSwitcher.Entry, Int) -> Unit,
     onBlur: (TaskSwitcher.Entry, Int) -> Unit
 ) {
-    val here = state.on(displayId)
-    val bringing = here.isEmpty()
-    val shown = if (bringing) state.entries.filter { it.task.displayId != displayId } else here
+    val (shown, bringing) = state.offers(displayId)
     Text(
-        if (bringing && shown.isNotEmpty()) "$title · free · bring an app here" else title,
+        when {
+            displayId == state.freed -> "$title · freed · choose what goes here"
+            bringing && shown.isNotEmpty() -> "$title · free · bring an app here"
+            else -> title
+        },
         style = MaterialTheme.typography.titleMedium,
         modifier = Modifier.padding(top = 8.dp, bottom = 6.dp)
     )
@@ -161,8 +170,9 @@ private fun ScreenRow(
     }
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 6.dp, horizontal = 4.dp)) {
         itemsIndexed(shown, key = { _, e -> "$displayId/${e.task.id}" }) { i, e ->
+            val elsewhere = e.task.displayId != displayId
             FocusRow(
-                onClick = { if (bringing) switcher.moveTo(e, displayId) else switcher.bringToFront(e) },
+                onClick = { if (elsewhere) switcher.moveTo(e, displayId) else switcher.bringToFront(e) },
                 modifier = Modifier.width(150.dp)
                     .then(if (i == 0 && first != null) Modifier.focusRequester(first) else Modifier)
                     .onFocusChanged { if (it.isFocused) onFocus(e, displayId) else onBlur(e, displayId) }
@@ -171,7 +181,8 @@ private fun ScreenRow(
                     AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(56.dp)) { it.setImageDrawable(e.icon) }
                     Spacer(Modifier.size(6.dp))
                     Text(e.label, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium)
-                    if (!bringing && i > 0) Text("behind", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val note = if (elsewhere) "other screen" else if (e !== state.on(displayId).firstOrNull()) "behind" else null
+                    if (note != null) Text(note, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

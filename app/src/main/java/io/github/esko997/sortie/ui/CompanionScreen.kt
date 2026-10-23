@@ -280,18 +280,19 @@ private const val MINUTE = 60_000L
 /** Long enough for the launched app's first activity to be started, so the anchor is the last start and keeps the controller. */
 private const val HAND_OFF_DELAY_MS = 500L
 
-/** This display's running apps; tap raises one here, the button sends it to the other screen. Empty screen offers the others. */
+/**
+ * This display's running apps: tap raises one here, the button sends it to the other screen. A freed or empty screen offers
+ * the other windows instead; tapping one brings it here.
+ */
 @Composable
 fun TouchSwitcher(switcher: TaskSwitcher, state: TaskSwitcher.State, displayId: Int) {
-    val here = state.on(displayId)
-    val elsewhere = state.entries.filter { it.task.displayId != displayId }
-    val bringing = here.isEmpty()
-    val shown = if (bringing) elsewhere else here
+    val (shown, bringing) = state.offers(displayId)
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text(
             when {
                 !state.ready -> "Switcher needs Shizuku"
                 state.entries.isEmpty() -> "Nothing running"
+                displayId == state.freed -> "This screen was freed · tap what goes here"
                 bringing -> "This screen is free · tap an app to bring it here"
                 else -> "On this screen"
             },
@@ -301,16 +302,19 @@ fun TouchSwitcher(switcher: TaskSwitcher, state: TaskSwitcher.State, displayId: 
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
             items(shown, key = { it.task.id }) { e ->
+                val elsewhere = e.task.displayId != displayId
                 Column(
                     Modifier.width(150.dp).clip(RoundedCornerShape(12.dp)).background(Slate).clickable(enabled = !state.busy) {
-                        if (bringing) switcher.moveTo(e, displayId) else switcher.bringToFront(e)
+                        if (elsewhere) switcher.moveTo(e, displayId) else switcher.bringToFront(e)
                     }.padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(64.dp)) { it.setImageDrawable(e.icon) }
                     Text(e.label, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
                     val other = switcher.other(displayId)
-                    if (!bringing && other != null) {
+                    if (elsewhere) {
+                        Text("other screen", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else if (!bringing && other != null) {
                         OutlinedButton(onClick = { switcher.moveTo(e, other) }, enabled = !state.busy) {
                             Text("Other screen")
                         }

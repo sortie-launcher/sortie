@@ -34,9 +34,24 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
         val overlay: Boolean = false,
         val entries: List<Entry> = emptyList(),
         val busy: Boolean = false,
-        val ready: Boolean = false
+        val ready: Boolean = false,
+        /** A display an app was just moved away from: its carousel offers every running window as the replacement. */
+        val freed: Int? = null
     ) {
         fun on(displayId: Int): List<Entry> = entries.filter { it.task.displayId == displayId }
+
+        /**
+         * What [displayId]'s carousel shows and whether choosing an entry brings it here (true) or just raises it (false): the
+         * display's own apps normally; every running window when it was just freed; the other screen's apps when it is empty.
+         */
+        fun offers(displayId: Int): Pair<List<Entry>, Boolean> {
+            val here = on(displayId)
+            return when {
+                displayId == freed -> entries to true
+                here.isEmpty() -> entries.filter { it.task.displayId != displayId } to true
+                else -> here to false
+            }
+        }
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -50,15 +65,25 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
     /** Installed by the UI layer: tears the overlay down. Main thread. */
     var dismisser: (() -> Unit)? = null
 
-    fun open(overlay: Boolean = false) {
-        _state.update { it.copy(open = true, overlay = overlay) }
+    fun open(overlay: Boolean = false, focusDisplay: Int? = null) {
+        overlayDisplay = if (overlay) focusDisplay else null
+        _state.update { it.copy(open = true, overlay = overlay, freed = null) }
         refresh()
     }
 
     fun close() {
         if (_state.value.overlay) dismisser?.invoke()
-        _state.update { it.copy(open = false, overlay = false) }
+        _state.update { it.copy(open = false, overlay = false, freed = null) }
+        overlayDisplay = null
+        pendingAnchor?.let { anchor(it) }
+        pendingAnchor = null
     }
+
+    /** The display whose overlay window has the controller while the overlay is up. */
+    private var overlayDisplay: Int? = null
+
+    /** Display to hand the controller to when the overlay closes (set by a move while the overlay keeps the controller). */
+    private var pendingAnchor: Int? = null
 
     fun refresh() = scope.launch { reload() }
 
@@ -90,14 +115,40 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
     }
 
     /** Raises [entry] on its display and gives that display the controller. The overlay closes: the user chose what to play. */
-    fun bringToFront(entry: Entry) = act(dismiss = true) { mover.focusTask(entry.task) && anchor(entry.task.displayId) }
+    fun bringToFront(entry: Entry) = act(dismiss = true) {
+        pendingAnchor = null
+        mover.focusTask(entry.task) && anchor(entry.task.displayId)
+    }
 
-    /** Moves [entry] to [displayId], raises it there and anchors the controller to that display. */
-    fun moveTo(entry: Entry, displayId: Int) = act(dismiss = true) { mover.moveTask(entry.task, displayId) && mover.focusTask(entry.task) && anchor(displayId) }
+    /**
+     * Moves [entry] to [displayId] and raises it there. Normally the switcher stays open: the display it left is marked
+     * [State.freed] so its carousel offers every running window as a replacement, and the controller stays with the switcher
+     * (a moved focused task drags display focus along, so the overlay's display is anchored again). A move *into* the freed
+     * display is the user's replacement choice: it closes the switcher and hands the controller to that display.
+     */
+    fun moveTo(entry: Entry, displayId: Int) {
+        val replacing = displayId == _state.value.freed
+        act(dismiss = replacing, freed = if (replacing) null else entry.task.displayId) {
+            val ok = mover.moveTask(entry.task, displayId) && mover.focusTask(entry.task)
+            if (ok) {
+                when {
+                    replacing || !_state.value.overlay -> {
+                        pendingAnchor = null // the replacement is the last choice: the controller goes with it
+                        anchor(displayId)
+                    }
+                    else -> {
+                        pendingAnchor = displayId
+                        overlayDisplay?.let { anchor(it) }
+                    }
+                }
+            }
+            ok
+        }
+    }
 
     fun closeApp(entry: Entry) = act { mover.removeTask(entry.task) }
 
-    /** Swaps the top app of each display: a → b and b → a in one go. */
+    /** Swaps the top app of each display: a → b and b → a in one go. Nothing is freed, so the overlay closes. */
     fun quickSwap(displayA: Int, displayB: Int) = act(dismiss = true) {
         val s = _state.value
         val a = s.on(displayA).firstOrNull()
@@ -147,12 +198,13 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
         other(fromDisplay)?.let { anchor(it) }
     }
 
-    private fun act(dismiss: Boolean = false, block: suspend () -> Boolean) = scope.launch {
+    private fun act(dismiss: Boolean = false, freed: Int? = null, block: suspend () -> Boolean) = scope.launch {
         val ok = lock.withLock {
             _state.update { it.copy(busy = true) }
             runCatching { block() }.onFailure { Log.w(TAG, "switch", it) }.getOrDefault(false)
         }
         reload()
+        _state.update { it.copy(freed = if (ok) freed else null) }
         if (dismiss && ok && _state.value.overlay) withContext(Dispatchers.Main) { close() }
     }
 

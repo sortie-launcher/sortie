@@ -20,7 +20,9 @@
   `TYPE_APPLICATION_OVERLAY` windows (`shell/SwitcherOverlay`, `ui/SwitcherHost`) over the running games instead of Sortie's
   screens: controller carousel on the display that had the controller, touch carousel on the other, dark scrim, games keep
   running underneath (Home on the top screen also resumes Sortie's HOME activity; the game is raised again over it). B closes;
-  A / Y / Quick swap act and close; Y/Select go to the overlay only, never to Sortie's screens below. Without the grant the
+  A (to front) and Quick swap act and close. Y moves the focused app to the other screen and keeps the switcher open: the
+  screen it left is marked freed and its carousel offers every running window; A on one brings it there and closes (the
+  controller follows that choice). Y/Select go to the overlay only, never to Sortie's screens below. Without the grant the
   activity route is used as before. `tools/dev.sh install` grants both appops.
 - Idle cost (feedback round 3): the focus glow pulses for 3 s after focus lands and then holds (an endless frame-clock pulse
   kept Sortie redrawing at 120 Hz, ~70% of a core while idle; the blurred glow is rasterised once per size). Measured: home
