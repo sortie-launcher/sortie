@@ -4,7 +4,7 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/** One launchable file. `id` is `<folder>/<filename>`, the same key the desktop uses in guide.json and the play log. */
+/** One launchable file. `id` is `<systemId>/<filename>`, the same key the desktop uses in guide.json and the play log. */
 @Entity(tableName = "games", indices = [Index("systemId"), Index("title"), Index("fit")])
 data class GameEntity(
     @PrimaryKey val id: String,

@@ -46,7 +46,7 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
                 problems += "${sys.id}: ${e.message}"
             }
         }
-        Report(snap.systems.size, files, updated, removed, System.currentTimeMillis() - t0, problems)
+        Report(snap.systems.size, files, updated, removed, System.currentTimeMillis() - t0, problems).also { Log.i(TAG, "indexed: $it") }
     }
 
     private suspend fun indexSystem(root: File, sys: SystemDef, guide: Map<String, GuideEntry>, gen: Long, force: Boolean): Pair<Int, Int> {
@@ -69,7 +69,7 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
                 if (exts.isNotEmpty() && name.substringAfterLast('.', "").lowercase(Locale.ROOT).let { ".$it" !in exts }) return@forEach
                 if (name.lowercase(Locale.ROOT) in SKIP_FILES) return@forEach
                 if (name.substringAfterLast('.', "").lowercase(Locale.ROOT) in SKIP_EXT) return@forEach
-                found += Triple(f, "${sys.folder}/$name", f.lastModified())
+                found += Triple(f, "${sys.id}/$name", f.lastModified()) // ids use the system id, folder names vary per device
             }
         }
         // Metadata changed (gamelist/guide) -> rewrite every row; otherwise only new/changed files.
