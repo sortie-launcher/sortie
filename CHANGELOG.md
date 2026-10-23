@@ -3,7 +3,9 @@
 ## Unreleased
 - Settings screen (home header, Diagnostics moved under it): per-system default launcher (`user.systemProfiles`, between the
   per-game override and the manifest order), home/browse grid, grid columns, hero rotation on/off (`user.heroRotation`), overlay
-  switcher on/off (`user.overlaySwitcher`). Directories and manifests stay desktop-authored.
+  switcher on/off (`user.overlaySwitcher`). Directories and manifests stay desktop-authored. Resolution order lives in
+  `launch/ProfileOrder.kt` (tested); verified on the DMG: set CPS-3 → Open with… (launch uses it), per-game override wins,
+  Manifest default restores ra-fbneo.
 - Launch display "same" always resolves to an explicit display: without one Android reused the emulator's existing task on
   whichever screen the switcher had moved it to.
 - A play session now ends only when its app is really gone (checked over Shizuku on foreground): Home summoning the switcher
