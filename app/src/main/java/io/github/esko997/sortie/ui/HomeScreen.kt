@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -217,7 +215,9 @@ fun HomeScreen(
         }
     }
 
-    val cols = if (grid) user.gridColumns.coerceAtLeast(1) else 1
+    // D-pad step across the grid's minor axis while a tile is lifted: a row in a vertical grid, a column in a horizontal one
+    val horizontal = grid && user.gridHorizontal
+    val cols = if (!grid) 1 else if (horizontal) user.gridRows.coerceAtLeast(1) else user.gridColumns.coerceAtLeast(1)
     // Moves the lifted tile to [target]'s slot; unresolved ids keep their place in the working list.
     val placeAt = placeAt@{ target: String ->
         val id = lifted ?: return@placeAt
@@ -242,10 +242,10 @@ fun HomeScreen(
         if (lifted == null) return@onPreviewKeyEvent false
         val down = e.type == KeyEventType.KeyDown
         when (e.key) {
-            Key.DirectionLeft -> if (down) moveBy(-1)
-            Key.DirectionRight -> if (down) moveBy(1)
-            Key.DirectionUp -> if (down) moveBy(-cols)
-            Key.DirectionDown -> if (down) moveBy(cols)
+            Key.DirectionLeft -> if (down) moveBy(if (horizontal) -cols else -1)
+            Key.DirectionRight -> if (down) moveBy(if (horizontal) cols else 1)
+            Key.DirectionUp -> if (down) moveBy(if (horizontal) -1 else -cols)
+            Key.DirectionDown -> if (down) moveBy(if (horizontal) 1 else cols)
             Key.ButtonA, Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> if (e.type == KeyEventType.KeyUp) drop()
             Key.ButtonB, Key.Back, Key.Escape -> if (e.type == KeyEventType.KeyUp) cancelMove()
             else -> return@onPreviewKeyEvent false
@@ -321,14 +321,7 @@ fun HomeScreen(
         // Focusable only while lifting: a permanently focusable container swallows D-pad focus itself (no tile outline, no
         // up/down between tiles).
         val liftFocus = if (lifted != null) Modifier.focusRequester(gridFocus).onFocusChanged { gridFocused = it.isFocused }.focusable() else Modifier
-        LazyVerticalGrid(
-            GridCells.Fixed(cols),
-            Modifier.weight(1f).then(liftFocus).then(liftKeys),
-            state = gridState,
-            contentPadding = PaddingValues(12.dp),
-            verticalArrangement = Arrangement.spacedBy(if (grid) 10.dp else 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
+        ItemGrid(grid, user, Modifier.weight(1f).then(liftFocus).then(liftKeys), state = gridState) {
             if (custom && tiles.isEmpty()) {
                 fullItem("empty") {
                     Text(

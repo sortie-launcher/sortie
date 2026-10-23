@@ -66,6 +66,10 @@ class UserStore(private val file: File, private val scope: CoroutineScope = Coro
 
     fun setGridColumns(n: Int) = update { it.copy(gridColumns = n.coerceIn(2, 10)) }
 
+    fun setGridHorizontal(on: Boolean) = update { it.copy(gridHorizontal = on) }
+
+    fun setGridRows(n: Int) = update { it.copy(gridRows = n.coerceIn(2, 6)) }
+
     fun setBrowseLayout(layout: String) = update { it.copy(browseLayout = layout) }
 
     fun setHomeSort(sort: String) = update { it.copy(homeSort = sort) }

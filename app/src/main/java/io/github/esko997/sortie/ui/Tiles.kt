@@ -11,14 +11,20 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridItemScope
 import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import io.github.esko997.sortie.data.manifest.UserData
 import kotlinx.coroutines.delay
 
 /** Glow colour of a home tile that is being moved (edit mode); distinct from every focus colour. */
@@ -133,7 +140,37 @@ fun SquareTile(
     }
 }
 
-/** A full-width row inside a grid (headers, expanders, list-style rows next to tiles). */
+/**
+ * The grid every browse surface uses: a horizontal grid of [UserData.gridRows] rows of square tiles when the user prefers
+ * sideways scrolling (the Thor's wide top screen), a vertical grid of [UserData.gridColumns] otherwise; a one-column vertical
+ * list when [grid] is false. Square tiles size themselves from the fixed axis, so density follows rows/columns.
+ */
+@Composable
+fun ItemGrid(grid: Boolean, user: UserData, modifier: Modifier = Modifier, state: LazyGridState = rememberLazyGridState(), content: LazyGridScope.() -> Unit) {
+    if (grid && user.gridHorizontal) {
+        LazyHorizontalGrid(
+            GridCells.Fixed(user.gridRows.coerceAtLeast(1)),
+            modifier,
+            state = state,
+            contentPadding = PaddingValues(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            content = content
+        )
+    } else {
+        LazyVerticalGrid(
+            GridCells.Fixed(if (grid) user.gridColumns.coerceAtLeast(1) else 1),
+            modifier,
+            state = state,
+            contentPadding = PaddingValues(12.dp),
+            verticalArrangement = Arrangement.spacedBy(if (grid) 10.dp else 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            content = content
+        )
+    }
+}
+
+/** A full-width row inside a vertical grid, or a full-height column inside a horizontal one (headers, expanders). */
 fun LazyGridScope.fullItem(key: String, content: @Composable LazyGridItemScope.() -> Unit) =
     item(key = key, span = { GridItemSpan(maxLineSpan) }, content = content)
 

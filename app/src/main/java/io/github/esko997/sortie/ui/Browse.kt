@@ -3,15 +3,11 @@ package io.github.esko997.sortie.ui
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyGridScope
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.FilterChip
@@ -50,19 +46,6 @@ fun BrowseLayoutHotkey(vm: SortieViewModel, grid: Boolean) {
         onDispose { Hotkeys.release(setOf(Hotkeys.Key.CONTEXT)) }
     }
     LaunchedEffect(Unit) { Hotkeys.events.collect { if (it == Hotkeys.Key.CONTEXT) vm.setBrowseLayout(if (current) "list" else "grid") } }
-}
-
-/** Browse grid (or, with one column, list) with the shared spacing; [grid] picks `user.gridColumns` square tiles. */
-@Composable
-private fun BrowseGrid(grid: Boolean, columns: Int, modifier: Modifier, content: LazyGridScope.() -> Unit) {
-    LazyVerticalGrid(
-        GridCells.Fixed(if (grid) columns.coerceAtLeast(1) else 1),
-        modifier,
-        contentPadding = PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(if (grid) 10.dp else 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        content = content
-    )
 }
 
 /**
@@ -178,24 +161,22 @@ private fun ItemListScreen(title: String, items: List<LibraryItem>, vm: SortieVi
     }
     val open: (LibraryItem) -> Unit = { if (!vm.launchItem(it)) onGame(it.id) }
     Column(Modifier.fillMaxSize()) {
-        BrowseGrid(grid, user.gridColumns, Modifier.weight(1f)) {
-            fullItem("header") {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                ) {
-                    Column {
-                        Text("$title · ${shown.size}", style = MaterialTheme.typography.titleLarge)
-                        subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
-                    }
-                    Spacer(Modifier.weight(1f))
-                    OutlinedButton(onClick = { shown.randomOrNull()?.let(open) }, enabled = shown.isNotEmpty()) { Text("🎲 Pick one") }
-                    FilterChip(selected = minFit >= 4, onClick = { minFit = if (minFit >= 4) 0 else 4 }, label = { Text("★★★★+") })
-                    FilterChip(selected = notesOnly, onClick = { notesOnly = !notesOnly }, label = { Text("✍ notes") })
-                    FilterChip(selected = onDeviceOnly, onClick = { onDeviceOnly = !onDeviceOnly }, label = { Text("on device") })
-                }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp)
+        ) {
+            Column {
+                Text("$title · ${shown.size}", style = MaterialTheme.typography.titleLarge)
+                subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
             }
+            Spacer(Modifier.weight(1f))
+            OutlinedButton(onClick = { shown.randomOrNull()?.let(open) }, enabled = shown.isNotEmpty()) { Text("🎲 Pick one") }
+            FilterChip(selected = minFit >= 4, onClick = { minFit = if (minFit >= 4) 0 else 4 }, label = { Text("★★★★+") })
+            FilterChip(selected = notesOnly, onClick = { notesOnly = !notesOnly }, label = { Text("✍ notes") })
+            FilterChip(selected = onDeviceOnly, onClick = { onDeviceOnly = !onDeviceOnly }, label = { Text("on device") })
+        }
+        ItemGrid(grid, user, Modifier.weight(1f)) {
             items(shown, key = { it.id }) { item ->
                 ItemCell(
                     item,
@@ -244,7 +225,7 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
             placeholder = { Text("title, genre, developer, description…") },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
         )
-        BrowseGrid(grid, user.gridColumns, Modifier.weight(1f).padding(top = 8.dp)) {
+        ItemGrid(grid, user, Modifier.weight(1f).padding(top = 8.dp)) {
             items(results, key = { it.id }) { g ->
                 val item = LibraryItem.Game(g)
                 ItemCell(

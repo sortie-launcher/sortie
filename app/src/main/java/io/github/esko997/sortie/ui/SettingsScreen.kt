@@ -42,9 +42,15 @@ fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit) {
                 Toggle("Home layout: grid", user.homeLayout == "grid") { vm.setHomeLayout(if (it) "grid" else "list") }
             }
             item { Toggle("Browse layout: grid", user.browseLayout == "grid") { vm.setBrowseLayout(if (it) "grid" else "list") } }
+            item { Toggle("Grids scroll sideways (rows of tiles)", user.gridHorizontal) { vm.setGridHorizontal(it) } }
+            item {
+                FocusRow(onClick = { vm.setGridRows(if (user.gridRows >= 5) 2 else user.gridRows + 1) }) {
+                    Line("Grid rows (sideways)", "${user.gridRows} · A cycles 2–5 · more rows, smaller tiles")
+                }
+            }
             item {
                 FocusRow(onClick = { vm.setGridColumns(if (user.gridColumns >= 7) 4 else user.gridColumns + 1) }) {
-                    Line("Grid columns", "${user.gridColumns} · A cycles 4–7")
+                    Line("Grid columns (downward)", "${user.gridColumns} · A cycles 4–7")
                 }
             }
             item { Toggle("Hero rotation on the idle companion screen", user.heroRotation) { vm.setHeroRotation(it) } }

@@ -96,7 +96,12 @@ data class UserData(
     val profileOverrides: Map<String, String> = emptyMap(),
     /** Home layout: "list" or "grid"; grid columns are editable here or cycled on the device. */
     val homeLayout: String = "list",
+    /** Vertical grid: tiles per row. Horizontal grid: see [gridRows]. */
     val gridColumns: Int = 5,
+    /** Grids scroll sideways (rows of square tiles; the Thor's wide top screen) instead of down. Lists are unaffected. */
+    val gridHorizontal: Boolean = false,
+    /** Horizontal grid: tiles per column; more rows = smaller tiles, denser. */
+    val gridRows: Int = 3,
     /** Browse screens (system, folder, apps, search): "list" or "grid". */
     val browseLayout: String = "list",
     /** Home tile order: "alpha", "count", "generation" (all generated, fixed) or "custom" (the user's [layout]). */

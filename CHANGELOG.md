@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Grids can scroll sideways (`user.gridHorizontal`, Settings → "Grids scroll sideways"): rows of square tiles, `user.gridRows`
+  (2–5) sets density. Home and browse share `ui/Tiles.kt` `ItemGrid`; section headers become rail columns; list view unchanged.
+  The Apps screen keeps its vertical grid (its expanders/management rows are full-width).
 - Settings screen (home header, Diagnostics moved under it): per-system default launcher (`user.systemProfiles`, between the
   per-game override and the manifest order), home/browse grid, grid columns, hero rotation on/off (`user.heroRotation`), overlay
   switcher on/off (`user.overlaySwitcher`). Directories and manifests stay desktop-authored. Resolution order lives in
