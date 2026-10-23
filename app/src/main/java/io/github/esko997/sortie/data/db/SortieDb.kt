@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [GameEntity::class, IndexMetaEntity::class, SessionEntity::class], version = 2, exportSchema = true)
+@Database(entities = [GameEntity::class, IndexMetaEntity::class, SessionEntity::class], version = 3, exportSchema = true)
 abstract class SortieDb : RoomDatabase() {
     abstract fun games(): GameDao
 

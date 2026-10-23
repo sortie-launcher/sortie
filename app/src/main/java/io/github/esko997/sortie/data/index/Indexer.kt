@@ -134,6 +134,12 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
         val stale = existing.keys - found.keys
         var removed = 0
         stale.chunked(SQLITE_CHUNK).forEach { removed += dao.deleteByIds(it) }
+        run { // cheap enough to do every pass: one narrow query per system
+            val names = dao.namesOf(sys.id)
+            val variants = Variants.resolve(names.map { Variants.Entry(it.id, it.fileName, !it.placeholder) })
+            dao.clearVariants(sys.id)
+            variants.entries.groupBy({ it.value }, { it.key }).forEach { (primary, ids) -> ids.chunked(SQLITE_CHUNK).forEach { dao.setVariantOf(it, primary) } }
+        }
         dao.putMeta(meta)
         return Triple(found.size, rows.size, removed)
     }

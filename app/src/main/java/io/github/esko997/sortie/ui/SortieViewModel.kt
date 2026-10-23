@@ -66,6 +66,8 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
 
     fun hide(id: String, hidden: Boolean) = graph.user.hide(id, hidden)
 
+    fun variantsOf(id: String): Flow<List<GameEntity>> = flow { emit(dao.variantsOf(id)) }
+
     val total: StateFlow<Int> = dao.total().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     fun gamesOf(systemId: String): Flow<List<GameEntity>> = dao.bySystem(systemId)

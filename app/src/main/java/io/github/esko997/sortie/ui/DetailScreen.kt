@@ -88,6 +88,15 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel) {
             if (game.flags.isNotBlank() || game.tags.isNotBlank()) {
                 Row { (game.flags.split(',') + game.tags.split(',')).filter { it.isNotBlank() }.distinct().take(8).forEach { Badge(it) } }
             }
+            val variants by remember(game.id) { vm.variantsOf(game.id) }.collectAsState(emptyList())
+            if (variants.isNotEmpty()) {
+                Text(
+                    "Also: " + variants.joinToString(" · ") { it.fileName },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                variants.forEach { v -> FocusRow(onClick = { vm.launch(v) }) { Text("Sortie ${v.fileName}", style = MaterialTheme.typography.bodySmall) } }
+            }
             Spacer(Modifier.height(8.dp))
             game.desc?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             Spacer(Modifier.height(8.dp))

@@ -11,6 +11,8 @@ data class SystemCount(val systemId: String, val n: Int)
 
 data class PlayStat(val gameId: String, val minutes: Int, val lastPlayed: Long?)
 
+data class NameRow(val id: String, val fileName: String, val placeholder: Boolean)
+
 data class Signature(val id: String, val mtime: Long, val size: Long, val addedAt: Long, val arriving: Boolean)
 
 /** SQLite binds at most 999 variables on older Android builds; every `IN (:ids)` goes through [chunked]. */
@@ -32,13 +34,25 @@ interface GameDao {
     @Query("UPDATE games SET arriving = :arriving WHERE id IN (:ids)")
     suspend fun setArriving(ids: List<String>, arriving: Boolean)
 
+    @Query("UPDATE games SET variantOf = NULL WHERE systemId = :systemId")
+    suspend fun clearVariants(systemId: String)
+
+    @Query("UPDATE games SET variantOf = :primary WHERE id IN (:ids)")
+    suspend fun setVariantOf(ids: List<String>, primary: String)
+
+    @Query("SELECT id, fileName, placeholder FROM games WHERE systemId = :systemId")
+    suspend fun namesOf(systemId: String): List<NameRow>
+
+    @Query("SELECT * FROM games WHERE variantOf = :primary ORDER BY fileName")
+    suspend fun variantsOf(primary: String): List<GameEntity>
+
     @Query("SELECT id, mtime, size, addedAt, arriving FROM games WHERE systemId = :systemId")
     suspend fun signatures(systemId: String): List<Signature>
 
-    @Query("SELECT systemId, COUNT(*) AS n FROM games WHERE placeholder = 0 GROUP BY systemId")
+    @Query("SELECT systemId, COUNT(*) AS n FROM games WHERE placeholder = 0 AND variantOf IS NULL GROUP BY systemId")
     fun countsBySystem(): Flow<List<SystemCount>>
 
-    @Query("SELECT * FROM games WHERE systemId = :systemId ORDER BY sortTitle")
+    @Query("SELECT * FROM games WHERE systemId = :systemId AND variantOf IS NULL ORDER BY sortTitle")
     fun bySystem(systemId: String): Flow<List<GameEntity>>
 
     @Query("SELECT * FROM games WHERE id = :id")
@@ -51,15 +65,16 @@ interface GameDao {
     suspend fun byIdsChunk(ids: List<String>): List<GameEntity>
 
     @Query(
-        "SELECT * FROM games WHERE placeholder = 0 AND (title LIKE '%' || :q || '%' ESCAPE '\\' OR genre LIKE '%' || :q || '%' ESCAPE '\\' " +
+        "SELECT * FROM games WHERE placeholder = 0 AND variantOf IS NULL AND (title LIKE '%' || :q || '%' ESCAPE '\\' " +
+            "OR genre LIKE '%' || :q || '%' ESCAPE '\\' " +
             "OR developer LIKE '%' || :q || '%' ESCAPE '\\' OR desc LIKE '%' || :q || '%' ESCAPE '\\') ORDER BY fit DESC, sortTitle LIMIT :limit"
     )
     fun search(q: String, limit: Int = 200): Flow<List<GameEntity>>
 
-    @Query("SELECT * FROM games WHERE placeholder = 0")
+    @Query("SELECT * FROM games WHERE placeholder = 0 AND variantOf IS NULL")
     suspend fun allPlayable(): List<GameEntity>
 
-    @Query("SELECT COUNT(*) FROM games WHERE placeholder = 0")
+    @Query("SELECT COUNT(*) FROM games WHERE placeholder = 0 AND variantOf IS NULL")
     fun total(): Flow<Int>
 
     @Query("SELECT * FROM index_meta WHERE systemId = :systemId")

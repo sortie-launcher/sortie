@@ -5,7 +5,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /** One launchable file. `id` is `<systemId>/<filename>`, the same key the desktop uses in guide.json and the play log. */
-@Entity(tableName = "games", indices = [Index("systemId", "sortTitle"), Index("fit")])
+@Entity(tableName = "games", indices = [Index("systemId", "sortTitle"), Index("fit"), Index("variantOf")])
 data class GameEntity(
     @PrimaryKey val id: String,
     val systemId: String,
@@ -37,7 +37,9 @@ data class GameEntity(
     val placeholder: Boolean,
     val arriving: Boolean,
     val hack: Boolean,
-    val addedAt: Long
+    val addedAt: Long,
+    // id of the file shown instead of this one (disc 1 of a set, or the preferred container format); null = shown
+    val variantOf: String? = null
 )
 
 /** Per-system bookkeeping so the indexer knows when metadata (gamelist, guide) changed since the last pass. */
