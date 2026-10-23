@@ -13,6 +13,9 @@ object Selection {
     /** Emitted when the companion Activity on the default display should go away (Sortie swapped back to that screen). */
     val closeCompanion = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
+    /** Debug navigation requests from adb (`--es open diagnostics`). */
+    val openRoute = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
     fun set(game: GameEntity?) {
         _current.value = game
     }

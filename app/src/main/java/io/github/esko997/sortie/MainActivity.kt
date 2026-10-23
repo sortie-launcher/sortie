@@ -66,9 +66,13 @@ class MainActivity : ComponentActivity() {
 
     /** Debug builds accept `--es launch <id> [--es profile <id>]` from adb so launch profiles can be tested from the desktop. */
     private fun handleIntent(intent: Intent?) {
-        val id = intent?.getStringExtra("launch") ?: return
+        if (intent == null || !BuildConfig.DEBUG) return
+        intent.getStringExtra("open")?.let { route ->
+            intent.removeExtra("open")
+            io.github.esko997.sortie.ui.Selection.openRoute.tryEmit(route)
+        }
+        val id = intent.getStringExtra("launch") ?: return
         intent.removeExtra("launch")
-        if (!BuildConfig.DEBUG) return
         vm.launchById(id, intent.getStringExtra("profile"))
     }
 
