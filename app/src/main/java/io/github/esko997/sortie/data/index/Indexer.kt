@@ -49,13 +49,7 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
         Report(snap.systems.size, files, updated, removed, System.currentTimeMillis() - t0, problems)
     }
 
-    private suspend fun indexSystem(
-        root: File,
-        sys: SystemDef,
-        guide: Map<String, GuideEntry>,
-        gen: Long,
-        force: Boolean
-    ): Pair<Int, Int> {
+    private suspend fun indexSystem(root: File, sys: SystemDef, guide: Map<String, GuideEntry>, gen: Long, force: Boolean): Pair<Int, Int> {
         val gamelistFile = sys.gamelist?.let { File(root, it) }
         val gamelistMtime = gamelistFile?.takeIf { it.isFile }?.lastModified() ?: 0L
         val existing = dao.signatures(sys.id).associateBy { it.id }

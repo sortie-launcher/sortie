@@ -26,14 +26,16 @@ data class GameEntity(
     val playersMax: Int,
     val fit: Int,
     val hook: String?,
-    val flags: String, // comma-joined, lower-case
-    val tags: String, // comma-joined, lower-case
+    // flags and tags are comma-joined, lower-case
+    val flags: String,
+    val tags: String,
     val handWritten: Boolean,
     val cover: String?,
     val screenshot: String?,
     val marquee: String?,
-    val placeholder: Boolean, // 0-byte shed file, not playable here
-    val arriving: Boolean, // Syncthing temp file still being written
+    // placeholder: 0-byte shed file, not playable here; arriving: Syncthing temp file still being written
+    val placeholder: Boolean,
+    val arriving: Boolean,
     val hack: Boolean,
     val addedAt: Long,
     val scanGen: Long

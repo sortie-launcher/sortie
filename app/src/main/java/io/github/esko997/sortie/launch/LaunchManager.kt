@@ -92,6 +92,7 @@ class LaunchManager(
             }
         }
         _log.value = (listOf(LogEntry(TS.format(Date()), game.id, attempts, launched)) + _log.value).take(50)
+        attempts.forEach { android.util.Log.i("SortieLaunch", "${game.id} via ${it.profileId}: ${it.outcome} | ${it.command}") }
         return launched
     }
 
