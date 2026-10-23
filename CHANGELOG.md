@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Title cleaning moved to `data/index/Titles.kt` `cleanTitle` with tests: revision markers need a digit or a lone letter after a
+  space, so Revenge/Revelations/Revolution keep their words.
 - Round 4b: `AppPicker` (search field + icon grid) opens any installed app or opted-in shortcut on a chosen display — the
   companion '+' launcher, and "Open app…" in both switcher sides (the switcher closes and the controller follows). Titles drop
   file-name noise everywhere (rows, tiles, detail header; the file name stays on its own line). `AmbientBackground`: the

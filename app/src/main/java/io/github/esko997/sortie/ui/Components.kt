@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.github.esko997.sortie.data.db.GameEntity
+import io.github.esko997.sortie.data.index.cleanTitle
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlinx.coroutines.delay
@@ -174,10 +175,8 @@ fun FocusRow(onClick: () -> Unit, modifier: Modifier = Modifier, onLongClick: ((
     ) { content() }
 }
 
-/** The title without the file-name noise: "(USA)", "[!]", "v1.1.1", "Rev A" … */
-fun displayTitle(g: GameEntity): String = g.title.replace(TITLE_NOISE, " ").replace(Regex("\\s{2,}"), " ").trim().ifEmpty { g.title }
-
-private val TITLE_NOISE = Regex("""\s*(\([^)]*\)|\[[^]]*]|\bv\d+(\.\d+)*[a-z]?\b|\bRev\s?[A-Z0-9]+\b)""", RegexOption.IGNORE_CASE)
+/** The title without the file-name noise (see [cleanTitle]). */
+fun displayTitle(g: GameEntity): String = cleanTitle(g.title)
 
 @Composable
 fun Stars(fit: Int, modifier: Modifier = Modifier) {
