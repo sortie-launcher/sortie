@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     ProbeScreen(
                         displays = displayManager().displays.map { it.describe() },
-                        presentationTarget = displays.firstOrNull()?.describe(),
+                        presentationTarget = displays.firstOrNull()?.describe()
                     )
                 }
             }
@@ -66,7 +66,7 @@ private fun ProbeScreen(displays: List<String>, presentationTarget: String?) {
         displays.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
         Text(
             presentationTarget?.let { "Presentation on: $it" } ?: "No secondary display",
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyLarge
         )
     }
 }
@@ -81,7 +81,7 @@ private class ProbePresentation(context: Context, display: Display) : Presentati
                 gravity = Gravity.CENTER
                 setBackgroundColor(0xFF101418.toInt())
                 setTextColor(0xFFF2B134.toInt())
-            },
+            }
         )
     }
 }
