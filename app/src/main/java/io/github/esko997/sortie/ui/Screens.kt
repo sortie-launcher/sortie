@@ -180,6 +180,20 @@ fun DiagnosticsScreen(vm: SortieViewModel) {
                 Text("Last index: ${r.files} files, ${r.updated} updated, ${r.removed} removed, ${r.millis} ms", style = MaterialTheme.typography.bodySmall)
                 r.problems.forEach { Text("! $it", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             }
+            val shizuku by vm.shizuku.collectAsState()
+            val moveResult by vm.moveResult.collectAsState()
+            val secondary = snap.device.screens.count > 1
+            SectionTitle("Screens (Shizuku)")
+            Text("Shizuku: ${shizuku.name.lowercase().replace('_', ' ')}", style = MaterialTheme.typography.bodySmall)
+            Row(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { vm.shizukuRefresh() }) { Text("Refresh") }
+                OutlinedButton(onClick = { vm.shizukuRequest() }) { Text("Request permission") }
+                if (secondary) {
+                    OutlinedButton(onClick = { vm.moveTopApp(0, 4) }) { Text("Top app → bottom") }
+                    OutlinedButton(onClick = { vm.moveTopApp(4, 0) }) { Text("Bottom app → top") }
+                }
+            }
+            if (moveResult.isNotBlank()) Text(moveResult, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             SectionTitle("Launch log (newest first)")
         }
         items(log) { e ->

@@ -52,6 +52,15 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { graph.deviceState.refresh() }
     }
 
+    val shizuku = graph.screenMover.status
+    val moveResult = graph.screenMover.lastResult
+
+    fun shizukuRefresh() = graph.screenMover.refresh()
+
+    fun shizukuRequest() = graph.screenMover.requestPermission()
+
+    fun moveTopApp(from: Int, to: Int) = viewModelScope.launch { graph.screenMover.moveTopApp(from, to) }
+
     val biosMissing = graph.deviceState.biosMissing
     val saveStems = graph.deviceState.saveStems
 

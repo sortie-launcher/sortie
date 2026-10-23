@@ -10,6 +10,7 @@ import io.github.esko997.sortie.data.manifest.ManifestStore
 import io.github.esko997.sortie.data.user.PlayLog
 import io.github.esko997.sortie.data.user.UserStore
 import io.github.esko997.sortie.launch.LaunchManager
+import io.github.esko997.sortie.shell.ScreenMover
 import java.io.File
 
 /** Hand-rolled service locator; small enough that a DI framework would be more code than it saves. */
@@ -26,6 +27,7 @@ class SortieApp : Application() {
         val launcher = LaunchManager(app, manifests, user, playLog)
         val folders = FolderRepository(db, manifests, user.data)
         val deviceState = DeviceState(manifests)
+        val screenMover = ScreenMover(app)
     }
 
     override fun onCreate() {

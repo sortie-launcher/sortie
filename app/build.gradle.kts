@@ -30,6 +30,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        aidl = true
     }
 }
 
@@ -54,5 +55,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.coil.compose)
     implementation(libs.androidx.palette)
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
     testImplementation(libs.junit)
 }
