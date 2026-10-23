@@ -49,7 +49,6 @@ fun SwitcherScreen() {
     val state by switcher.state.collectAsState()
     var focused by remember { mutableStateOf<TaskSwitcher.Entry?>(null) }
     var focusedScreen by remember { mutableStateOf(TaskSwitcher.TOP) }
-    var focusedKey by remember { mutableStateOf<String?>(null) }
     val secondary = remember { switcher.secondaryDisplay() }
     DisposableEffect(Unit) {
         switcher.open()
@@ -83,21 +82,15 @@ fun SwitcherScreen() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
-            // The first card of the first non-empty row takes the controller focus whenever the list (re)appears: without this,
-            // coming back from a game leaves nothing focused and Y / Select would act on nothing.
+            // The first card takes the controller focus once, when the list first has cards (coming back from a game leaves
+            // nothing focused and Y / Select would act on nothing). Leaving a card for the buttons below must not pull it back.
             val first = remember { FocusRequester() }
             val onFocus = { e: TaskSwitcher.Entry, d: Int ->
                 focused = e
                 focusedScreen = d
-                focusedKey = "$d/${e.task.id}"
             }
-            val onBlur = { e: TaskSwitcher.Entry, d: Int ->
-                if (focusedKey == "$d/${e.task.id}") {
-                    focused = null
-                    focusedKey = null
-                }
-            }
-            LaunchedEffect(state, focusedKey) { if (focusedKey == null && state.entries.isNotEmpty()) runCatching { first.requestFocus() } }
+            val onBlur = { e: TaskSwitcher.Entry, _: Int -> if (focused === e) focused = null }
+            LaunchedEffect(state.entries.isNotEmpty()) { if (state.entries.isNotEmpty()) runCatching { first.requestFocus() } }
             ScreenRow("Top screen", TaskSwitcher.TOP, state, switcher, first, onFocus, onBlur)
             if (secondary != null) ScreenRow("Bottom screen", secondary, state, switcher, null, onFocus, onBlur)
             Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

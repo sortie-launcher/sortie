@@ -1,13 +1,7 @@
 package io.github.esko997.sortie.ui
 
 import android.graphics.BlurMaskFilter
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,21 +20,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,6 +46,12 @@ import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import io.github.esko997.sortie.data.db.GameEntity
 import java.io.File
+import kotlin.math.PI
+import kotlin.math.sin
+import kotlinx.coroutines.delay
+
+private const val PULSE_HALF_PERIOD_S = 0.6
+private const val PULSE_FOR_S = 3.0
 
 /**
  * Controller-focus highlight shared by every focusable row/tile: a 3dp [colour] border, a soft blurred glow just outside the bounds whose
@@ -58,13 +61,21 @@ import java.io.File
 @Composable
 fun Modifier.focusGlow(focused: Boolean, shape: Shape, colour: Color = Amber, focusedScale: Float = 1.02f, idleBorder: Color = Color.Transparent): Modifier {
     val scale = animateFloatAsState(if (focused) focusedScale else 1f, label = "focusScale")
+    // The glow pulses for a few seconds after the focus lands, then holds: an endless pulse kept Sortie redrawing while idle
+    // (~50% of a core at the display rate, still ~30% sampled at 20 Hz — a launcher waiting for input should cost nothing).
     val pulse: State<Float>? = if (focused) {
-        rememberInfiniteTransition(label = "focusGlow").animateFloat(
-            initialValue = 0.55f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(600, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-            label = "focusGlowAlpha"
-        )
+        val alpha = remember { mutableFloatStateOf(1f) }
+        LaunchedEffect(Unit) {
+            val t0 = System.nanoTime()
+            while (true) {
+                val t = (System.nanoTime() - t0) / 1e9
+                if (t >= PULSE_FOR_S) break
+                alpha.floatValue = 0.775f + 0.225f * sin(t * PI / PULSE_HALF_PERIOD_S).toFloat()
+                delay(50)
+            }
+            alpha.floatValue = 1f
+        }
+        alpha
     } else {
         null
     }
@@ -78,7 +89,13 @@ fun Modifier.focusGlow(focused: Boolean, shape: Shape, colour: Color = Amber, fo
     if (pulse == null) return if (idleBorder == Color.Transparent) base else base.border(2.dp, idleBorder, shape)
     return base
         .drawWithCache {
+            // The blurred outline is rasterised once per size into a bitmap; the pulse then only changes the alpha of one
+            // texture draw per frame. Blurring the path on every frame cost ~70% of a core on the Thor.
             val spread = 3.dp.toPx()
+            val margin = (spread + 12.dp.toPx()).toInt()
+            val w = size.width.toInt() + 2 * margin
+            val h = size.height.toInt() + 2 * margin
+            val bitmap = ImageBitmap(w, h)
             val outline = shape.createOutline(Size(size.width + 2 * spread, size.height + 2 * spread), layoutDirection, this)
             val paint = Paint().apply {
                 color = colour
@@ -86,10 +103,11 @@ fun Modifier.focusGlow(focused: Boolean, shape: Shape, colour: Color = Amber, fo
                 strokeWidth = 6.dp.toPx()
                 asFrameworkPaint().maskFilter = BlurMaskFilter(8.dp.toPx(), BlurMaskFilter.Blur.NORMAL)
             }
-            onDrawBehind {
-                paint.alpha = colour.alpha * pulse.value
-                translate(-spread, -spread) { drawIntoCanvas { it.drawOutline(outline, paint) } }
+            Canvas(bitmap).run {
+                translate(margin - spread, margin - spread)
+                drawOutline(outline, paint)
             }
+            onDrawBehind { drawImage(bitmap, topLeft = Offset(-margin.toFloat(), -margin.toFloat()), alpha = pulse.value) }
         }
         .border(3.dp, colour, shape)
 }
