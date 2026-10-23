@@ -126,7 +126,8 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
                 tags = g?.tags?.joinToString(",")?.lowercase(Locale.ROOT) ?: "", handWritten = g?.auto == false,
                 cover = media.find("covers", stem), screenshot = media.find("screenshots", stem), marquee = media.find("marquees", stem),
                 placeholder = fd.size == 0L, arriving = isArriving, hack = hackRx?.containsMatchIn(fd.file.name) ?: false,
-                addedAt = sig?.addedAt ?: fd.mtime // first seen = the file's own mtime (adb and Syncthing preserve it)
+                // first seen = the file's own mtime (adb and Syncthing preserve it)
+                addedAt = sig?.addedAt ?: fd.mtime
             )
         }
         rows.chunked(SQLITE_CHUNK).forEach { dao.upsertAll(it) }
