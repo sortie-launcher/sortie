@@ -18,6 +18,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import io.github.esko997.sortie.shell.TaskSwitcher
 import io.github.esko997.sortie.ui.AmbientBackground
@@ -40,6 +43,11 @@ class MainActivity : ComponentActivity() {
         instances.clear()
         instances += this
         enableEdgeToEdge()
+        // No status bar over the launcher; a swipe from the top still shows it transiently.
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.statusBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
         val graph = (application as SortieApp).graph
         graph.launcher.currentDisplayId = { myDisplayId() }
         graph.launcher.afterLaunch = { target ->
@@ -123,7 +131,19 @@ class MainActivity : ComponentActivity() {
         showCompanion()
     }
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean = (event?.repeatCount == 0 && Hotkeys.onKeyDown(keyCode)) || super.onKeyDown(keyCode, event)
+    /**
+     * Hotkeys fire on the first key-down, except L1/R1 which fire on key-up: a held R1 is "favourite" on the focused tile
+     * (`Modifier.keyLongPress` swallows the hold and its release), and must not also page sorts/systems.
+     */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_L1 || keyCode == KeyEvent.KEYCODE_BUTTON_R1) return true
+        return (event?.repeatCount == 0 && Hotkeys.onKeyDown(keyCode)) || super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_L1 || keyCode == KeyEvent.KEYCODE_BUTTON_R1) return Hotkeys.onKeyDown(keyCode) || super.onKeyUp(keyCode, event)
+        return super.onKeyUp(keyCode, event)
+    }
 
     private fun myDisplayId(): Int = display?.displayId ?: Display.DEFAULT_DISPLAY
 

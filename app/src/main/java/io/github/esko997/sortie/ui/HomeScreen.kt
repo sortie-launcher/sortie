@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.ui
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -16,9 +17,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -64,7 +68,7 @@ object HomeIds {
     fun isGame(id: String): Boolean = LibraryItem.isGameId(id) && !id.startsWith(SYSTEM) && !id.startsWith(FOLDER) && id != APPS
 }
 
-private val SORTS = listOf("alpha" to "Alphabetical", "count" to "Game count", "generation" to "Generation", "custom" to "Custom")
+val SORTS = listOf("alpha" to "Alphabetical", "count" to "Game count", "generation" to "Generation", "custom" to "Custom", "console" to "By Console")
 
 private val BITS = Regex("^(\\d+)-bit", RegexOption.IGNORE_CASE)
 
@@ -119,6 +123,9 @@ fun HomeScreen(
     val grid = user.homeLayout == "grid"
     val sort = user.homeSort.takeIf { s -> SORTS.any { it.first == s } } ?: "alpha"
     val custom = sort == "custom"
+    val console = sort == "console"
+    val homeConsole by vm.homeConsole.collectAsState()
+    LaunchedEffect(console, systems) { if (console && homeConsole == null && systems.isNotEmpty()) vm.homeConsole.value = systems.first().def.id }
     var sheet by remember { mutableStateOf<HomeTile?>(null) }
     // edit mode: the lifted tile id and the working copy of user.layout it is being moved through
     var lifted by remember { mutableStateOf<String?>(null) }
@@ -128,10 +135,12 @@ fun HomeScreen(
         moving = null
     }
     val currentGrid by rememberUpdatedState(grid)
+    val currentConsole by rememberUpdatedState(console)
     val currentOnSearch by rememberUpdatedState(onSearch)
     LaunchedEffect(Unit) { Selection.set(null) }
     LaunchedEffect(sort) { cancelMove() }
     BackHandler(enabled = lifted != null) { cancelMove() }
+    BackHandler(enabled = console && lifted == null) { vm.leaveConsoleSort() }
     // Y opens search from Home (Start is intercepted by Android while Sortie is the home app); Select toggles list/grid.
     DisposableEffect(Unit) {
         val keys = setOf(Hotkeys.Key.FAVOURITE, Hotkeys.Key.CONTEXT)
@@ -143,7 +152,8 @@ fun HomeScreen(
             if (lifted != null) return@collect
             when (it) {
                 Hotkeys.Key.FAVOURITE -> currentOnSearch()
-                Hotkeys.Key.CONTEXT -> vm.setHomeLayout(if (currentGrid) "list" else "grid")
+                Hotkeys.Key.CONTEXT -> if (!currentConsole) vm.setHomeLayout(if (currentGrid) "list" else "grid") // the console list toggles its own
+
                 else -> Unit
             }
         }
@@ -273,6 +283,29 @@ fun HomeScreen(
             Text("Sort", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             SORTS.forEach { (id, label) -> SortChip(label, selected = sort == id) { vm.setHomeSort(id) } }
         }
+        if (console) {
+            // By Console: a strip of consoles (L1/R1 page it, B leaves the sort) and the chosen console's games below
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                state = rememberLazyListState().also { st ->
+                    val i = systems.indexOfFirst { it.def.id == homeConsole }
+                    LaunchedEffect(i) { if (i >= 0) st.animateScrollToItem(i) }
+                }
+            ) {
+                items(systems, key = { it.def.id }) { row ->
+                    SortChip(row.def.label, selected = row.def.id == homeConsole) { vm.homeConsole.value = row.def.id }
+                }
+            }
+            val chosen = systems.firstOrNull { it.def.id == homeConsole }
+            if (chosen != null) {
+                val games by remember(chosen.def.id) { vm.gamesOf(chosen.def.id) }.collectAsState(emptyList())
+                Box(Modifier.weight(1f)) { GameListScreen(chosen.def.label, games, vm, onGame) }
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
+            return@Column
+        }
         // While a tile is lifted the grid itself holds the focus, so every D-pad press reaches [liftKeys] instead of moving the
         // focus between tiles. The sheet that started the lift is still closing when `lifted` is set: retry until it lands.
         val gridFocus = remember { FocusRequester() }
@@ -331,7 +364,13 @@ fun HomeScreen(
                                 t.onClick()
                             }
                         },
-                        onLongClick = { if (lifted == null) sheet = t }
+                        onLongClick = { if (lifted == null) sheet = t },
+                        onFavourite = t.item?.let { item ->
+                            {
+                                val now = vm.toggleFavourite(item.id)
+                                Toast.makeText(context, if (now) "Added to favourites" else "Removed from favourites", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     )
                 }
             }
@@ -384,7 +423,8 @@ private fun HomeTileView(
     favourite: Boolean,
     minutes: Int?,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    onFavourite: (() -> Unit)?
 ) {
     val item = t.item
     if (grid) {
@@ -406,7 +446,8 @@ private fun HomeTileView(
                 paletteGlow = true,
                 favourite = favourite,
                 lifted = lifted,
-                onLongClick = onLongClick
+                onLongClick = onLongClick,
+                onFavourite = onFavourite
             )
             is LibraryItem.App -> SquareTile(
                 t.title,
@@ -414,7 +455,8 @@ private fun HomeTileView(
                 favourite = favourite,
                 lifted = lifted,
                 icon = { vm.appIcon(item.app.pkg) },
-                onLongClick = onLongClick
+                onLongClick = onLongClick,
+                onFavourite = onFavourite
             )
             is LibraryItem.Shortcut -> SquareTile(
                 t.title,
@@ -422,7 +464,8 @@ private fun HomeTileView(
                 favourite = favourite,
                 lifted = lifted,
                 icon = { vm.shortcutIcon(item.shortcut) },
-                onLongClick = onLongClick
+                onLongClick = onLongClick,
+                onFavourite = onFavourite
             )
         }
     } else {
@@ -432,9 +475,11 @@ private fun HomeTileView(
                     val colour = t.colour ?: Amber
                     FocusRow(onClick = onClick, onLongClick = onLongClick, colour = colour) { FolderLine(t.title, t.subtitle, colour) }
                 }
-                is LibraryItem.Game -> GameRow(item.game, minutes, onClick = onClick, onLongClick = onLongClick)
-                is LibraryItem.App -> LauncherRow(t.title, t.subtitle, favourite, onClick, onLongClick, minutes, tall = true) { vm.appIcon(item.app.pkg) }
-                is LibraryItem.Shortcut -> LauncherRow(t.title, t.subtitle, favourite, onClick, onLongClick, minutes, tall = true) {
+                is LibraryItem.Game -> GameRow(item.game, minutes, onClick = onClick, onLongClick = onLongClick, onFavourite = onFavourite)
+                is LibraryItem.App -> LauncherRow(t.title, t.subtitle, favourite, onClick, onLongClick, minutes, tall = true, onFavourite = onFavourite) {
+                    vm.appIcon(item.app.pkg)
+                }
+                is LibraryItem.Shortcut -> LauncherRow(t.title, t.subtitle, favourite, onClick, onLongClick, minutes, tall = true, onFavourite = onFavourite) {
                     vm.shortcutIcon(item.shortcut)
                 }
             }

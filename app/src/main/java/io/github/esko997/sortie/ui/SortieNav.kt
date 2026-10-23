@@ -29,7 +29,11 @@ fun SortieNav(vm: SortieViewModel) {
             val route = nav.currentBackStackEntry?.destination?.route ?: ""
             when (key) {
                 Hotkeys.Key.SEARCH -> if (route != "search") nav.navigate("search") { launchSingleTop = true }
-                Hotkeys.Key.PREV_FOLDER, Hotkeys.Key.NEXT_FOLDER -> if (systems.isNotEmpty()) {
+                Hotkeys.Key.PREV_FOLDER, Hotkeys.Key.NEXT_FOLDER -> if (route == "home") {
+                    // on Home L1/R1 page the sort modes, or the consoles while "By Console" is the sort
+                    val delta = if (key == Hotkeys.Key.NEXT_FOLDER) 1 else -1
+                    if (vm.user.value.homeSort == "console") vm.cycleHomeConsole(delta) else vm.cycleHomeSort(delta, SORTS.map { it.first })
+                } else if (systems.isNotEmpty()) {
                     val cur = nav.currentBackStackEntry?.arguments?.getString("id")
                     val i = systems.indexOfFirst { it.def.id == cur }
                     val next = when {

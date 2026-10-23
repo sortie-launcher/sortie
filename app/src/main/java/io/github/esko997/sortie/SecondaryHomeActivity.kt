@@ -34,7 +34,7 @@ class SecondaryHomeActivity : CompanionHost() {
  */
 abstract class CompanionHost : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
-    private val handOff = Runnable { graph().switcher.handOff(myDisplayId()) }
+    private val handOff = Runnable { if (!keepController) graph().switcher.handOff(myDisplayId()) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +53,10 @@ abstract class CompanionHost : ComponentActivity() {
      */
     @Volatile
     var keepController = false
+        set(value) {
+            field = value
+            if (value) handler.removeCallbacks(handOff) // the tap that opened the picker has a hand-off pending
+        }
 
     fun releaseController() {
         keepController = false

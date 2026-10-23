@@ -130,7 +130,31 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
     /** List or grid for every browse screen (system, folder, search, apps); one setting, separate from home. */
     fun setBrowseLayout(layout: String) = graph.user.setBrowseLayout(layout)
 
-    fun setHomeSort(sort: String) = graph.user.setHomeSort(sort)
+    fun setHomeSort(sort: String) {
+        if (sort == "console" && user.value.homeSort != "console") homeSortBefore = user.value.homeSort
+        graph.user.setHomeSort(sort)
+    }
+
+    /** The sort to return to when "By Console" is left with B. */
+    private var homeSortBefore = "alpha"
+
+    fun leaveConsoleSort() = graph.user.setHomeSort(homeSortBefore.takeIf { it != "console" } ?: "alpha")
+
+    /** L1/R1 on Home: the next/previous sort mode (list order from HomeScreen). */
+    fun cycleHomeSort(delta: Int, sorts: List<String>) {
+        val i = sorts.indexOf(user.value.homeSort).coerceAtLeast(0)
+        setHomeSort(sorts[(i + delta + sorts.size) % sorts.size])
+    }
+
+    /** The console shown by the "By Console" home sort (session state; first system until chosen). */
+    val homeConsole = MutableStateFlow<String?>(null)
+
+    fun cycleHomeConsole(delta: Int) {
+        val ids = systems.value.map { it.def.id }
+        if (ids.isEmpty()) return
+        val i = ids.indexOf(homeConsole.value)
+        homeConsole.value = ids[((if (i < 0) 0 else i + delta) + ids.size) % ids.size]
+    }
 
     fun setLayout(ids: List<String>) = graph.user.setLayout(ids)
 
@@ -227,7 +251,12 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
         graph.launcher.launch(game, only)
     }
 
-    fun toggleFavourite(id: String) = graph.user.toggleFavourite(id)
+    /** Returns whether [id] is a favourite after the toggle. */
+    fun toggleFavourite(id: String): Boolean {
+        val now = id !in user.value.favourites
+        graph.user.toggleFavourite(id)
+        return now
+    }
 
     fun setOverride(id: String, profileId: String?) = graph.user.setOverride(id, profileId)
 

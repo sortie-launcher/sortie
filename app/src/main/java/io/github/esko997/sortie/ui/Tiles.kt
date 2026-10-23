@@ -70,7 +70,8 @@ fun SquareTile(
     favourite: Boolean = false,
     lifted: Boolean = false,
     icon: (() -> Drawable?)? = null,
-    onLongClick: (() -> Unit)? = null
+    onLongClick: (() -> Unit)? = null,
+    onFavourite: (() -> Unit)? = null
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -88,7 +89,7 @@ fun SquareTile(
             .aspectRatio(1f)
             .clip(shape)
             .background(colour?.copy(alpha = 0.22f) ?: Slate)
-            .keyLongPress(onLongClick)
+            .keyLongPress(onLongClick, onFavourite)
             .combinedClickable(interactionSource = interaction, indication = null, onClick = onClick, onLongClick = onLongClick)
     ) {
         if (icon != null) {

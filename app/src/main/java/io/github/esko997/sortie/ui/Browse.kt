@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -96,24 +97,46 @@ fun ItemCell(
     appLabel: (String) -> String = { it },
     hasSave: Boolean = false
 ) {
+    val context = LocalContext.current
+    val fav = {
+        val now = vm.toggleFavourite(item.id)
+        Toast.makeText(context, if (now) "Added to favourites" else "Removed from favourites", Toast.LENGTH_SHORT).show()
+    }
     when (item) {
         is LibraryItem.Game -> {
             val g = item.game
             if (grid) {
-                SquareTile(displayTitle(g), onClick, cover = g.cover ?: g.screenshot, paletteGlow = true, favourite = favourite, onLongClick = onLongClick)
+                SquareTile(
+                    displayTitle(g),
+                    onClick,
+                    cover = g.cover ?: g.screenshot,
+                    paletteGlow = true,
+                    favourite = favourite,
+                    onLongClick = onLongClick,
+                    onFavourite = fav
+                )
             } else {
-                GameRow(g, minutes, onClick = onClick, onLongClick = onLongClick, hasSave = hasSave)
+                GameRow(g, minutes, onClick = onClick, onLongClick = onLongClick, hasSave = hasSave, onFavourite = fav)
             }
         }
         is LibraryItem.App -> if (grid) {
-            SquareTile(item.label, onClick, favourite = favourite, icon = { vm.appIcon(item.app.pkg) }, onLongClick = onLongClick)
+            SquareTile(item.label, onClick, favourite = favourite, icon = { vm.appIcon(item.app.pkg) }, onLongClick = onLongClick, onFavourite = fav)
         } else {
-            LauncherRow(item.label, "app · ${item.app.pkg}", favourite, onClick, onLongClick, minutes, tall = true) { vm.appIcon(item.app.pkg) }
+            LauncherRow(
+                item.label,
+                "app · ${item.app.pkg}",
+                favourite,
+                onClick,
+                onLongClick,
+                minutes,
+                tall = true,
+                onFavourite = fav
+            ) { vm.appIcon(item.app.pkg) }
         }
         is LibraryItem.Shortcut -> if (grid) {
-            SquareTile(item.label, onClick, favourite = favourite, icon = { vm.shortcutIcon(item.shortcut) }, onLongClick = onLongClick)
+            SquareTile(item.label, onClick, favourite = favourite, icon = { vm.shortcutIcon(item.shortcut) }, onLongClick = onLongClick, onFavourite = fav)
         } else {
-            LauncherRow(item.label, "shortcut · ${appLabel(item.shortcut.pkg)}", favourite, onClick, onLongClick, minutes, tall = true) {
+            LauncherRow(item.label, "shortcut · ${appLabel(item.shortcut.pkg)}", favourite, onClick, onLongClick, minutes, tall = true, onFavourite = fav) {
                 vm.shortcutIcon(item.shortcut)
             }
         }

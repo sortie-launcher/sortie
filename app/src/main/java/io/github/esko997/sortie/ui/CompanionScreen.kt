@@ -1,6 +1,11 @@
 package io.github.esko997.sortie.ui
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
+import android.os.BatteryManager
 import android.widget.ImageView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -24,6 +30,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +60,7 @@ import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.apps.ShortcutEntry
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.db.SessionEntity
+import io.github.esko997.sortie.shell.ScreenMover
 import io.github.esko997.sortie.shell.TaskSwitcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -86,6 +95,7 @@ fun CompanionScreen(displayId: Int) {
                 val s = session
                 if (s != null) NowPlaying(graph, s) else HeroPanel()
                 CornerPlus(Modifier.align(Alignment.BottomEnd).padding(16.dp)) { launcher = true }
+                StatusStrip(graph, Modifier.align(Alignment.TopEnd).padding(12.dp))
             }
         }
     }
@@ -190,6 +200,50 @@ private fun Panel(title: String, subtitle: String, status: String? = null, onTap
 private fun gameLine(g: GameEntity): String = g.hook ?: listOfNotNull(g.year?.toString(), g.developer, g.genre).joinToString(" · ")
 
 /** Small translucent round '+' in the corner of the idle panel; opens [TouchLauncher]. */
+/**
+ * Battery and a bell, top-right of the idle panel. Battery comes from the sticky ACTION_BATTERY_CHANGED broadcast (no polling;
+ * the receiver only lives while the panel is composed). The bell opens the system notification shade on this display over
+ * Shizuku (`cmd statusbar expand-notifications`): Sortie does not read notifications itself — that needs a
+ * NotificationListenerService, a permanent bound service, which is what kept Cocoon alive in the background.
+ */
+@Composable
+private fun StatusStrip(graph: SortieApp.Graph, modifier: Modifier) {
+    val context = LocalContext.current
+    var level by remember { mutableStateOf(-1) }
+    var charging by remember { mutableStateOf(false) }
+    DisposableEffect(Unit) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, intent: Intent) {
+                val l = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
+                level = if (l < 0) -1 else l * 100 / scale.coerceAtLeast(1)
+                val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+            }
+        }
+        context.registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+    val shizuku by graph.screenMover.status.collectAsState()
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (level >= 0) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Box(Modifier.size(22.dp, 11.dp).clip(RoundedCornerShape(2.dp)).background(Slate)) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(level / 100f).background(if (level <= 15 && !charging) Color(0xFFE05B4B) else Amber))
+                }
+                Text((if (charging) "⚡" else "") + "$level%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (shizuku == ScreenMover.Status.READY) {
+            Text(
+                "🔔",
+                fontSize = 18.sp,
+                modifier = Modifier.clip(CircleShape).clickable(onClickLabel = "Notifications") { graph.screenMover.expandNotifications() }.padding(4.dp)
+            )
+        }
+    }
+}
+
 @Composable
 private fun CornerPlus(modifier: Modifier, onClick: () -> Unit) {
     Box(

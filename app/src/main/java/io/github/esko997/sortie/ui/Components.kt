@@ -120,28 +120,32 @@ fun Modifier.focusGlow(focused: Boolean, shape: Shape, colour: Color = Amber, fo
 }
 
 /**
- * Hold-A for the controller. `combinedClickable`'s long press only listens to touch; on a held key Android repeats the key-down
- * (first repeat after ~500 ms), so the first repeat is the long press. Every release that follows is swallowed so it does not
- * also click: the gamepad's BUTTON_A arrives twice, raw and as the framework's DPAD_CENTER fallback, and the framework sends
- * the fallback's key-up regardless of whether the raw key-up was handled. A fresh press (repeat 0) re-arms.
+ * Held buttons for the controller: A (context sheet) and R1 (favourite). `combinedClickable`'s long press only listens to touch;
+ * on a held key Android repeats the key-down (first repeat after ~500 ms), so the first repeat is the hold. Every release that
+ * follows is swallowed so it does not also click or page: the gamepad's BUTTON_A arrives twice, raw and as the framework's
+ * DPAD_CENTER fallback, whose key-up is sent regardless; R1's short press pages systems/sorts on key-up (MainActivity), so
+ * swallowing the up after a hold is what keeps a favourite from also paging. A fresh press (repeat 0) re-arms.
  */
 @Composable
-fun Modifier.keyLongPress(onLongClick: (() -> Unit)?): Modifier {
-    if (onLongClick == null) return this
+fun Modifier.keyLongPress(onLongClick: (() -> Unit)?, onHoldR1: (() -> Unit)? = null): Modifier {
+    if (onLongClick == null && onHoldR1 == null) return this
     var fired by remember { mutableStateOf(false) }
     return onPreviewKeyEvent { e ->
-        val isA = e.key == Key.ButtonA || e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
-        if (!isA) return@onPreviewKeyEvent false
+        val action = when (e.key) {
+            Key.ButtonA, Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> onLongClick
+            Key.ButtonR1 -> onHoldR1
+            else -> null
+        } ?: return@onPreviewKeyEvent false
         when {
             e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0 -> {
                 // a fresh press: the previous hold is over (its key-ups, however many, have passed)
-                if (fired && e.key == Key.ButtonA) fired = false
+                if (fired && e.key != Key.DirectionCenter) fired = false
                 fired
             }
             e.type == KeyEventType.KeyDown -> {
                 if (!fired) {
                     fired = true
-                    onLongClick()
+                    action()
                 }
                 true
             }
@@ -153,7 +157,14 @@ fun Modifier.keyLongPress(onLongClick: (() -> Unit)?): Modifier {
 /** A focus-aware row: [focusGlow] outline in [colour] plus a subtle surface when focused (D-pad). Long press = context menu. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun FocusRow(onClick: () -> Unit, modifier: Modifier = Modifier, onLongClick: (() -> Unit)? = null, colour: Color = Amber, content: @Composable () -> Unit) {
+fun FocusRow(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    colour: Color = Amber,
+    onFavourite: (() -> Unit)? = null,
+    content: @Composable () -> Unit
+) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(10.dp)
@@ -163,7 +174,7 @@ fun FocusRow(onClick: () -> Unit, modifier: Modifier = Modifier, onLongClick: ((
             .fillMaxWidth()
             .clip(shape)
             .background(if (focused) Slate else Color.Transparent)
-            .keyLongPress(onLongClick)
+            .keyLongPress(onLongClick, onFavourite)
             .combinedClickable(
                 interactionSource = interaction,
                 indication = null,
@@ -197,8 +208,15 @@ fun Cover(game: GameEntity, width: Int = 56, height: Int = 72, modifier: Modifie
 }
 
 @Composable
-fun GameRow(game: GameEntity, minutes: Int?, onClick: () -> Unit, onLongClick: (() -> Unit)? = null, hasSave: Boolean = false) {
-    FocusRow(onClick = onClick, onLongClick = onLongClick) {
+fun GameRow(
+    game: GameEntity,
+    minutes: Int?,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    hasSave: Boolean = false,
+    onFavourite: (() -> Unit)? = null
+) {
+    FocusRow(onClick = onClick, onLongClick = onLongClick, onFavourite = onFavourite) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Cover(game)
             Column(Modifier.padding(start = 12.dp).weight(1f)) {

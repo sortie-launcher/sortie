@@ -138,6 +138,11 @@ class ScreenMover(private val context: Context) {
         return stale.count { removeTask(it) }.also { if (it > 0) Log.i(TAG, "removed $it stale launcher task(s): ${stale.map { t -> t.component }}") }
     }
 
+    /** Opens the system notification shade (on whichever display the status bar serves). */
+    fun expandNotifications() {
+        scope.launch { ok(exec("cmd statusbar expand-notifications"), "expand notifications") }
+    }
+
     fun sweepAsync() {
         scope.launch { sweepStaleLaunchers() }
     }

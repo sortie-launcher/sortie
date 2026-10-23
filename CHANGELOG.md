@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Round 4c: status bar hidden over Sortie (swipe down still shows it); hold R1 on any game/app/shortcut tile or row toggles its
+  favourite (`keyLongPress` handles R1; L1/R1 short presses now fire on key-up so a hold does not also page); on Home L1/R1 page
+  the sort modes and a new "By Console" sort shows a console strip (L1/R1 page consoles, B returns to the previous sort) with
+  the chosen console's games below; the companion idle panel has a battery gauge (sticky broadcast, no polling) and a bell that
+  opens the system notification shade over Shizuku — Sortie does not read notifications (that needs a permanent
+  NotificationListenerService). Companion '+' picker: the pending hand-off from the tap that opened it is cancelled.
 - Tile/row text is white again over the ambient gradient (the transparent Surface had lost its content colour). The companion
   '+' picker keeps the controller while open (`CompanionHost.keepController`): a tap on its search field no longer hands the
   display away and closes the keyboard; closing the picker hands it back.

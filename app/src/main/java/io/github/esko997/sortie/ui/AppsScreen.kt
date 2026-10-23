@@ -165,9 +165,10 @@ fun LauncherRow(
     onLongClick: (() -> Unit)? = null,
     minutes: Int? = null,
     tall: Boolean = false,
+    onFavourite: (() -> Unit)? = null,
     icon: () -> Drawable?
 ) {
-    FocusRow(onClick = onClick, onLongClick = onLongClick) {
+    FocusRow(onClick = onClick, onLongClick = onLongClick, onFavourite = onFavourite) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (tall) {
                 Box(Modifier.size(56.dp, 72.dp).clip(RoundedCornerShape(6.dp)).background(Slate), contentAlignment = Alignment.Center) {
