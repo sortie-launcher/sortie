@@ -11,7 +11,7 @@ import java.io.File
  * Nothing here knows any emulator by name; the manifest does.
  */
 object IntentBuilder {
-    private val PLACEHOLDER = Regex("\\$\\{(\\w+)}")
+    private val PLACEHOLDER = Regex("\\$\\{(\\w+)\\}")
     private val TITLE_ID = Regex("[A-Z]{4}\\d{5}")
 
     fun vars(file: File, systemId: String, contentUri: Uri?): Map<String, String> = mapOf(

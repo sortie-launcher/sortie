@@ -27,6 +27,9 @@ class SortieApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Many emulators only accept file:// URIs (PPSSPP, Mupen64Plus FZ, ...). Android forbids exposing them unless the
+        // app opts out of the StrictMode check, which is what every launcher frontend does.
+        android.os.StrictMode.setVmPolicy(android.os.StrictMode.VmPolicy.Builder().build())
         graph = Graph(this)
     }
 
