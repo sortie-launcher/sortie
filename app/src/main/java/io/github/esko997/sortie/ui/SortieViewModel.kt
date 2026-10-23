@@ -49,7 +49,11 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
         if (!granted) return
         if (manifests.value.errors.isNotEmpty()) graph.manifests.reload()
         reindex()
+        viewModelScope.launch { graph.deviceState.refresh() }
     }
+
+    val biosMissing = graph.deviceState.biosMissing
+    val saveStems = graph.deviceState.saveStems
 
     val systems: StateFlow<List<SystemRow>> =
         combine(manifests, dao.countsBySystem()) { snap, counts ->
@@ -118,5 +122,8 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
 
     fun reloadManifests() = viewModelScope.launch { graph.manifests.reloadNow() }
 
-    fun onForeground() = viewModelScope.launch { graph.playLog.end() }
+    fun onForeground() = viewModelScope.launch {
+        graph.playLog.end()
+        graph.deviceState.refresh()
+    }
 }

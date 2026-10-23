@@ -9,7 +9,10 @@ data class DeviceManifest(
     val device: String = "unknown",
     val root: String,
     val screens: Screens = Screens(),
-    val shizuku: Boolean = false
+    val shizuku: Boolean = false,
+    /** Where RetroArch-style saves live (scanned two levels deep for `<stem>.*`) and where BIOS files are expected. */
+    val saves: List<String> = emptyList(),
+    val biosDir: String? = null
 ) {
     /** `presentationIndex` picks which secondary display is "bottom" when several exist. */
     @Serializable
@@ -35,7 +38,9 @@ data class SystemDef(
     val media: String? = null,
     val profiles: List<String> = emptyList(),
     val colour: String = "#64748b",
-    val order: Int = 0
+    val order: Int = 0,
+    /** BIOS files (relative to device.biosDir) the system's cores need; missing ones are shown as a badge. */
+    val bios: List<String> = emptyList()
 )
 
 @Serializable

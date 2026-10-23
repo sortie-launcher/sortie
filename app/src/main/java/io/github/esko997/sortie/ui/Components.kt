@@ -73,7 +73,7 @@ fun Cover(game: GameEntity, width: Int = 56, height: Int = 72, modifier: Modifie
 }
 
 @Composable
-fun GameRow(game: GameEntity, minutes: Int?, onClick: () -> Unit, onLongClick: (() -> Unit)? = null) {
+fun GameRow(game: GameEntity, minutes: Int?, onClick: () -> Unit, onLongClick: (() -> Unit)? = null, hasSave: Boolean = false) {
     FocusRow(onClick = onClick, onLongClick = onLongClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Cover(game)
@@ -95,6 +95,7 @@ fun GameRow(game: GameEntity, minutes: Int?, onClick: () -> Unit, onLongClick: (
                     if (game.placeholder) Badge("not on device", Color(0xFF7F1D1D))
                     if (game.arriving) Badge("arriving", Color(0xFF1E3A8A))
                     if ((minutes ?: 0) > 0) Badge("${minutes}m played", Color(0xFF14532D))
+                    if (hasSave) Badge("save", Color(0xFF3F3F46))
                 }
             }
         }

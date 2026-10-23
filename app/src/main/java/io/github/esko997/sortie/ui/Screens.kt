@@ -38,6 +38,7 @@ import io.github.esko997.sortie.data.db.GameEntity
 fun HomeScreen(vm: SortieViewModel, onSystem: (String) -> Unit, onFolder: (String) -> Unit, onSearch: () -> Unit, onDiagnostics: () -> Unit) {
     val systems by vm.systems.collectAsState()
     val folders by vm.folders.collectAsState()
+    val biosMissing by vm.biosMissing.collectAsState()
     androidx.compose.runtime.LaunchedEffect(Unit) { Selection.set(null) }
     val total by vm.total.collectAsState()
     val index by vm.index.collectAsState()
@@ -65,7 +66,18 @@ fun HomeScreen(vm: SortieViewModel, onSystem: (String) -> Unit, onFolder: (Strin
         }
         item { SectionTitle("Systems") }
         items(systems, key = { it.def.id }) { row ->
-            FocusRow(onClick = { onSystem(row.def.id) }) { FolderLine(row.def.label, "${row.count} · ${row.def.generation}", parseColour(row.def.colour)) }
+            val missing = biosMissing[row.def.id]
+            FocusRow(onClick = { onSystem(row.def.id) }) {
+                FolderLine(
+                    row.def.label,
+                    "${row.count} · ${row.def.generation}" + (
+                        missing?.let {
+                            " · BIOS missing: ${it.joinToString()}"
+                        } ?: ""
+                        ),
+                    parseColour(row.def.colour)
+                )
+            }
         }
     }
 }
@@ -84,6 +96,7 @@ private fun FolderLine(title: String, subtitle: String, colour: androidx.compose
 @Composable
 fun GameListScreen(title: String, games: List<GameEntity>, vm: SortieViewModel, onGame: (String) -> Unit, subtitle: String? = null) {
     val stats by vm.playStats.collectAsState()
+    val saves by vm.saveStems.collectAsState()
     var minFit by rememberSaveable { mutableStateOf(0) }
     var onDeviceOnly by rememberSaveable { mutableStateOf(true) }
     var notesOnly by rememberSaveable { mutableStateOf(false) }
@@ -108,7 +121,9 @@ fun GameListScreen(title: String, games: List<GameEntity>, vm: SortieViewModel, 
                 FilterChip(selected = onDeviceOnly, onClick = { onDeviceOnly = !onDeviceOnly }, label = { Text("on device") })
             }
         }
-        items(shown, key = { it.id }) { g -> GameRow(g, stats[g.id]?.minutes, onClick = { onGame(g.id) }) }
+        items(shown, key = {
+            it.id
+        }) { g -> GameRow(g, stats[g.id]?.minutes, hasSave = g.fileName.substringBeforeLast('.').lowercase() in saves, onClick = { onGame(g.id) }) }
     }
 }
 
