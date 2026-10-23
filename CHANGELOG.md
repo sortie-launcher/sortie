@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- M4 (in progress): palette theming on the detail screen, per-share absolute roots, manifests for DMG/Vert/Nova, GitHub
+  Actions debug build, release checklist.
 - M3 (in progress): companion panel on the other screen, X swaps screens, launches target the top screen when navigating
   from the bottom, HOME role, single-instance guard, disc grouping and duplicate-format hiding (schema v3).
 - M2: smart folders from folders.json (rule engine with tests, repository, home counts, folder screen, Pick one, Select
