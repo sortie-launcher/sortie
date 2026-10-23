@@ -122,7 +122,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        vm.onStart(Environment.isExternalStorageManager())
+        val granted = Environment.isExternalStorageManager()
+        if (granted && SortieApp.relocateIfNeeded(application, (application as SortieApp).graph)) return
+        vm.onStart(granted)
     }
 
     override fun onResume() {

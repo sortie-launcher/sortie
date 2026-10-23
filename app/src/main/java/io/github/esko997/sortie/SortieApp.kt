@@ -1,7 +1,13 @@
 package io.github.esko997.sortie
 
+import android.app.AlarmManager
 import android.app.Application
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
 import android.os.StrictMode
+import android.os.SystemClock
+import android.util.Log
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -70,6 +76,26 @@ class SortieApp :
 
     companion object {
         /** The card root is not known until device.json is read, so look for `sortie/device.json` on every mounted volume. */
+        /**
+         * The card directory the running process is bound to may be wrong on the very first run: before the all-files grant an
+         * SD card's `device.json` is unreadable, so [locateSortieDir] falls back to primary storage. The stores bind to one
+         * directory for the life of the process, so once the grant exists and discovery disagrees, the process restarts
+         * (MainActivity relaunches via an alarm; as the home app it comes back anyway).
+         */
+        fun relocateIfNeeded(app: Application, graph: Graph): Boolean {
+            if (locateSortieDir(app) == graph.sortieDir) return false
+            Log.i("Sortie", "card directory changed after the storage grant; restarting")
+            val restart = PendingIntent.getActivity(
+                app,
+                0,
+                Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                PendingIntent.FLAG_IMMUTABLE
+            )
+            (app.getSystemService(Context.ALARM_SERVICE) as AlarmManager).set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 400, restart)
+            Runtime.getRuntime().exit(0)
+            return true
+        }
+
         fun locateSortieDir(app: Application): File {
             val candidates = buildList {
                 app.getExternalFilesDirs(null).filterNotNull().forEach { d ->
