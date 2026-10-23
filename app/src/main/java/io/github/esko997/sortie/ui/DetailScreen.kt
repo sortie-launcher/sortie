@@ -82,6 +82,7 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel) {
                     }
                 }
                 FocusRow(onClick = { vm.setOverride(game.id, null) }) { Text("Clear override", style = MaterialTheme.typography.bodySmall) }
+                FocusRow(onClick = { vm.hide(game.id, true) }) { Text("Hide this game from folders", style = MaterialTheme.typography.bodySmall) }
             }
             if (game.flags.isNotBlank() || game.tags.isNotBlank()) {
                 Row { (game.flags.split(',') + game.tags.split(',')).filter { it.isNotBlank() }.distinct().take(8).forEach { Badge(it) } }

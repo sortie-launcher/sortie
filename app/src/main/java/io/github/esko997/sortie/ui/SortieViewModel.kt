@@ -8,6 +8,7 @@ import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.db.byIds
 import io.github.esko997.sortie.data.db.likeEscape
+import io.github.esko997.sortie.data.folders.FolderView
 import io.github.esko997.sortie.data.index.Indexer
 import io.github.esko997.sortie.data.manifest.LaunchProfile
 import io.github.esko997.sortie.data.manifest.SystemDef
@@ -58,6 +59,12 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
 
     val playStats: StateFlow<Map<String, PlayStat>> =
         dao.playStats().map { l -> l.associateBy { it.gameId } }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    val folders: StateFlow<List<FolderView>> = graph.folders.folders.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun folder(id: String): Flow<FolderView?> = folders.map { l -> l.firstOrNull { it.def.id == id } }
+
+    fun hide(id: String, hidden: Boolean) = graph.user.hide(id, hidden)
 
     val total: StateFlow<Int> = dao.total().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 

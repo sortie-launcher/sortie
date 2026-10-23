@@ -3,6 +3,7 @@ package io.github.esko997.sortie
 import android.app.Application
 import android.os.StrictMode
 import io.github.esko997.sortie.data.db.SortieDb
+import io.github.esko997.sortie.data.folders.FolderRepository
 import io.github.esko997.sortie.data.index.Indexer
 import io.github.esko997.sortie.data.manifest.ManifestStore
 import io.github.esko997.sortie.data.user.PlayLog
@@ -22,6 +23,7 @@ class SortieApp : Application() {
         val playLog = PlayLog(db.games(), File(sortieDir, "playlog.jsonl"), manifests.snapshot.value.device.device)
         val indexer = Indexer(db.games(), manifests)
         val launcher = LaunchManager(app, manifests, user, playLog)
+        val folders = FolderRepository(db.games(), manifests, user.data)
     }
 
     override fun onCreate() {

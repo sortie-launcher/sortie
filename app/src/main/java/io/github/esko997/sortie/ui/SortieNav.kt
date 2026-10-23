@@ -54,13 +54,19 @@ fun SortieNav(vm: SortieViewModel) {
         composable("system/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
             val id = entry.arguments?.getString("id") ?: return@composable
             val games by remember(id) { vm.gamesOf(id) }.collectAsState(emptyList())
-            GameListScreen(systems.firstOrNull { it.def.id == id }?.def?.label ?: id, games, vm) { nav.navigate("game/${enc(it)}") }
+            GameListScreen(systems.firstOrNull { it.def.id == id }?.def?.label ?: id, games, vm, onGame = { nav.navigate("game/${enc(it)}") })
         }
         composable("folder/{id}") { entry ->
-            if (entry.arguments?.getString("id") == "favourites") {
-                FavouritesScreen(vm) { nav.navigate("game/${enc(it)}") }
-            } else {
-                ContinueScreen(vm) { nav.navigate("game/${enc(it)}") }
+            val id = entry.arguments?.getString("id") ?: return@composable
+            val view by remember(id) { vm.folder(id) }.collectAsState(null)
+            view?.let { f ->
+                GameListScreen(
+                    title = f.def.label,
+                    games = f.games,
+                    vm = vm,
+                    onGame = { nav.navigate("game/${enc(it)}") },
+                    subtitle = f.problems.takeIf { it.isNotEmpty() }?.joinToString("; ")
+                )
             }
         }
         composable("game/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
@@ -68,19 +74,7 @@ fun SortieNav(vm: SortieViewModel) {
             val game by remember(id) { vm.game(id) }.collectAsState(null)
             game?.let { DetailScreen(it, vm) }
         }
-        composable("search") { SearchScreen(vm) { nav.navigate("game/${enc(it)}") } }
+        composable("search") { SearchScreen(vm, onGame = { nav.navigate("game/${enc(it)}") }) }
         composable("diagnostics") { DiagnosticsScreen(vm) }
     }
-}
-
-@Composable
-private fun FavouritesScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
-    val games by vm.favourites.collectAsState(emptyList())
-    GameListScreen("Favourites", games, vm, onGame)
-}
-
-@Composable
-private fun ContinueScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
-    val recent by vm.recent.collectAsState(emptyList())
-    GameListScreen("Continue", recent.map { it.first }, vm, onGame)
 }

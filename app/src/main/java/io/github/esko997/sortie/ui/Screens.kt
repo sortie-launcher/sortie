@@ -37,6 +37,7 @@ import io.github.esko997.sortie.data.db.GameEntity
 @Composable
 fun HomeScreen(vm: SortieViewModel, onSystem: (String) -> Unit, onFolder: (String) -> Unit, onSearch: () -> Unit, onDiagnostics: () -> Unit) {
     val systems by vm.systems.collectAsState()
+    val folders by vm.folders.collectAsState()
     val total by vm.total.collectAsState()
     val index by vm.index.collectAsState()
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp)) {
@@ -56,8 +57,11 @@ fun HomeScreen(vm: SortieViewModel, onSystem: (String) -> Unit, onFolder: (Strin
             }
         }
         item { SectionTitle("Folders") }
-        item { FocusRow(onClick = { onFolder("continue") }) { FolderLine("Continue", "recently played", Amber) } }
-        item { FocusRow(onClick = { onFolder("favourites") }) { FolderLine("Favourites", "games and apps you starred", Amber) } }
+        items(folders, key = { "f:" + it.def.id }) { f ->
+            FocusRow(onClick = { onFolder(f.def.id) }) {
+                FolderLine(f.def.label, "${f.games.size}" + if (f.problems.isNotEmpty()) " · rule problems" else "", Amber)
+            }
+        }
         item { SectionTitle("Systems") }
         items(systems, key = { it.def.id }) { row ->
             FocusRow(onClick = { onSystem(row.def.id) }) { FolderLine(row.def.label, "${row.count} · ${row.def.generation}", parseColour(row.def.colour)) }
@@ -77,7 +81,7 @@ private fun FolderLine(title: String, subtitle: String, colour: androidx.compose
 }
 
 @Composable
-fun GameListScreen(title: String, games: List<GameEntity>, vm: SortieViewModel, onGame: (String) -> Unit) {
+fun GameListScreen(title: String, games: List<GameEntity>, vm: SortieViewModel, onGame: (String) -> Unit, subtitle: String? = null) {
     val stats by vm.playStats.collectAsState()
     var minFit by rememberSaveable { mutableStateOf(0) }
     var onDeviceOnly by rememberSaveable { mutableStateOf(true) }
@@ -92,8 +96,12 @@ fun GameListScreen(title: String, games: List<GameEntity>, vm: SortieViewModel, 
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(bottom = 8.dp)
             ) {
-                Text("$title · ${shown.size}", style = MaterialTheme.typography.titleLarge)
+                Column {
+                    Text("$title · ${shown.size}", style = MaterialTheme.typography.titleLarge)
+                    subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                }
                 Spacer(Modifier.weight(1f))
+                OutlinedButton(onClick = { shown.randomOrNull()?.let { onGame(it.id) } }, enabled = shown.isNotEmpty()) { Text("🎲 Pick one") }
                 FilterChip(selected = minFit >= 4, onClick = { minFit = if (minFit >= 4) 0 else 4 }, label = { Text("★★★★+") })
                 FilterChip(selected = notesOnly, onClick = { notesOnly = !notesOnly }, label = { Text("✍ notes") })
                 FilterChip(selected = onDeviceOnly, onClick = { onDeviceOnly = !onDeviceOnly }, label = { Text("on device") })
