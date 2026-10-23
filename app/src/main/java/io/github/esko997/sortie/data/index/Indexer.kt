@@ -166,7 +166,8 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
 
     companion object {
         private const val TAG = "Indexer"
-        private val SKIP_EXT = setOf("txt", "nfo", "dat", "db", "jpg", "png", "sav", "srm", "m3u8", "cht", "ngf", "sta", "state", "json", "xml", "tmp")
+        private val SKIP_EXT =
+            setOf("txt", "nfo", "dat", "db", "jpg", "png", "sav", "srm", "m3u8", "cht", "ngf", "sta", "state", "json", "xml", "tmp", "titleid", "psvita")
         private val PLAYERS_RX = Regex("\\d+")
         private val TAG_RX = Regex("\\s*[(\\[][^)\\]]*[)\\]]")
 
