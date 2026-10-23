@@ -136,14 +136,24 @@ class MainActivity : ComponentActivity() {
      * (`Modifier.keyLongPress` swallows the hold and its release), and must not also page sorts/systems.
      */
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BUTTON_L1 || keyCode == KeyEvent.KEYCODE_BUTTON_R1) return true
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_L1 || keyCode == KeyEvent.KEYCODE_BUTTON_R1) {
+            // a repeat means the button is being held: whatever is focused may act on it, and the release must not page
+            if ((event?.repeatCount ?: 0) > 0) shoulderHeld = true
+            return true
+        }
         return (event?.repeatCount == 0 && Hotkeys.onKeyDown(keyCode)) || super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BUTTON_L1 || keyCode == KeyEvent.KEYCODE_BUTTON_R1) return Hotkeys.onKeyDown(keyCode) || super.onKeyUp(keyCode, event)
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_L1 || keyCode == KeyEvent.KEYCODE_BUTTON_R1) {
+            val held = shoulderHeld
+            shoulderHeld = false
+            return held || Hotkeys.onKeyDown(keyCode) || super.onKeyUp(keyCode, event)
+        }
         return super.onKeyUp(keyCode, event)
     }
+
+    private var shoulderHeld = false
 
     private fun myDisplayId(): Int = display?.displayId ?: Display.DEFAULT_DISPLAY
 

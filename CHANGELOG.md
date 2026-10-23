@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- A held L1/R1 never pages on release, on any tile (system and folder tiles included), so hold-R1 is safe everywhere.
 - Round 4c: status bar hidden over Sortie (swipe down still shows it); hold R1 on any game/app/shortcut tile or row toggles its
   favourite (`keyLongPress` handles R1; L1/R1 short presses now fire on key-up so a hold does not also page); on Home L1/R1 page
   the sort modes and a new "By Console" sort shows a console strip (L1/R1 page consoles, B returns to the previous sort) with
