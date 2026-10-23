@@ -174,9 +174,23 @@ private fun SquareTile(t: Tile) {
             .background(t.colour.copy(alpha = 0.22f))
             .border(2.dp, if (focused) Amber else t.colour.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
             .combinedClickable(interactionSource = interaction, indication = null, onClick = t.onClick)
-            .padding(12.dp)
     ) {
-        Box(Modifier.size(10.dp).clip(RoundedCornerShape(5.dp)).background(t.colour).align(Alignment.TopStart))
+        // a representative cover, washed under a gradient so the label stays readable
+        t.cover?.let { c ->
+            coil3.compose.AsyncImage(
+                model = java.io.File(c),
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                alpha = 0.45f,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                Modifier.fillMaxSize().background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(0.35f to androidx.compose.ui.graphics.Color.Transparent, 1f to Ink.copy(alpha = 0.92f))
+                )
+            )
+        }
+        Box(Modifier.padding(12.dp).size(10.dp).clip(RoundedCornerShape(5.dp)).background(t.colour).align(Alignment.TopStart))
         Column(Modifier.align(Alignment.BottomStart).padding(12.dp)) {
             Text(t.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2)
             Text(
