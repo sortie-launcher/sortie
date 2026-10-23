@@ -13,7 +13,18 @@ object Hotkeys {
 
     val events = MutableSharedFlow<Key>(extraBufferCapacity = 8)
 
-    /** Returns true when the key was a hotkey (consumed). */
+    /** Keys some visible screen currently handles; everything else falls through to the framework. */
+    val handled = kotlinx.coroutines.flow.MutableStateFlow<Set<Key>>(emptySet())
+
+    fun handle(keys: Set<Key>) {
+        handled.value = handled.value + keys
+    }
+
+    fun release(keys: Set<Key>) {
+        handled.value = handled.value - keys
+    }
+
+    /** Returns true when the key was a hotkey that a screen consumes. */
     fun onKeyDown(code: Int): Boolean {
         val key = when (code) {
             KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_MENU -> Key.SEARCH
@@ -24,6 +35,6 @@ object Hotkeys {
             KeyEvent.KEYCODE_BUTTON_R1 -> Key.NEXT_FOLDER
             else -> return false
         }
-        return events.tryEmit(key)
+        return key in handled.value && events.tryEmit(key)
     }
 }

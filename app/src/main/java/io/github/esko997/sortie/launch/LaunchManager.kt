@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.net.Uri
+import android.util.Log
+import android.view.Display
 import androidx.core.content.FileProvider
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.manifest.LaunchProfile
@@ -13,13 +15,14 @@ import io.github.esko997.sortie.data.manifest.ManifestStore
 import io.github.esko997.sortie.data.user.PlayLog
 import io.github.esko997.sortie.data.user.UserStore
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 
-/** Resolves a game to an ordered list of profiles (override, then system order), tries them, and records what happened. */
+/** Resolves a game to an ordered list of profiles (override, then system order, then the generic one), tries them, records what happened. */
 class LaunchManager(
     private val context: Context,
     private val manifests: ManifestStore,
@@ -30,6 +33,9 @@ class LaunchManager(
 
     data class LogEntry(val at: String, val gameId: String, val attempts: List<Attempt>, val launched: Boolean)
 
+    /** Hook for the activity: called right before an emulator is started on the given display ("top"/"bottom"/"same"). */
+    var beforeLaunch: ((display: String) -> Unit)? = null
+
     private val _log = MutableStateFlow<List<LogEntry>>(emptyList())
     val log: StateFlow<List<LogEntry>> = _log
 
@@ -39,7 +45,7 @@ class LaunchManager(
         val ids = buildList {
             user.data.value.profileOverrides[game.id]?.let { add(it) }
             system?.profiles?.forEach { if (it !in this) add(it) }
-            if ("open-with" !in this && snap.profiles.containsKey("open-with")) add("open-with")
+            snap.profiles.values.firstOrNull { it.generic }?.let { if (it.id !in this) add(it.id) }
         }
         return ids.mapNotNull { snap.profiles[it] }
     }
@@ -53,36 +59,26 @@ class LaunchManager(
         val file = File(game.path)
         val attempts = mutableListOf<Attempt>()
         val candidates = only?.let { listOf(it) } ?: profilesFor(game)
-        var launched = false
+        var started: LaunchProfile? = null
         for (profile in candidates) {
             if (!isInstalled(profile)) {
                 attempts += Attempt(profile.id, "", "package ${profile.`package`} not installed")
                 continue
             }
-            val uri = runCatching {
-                FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.files",
-                    file
-                )
-            }.getOrNull()
-            val intent = if (profile.generic) {
-                openWith(
-                    file,
-                    uri
-                )
-            } else {
-                IntentBuilder.build(profile, IntentBuilder.vars(file, game.systemId, uri))
-            }
-            val command = IntentBuilder.describe(intent)
-            if (uri != null && profile.data?.contains("\${uri}") == true) grant(intent, uri)
-            val options = displayOptions(profile.display)
+            val uri = runCatching { FileProvider.getUriForFile(context, "${context.packageName}.files", file) }.getOrNull()
+            val titleId = sidecarTitleId(file)
+            val intent = if (profile.generic) openWith(file, uri) else IntentBuilder.build(profile, IntentBuilder.vars(file, game.systemId, uri, titleId))
+            val (options, displayId, displayNote) = displayOptions(profile.display)
+            val command = IntentBuilder.describe(intent, displayId)
+            if (uri != null && !profile.generic && IntentBuilder.usesContentUri(profile)) grant(intent, uri)
             try {
+                beforeLaunch?.invoke(profile.display)
                 context.startActivity(intent, options?.toBundle())
-                attempts += Attempt(profile.id, command, "started")
-                playLog.start(game.id, profile.id, profile.display)
-                launched = true
+                attempts += Attempt(profile.id, command, "started" + (displayNote?.let { " ($it)" } ?: ""))
+                started = profile
                 break
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: ActivityNotFoundException) {
                 attempts += Attempt(profile.id, command, "activity not found: ${e.message}")
             } catch (e: SecurityException) {
@@ -91,43 +87,44 @@ class LaunchManager(
                 attempts += Attempt(profile.id, command, "${e.javaClass.simpleName}: ${e.message}")
             }
         }
-        _log.value = (listOf(LogEntry(TS.format(Date()), game.id, attempts, launched)) + _log.value).take(50)
-        attempts.forEach { android.util.Log.i("SortieLaunch", "${game.id} via ${it.profileId}: ${it.outcome} | ${it.command}") }
-        return launched
+        _log.update { (listOf(LogEntry(LocalTime.now().format(TS), game.id, attempts, started != null)) + it).take(50) }
+        attempts.forEach { Log.i("SortieLaunch", "${game.id} via ${it.profileId}: ${it.outcome} | ${it.command}") }
+        // Record the session outside the try/catch so a logging failure can never trigger a second launch.
+        started?.let { runCatching { playLog.start(game.id, it.id, it.display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) } }
+        return started != null
+    }
+
+    /** `<game>.titleid` next to the file (or `<stem>.psvita`, ES-DE's convention) holds a title id when the emulator needs one. */
+    private fun sidecarTitleId(file: File): String? {
+        val dir = file.parentFile ?: return null
+        return listOf(File(dir, file.name + ".titleid"), File(dir, file.nameWithoutExtension + ".psvita"))
+            .firstOrNull { it.isFile && it.length() in 1..64 }?.readText()?.trim()?.takeIf { it.isNotEmpty() }
     }
 
     private fun openWith(file: File, uri: Uri?): Intent {
         val target = uri ?: Uri.fromFile(file)
-        val view = Intent(
-            Intent.ACTION_VIEW
-        ).setDataAndType(target, "*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val view = Intent(Intent.ACTION_VIEW).setDataAndType(target, "*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         return Intent.createChooser(view, file.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
     private fun grant(intent: Intent, uri: Uri) {
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        intent.`package`?.let { context.grantUriPermission(it, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-        intent.component?.packageName?.let {
-            context.grantUriPermission(
-                it,
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION
-            )
-        }
+        (intent.component?.packageName ?: intent.`package`)?.let { context.grantUriPermission(it, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
 
-    private fun displayOptions(display: String): ActivityOptions? {
+    private fun displayOptions(display: String): Triple<ActivityOptions?, Int?, String?> {
         val dm = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-        val secondary = dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).firstOrNull()
+        val screens = manifests.snapshot.value.device.screens
+        val secondary = dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).getOrNull(screens.presentationIndex)
         val id = when (display) {
-            "top" -> android.view.Display.DEFAULT_DISPLAY
-            "bottom" -> secondary?.displayId ?: return null
-            else -> return null
+            "top" -> Display.DEFAULT_DISPLAY
+            "bottom" -> secondary?.displayId ?: return Triple(null, null, "no secondary display, launched on the current one")
+            else -> return Triple(null, null, null)
         }
-        return ActivityOptions.makeBasic().setLaunchDisplayId(id)
+        return Triple(ActivityOptions.makeBasic().setLaunchDisplayId(id), id, null)
     }
 
     companion object {
-        private val TS = SimpleDateFormat("HH:mm:ss", Locale.ROOT)
+        private val TS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
     }
 }

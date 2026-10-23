@@ -19,9 +19,9 @@ fun SortieTheme(content: @Composable () -> Unit) {
             surface = Ink,
             surfaceVariant = Slate,
             onSurface = Color(0xFFE6E8EB),
-            onSurfaceVariant = Color(0xFF9AA3AD),
+            onSurfaceVariant = Color(0xFF9AA3AD)
         ),
-        content = content,
+        content = content
     )
 }
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <external-path name="primary" path="." />
-    <root-path name="root" path="/" />
+    <!-- Only mounted volumes (the library card lives under /storage/<uuid>), never the whole filesystem. -->
+    <root-path name="storage" path="storage/" />
 </paths>

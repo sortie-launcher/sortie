@@ -1,7 +1,7 @@
 package io.github.esko997.sortie
 
 import android.app.Application
-import android.os.Environment
+import android.os.StrictMode
 import io.github.esko997.sortie.data.db.SortieDb
 import io.github.esko997.sortie.data.index.Indexer
 import io.github.esko997.sortie.data.manifest.ManifestStore
@@ -12,8 +12,7 @@ import java.io.File
 
 /** Hand-rolled service locator; small enough that a DI framework would be more code than it saves. */
 class SortieApp : Application() {
-    lateinit var graph: Graph
-        private set
+    val graph: Graph by lazy { Graph(this) }
 
     class Graph(app: SortieApp) {
         val sortieDir: File = locateSortieDir(app)
@@ -27,10 +26,9 @@ class SortieApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Many emulators only accept file:// URIs (PPSSPP, Mupen64Plus FZ, ...). Android forbids exposing them unless the
-        // app opts out of the StrictMode check, which is what every launcher frontend does.
-        android.os.StrictMode.setVmPolicy(android.os.StrictMode.VmPolicy.Builder().build())
-        graph = Graph(this)
+        // Some launch targets only accept file:// URIs. Android forbids exposing them unless the app opts out of the
+        // StrictMode check, which is what launcher frontends do. Keep everything else in the default policy.
+        StrictMode.setVmPolicy(StrictMode.VmPolicy.Builder().build())
     }
 
     companion object {
@@ -43,8 +41,7 @@ class SortieApp : Application() {
                     repeat(4) { p = p?.parentFile }
                     p?.let { add(File(it, "sortie")) }
                 }
-                add(File(Environment.getExternalStorageDirectory(), "sortie"))
-                File("/storage").listFiles()?.forEach { add(File(it, "sortie")) }
+                File("/storage").listFiles()?.filter { it.name !in setOf("emulated", "self") }?.forEach { add(File(it, "sortie")) }
             }
             return candidates.firstOrNull { File(it, "device.json").isFile } ?: candidates.first()
         }

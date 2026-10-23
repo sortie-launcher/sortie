@@ -15,15 +15,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.data.db.GameEntity
@@ -33,16 +33,33 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel) {
     val user by vm.user.collectAsState()
     val stats by vm.playStats.collectAsState()
     var showProfiles by remember { mutableStateOf(false) }
-    val profiles = remember(game.id, user.profileOverrides[game.id]) { vm.profilesFor(game) }
+    val snap by vm.manifests.collectAsState()
+    val profiles = remember(game.id, user.profileOverrides[game.id], snap.loadedAt) { vm.profilesFor(game) }
     val fav = game.id in user.favourites
     val launchFocus = remember { FocusRequester() }
     LaunchedEffect(game.id) { runCatching { launchFocus.requestFocus() } }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        Hotkeys.handle(setOf(Hotkeys.Key.FAVOURITE))
+        onDispose { Hotkeys.release(setOf(Hotkeys.Key.FAVOURITE)) }
+    }
     LaunchedEffect(game.id) { Hotkeys.events.collect { if (it == Hotkeys.Key.FAVOURITE) vm.toggleFavourite(game.id) } }
     Row(Modifier.fillMaxSize().padding(16.dp)) {
         Cover(game, width = 200, height = 260)
         Column(Modifier.padding(start = 20.dp).verticalScroll(rememberScrollState())) {
             Text(game.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Row { Stars(game.fit); Text("  " + listOfNotNull(game.systemId.uppercase(), game.year?.toString(), game.developer, game.players?.let { "$it players" }).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Row {
+                Stars(game.fit)
+                Text(
+                    "  " + listOfNotNull(
+                        game.systemId.uppercase(), game.year?.toString(), game.developer,
+                        game.players?.let {
+                            "$it players"
+                        }
+                    ).joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             game.hook?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = Amber, modifier = Modifier.padding(top = 8.dp)) }
             stats[game.id]?.let { Text("Played ${it.minutes} min", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp)) }
             Row(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -52,8 +69,16 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel) {
             }
             if (showProfiles) {
                 profiles.forEach { (p, installed) ->
-                    FocusRow(onClick = { if (installed) { vm.setOverride(game.id, p.id); vm.launch(game, p) } }) {
-                        Text((if (user.profileOverrides[game.id] == p.id) "● " else "○ ") + p.label + if (installed) "" else "  (not installed)", style = MaterialTheme.typography.bodyMedium)
+                    FocusRow(onClick = {
+                        if (installed) {
+                            vm.setOverride(game.id, p.id)
+                            vm.launch(game, p)
+                        }
+                    }) {
+                        Text(
+                            (if (user.profileOverrides[game.id] == p.id) "● " else "○ ") + p.label + if (installed) "" else "  (not installed)",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     }
                 }
                 FocusRow(onClick = { vm.setOverride(game.id, null) }) { Text("Clear override", style = MaterialTheme.typography.bodySmall) }

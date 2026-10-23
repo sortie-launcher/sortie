@@ -5,7 +5,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /** One launchable file. `id` is `<systemId>/<filename>`, the same key the desktop uses in guide.json and the play log. */
-@Entity(tableName = "games", indices = [Index("systemId"), Index("title"), Index("fit")])
+@Entity(tableName = "games", indices = [Index("systemId", "sortTitle"), Index("fit")])
 data class GameEntity(
     @PrimaryKey val id: String,
     val systemId: String,
@@ -37,8 +37,16 @@ data class GameEntity(
     val placeholder: Boolean,
     val arriving: Boolean,
     val hack: Boolean,
-    val addedAt: Long,
-    val scanGen: Long
+    val addedAt: Long
+)
+
+/** Per-system bookkeeping so the indexer knows when metadata (gamelist, guide) changed since the last pass. */
+@Entity(tableName = "index_meta")
+data class IndexMetaEntity(
+    @PrimaryKey val systemId: String,
+    val gamelistMtime: Long,
+    val guideStamp: String,
+    val mediaStamp: Long
 )
 
 @Entity(tableName = "sessions", indices = [Index("gameId"), Index("startedAt")])
@@ -47,5 +55,7 @@ data class SessionEntity(
     val gameId: String,
     val profileId: String?,
     val startedAt: Long,
-    val endedAt: Long?
+    val endedAt: Long?,
+    // abandoned: Sortie never saw the session end (process killed, device slept); its duration is not counted
+    val abandoned: Boolean = false
 )

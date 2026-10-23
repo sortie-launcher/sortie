@@ -5,48 +5,46 @@ import io.github.esko997.sortie.data.db.SessionEntity
 import java.io.File
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
-/** Sessions in Room for queries, mirrored as JSON lines to `<root>/sortie/playlog.jsonl` for the desktop. */
+/**
+ * Sessions in Room for queries, mirrored as JSON lines to `<root>/sortie/playlog.jsonl` (docs/formats/playlog.md).
+ * A session Sortie never saw end (process killed, device slept) is closed as abandoned with `minutes: null` and not counted.
+ */
 class PlayLog(private val dao: GameDao, private val file: File, private val device: String) {
-    suspend fun start(gameId: String, profileId: String?, display: String) {
+    private val mutex = Mutex()
+
+    suspend fun start(gameId: String, profileId: String?, display: String) = mutex.withLock {
         closeOpen(abandoned = true)
-        dao.insertSession(
-            SessionEntity(
-                gameId = gameId,
-                profileId = profileId,
-                startedAt = System.currentTimeMillis(),
-                endedAt = null
-            )
-        )
-        append(mapOf("event" to "start", "id" to gameId, "profile" to (profileId ?: ""), "display" to display))
+        dao.insertSession(SessionEntity(gameId = gameId, profileId = profileId, startedAt = System.currentTimeMillis(), endedAt = null))
+        append("start", gameId, mapOf("profile" to JsonPrimitive(profileId ?: ""), "display" to JsonPrimitive(display)))
     }
 
     /** Called when Sortie regains the foreground. */
-    suspend fun end() = closeOpen(abandoned = false)
+    suspend fun end() = mutex.withLock { closeOpen(abandoned = false) }
 
     private suspend fun closeOpen(abandoned: Boolean) {
         val open = dao.openSession() ?: return
         val now = System.currentTimeMillis()
-        dao.updateSession(open.copy(endedAt = now))
-        val minutes = ((now - open.startedAt) / 60000).toInt()
-        append(
-            mapOf(
-                "event" to "end",
-                "id" to open.gameId,
-                "minutes" to minutes.toString(),
-                "abandoned" to abandoned.toString()
-            )
-        )
+        dao.updateSession(open.copy(endedAt = now, abandoned = abandoned))
+        val minutes = if (abandoned) JsonNull else JsonPrimitive(((now - open.startedAt) / 60000).toInt())
+        append("end", open.gameId, mapOf("minutes" to minutes))
     }
 
-    private fun append(fields: Map<String, String>) {
+    private suspend fun append(event: String, id: String, fields: Map<String, kotlinx.serialization.json.JsonElement>) = withContext(Dispatchers.IO) {
         runCatching {
             file.parentFile?.mkdirs()
             val obj = buildJsonObject {
                 put("ts", JsonPrimitive(OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)))
-                fields.forEach { (k, v) -> put(k, JsonPrimitive(v)) }
+                put("event", JsonPrimitive(event))
+                put("id", JsonPrimitive(id))
+                fields.forEach { (k, v) -> put(k, v) }
                 put("device", JsonPrimitive(device))
             }
             file.appendText(obj.toString() + "\n")

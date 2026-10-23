@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "io.github.esko997.sortie"
-        minSdk = 29
+        minSdk = 30 // MANAGE_EXTERNAL_STORAGE exists from API 30
         targetSdk = 35
         versionCode = 1
         versionName = "0.0.1"
@@ -27,9 +27,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 }
+
+kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
@@ -41,7 +45,6 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material.icons)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.room.runtime)
@@ -50,4 +53,5 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.coil.compose)
+    testImplementation(libs.junit)
 }

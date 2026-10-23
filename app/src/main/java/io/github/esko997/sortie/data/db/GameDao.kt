@@ -11,18 +11,28 @@ data class SystemCount(val systemId: String, val n: Int)
 
 data class PlayStat(val gameId: String, val minutes: Int, val lastPlayed: Long?)
 
+data class Signature(val id: String, val mtime: Long, val size: Long, val addedAt: Long, val arriving: Boolean)
+
+/** SQLite binds at most 999 variables on older Android builds; every `IN (:ids)` goes through [chunked]. */
+const val SQLITE_CHUNK = 500
+
+suspend fun <T> chunked(ids: Collection<String>, block: suspend (List<String>) -> List<T>): List<T> = ids.chunked(SQLITE_CHUNK).flatMap { block(it) }
+
 @Dao
 interface GameDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(games: List<GameEntity>)
 
-    @Query("DELETE FROM games WHERE systemId = :systemId AND scanGen <> :gen")
-    suspend fun deleteStale(systemId: String, gen: Long): Int
+    @Query("DELETE FROM games WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<String>): Int
 
-    @Query("UPDATE games SET scanGen = :gen WHERE systemId = :systemId AND id IN (:ids)")
-    suspend fun touch(systemId: String, gen: Long, ids: List<String>)
+    @Query("DELETE FROM games WHERE systemId NOT IN (:systemIds)")
+    suspend fun deleteSystemsNotIn(systemIds: List<String>): Int
 
-    @Query("SELECT id, mtime, size, addedAt FROM games WHERE systemId = :systemId")
+    @Query("UPDATE games SET arriving = :arriving WHERE id IN (:ids)")
+    suspend fun setArriving(ids: List<String>, arriving: Boolean)
+
+    @Query("SELECT id, mtime, size, addedAt, arriving FROM games WHERE systemId = :systemId")
     suspend fun signatures(systemId: String): List<Signature>
 
     @Query("SELECT systemId, COUNT(*) AS n FROM games WHERE placeholder = 0 GROUP BY systemId")
@@ -38,18 +48,25 @@ interface GameDao {
     fun observe(id: String): Flow<GameEntity?>
 
     @Query("SELECT * FROM games WHERE id IN (:ids)")
-    suspend fun byIds(ids: List<String>): List<GameEntity>
+    suspend fun byIdsChunk(ids: List<String>): List<GameEntity>
 
     @Query(
-        "SELECT * FROM games WHERE placeholder = 0 AND (title LIKE '%' || :q || '%' OR genre LIKE '%' || :q || '%' OR developer LIKE '%' || :q || '%' OR desc LIKE '%' || :q || '%') ORDER BY fit DESC, sortTitle LIMIT :limit"
+        "SELECT * FROM games WHERE placeholder = 0 AND (title LIKE '%' || :q || '%' ESCAPE '\\' OR genre LIKE '%' || :q || '%' ESCAPE '\\' " +
+            "OR developer LIKE '%' || :q || '%' ESCAPE '\\' OR desc LIKE '%' || :q || '%' ESCAPE '\\') ORDER BY fit DESC, sortTitle LIMIT :limit"
     )
     fun search(q: String, limit: Int = 200): Flow<List<GameEntity>>
 
     @Query("SELECT * FROM games WHERE placeholder = 0")
     suspend fun allPlayable(): List<GameEntity>
 
-    @Query("SELECT COUNT(*) FROM games")
+    @Query("SELECT COUNT(*) FROM games WHERE placeholder = 0")
     fun total(): Flow<Int>
+
+    @Query("SELECT * FROM index_meta WHERE systemId = :systemId")
+    suspend fun meta(systemId: String): IndexMetaEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putMeta(meta: IndexMetaEntity)
 
     @Insert
     suspend fun insertSession(s: SessionEntity): Long
@@ -61,14 +78,19 @@ interface GameDao {
     suspend fun openSession(): SessionEntity?
 
     @Query(
-        "SELECT gameId, CAST(SUM(COALESCE(endedAt, startedAt) - startedAt) / 60000 AS INTEGER) AS minutes, MAX(startedAt) AS lastPlayed FROM sessions GROUP BY gameId"
+        "SELECT gameId, CAST(SUM(CASE WHEN abandoned = 0 AND endedAt IS NOT NULL THEN endedAt - startedAt ELSE 0 END) / 60000 AS INTEGER) AS minutes, " +
+            "MAX(startedAt) AS lastPlayed FROM sessions GROUP BY gameId"
     )
     fun playStats(): Flow<List<PlayStat>>
 
     @Query(
-        "SELECT gameId, CAST(SUM(COALESCE(endedAt, startedAt) - startedAt) / 60000 AS INTEGER) AS minutes, MAX(startedAt) AS lastPlayed FROM sessions GROUP BY gameId ORDER BY lastPlayed DESC LIMIT :limit"
+        "SELECT gameId, CAST(SUM(CASE WHEN abandoned = 0 AND endedAt IS NOT NULL THEN endedAt - startedAt ELSE 0 END) / 60000 AS INTEGER) AS minutes, " +
+            "MAX(startedAt) AS lastPlayed FROM sessions GROUP BY gameId ORDER BY lastPlayed DESC LIMIT :limit"
     )
     fun recentlyPlayed(limit: Int = 30): Flow<List<PlayStat>>
 }
 
-data class Signature(val id: String, val mtime: Long, val size: Long, val addedAt: Long)
+suspend fun GameDao.byIds(ids: Collection<String>): List<GameEntity> = chunked(ids) { byIdsChunk(it) }
+
+/** Escapes LIKE wildcards in user input (the queries use ESCAPE '\'). */
+fun likeEscape(q: String): String = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")

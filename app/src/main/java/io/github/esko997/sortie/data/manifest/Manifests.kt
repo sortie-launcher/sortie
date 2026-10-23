@@ -11,12 +11,17 @@ data class DeviceManifest(
     val screens: Screens = Screens(),
     val shizuku: Boolean = false
 ) {
+    /** `presentationIndex` picks which secondary display is "bottom" when several exist. */
     @Serializable
-    data class Screens(val count: Int = 1, val navigation: String = "bottom")
+    data class Screens(val count: Int = 1, val navigation: String = "bottom", val presentationIndex: Int = 0)
 }
 
 @Serializable
-data class SystemsManifest(val systems: List<SystemDef> = emptyList())
+data class SystemsManifest(val systems: List<SystemDef> = emptyList(), val library: LibraryRules = LibraryRules())
+
+/** Library-wide rules that used to be hard-coded: BIOS archives to hide, how to recognise hacks. Desktop-authored. */
+@Serializable
+data class LibraryRules(val skipFiles: List<String> = emptyList(), val hackRegex: String? = null)
 
 @Serializable
 data class SystemDef(
