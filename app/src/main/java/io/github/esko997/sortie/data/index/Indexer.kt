@@ -70,7 +70,7 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
         guideStamp: String,
         rules: LibraryRules,
         force: Boolean
-    ): Triple<Int, Int, Int> {
+    ): SystemResult {
         val gamelistFile = sys.gamelist?.let { File(root, it) }?.takeIf { it.isFile }
         val mediaDir = sys.media?.let { File(root, it) }?.takeIf { it.isDirectory }
         val meta = IndexMetaEntity(sys.id, gamelistFile?.lastModified() ?: 0L, guideStamp, mediaDir?.lastModified() ?: 0L)
