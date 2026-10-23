@@ -273,7 +273,7 @@ fun HomeScreen(
             Spacer(Modifier.width(8.dp))
             OutlinedButton(onClick = onSearch) { Text("Search") }
             Spacer(Modifier.width(8.dp))
-            OutlinedButton(onClick = onDiagnostics) { Text("Diagnostics") }
+            OutlinedButton(onClick = onDiagnostics) { Text("Settings") }
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,

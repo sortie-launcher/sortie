@@ -75,6 +75,20 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
     init {
         // A manifest deploy from the desktop is the explicit signal that the card changed.
         viewModelScope.launch { manifests.map { it.loadedAt }.drop(1).distinctUntilChanged().collect { reindex() } }
+        viewModelScope.launch { user.map { it.heroRotation }.distinctUntilChanged().collect { Selection.heroRotation.value = it } }
+    }
+
+    fun setSystemProfile(systemId: String, profileId: String?) = graph.user.setSystemProfile(systemId, profileId)
+
+    fun setHeroRotation(on: Boolean) = graph.user.setHeroRotation(on)
+
+    fun setOverlaySwitcher(on: Boolean) = graph.user.setOverlaySwitcher(on)
+
+    /** Launch profiles a system lists in the manifest, with whether each is installed (for Settings). */
+    fun profilesForSystem(systemId: String): List<Pair<LaunchProfile, Boolean>> {
+        val snap = manifests.value
+        val system = snap.systems.firstOrNull { it.id == systemId } ?: return emptyList()
+        return system.profiles.mapNotNull { snap.profiles[it] }.map { it to graph.launcher.isInstalled(it) }
     }
 
     val apps: StateFlow<List<AppEntry>> = graph.apps.apps

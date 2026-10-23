@@ -46,9 +46,11 @@ class LaunchManager(
     fun profilesFor(game: GameEntity): List<LaunchProfile> {
         val snap = manifests.snapshot.value
         val system = snap.systems.firstOrNull { it.id == game.systemId }
+        val prefs = user.data.value
         val ids = buildList {
-            user.data.value.profileOverrides[game.id]?.let { add(it) }
-            system?.profiles?.forEach { if (it !in this) add(it) }
+            prefs.profileOverrides[game.id]?.let { add(it) } // per game
+            prefs.systemProfiles[game.systemId]?.let { if (it !in this) add(it) } // per system (Settings)
+            system?.profiles?.forEach { if (it !in this) add(it) } // manifest order
             snap.profiles.values.firstOrNull { it.generic }?.let { if (it.id !in this) add(it.id) }
         }
         return ids.mapNotNull { snap.profiles[it] }

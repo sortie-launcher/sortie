@@ -107,5 +107,11 @@ data class UserData(
      */
     val layout: List<String> = emptyList(),
     /** Shortcuts the user opted in to (ids `shortcut:<pkg>/<id>`); every other launcher shortcut stays out of the lists. */
-    val shortcuts: Set<String> = emptySet()
+    val shortcuts: Set<String> = emptySet(),
+    /** Per-system default launch profile chosen on the device (system id → profile id); overrides the manifest's first choice. */
+    val systemProfiles: Map<String, String> = emptyMap(),
+    /** Hero rotation on the idle companion screen (and the ambient tint it drives). */
+    val heroRotation: Boolean = true,
+    /** Home-key switcher as overlay windows over the running games (needs the draw-over-apps grant) rather than Sortie's screens. */
+    val overlaySwitcher: Boolean = true
 )

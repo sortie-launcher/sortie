@@ -77,5 +77,12 @@ class UserStore(private val file: File, private val scope: CoroutineScope = Coro
 
     fun setLayout(ids: List<String>) = update { it.copy(layout = ids.distinct()) }
 
+    fun setSystemProfile(systemId: String, profileId: String?) =
+        update { it.copy(systemProfiles = if (profileId == null) it.systemProfiles - systemId else it.systemProfiles + (systemId to profileId)) }
+
+    fun setHeroRotation(on: Boolean) = update { it.copy(heroRotation = on) }
+
+    fun setOverlaySwitcher(on: Boolean) = update { it.copy(overlaySwitcher = on) }
+
     fun showShortcut(id: String, shown: Boolean) = update { it.copy(shortcuts = if (shown) it.shortcuts + id else it.shortcuts - id) }
 }

@@ -63,7 +63,7 @@ fun SortieNav(vm: SortieViewModel) {
                 onFolder = { nav.navigate("folder/$it") },
                 onGame = { nav.navigate("game/${enc(it)}") },
                 onSearch = { nav.navigate("search") },
-                onDiagnostics = { nav.navigate("diagnostics") },
+                onDiagnostics = { nav.navigate("settings") },
                 onApps = { nav.navigate("apps") }
             )
         }
@@ -84,6 +84,7 @@ fun SortieNav(vm: SortieViewModel) {
         }
         composable("search") { SearchScreen(vm, onGame = { nav.navigate("game/${enc(it)}") }) }
         composable("diagnostics") { DiagnosticsScreen(vm) }
+        composable("settings") { SettingsScreen(vm, onDiagnostics = { nav.navigate("diagnostics") }) }
         composable("apps") { AppsScreen(vm) }
         composable("switcher") { SwitcherScreen() }
     }

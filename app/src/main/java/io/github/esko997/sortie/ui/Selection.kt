@@ -16,6 +16,9 @@ object Selection {
     /** Debug navigation requests from adb (`--es open diagnostics`). */
     val openRoute = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 1) // replay: emitted before the NavHost exists on cold start
 
+    /** Mirrors `user.heroRotation`; false shows the plain Sortie panel when nothing is selected. Set by SortieViewModel. */
+    val heroRotation = MutableStateFlow(true)
+
     /** Palette of the game shown on the companion screen (set by its hero panel); tints the navigation screen's background. */
     val heroPalette = MutableStateFlow<GamePalette?>(null)
 
@@ -35,6 +38,8 @@ object Selection {
                 kotlinx.coroutines.delay(20_000) // slow enough that the ambient background has settled long before the next change
             }
         }
-        return kotlinx.coroutines.flow.combine(current, heroes, ticker) { cur, hs, i -> cur ?: hs.getOrNull(if (hs.isEmpty()) 0 else i % hs.size) }
+        return kotlinx.coroutines.flow.combine(current, heroes, ticker, heroRotation) { cur, hs, i, rotate ->
+            cur ?: if (rotate) hs.getOrNull(if (hs.isEmpty()) 0 else i % hs.size) else null
+        }
     }
 }

@@ -32,7 +32,7 @@ class SwitcherHost(private val graph: SortieApp.Graph) {
     }
 
     private fun present(focusDisplay: Int): Boolean {
-        if (!overlay.available) return false
+        if (!overlay.available || !graph.user.data.value.overlaySwitcher) return false
         val switcher = graph.switcher
         val displays = listOfNotNull(TaskSwitcher.TOP, switcher.secondaryDisplay()).distinct()
         switcher.open(overlay = true, focusDisplay = focusDisplay)
