@@ -326,7 +326,16 @@ fun TouchSwitcher(switcher: TaskSwitcher, state: TaskSwitcher.State, displayId: 
                     }.padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(64.dp)) { it.setImageDrawable(e.icon) }
+                    Box(Modifier.fillMaxWidth()) {
+                        AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(64.dp).align(Alignment.Center)) { it.setImageDrawable(e.icon) }
+                        Text(
+                            "✕",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.align(Alignment.TopEnd).clip(CircleShape).clickable(enabled = !state.busy, onClickLabel = "Close app") {
+                                switcher.closeApp(e)
+                            }.padding(6.dp)
+                        )
+                    }
                     Text(e.label, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
                     val other = switcher.other(displayId)
                     if (elsewhere) {

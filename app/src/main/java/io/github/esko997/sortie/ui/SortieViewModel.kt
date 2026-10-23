@@ -273,8 +273,23 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
     fun reloadManifests() = viewModelScope.launch { graph.manifests.reloadNow() }
 
     /** Back from an emulator: close the open play session. Save and BIOS state stay as scanned until the next re-index. */
+    /**
+     * Back in the foreground. The open play session ends only if its app is gone: Home summons the switcher by resuming this
+     * HOME activity while the game keeps running underneath (and is raised again), which must not stop the timer or replace
+     * Now playing. The app's package comes from the session's profile (games) or its id (apps); without Shizuku, as before,
+     * resuming ends the session.
+     */
     fun onForeground() = viewModelScope.launch {
-        graph.playLog.end()
+        val session = graph.playLog.current.value
+        if (session != null) {
+            val pkg = when {
+                session.gameId.startsWith(LibraryItem.APP_PREFIX) -> session.gameId.removePrefix(LibraryItem.APP_PREFIX)
+                session.gameId.startsWith(LibraryItem.SHORTCUT_PREFIX) -> session.gameId.removePrefix(LibraryItem.SHORTCUT_PREFIX).substringBefore('/')
+                else -> session.profileId?.let { manifests.value.profiles[it]?.`package` }
+            }
+            val stillRunning = pkg != null && graph.screenMover.ready && graph.screenMover.appTasks().any { it.pkg == pkg }
+            if (!stillRunning) graph.playLog.end()
+        }
         graph.screenMover.sweepStaleLaunchers()
     }
 }

@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- A play session now ends only when its app is really gone (checked over Shizuku on foreground): Home summoning the switcher
+  resumes Sortie's HOME activity while the game runs underneath and used to stop the timer and Now playing. Switcher cards have
+  a ✕ (touch) to close that app.
 - A held L1/R1 never pages on release, on any tile (system and folder tiles included), so hold-R1 is safe everywhere.
 - Round 4c: status bar hidden over Sortie (swipe down still shows it); hold R1 on any game/app/shortcut tile or row toggles its
   favourite (`keyLongPress` handles R1; L1/R1 short presses now fire on key-up so a hold does not also page); on Home L1/R1 page
