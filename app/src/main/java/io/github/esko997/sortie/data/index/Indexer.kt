@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
  * deleted. Never runs when the card cannot be read, so an unmounted card or a missing permission cannot empty the index.
  */
 class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
-    data class Report(val systems: Int, val files: Int, val updated: Int, val removed: Int, val millis: Long, val problems: List<String>)
+    data class Report(val systems: Int, val files: Int, val updated: Int, val removed: Int, val millis: Long, val problems: List<String>, val variants: Int = 0)
 
     private val lock = Mutex()
 
@@ -40,6 +40,7 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
         var files = 0
         var updated = 0
         var removed = 0
+        var variants = 0
         val problems = mutableListOf<String>()
         for (sys in snap.systems) {
             try {
@@ -55,10 +56,12 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
             }
         }
         if (snap.systems.isNotEmpty()) removed += dao.deleteSystemsNotIn(snap.systems.map { it.id })
-        return Report(snap.systems.size, files, updated, removed, System.currentTimeMillis() - t0, problems).also { Log.i(TAG, "indexed: $it") }
+        return Report(snap.systems.size, files, updated, removed, System.currentTimeMillis() - t0, problems, variants).also { Log.i(TAG, "indexed: $it") }
     }
 
     private class Found(val file: File, val id: String, val mtime: Long, val size: Long)
+
+    private class SystemResult(val files: Int, val updated: Int, val removed: Int, val variants: Int)
 
     private suspend fun indexSystem(
         root: File,
@@ -102,7 +105,7 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
                 if (prev == null || (prev.size == 0L && f.length() > 0L)) found[id] = Found(f, id, f.lastModified(), f.length())
             }
         }
-        if (unreadable) return Triple(found.size, 0, 0) // partial listing: do not delete anything this pass
+        if (unreadable) return SystemResult(found.size, 0, 0, 0) // partial listing: do not delete anything this pass
         val gamelist = if (found.isNotEmpty()) gamelistFile?.let { GamelistParser.parse(it) } ?: emptyMap() else emptyMap()
         val media = MediaIndex(mediaDir)
         val rows = ArrayList<GameEntity>()
@@ -134,14 +137,16 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
         val stale = existing.keys - found.keys
         var removed = 0
         stale.chunked(SQLITE_CHUNK).forEach { removed += dao.deleteByIds(it) }
+        var nVariants = 0
         run { // cheap enough to do every pass: one narrow query per system
             val names = dao.namesOf(sys.id)
             val variants = Variants.resolve(names.map { Variants.Entry(it.id, it.fileName, !it.placeholder) })
             dao.clearVariants(sys.id)
             variants.entries.groupBy({ it.value }, { it.key }).forEach { (primary, ids) -> ids.chunked(SQLITE_CHUNK).forEach { dao.setVariantOf(it, primary) } }
+            nVariants = variants.size
         }
         dao.putMeta(meta)
-        return Triple(found.size, rows.size, removed)
+        return SystemResult(found.size, rows.size, removed, nVariants)
     }
 
     /** One directory listing per media kind instead of several `isFile` probes per game. */
