@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -74,9 +75,23 @@ private fun FolderLine(title: String, subtitle: String, colour: androidx.compose
 @Composable
 fun GameListScreen(title: String, games: List<GameEntity>, vm: SortieViewModel, onGame: (String) -> Unit) {
     val stats by vm.playStats.collectAsState()
+    var minFit by remember { mutableStateOf(0) }
+    var onDeviceOnly by remember { mutableStateOf(true) }
+    var notesOnly by remember { mutableStateOf(false) }
+    val shown = remember(games, minFit, onDeviceOnly, notesOnly) {
+        games.filter { (!onDeviceOnly || !it.placeholder) && it.fit >= minFit && (!notesOnly || it.handWritten) }
+    }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        item { Text("$title · ${games.size}", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp)) }
-        items(games, key = { it.id }) { g -> GameRow(g, stats[g.id]?.minutes, onClick = { onGame(g.id) }) }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 8.dp)) {
+                Text("$title · ${shown.size}", style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.weight(1f))
+                FilterChip(selected = minFit >= 4, onClick = { minFit = if (minFit >= 4) 0 else 4 }, label = { Text("★★★★+") })
+                FilterChip(selected = notesOnly, onClick = { notesOnly = !notesOnly }, label = { Text("✍ notes") })
+                FilterChip(selected = onDeviceOnly, onClick = { onDeviceOnly = !onDeviceOnly }, label = { Text("on device") })
+            }
+        }
+        items(shown, key = { it.id }) { g -> GameRow(g, stats[g.id]?.minutes, onClick = { onGame(g.id) }) }
     }
 }
 

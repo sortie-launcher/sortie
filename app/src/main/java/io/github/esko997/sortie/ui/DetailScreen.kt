@@ -37,6 +37,7 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel) {
     val fav = game.id in user.favourites
     val launchFocus = remember { FocusRequester() }
     LaunchedEffect(game.id) { runCatching { launchFocus.requestFocus() } }
+    LaunchedEffect(game.id) { Hotkeys.events.collect { if (it == Hotkeys.Key.FAVOURITE) vm.toggleFavourite(game.id) } }
     Row(Modifier.fillMaxSize().padding(16.dp)) {
         Cover(game, width = 200, height = 260)
         Column(Modifier.padding(start = 20.dp).verticalScroll(rememberScrollState())) {

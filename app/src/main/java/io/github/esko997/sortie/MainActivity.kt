@@ -13,6 +13,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import io.github.esko997.sortie.ui.Hotkeys
 import io.github.esko997.sortie.ui.SortieNav
 import io.github.esko997.sortie.ui.SortieTheme
 import io.github.esko997.sortie.ui.SortieViewModel
@@ -50,6 +51,9 @@ class MainActivity : ComponentActivity() {
         presentation?.dismiss(); presentation = null
         super.onPause()
     }
+
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean =
+        (event?.repeatCount == 0 && Hotkeys.onKeyDown(keyCode)) || super.onKeyDown(keyCode, event)
 
     private fun displayManager() = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
 }
