@@ -11,6 +11,8 @@ data class SystemCount(val systemId: String, val n: Int)
 
 data class PlayStat(val gameId: String, val minutes: Int, val lastPlayed: Long?)
 
+data class TileCover(val systemId: String, val cover: String)
+
 data class NameRow(val id: String, val fileName: String, val placeholder: Boolean)
 
 data class Signature(val id: String, val mtime: Long, val size: Long, val addedAt: Long, val arriving: Boolean)
@@ -76,6 +78,10 @@ interface GameDao {
 
     @Query("SELECT * FROM games WHERE placeholder = 0 AND variantOf IS NULL AND fit >= 4 AND screenshot IS NOT NULL ORDER BY RANDOM() LIMIT 120")
     suspend fun heroes(): List<GameEntity>
+
+    /** One cover per system for the home tiles: the best-rated game that has one. */
+    @Query("SELECT systemId, cover FROM games WHERE cover IS NOT NULL AND placeholder = 0 GROUP BY systemId HAVING MAX(fit)")
+    fun tileCovers(): Flow<List<TileCover>>
 
     @Query("SELECT COUNT(*) FROM games WHERE placeholder = 0 AND variantOf IS NULL")
     fun total(): Flow<Int>

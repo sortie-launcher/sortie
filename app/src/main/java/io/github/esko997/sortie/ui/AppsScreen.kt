@@ -36,7 +36,7 @@ fun AppsScreen(vm: SortieViewModel) {
                 }, onFavourite = { vm.toggleFavourite(app.id) }, icon = { vm.appIcon(app.pkg) })
             }
         }
-        HintBar("A" to "open", "Select" to "favourite", "B" to "back")
+        HintBar("A" to "open", "hold A" to "favourite", "B" to "back")
     }
 }
 

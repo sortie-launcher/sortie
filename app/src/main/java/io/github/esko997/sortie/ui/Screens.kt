@@ -65,6 +65,7 @@ fun HomeScreen(
     val total by vm.total.collectAsState()
     val index by vm.index.collectAsState()
     val apps by vm.apps.collectAsState()
+    val covers by vm.tileCovers.collectAsState()
     val grid = user.homeLayout == "grid"
     androidx.compose.runtime.LaunchedEffect(Unit) { Selection.set(null) }
     // Y opens search from Home (Start is intercepted by Android while Sortie is the home app); Select toggles list/grid.
@@ -104,7 +105,7 @@ fun HomeScreen(
                     }
                 )
             }
-            add(Tile("apps", "Apps", "${apps.size}", androidx.compose.ui.graphics.Color(0xFF9AA3AD), onApps))
+            add(Tile("apps", "Apps", "${apps.size}", androidx.compose.ui.graphics.Color(0xFF9AA3AD), onClick = onApps))
             systems.forEach { row ->
                 val missing = biosMissing[row.def.id]
                 add(
@@ -149,7 +150,14 @@ fun HomeScreen(
     }
 }
 
-private class Tile(val key: String, val title: String, val subtitle: String, val colour: androidx.compose.ui.graphics.Color, val onClick: () -> Unit)
+private class Tile(
+    val key: String,
+    val title: String,
+    val subtitle: String,
+    val colour: androidx.compose.ui.graphics.Color,
+    val cover: String? = null,
+    val onClick: () -> Unit
+)
 
 /** 1:1 tile for the grid layout: system colour wash, label, count; grows slightly when focused. */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -169,7 +177,7 @@ private fun SquareTile(t: Tile) {
             .padding(12.dp)
     ) {
         Box(Modifier.size(10.dp).clip(RoundedCornerShape(5.dp)).background(t.colour).align(Alignment.TopStart))
-        Column(Modifier.align(Alignment.BottomStart)) {
+        Column(Modifier.align(Alignment.BottomStart).padding(12.dp)) {
             Text(t.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2)
             Text(
                 t.subtitle.substringBefore(" · BIOS"),

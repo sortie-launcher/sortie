@@ -104,6 +104,9 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
 
     fun variantsOf(id: String): Flow<List<GameEntity>> = flow { emit(dao.variantsOf(id)) }
 
+    val tileCovers: StateFlow<Map<String, String>> =
+        dao.tileCovers().map { l -> l.associate { it.systemId to it.cover } }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     val total: StateFlow<Int> = dao.total().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     fun gamesOf(systemId: String): Flow<List<GameEntity>> = dao.bySystem(systemId)
