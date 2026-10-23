@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -127,7 +128,9 @@ fun CompanionScreen(displayId: Int) {
                 if (s != null) NowPlaying(graph, s) else HeroPanel(graph)
                 CornerPlus(Modifier.align(Alignment.BottomEnd).padding(16.dp)) { launcher = true }
                 Dock(graph, displayId, scope, dock, Modifier.align(Alignment.BottomStart).padding(16.dp), onToggle = { dock = !dock }) { dockSlot = it }
-                StatusStrip(graph, Modifier.align(Alignment.TopEnd).padding(12.dp))
+                // one element per corner, all on the same 44 dp inset: battery · bell / dock · '+'
+                Battery(Modifier.align(Alignment.TopStart).padding(16.dp))
+                Bell(graph, Modifier.align(Alignment.TopEnd).padding(16.dp))
             }
         }
     }
@@ -340,13 +343,10 @@ private fun Dock(
                 }
             }
         }
-        Box(
-            Modifier
-                .size(if (open) 20.dp else 14.dp)
-                .clip(CircleShape)
-                .background(if (open) Amber else Slate.copy(alpha = 0.8f))
-                .clickable(onClickLabel = "Dock", onClick = onToggle)
-        )
+        // the dot sits centred in a corner-sized hit box so it lines up with the '+' opposite (and is easier to hit)
+        Box(Modifier.size(CORNER).clip(CircleShape).clickable(onClickLabel = "Dock", onClick = onToggle), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(if (open) 20.dp else 14.dp).clip(CircleShape).background(if (open) Amber else Slate.copy(alpha = 0.8f)))
+        }
     }
 }
 
@@ -358,7 +358,7 @@ private fun Dock(
  * NotificationListenerService, a permanent bound service, which is what kept Cocoon alive in the background.
  */
 @Composable
-private fun StatusStrip(graph: SortieApp.Graph, modifier: Modifier) {
+private fun Battery(modifier: Modifier) {
     val context = LocalContext.current
     var level by remember { mutableStateOf(-1) }
     var charging by remember { mutableStateOf(false) }
@@ -375,31 +375,33 @@ private fun StatusStrip(graph: SortieApp.Graph, modifier: Modifier) {
         context.registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         onDispose { context.unregisterReceiver(receiver) }
     }
-    val shizuku by graph.screenMover.status.collectAsState()
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (level >= 0) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Box(Modifier.size(22.dp, 11.dp).clip(RoundedCornerShape(2.dp)).background(Slate)) {
-                    Box(Modifier.fillMaxHeight().fillMaxWidth(level / 100f).background(if (level <= 15 && !charging) Color(0xFFE05B4B) else Amber))
-                }
-                Text((if (charging) "⚡" else "") + "$level%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+    if (level < 0) return
+    Row(modifier.height(CORNER), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(Modifier.size(22.dp, 11.dp).clip(RoundedCornerShape(2.dp)).background(Slate)) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(level / 100f).background(if (level <= 15 && !charging) Color(0xFFE05B4B) else Amber))
         }
-        if (shizuku == ScreenMover.Status.READY) {
-            Text(
-                "🔔",
-                fontSize = 18.sp,
-                modifier = Modifier.clip(CircleShape).clickable(onClickLabel = "Notifications") { graph.screenMover.expandNotifications() }.padding(4.dp)
-            )
-        }
+        Text((if (charging) "⚡" else "") + "$level%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
+
+@Composable
+private fun Bell(graph: SortieApp.Graph, modifier: Modifier) {
+    val shizuku by graph.screenMover.status.collectAsState()
+    if (shizuku != ScreenMover.Status.READY) return
+    Box(
+        modifier.size(CORNER).clip(CircleShape).clickable(onClickLabel = "Notifications") { graph.screenMover.expandNotifications() },
+        contentAlignment = Alignment.Center
+    ) { Text("🔔", fontSize = 18.sp) }
+}
+
+/** Size of the four corner controls; the dock dot and battery centre themselves in it so every corner lines up. */
+private val CORNER = 44.dp
 
 @Composable
 private fun CornerPlus(modifier: Modifier, onClick: () -> Unit) {
     Box(
         modifier
-            .size(44.dp)
+            .size(CORNER)
             .clip(CircleShape)
             .background(Slate.copy(alpha = 0.6f))
             .clickable(onClickLabel = "Open an app here", onClick = onClick),
