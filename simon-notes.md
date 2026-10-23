@@ -8,3 +8,5 @@
     - ideally can get structured response from remote agent and then
       render into a browseable saved "Recommendation Snapshot" view/UI
     - Can target recommendations to specific genres,platforms,device performance criteria (eg runs well on Ayn Thor)
+- "Horizontal" folder scrolling/view
+  - Option to orient folders as 1:1 aspect ratio squares in a grid, allow arrangement in arbitrary verical and horizontal dimensions
