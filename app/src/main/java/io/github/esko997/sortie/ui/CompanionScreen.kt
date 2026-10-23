@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import io.github.esko997.sortie.CompanionHost
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.apps.AppEntry
 import io.github.esko997.sortie.data.apps.LibraryItem
@@ -71,6 +72,11 @@ fun CompanionScreen(displayId: Int) {
     // Screen-level scope: a launch's controller hand-off must outlive the launcher list, which closes on the tap.
     val scope = rememberCoroutineScope()
     LaunchedEffect(switcher.open) { if (switcher.open) launcher = false }
+    // the host hands the controller away on every tap; not while a text field here needs the IME
+    val host = LocalContext.current as? CompanionHost
+    LaunchedEffect(launcher) {
+        if (launcher) host?.keepController = true else if (host?.keepController == true) host.releaseController()
+    }
     Surface(Modifier.fillMaxSize(), color = Ink) {
         when {
             switcher.open && !switcher.overlay -> TouchSwitcher(graph.switcher, switcher, displayId)

@@ -46,8 +46,21 @@ abstract class CompanionHost : ComponentActivity() {
         if (!graph().switcher.anchoredRecently()) scheduleHandOff()
     }
 
+    /**
+     * While the companion's own app picker (text field, IME) is open the controller must stay here: a hand-off on every tap
+     * would move display focus away and the keyboard would close as soon as it opened. Set by the screen; [releaseController]
+     * hands the controller back when the picker closes.
+     */
+    @Volatile
+    var keepController = false
+
+    fun releaseController() {
+        keepController = false
+        scheduleHandOff()
+    }
+
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) scheduleHandOff()
+        if (!keepController && (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL)) scheduleHandOff()
         return super.dispatchTouchEvent(ev)
     }
 

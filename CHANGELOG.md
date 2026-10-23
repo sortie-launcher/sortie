@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Tile/row text is white again over the ambient gradient (the transparent Surface had lost its content colour). The companion
+  '+' picker keeps the controller while open (`CompanionHost.keepController`): a tap on its search field no longer hands the
+  display away and closes the keyboard; closing the picker hands it back.
 - Overlay picker search: the touch-only overlay window becomes focusable while its app picker is open (`SwitcherOverlay.
   allowTextInput`), so the IME stays attached; restored and the controller re-anchored when the picker closes. Known wart: Gboard
   uses its fullscreen extract UI on that window while typing (not on Sortie's own screens); Done/Back returns to the filtered grid.

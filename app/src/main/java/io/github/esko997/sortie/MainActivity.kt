@@ -14,6 +14,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,7 +56,17 @@ class MainActivity : ComponentActivity() {
         }
         Hotkeys.handle(setOf(Hotkeys.Key.SWAP_SCREENS))
         lifecycleScope.launch { Hotkeys.events.collect { if (it == Hotkeys.Key.SWAP_SCREENS) swapScreens() } }
-        setContent { SortieTheme { AmbientBackground { Surface(Modifier.fillMaxSize().safeDrawingPadding(), color = Color.Transparent) { SortieNav(vm) } } } }
+        setContent {
+            SortieTheme {
+                AmbientBackground {
+                    Surface(
+                        Modifier.fillMaxSize().safeDrawingPadding(),
+                        color = Color.Transparent,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ) { SortieNav(vm) }
+                }
+            }
+        }
         if (savedInstanceState == null) handleIntent(intent) // never re-fire a launch on activity recreation
     }
 
