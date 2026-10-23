@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
@@ -55,6 +56,8 @@ import androidx.compose.ui.zIndex
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.index.cleanTitle
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlinx.coroutines.delay
@@ -218,7 +221,7 @@ fun GameRow(
     hasSave: Boolean = false,
     onFavourite: (() -> Unit)? = null
 ) {
-    FocusRow(onClick = onClick, onLongClick = onLongClick, onFavourite = onFavourite) {
+    FocusRow(onClick = onClick, modifier = Modifier.heroOnFocus(game), onLongClick = onLongClick, onFavourite = onFavourite) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Cover(game)
             Column(Modifier.padding(start = 12.dp).weight(1f)) {
@@ -289,3 +292,24 @@ fun playedLine(s: PlayStat): String {
 
 /** The stem save files are matched on (`DeviceState.saveStems`): the file name without its extension, lower-cased. */
 fun GameEntity.saveStem(): String = fileName.substringBeforeLast('.').lowercase()
+
+/** While this tile or row has the D-pad focus the companion's hero panel shows [game] (see [Selection]). */
+fun Modifier.heroOnFocus(game: GameEntity): Modifier = onFocusChanged { if (it.isFocused) Selection.set(game) }
+
+/**
+ * The time, 24-hour, recomposed once a minute on the minute boundary and never faster — the same budget as the companion's
+ * play timer. The format comes from the device locale's 24-hour pattern.
+ */
+@Composable
+fun Clock(modifier: Modifier = Modifier) {
+    var now by remember { mutableStateOf(LocalTime.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = LocalTime.now()
+            delay(60_000L - (System.currentTimeMillis() % 60_000L) + 50)
+        }
+    }
+    Text(now.format(CLOCK_FORMAT), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = modifier)
+}
+
+private val CLOCK_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

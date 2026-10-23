@@ -92,6 +92,7 @@ fun ItemCell(
                 SquareTile(
                     displayTitle(g),
                     onClick,
+                    modifier = Modifier.heroOnFocus(g),
                     cover = g.cover ?: g.screenshot,
                     paletteGlow = true,
                     favourite = favourite,

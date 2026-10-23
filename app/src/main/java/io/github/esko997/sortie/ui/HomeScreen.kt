@@ -277,6 +277,8 @@ fun HomeScreen(
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Text("Sortie", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.width(12.dp))
+            Clock()
+            Spacer(Modifier.width(12.dp))
             Text("$total games", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (index.running) {
                 Spacer(Modifier.width(12.dp))
@@ -464,6 +466,7 @@ private fun HomeTileView(
             is LibraryItem.Game -> SquareTile(
                 t.title,
                 onClick,
+                modifier = Modifier.heroOnFocus(item.game),
                 subtitle = t.subtitle,
                 cover = t.cover,
                 paletteGlow = true,

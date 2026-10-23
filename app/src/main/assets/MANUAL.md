@@ -40,7 +40,7 @@ Settings → the manifest's order → "Open with…".
 
 ## The other screen (companion)
 
-While you browse, the bottom screen mirrors the selected game: art, hook, description, notes and play stats — read without
+While you browse, the bottom screen follows the focused game: art, hook, description, notes and play stats — read without
 leaving the list. With nothing selected it rotates through recommended unplayed games; tapping one opens it. While a game runs,
 it shows what is playing, how long, and its control notes.
 

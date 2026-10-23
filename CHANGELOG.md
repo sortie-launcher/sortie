@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Home header shows a 24-hour clock (one recomposition a minute). The companion hero follows the focused game while browsing
+  grids and lists (`Modifier.heroOnFocus`), not only the game page. Manual scrolls with the D-pad (focusable list, Up/Down/Page).
 - Home: a **Continue** tile (last game played) leads every generated sort. Hold R1 on a system or folder tile opens a random
   playable game in it.
 - Lists: **💾 started** chip — games with a save or state on the card (`DeviceState.saveStems`).
