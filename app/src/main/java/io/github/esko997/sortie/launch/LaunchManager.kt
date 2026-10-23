@@ -152,23 +152,20 @@ class LaunchManager(
         (intent.component?.packageName ?: intent.`package`)?.let { context.grantUriPermission(it, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
 
+    /**
+     * The display an emulator is sent to. "same" always resolves to an explicit id: without one Android reuses the emulator's
+     * existing task wherever it is (after a switcher move, on the other screen) instead of the screen the user is looking at.
+     * On a dual-screen device whose navigation lives on the bottom, "same" means the top screen.
+     */
     private fun displayOptions(display: String): Triple<ActivityOptions?, Int?, String?> {
         val dm = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
         val screens = manifests.snapshot.value.device.screens
         val secondary = dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).getOrNull(screens.presentationIndex)
+        val current = currentDisplayId?.invoke() ?: Display.DEFAULT_DISPLAY
         val id = when (display) {
             "top" -> Display.DEFAULT_DISPLAY
             "bottom" -> secondary?.displayId ?: return Triple(null, null, "no secondary display, launched on the current one")
-            // "same": games go to the top screen on a dual-screen device whose navigation lives on the bottom
-            else -> if (secondary != null && screens.navigation == "bottom" && (currentDisplayId?.invoke() ?: 0) != Display.DEFAULT_DISPLAY) {
-                Display.DEFAULT_DISPLAY
-            } else {
-                return Triple(
-                    null,
-                    null,
-                    null
-                )
-            }
+            else -> if (secondary != null && screens.navigation == "bottom") Display.DEFAULT_DISPLAY else current
         }
         return Triple(ActivityOptions.makeBasic().setLaunchDisplayId(id), id, null)
     }

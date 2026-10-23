@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Launch display "same" always resolves to an explicit display: without one Android reused the emulator's existing task on
+  whichever screen the switcher had moved it to.
 - A play session now ends only when its app is really gone (checked over Shizuku on foreground): Home summoning the switcher
   resumes Sortie's HOME activity while the game runs underneath and used to stop the timer and Now playing. Switcher cards have
   a ✕ (touch) to close that app.
