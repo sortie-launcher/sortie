@@ -2,6 +2,9 @@ package io.github.esko997.sortie.data.folders
 
 import android.util.Log
 import androidx.room.withTransaction
+import io.github.esko997.sortie.data.apps.AppEntry
+import io.github.esko997.sortie.data.apps.LibraryItem
+import io.github.esko997.sortie.data.apps.ShortcutEntry
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.db.SortieDb
@@ -18,16 +21,22 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
-/** A smart folder evaluated against the current library, play data and favourites. */
-data class FolderView(val def: FolderDef, val games: List<GameEntity>, val problems: List<String>)
+/** A smart folder evaluated against the current library, installed apps, launcher shortcuts, play data and favourites. */
+data class FolderView(val def: FolderDef, val items: List<LibraryItem>, val problems: List<String>)
 
 /**
- * Evaluates every folder in `folders.json` whenever the library, play stats, favourites or the manifests change.
+ * Evaluates every folder in `folders.json` whenever the library, apps, shortcuts, play stats, favourites or the manifests change.
  * The full-table read runs inside a transaction so the indexer cannot change rows under the cursor (that race crashed the
  * process once with "Couldn't read row N from CursorWindow"), inputs are debounced while an index pass is writing, and any
  * failure degrades to the previous result instead of propagating.
  */
-class FolderRepository(private val db: SortieDb, private val manifests: ManifestStore, user: StateFlow<UserData>) {
+class FolderRepository(
+    private val db: SortieDb,
+    private val manifests: ManifestStore,
+    user: StateFlow<UserData>,
+    apps: StateFlow<List<AppEntry>>,
+    shortcuts: StateFlow<List<ShortcutEntry>>
+) {
     private val dao = db.games()
 
     @OptIn(FlowPreview::class)
@@ -37,18 +46,19 @@ class FolderRepository(private val db: SortieDb, private val manifests: Manifest
             .map { (stats, u) -> Triple(readAll(), stats, u) }
 
     val folders: Flow<List<FolderView>> =
-        combine(inputs, manifests.snapshot) { (games, stats, u), snap ->
+        combine(inputs, manifests.snapshot, apps, shortcuts) { (games, stats, u), snap, appList, shortcutList ->
             val now = System.currentTimeMillis()
-            val subjects = games.filter { it.id !in u.hidden }.map { g ->
-                Subject(
-                    g,
-                    stats[g.id]?.minutes ?: 0,
-                    stats[g.id]?.lastPlayed,
-                    g.id in u.favourites,
-                    now
-                )
+            val items = buildList<LibraryItem> {
+                games.mapTo(this) { LibraryItem.Game(it) }
+                appList.mapTo(this) { LibraryItem.App(it) }
+                shortcutList.mapTo(this) { LibraryItem.Shortcut(it) }
+            }.filter { it.id !in u.hidden }
+            val byId = items.associateBy { it.id }
+            val subjects = items.map { subjectOf(it, stats[it.id], it.id in u.favourites, now) }
+            snap.folders.map { def ->
+                val result = RuleEngine.evaluate(def, subjects)
+                FolderView(def, result.subjects.mapNotNull { byId[it.id] }, result.problems)
             }
-            snap.folders.map { def -> evaluate(def, subjects) }
         }.catch { e ->
             Log.w(TAG, "folder evaluation failed", e)
             emit(emptyList())
@@ -66,13 +76,33 @@ class FolderRepository(private val db: SortieDb, private val manifests: Manifest
         return emptyList()
     }
 
-    private fun evaluate(def: FolderDef, subjects: List<Subject>): FolderView {
-        val engine = RuleEngine(def.rule)
-        val include = def.include.toSet()
-        val exclude = def.exclude.toSet()
-        val matched = subjects.filter { s -> s.game.id !in exclude && (s.game.id in include || (def.rule != null && engine.matches(s))) }
-        val sorted = matched.sortedWith(RuleEngine.comparator(def.sort)).let { if (def.limit > 0) it.take(def.limit) else it }
-        return FolderView(def, sorted.map { it.game }, engine.problems)
+    private fun subjectOf(item: LibraryItem, stat: PlayStat?, favourite: Boolean, now: Long): Subject {
+        val minutes = stat?.minutes ?: 0
+        val last = stat?.lastPlayed
+        return when (item) {
+            is LibraryItem.Game -> Subject(item.game, minutes, last, favourite, now)
+            is LibraryItem.App -> Subject(
+                item.id,
+                Subject.Kind.APP,
+                item.label,
+                pkg = item.app.pkg,
+                playMinutes = minutes,
+                lastPlayed = last,
+                favourite = favourite,
+                now = now
+            )
+            is LibraryItem.Shortcut -> Subject(
+                item.id,
+                Subject.Kind.SHORTCUT,
+                item.label,
+                pkg = item.shortcut.pkg,
+                source = item.shortcut.pkg,
+                playMinutes = minutes,
+                lastPlayed = last,
+                favourite = favourite,
+                now = now
+            )
+        }
     }
 
     companion object {

@@ -36,6 +36,44 @@
             android:launchMode="singleInstance"
             android:taskAffinity=""
             android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" />
+        <!-- Home for the second screen: resolved from the default HOME package, so the bottom screen falls back to Sortie's companion
+             panel whenever it is vacated. singleTop so a Home press there re-delivers the intent instead of stacking instances
+             (the framework rejects singleTask/singleInstance secondary homes). -->
+        <activity
+            android:name=".SecondaryHomeActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true"
+            android:stateNotNeeded="true"
+            android:taskAffinity="${applicationId}.companion"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density|fontScale|smallestScreenSize|layoutDirection|locale"
+            android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.SECONDARY_HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <!-- Exists for one frame on a chosen display to hand it the controller (see AnchorActivity). -->
+        <activity
+            android:name=".AnchorActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="${applicationId}.anchor"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- Confirms ShortcutManager.requestPinShortcut (e.g. DroidDeck "add to home") while Sortie is the default launcher. -->
+        <activity
+            android:name=".ShortcutPinActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="${applicationId}.pin"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.content.pm.action.CONFIRM_PIN_SHORTCUT" />
+            </intent-filter>
+        </activity>
         <!-- Shizuku (optional): lets Sortie move running apps between screens as the shell user. Nothing works without the user's grant. -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"

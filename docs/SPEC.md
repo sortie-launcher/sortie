@@ -62,11 +62,15 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Live counts; "Pick one" (random) scoped to any folder.
 - Built-in examples: Unplayed 4+, Recently added, Short sessions, Two-player.
 
-### Dual screen (M3)
-- Roles: top = art and detail, bottom = navigation; swappable. Implemented with Presentation on the
-  secondary display when present; single-screen layout otherwise.
+### Dual screen (M3, revised in feedback round 2)
+- Roles: top = art and detail, bottom = navigation; swappable. The companion panel is an activity on whichever screen the
+  navigation is not on: `CompanionActivity` on the default display, `SecondaryHomeActivity` (SECONDARY_HOME) on the second,
+  so the second screen always falls back to Sortie when an emulator exits. Single-screen layout otherwise.
 - Launch target display per profile (ActivityOptions.setLaunchDisplayId).
-- Stretch: move a running app between screens via Shizuku (shell privilege granted once per boot).
+- Controller anchoring: the controller follows the game's display. Companion screens are touch only and hand the controller
+  back to the other screen when they appear or are tapped (`AnchorActivity`).
+- App switcher (Shizuku): Home while something runs shows each screen's running apps on both screens; apps can be raised,
+  moved between screens, swapped or closed. Companion-side carousel is touch, navigation-side is controller.
 
 ### Library hygiene (M3)
 - Multi-disc grouping (.m3u or disc tags), duplicate-format hiding (PBP next to CHD), hacks
@@ -81,6 +85,7 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 ## Non-goals (for now)
 Scraping, cloud sync, RetroAchievements UI, themes marketplace, video previews, any network use.
 
-## Controller grammar (draft)
-A select/launch · B back · X swap screen roles · Y favourite toggle (on a game) / search (on Home) · Start search (not
-available while Sortie is the home app: Android intercepts it) · Select launch-profile sheet · L1/R1 previous/next system.
+## Controller grammar
+A select/launch · B back · X swap screen roles · Y favourite toggle (on a game) / search (on Home) / other screen (switcher) ·
+Start search (not available while Sortie is the home app: Android intercepts it) · Select launch-profile sheet / close app
+(switcher) · L1/R1 previous/next system · Home (physical) app switcher when something is running.

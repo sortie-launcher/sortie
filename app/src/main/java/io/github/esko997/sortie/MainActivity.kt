@@ -1,7 +1,6 @@
 package io.github.esko997.sortie
 
 import android.app.ActivityOptions
-import android.app.Presentation
 import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
@@ -18,7 +17,9 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
+import io.github.esko997.sortie.shell.TaskSwitcher
 import io.github.esko997.sortie.ui.Hotkeys
+import io.github.esko997.sortie.ui.Selection
 import io.github.esko997.sortie.ui.SortieNav
 import io.github.esko997.sortie.ui.SortieTheme
 import io.github.esko997.sortie.ui.SortieViewModel
@@ -26,7 +27,6 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val vm: SortieViewModel by viewModels()
-    private var presentation: Presentation? = null
     private var companionShown = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,17 +39,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val graph = (application as SortieApp).graph
         graph.launcher.currentDisplayId = { myDisplayId() }
-        graph.launcher.beforeLaunch = { target ->
-            // never leave the companion panel over the screen an emulator is about to use
-            if (target == "bottom" || (target == "same" && myDisplayId() != Display.DEFAULT_DISPLAY)) dismissPresentation()
-        }
         graph.launcher.afterLaunch = { target ->
+            // Other launchers' leftover tasks would be what the system resumes when the game exits: clear them now.
+            graph.screenMover.sweepAsync()
             // Running on the secondary screen while a game takes the primary one: get out of the way so dual-screen emulators
-            // (DS bottom screen) can use this display too. Home brings Sortie back.
+            // (DS bottom screen) can use this display too. The secondary home (companion panel) takes over this screen; Home
+            // brings Sortie back on the top screen.
             if (myDisplayId() != Display.DEFAULT_DISPLAY && target != myDisplayId()) {
-                io.github.esko997.sortie.ui.Selection.closeCompanion.tryEmit(Unit)
+                Selection.closeCompanion.tryEmit(Unit)
                 companionShown = false
-                finishAndRemoveTask() // a home-role task cannot be moved to the back; Home brings Sortie back on the top screen
+                finishAndRemoveTask() // a home-role task cannot be moved to the back
             }
         }
         Hotkeys.handle(setOf(Hotkeys.Key.SWAP_SCREENS))
@@ -64,12 +63,29 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
     }
 
-    /** Debug builds accept `--es launch <id> [--es profile <id>]` from adb so launch profiles can be tested from the desktop. */
+    /**
+     * The Home button lands on the switcher when something is running: Sortie is HOME, so the system delivers the HOME intent
+     * here when the top screen had the controller; the secondary home summons us with [TaskSwitcher.EXTRA_SWITCHER] when the
+     * bottom screen had it. Debug builds also accept `--es launch <id> [--es profile <id>]` / `--es open <route>` from adb.
+     */
     private fun handleIntent(intent: Intent?) {
-        if (intent == null || !BuildConfig.DEBUG) return
+        if (intent == null) return
+        val summoned = intent.hasExtra(TaskSwitcher.EXTRA_SWITCHER)
+        if (summoned || (intent.hasCategory(Intent.CATEGORY_HOME) && !intent.hasExtra("open") && !intent.hasExtra("launch"))) {
+            intent.removeExtra(TaskSwitcher.EXTRA_SWITCHER)
+            val switcher = (application as SortieApp).graph.switcher
+            lifecycleScope.launch {
+                if (summoned || switcher.anyRunning()) {
+                    switcher.open()
+                    Selection.openRoute.tryEmit("switcher")
+                }
+            }
+            return
+        }
+        if (!BuildConfig.DEBUG) return
         intent.getStringExtra("open")?.let { route ->
             intent.removeExtra("open")
-            io.github.esko997.sortie.ui.Selection.openRoute.tryEmit(route)
+            Selection.openRoute.tryEmit(route)
         }
         val id = intent.getStringExtra("launch") ?: return
         intent.removeExtra("launch")
@@ -84,12 +100,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         vm.onForeground() // closes an open play session when we come back from an emulator
-        showPresentation()
-    }
-
-    override fun onPause() {
-        dismissPresentation()
-        super.onPause()
+        showCompanion()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean = (event?.repeatCount == 0 && Hotkeys.onKeyDown(keyCode)) || super.onKeyDown(keyCode, event)
@@ -104,37 +115,42 @@ class MainActivity : ComponentActivity() {
         return dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).getOrNull(index)
     }
 
-    private fun showPresentation() {
-        if (presentation != null) return
+    /**
+     * Puts the companion panel on the other screen, once per instance. On the second screen that is Sortie's SECONDARY_HOME,
+     * which the system keeps there anyway; starting it explicitly covers a stale Launcher3 home task left from before Sortie
+     * became HOME. The default display has no secondary home, so an ordinary activity serves there.
+     */
+    private fun showCompanion() {
+        if (companionShown) return
         val target = otherDisplay() ?: return
-        if (target.displayId == Display.DEFAULT_DISPLAY) { // Presentations cannot target the default display: use an activity there
-            if (!companionShown) {
-                companionShown = true
-                val options = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                startActivity(Intent(this, CompanionActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options.toBundle())
-            }
-            return
+        companionShown = true
+        startCompanion(target.displayId)
+    }
+
+    private fun startCompanion(displayId: Int) {
+        val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId)
+        val intent = if (displayId == Display.DEFAULT_DISPLAY) {
+            Intent(this, CompanionActivity::class.java)
+        } else {
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_SECONDARY_HOME).setClass(this, SecondaryHomeActivity::class.java)
         }
-        presentation = runCatching {
-            CompanionPresentation(this, target, this).also { p ->
-                p.setOnDismissListener { if (presentation === p) presentation = null }
-                p.show()
-            }
-        }.getOrNull()
+        runCatching { startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options.toBundle()) }
     }
 
-    private fun dismissPresentation() {
-        presentation?.dismiss()
-        presentation = null
-    }
-
-    /** X: move Sortie to the other screen. Apps cannot move a task between displays, so finish here and relaunch there. */
+    /**
+     * X: move Sortie to the other screen. Apps cannot move a task between displays, so finish here and relaunch there.
+     * Leaving the default display: cover it with the companion first. An empty default display makes the system start HOME,
+     * and HOME is this singleTask activity, which would be pulled straight back to the default display.
+     */
     private fun swapScreens() {
         val target = otherDisplay() ?: return
         val intent = Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val options = ActivityOptions.makeBasic().setLaunchDisplayId(target.displayId)
-        dismissPresentation()
-        io.github.esko997.sortie.ui.Selection.closeCompanion.tryEmit(Unit)
+        if (target.displayId == Display.DEFAULT_DISPLAY) {
+            Selection.closeCompanion.tryEmit(Unit)
+        } else {
+            startCompanion(Display.DEFAULT_DISPLAY)
+        }
         finishAndRemoveTask()
         startActivity(intent, options.toBundle())
     }

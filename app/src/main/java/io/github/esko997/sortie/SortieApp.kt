@@ -3,6 +3,7 @@ package io.github.esko997.sortie
 import android.app.Application
 import android.os.StrictMode
 import io.github.esko997.sortie.data.apps.AppsRepository
+import io.github.esko997.sortie.data.apps.ShortcutsRepository
 import io.github.esko997.sortie.data.db.SortieDb
 import io.github.esko997.sortie.data.folders.FolderRepository
 import io.github.esko997.sortie.data.index.DeviceState
@@ -12,6 +13,7 @@ import io.github.esko997.sortie.data.user.PlayLog
 import io.github.esko997.sortie.data.user.UserStore
 import io.github.esko997.sortie.launch.LaunchManager
 import io.github.esko997.sortie.shell.ScreenMover
+import io.github.esko997.sortie.shell.TaskSwitcher
 import java.io.File
 
 /** Hand-rolled service locator; small enough that a DI framework would be more code than it saves. */
@@ -26,10 +28,12 @@ class SortieApp : Application() {
         val playLog = PlayLog(db.games(), File(sortieDir, "playlog.jsonl"), manifests.snapshot.value.device.device)
         val indexer = Indexer(db.games(), manifests)
         val launcher = LaunchManager(app, manifests, user, playLog)
-        val folders = FolderRepository(db, manifests, user.data)
         val deviceState = DeviceState(manifests)
         val screenMover = ScreenMover(app)
+        val switcher = TaskSwitcher(app, screenMover) { manifests.snapshot.value.device.screens.presentationIndex }
         val apps = AppsRepository(app)
+        val shortcuts = ShortcutsRepository(app)
+        val folders = FolderRepository(db, manifests, user.data, apps.apps, shortcuts.shortcuts)
     }
 
     override fun onCreate() {

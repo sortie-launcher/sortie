@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.net.Uri
+import android.os.Bundle
 import android.util.Log
 import android.view.Display
 import androidx.core.content.FileProvider
@@ -32,9 +33,6 @@ class LaunchManager(
     data class Attempt(val profileId: String, val command: String, val outcome: String)
 
     data class LogEntry(val at: String, val gameId: String, val attempts: List<Attempt>, val launched: Boolean)
-
-    /** Hook for the activity: called right before an emulator is started on the given display ("top"/"bottom"/"same"). */
-    var beforeLaunch: ((display: String) -> Unit)? = null
 
     /** Supplied by the activity: which display Sortie itself is on right now. */
     var currentDisplayId: (() -> Int)? = null
@@ -79,7 +77,6 @@ class LaunchManager(
             val command = IntentBuilder.describe(intent, displayId)
             if (uri != null && !profile.generic && IntentBuilder.usesContentUri(profile)) grant(intent, uri)
             try {
-                beforeLaunch?.invoke(profile.display)
                 context.startActivity(intent, options?.toBundle())
                 attempts += Attempt(profile.id, command, "started" + (displayNote?.let { " ($it)" } ?: ""))
                 started = profile
@@ -101,6 +98,32 @@ class LaunchManager(
         started?.let { runCatching { playLog.start(game.id, it.id, it.display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) } }
         if (started != null) afterLaunch?.invoke(startedDisplay) // last: the activity may finish itself here
         return started != null
+    }
+
+    /**
+     * Starts an installed app or a launcher shortcut ([id] `app:…`/`shortcut:…`) under the same rules as a game: the "same"
+     * display rule (top screen when navigation lives on the bottom one), the activity hooks, the launch log and the play log.
+     * [start] performs the actual start with the ActivityOptions bundle, or null for "wherever the system puts it".
+     */
+    suspend fun launchExternal(id: String, command: String, start: (Bundle?) -> Unit): Boolean {
+        val (options, displayId, displayNote) = displayOptions("same")
+        val outcome = try {
+            start(options?.toBundle())
+            null
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            "${e.javaClass.simpleName}: ${e.message}"
+        }
+        val launched = outcome == null
+        val described = command + (displayId?.let { " --display $it" } ?: "")
+        val attempt = Attempt(id.substringBefore(':'), described, outcome ?: ("started" + (displayNote?.let { " ($it)" } ?: "")))
+        _log.update { (listOf(LogEntry(LocalTime.now().format(TS), id, listOf(attempt), launched)) + it).take(50) }
+        Log.i("SortieLaunch", "$id: ${attempt.outcome} | ${attempt.command}")
+        if (!launched) return false
+        runCatching { playLog.start(id, null, "same") }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
+        afterLaunch?.invoke(displayId) // last: the activity may finish itself here
+        return true
     }
 
     /** `<game>.titleid` next to the file (or `<stem>.psvita`, ES-DE's convention) holds a title id when the emulator needs one. */

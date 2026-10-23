@@ -1,5 +1,13 @@
 package io.github.esko997.sortie.ui
 
+import android.graphics.BlurMaskFilter
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,31 +26,87 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.PaintingStyle
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
 import io.github.esko997.sortie.data.db.GameEntity
 import java.io.File
 
-/** A focus-aware row: amber outline when focused (D-pad), subtle surface otherwise. Long press = context menu. */
+/**
+ * Controller-focus highlight shared by every focusable row/tile: a 3dp [colour] border, a soft blurred glow just outside the bounds whose
+ * alpha pulses 0.55..1 (~1.2 s period) and a subtle [focusedScale]. The pulse transition only exists while [focused], so unfocused items
+ * run no infinite animation. Unfocused items draw a 2dp [idleBorder] unless it is transparent, i.e. they look exactly as before.
+ */
+@Composable
+fun Modifier.focusGlow(focused: Boolean, shape: Shape, colour: Color = Amber, focusedScale: Float = 1.02f, idleBorder: Color = Color.Transparent): Modifier {
+    val scale = animateFloatAsState(if (focused) focusedScale else 1f, label = "focusScale")
+    val pulse: State<Float>? = if (focused) {
+        rememberInfiniteTransition(label = "focusGlow").animateFloat(
+            initialValue = 0.55f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(600, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "focusGlowAlpha"
+        )
+    } else {
+        null
+    }
+    // state is read only inside the layer/draw lambdas, so the pulse re-draws without recomposing the row
+    val base = this
+        .zIndex(if (focused) 1f else 0f)
+        .graphicsLayer {
+            scaleX = scale.value
+            scaleY = scale.value
+        }
+    if (pulse == null) return if (idleBorder == Color.Transparent) base else base.border(2.dp, idleBorder, shape)
+    return base
+        .drawWithCache {
+            val spread = 3.dp.toPx()
+            val outline = shape.createOutline(Size(size.width + 2 * spread, size.height + 2 * spread), layoutDirection, this)
+            val paint = Paint().apply {
+                color = colour
+                style = PaintingStyle.Stroke
+                strokeWidth = 6.dp.toPx()
+                asFrameworkPaint().maskFilter = BlurMaskFilter(8.dp.toPx(), BlurMaskFilter.Blur.NORMAL)
+            }
+            onDrawBehind {
+                paint.alpha = colour.alpha * pulse.value
+                translate(-spread, -spread) { drawIntoCanvas { it.drawOutline(outline, paint) } }
+            }
+        }
+        .border(3.dp, colour, shape)
+}
+
+/** A focus-aware row: [focusGlow] outline in [colour] plus a subtle surface when focused (D-pad). Long press = context menu. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun FocusRow(onClick: () -> Unit, modifier: Modifier = Modifier, onLongClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
+fun FocusRow(onClick: () -> Unit, modifier: Modifier = Modifier, onLongClick: (() -> Unit)? = null, colour: Color = Amber, content: @Composable () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val shape = RoundedCornerShape(10.dp)
     Box(
         modifier
+            .focusGlow(focused, shape, colour)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(shape)
             .background(if (focused) Slate else Color.Transparent)
-            .border(2.dp, if (focused) Amber else Color.Transparent, RoundedCornerShape(10.dp))
             .combinedClickable(
                 interactionSource = interaction,
                 indication = null,

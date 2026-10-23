@@ -1,21 +1,17 @@
 package io.github.esko997.sortie
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import io.github.esko997.sortie.ui.Selection
 import kotlinx.coroutines.launch
 
 /**
- * Companion panel on the DEFAULT display while Sortie's navigation runs on a secondary one (a Presentation cannot target the
- * default display). Lives in its own task so it never steals focus from the navigation screen; closed when Sortie swaps back.
+ * Companion panel on the DEFAULT display while Sortie's navigation runs on a secondary one (there is no "secondary home" for
+ * the default display, so this is an ordinary task there). Closed when Sortie swaps back or sends a game to this screen.
  */
-class CompanionActivity : ComponentActivity() {
+class CompanionActivity : CompanionHost() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val view = CompanionView(this)
-        setContentView(view.root)
-        lifecycleScope.launch { Selection.panel().collect(view::show) }
         lifecycleScope.launch { Selection.closeCompanion.collect { finishAndRemoveTask() } }
     }
 }

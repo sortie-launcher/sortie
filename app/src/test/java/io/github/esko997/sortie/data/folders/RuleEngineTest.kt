@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.data.folders
 
 import io.github.esko997.sortie.data.db.GameEntity
+import io.github.esko997.sortie.data.manifest.FolderDef
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -71,11 +72,65 @@ class RuleEngineTest {
     fun `sort comparator orders by fit desc then title`() {
         val c = RuleEngine.comparator("fit:desc,title:asc")
         val l = listOf(subj(game("B", fit = 5)), subj(game("A", fit = 5)), subj(game("C", fit = 2))).sortedWith(c)
-        assertEquals(listOf("A", "B", "C"), l.map { it.game.title })
+        assertEquals(listOf("A", "B", "C"), l.map { it.label })
     }
+
+    @Test
+    fun `package rule feeds shortcuts into a folder only when apps is true`() {
+        val rule = Json.parseToJsonElement("""{"package":{"eq":"com.droiddeck.launcher"}}""")
+        val subjects = listOf(subj(game("Armored Core 3")), app("com.droiddeck.launcher", "DroidDeck"), shortcut(DROIDDECK, "7", "Gungriffon"))
+        val off = RuleEngine.evaluate(FolderDef("dd", rule = rule), subjects)
+        assertTrue(off.subjects.isEmpty())
+        assertTrue(off.problems.isEmpty())
+        val on = RuleEngine.evaluate(FolderDef("dd", rule = rule, apps = true), subjects)
+        assertEquals(listOf("app:$DROIDDECK", "shortcut:$DROIDDECK/7"), on.subjects.map { it.id })
+    }
+
+    @Test
+    fun `source matches shortcuts but not the publishing app`() {
+        val r = rule("""{"source":{"eq":"com.droiddeck.launcher"}}""")
+        assertTrue(r.matches(shortcut(DROIDDECK, "7", "Gungriffon")))
+        assertFalse(r.matches(app(DROIDDECK, "DroidDeck")))
+        assertFalse(r.matches(subj(game("Gungriffon"))))
+        assertTrue(rule("""{"kind":{"eq":"shortcut"}}""").matches(shortcut(DROIDDECK, "7", "Gungriffon")))
+    }
+
+    @Test
+    fun `game-only fields never match an app`() {
+        val a = app("com.android.chrome", "Chrome")
+        listOf(
+            """{"fit":{"gte":0}}""",
+            """{"system":{"regex":".*"}}""",
+            """{"genre":{"regex":".*"}}""",
+            """{"daysSinceAdded":{"gte":0}}""",
+            """{"tags":{"hasAll":[]}}""",
+            """{"hack":false}""",
+            """{"handWritten":false}"""
+        ).forEach { json ->
+            val r = rule(json)
+            assertFalse(json, r.matches(a))
+            assertTrue(json, r.problems.isEmpty())
+        }
+        assertTrue(rule("""{"name":{"regex":"(?i)chrome"}}""").matches(a))
+        assertTrue(rule("""{"favourite":true}""").matches(a.copy(favourite = true)))
+        assertFalse(rule("""{"package":{"regex":".*"}}""").matches(subj(game("X"))))
+    }
+
+    @Test
+    fun `include adds an app even without apps true, and fit sort puts apps last`() {
+        val subjects = listOf(app("com.android.chrome", "Chrome"), subj(game("B", fit = 2)))
+        val def = FolderDef("mix", rule = Json.parseToJsonElement("""{"fit":{"gte":1}}"""), include = listOf("app:com.android.chrome"), sort = "fit:desc")
+        assertEquals(listOf("ps2/B.iso", "app:com.android.chrome"), RuleEngine.evaluate(def, subjects).subjects.map { it.id })
+    }
+
+    private fun app(pkg: String, label: String) = Subject("app:$pkg", Subject.Kind.APP, label, pkg = pkg, now = NOW)
+
+    private fun shortcut(pkg: String, id: String, label: String) =
+        Subject("shortcut:$pkg/$id", Subject.Kind.SHORTCUT, label, pkg = pkg, source = pkg, now = NOW)
 
     companion object {
         const val DAY = 86_400_000L
         const val NOW = 1_800_000_000_000L
+        const val DROIDDECK = "com.droiddeck.launcher"
     }
 }

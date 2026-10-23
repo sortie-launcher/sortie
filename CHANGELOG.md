@@ -1,6 +1,22 @@
 # Changelog
 
 ## Unreleased
+- Feedback round 2 (2026-10-23):
+  - App switcher (needs Shizuku): Home while something runs opens it on both screens — controller carousels per screen on the
+    navigation screen (A to front / bring to a free screen, Y other screen, Select close app, Quick swap, Controller → top/bottom),
+    touch carousel on the companion screen. `shell/TaskSwitcher` + `ScreenMover` (`am task focus`, `am stack remove`).
+  - Controller anchoring: companion screens hand the controller back to the other screen when they appear or are tapped
+    (`AnchorActivity`), so tapping the bottom panel no longer steals the gamepad from the game.
+  - Second-screen home: `SecondaryHomeActivity` (SECONDARY_HOME, singleTop) is the bottom screen's fallback, so an exiting
+    emulator lands on Sortie's companion panel instead of Launcher3 or leftover Cocoon tasks; the Presentation path is gone.
+    Stale tasks from other launchers are swept over Shizuku (connect, foreground, after launch); never Launcher3's own.
+  - X swap no longer bounces back: the companion covers the default display before the navigation task leaves it.
+  - Index is fixed: no walk on activity start; only first run, a manifest deploy (hot reload) or Diagnostics re-index.
+  - Focus glow (`Modifier.focusGlow`): 3dp border, pulsing outer glow, slight scale on every row/tile; detail buttons wrap and
+    the favourite toggle is a star icon button.
+- Launcher shortcuts and mixed folders: Sortie confirms `requestPinShortcut` (ShortcutPinActivity, e.g. DroidDeck "add to
+  home") and pulls shortcuts via "Add shortcut from…" on the Apps screen; favourites and `apps: true` folders now hold apps
+  and shortcuts next to games (rule fields `kind`, `package`, `source`); apps and shortcuts launch with the game display rule.
 - Feedback round 1: Apps folder (launch installed apps, favourite them), controller hints on every screen, home grid layout
   with 1:1 tiles washed with a representative cover (Select toggles list/grid, columns in user.json), hero cards on the idle
   companion screen, debug `--es open <route>`. Design note for recommendation snapshots (docs/RECOMMENDATIONS.md).

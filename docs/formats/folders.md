@@ -29,5 +29,24 @@ Smart and manual folders. A folder is a query over the index plus optional manua
 Predicates: `name`, `path`, `system` (`regex`, `eq`, `in`); `genre`, `developer` (`regex`);
 `players` (`gte`, `lte`); `year` (`gte`, `lte`); `fit` (`gte`, `lte`, `eq`); `playMinutes`,
 `daysSincePlayed`, `daysSinceAdded` (`gte`, `lte`, `eq`); `tags`/`flags` (`has`, `hasAny`,
-`hasAll`); `favourite` (bool); `hack` (bool). Combinators: `all`, `any`, `not`. `apps: true`
-lets installed apps match (by label/package regex) so a folder can mix games and apps.
+`hasAll`); `favourite` (bool); `hack` (bool). Combinators: `all`, `any`, `not`.
+
+## Apps and launcher shortcuts (`apps: true`)
+
+Besides games, a folder can hold installed apps (id `app:<package>`) and launcher shortcuts other apps
+handed to Sortie (id `shortcut:<package>/<shortcutId>`, e.g. one DroidDeck game pinned from DroidDeck's
+"add to home screen"; shortcuts only exist while Sortie is the default Home app). The rule sees apps and
+shortcuts only when the folder sets `apps: true`; `include`/`exclude` take ids of any kind and always win.
+
+Fields for every kind: `name`/`title` (label), `kind` (`game`, `app`, `shortcut`), `package` (the app's
+package, or the package that published the shortcut; absent on games), `source` (shortcuts only: the
+publishing package), `favourite`, `playMinutes`, `daysSincePlayed`. All other fields are game-only: on an
+app or shortcut they are a non-match, not an error, so `{ "hack": false }` excludes apps while
+`{ "not": { "hack": true } }` includes them. Sorting by a game-only key (`fit`, `year`, `added`, `system`)
+puts apps and shortcuts first ascending, last descending.
+
+```json
+{ "id": "droiddeck", "label": "DroidDeck", "rule": { "source": { "eq": "com.droiddeck.launcher" } }, "apps": true }
+```
+
+`validate_folders.py` knows these fields but previews games only (there are no apps on the desktop).

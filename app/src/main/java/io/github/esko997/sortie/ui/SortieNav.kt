@@ -67,15 +67,7 @@ fun SortieNav(vm: SortieViewModel) {
         composable("folder/{id}") { entry ->
             val id = entry.arguments?.getString("id") ?: return@composable
             val view by remember(id) { vm.folder(id) }.collectAsState(null)
-            view?.let { f ->
-                GameListScreen(
-                    title = f.def.label,
-                    games = f.games,
-                    vm = vm,
-                    onGame = { nav.navigate("game/${enc(it)}") },
-                    subtitle = f.problems.takeIf { it.isNotEmpty() }?.joinToString("; ")
-                )
-            }
+            view?.let { f -> FolderScreen(view = f, vm = vm, onGame = { nav.navigate("game/${enc(it)}") }) }
         }
         composable("game/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
             val id = entry.arguments?.getString("id") ?: return@composable
@@ -85,5 +77,6 @@ fun SortieNav(vm: SortieViewModel) {
         composable("search") { SearchScreen(vm, onGame = { nav.navigate("game/${enc(it)}") }) }
         composable("diagnostics") { DiagnosticsScreen(vm) }
         composable("apps") { AppsScreen(vm) }
+        composable("switcher") { SwitcherScreen() }
     }
 }

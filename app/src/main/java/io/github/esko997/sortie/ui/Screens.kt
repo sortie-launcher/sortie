@@ -1,8 +1,6 @@
 package io.github.esko997.sortie.ui
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -43,11 +41,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
+import io.github.esko997.sortie.data.folders.FolderView
 
 @Composable
 fun HomeScreen(
@@ -100,7 +99,7 @@ fun HomeScreen(
         val tiles = buildList {
             folders.forEach { f ->
                 add(
-                    Tile("f:" + f.def.id, f.def.label, "${f.games.size}" + if (f.problems.isNotEmpty()) " · rule problems" else "", Amber) {
+                    Tile("f:" + f.def.id, f.def.label, "${f.items.size}" + if (f.problems.isNotEmpty()) " · rule problems" else "", Amber) {
                         onFolder(f.def.id)
                     }
                 )
@@ -139,12 +138,12 @@ fun HomeScreen(
                 items(
                     tiles.filter { !it.key.startsWith("s:") },
                     key = { it.key }
-                ) { t -> FocusRow(onClick = t.onClick) { FolderLine(t.title, t.subtitle, t.colour) } }
+                ) { t -> FocusRow(onClick = t.onClick, colour = t.colour) { FolderLine(t.title, t.subtitle, t.colour) } }
                 item { SectionTitle("Systems") }
                 items(
                     tiles.filter { it.key.startsWith("s:") },
                     key = { it.key }
-                ) { t -> FocusRow(onClick = t.onClick) { FolderLine(t.title, t.subtitle, t.colour) } }
+                ) { t -> FocusRow(onClick = t.onClick, colour = t.colour) { FolderLine(t.title, t.subtitle, t.colour) } }
             }
         }
         HintBar("A" to "open", "Y" to "search", "Select" to if (grid) "list view" else "grid view", "L1/R1" to "systems", "X" to "swap screens")
@@ -160,20 +159,19 @@ private class Tile(
     val onClick: () -> Unit
 )
 
-/** 1:1 tile for the grid layout: system colour wash, label, count; grows slightly when focused. */
+/** 1:1 tile for the grid layout: system colour wash, label, count; [focusGlow] in the tile colour (and 1.06 scale) when focused. */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SquareTile(t: Tile) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val scale by animateFloatAsState(if (focused) 1.06f else 1f, label = "tile")
+    val shape = RoundedCornerShape(14.dp)
     Box(
         Modifier
+            .focusGlow(focused, shape, t.colour, focusedScale = 1.06f, idleBorder = t.colour.copy(alpha = 0.5f))
             .aspectRatio(1f)
-            .scale(scale)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(shape)
             .background(t.colour.copy(alpha = 0.22f))
-            .border(2.dp, if (focused) Amber else t.colour.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
             .combinedClickable(interactionSource = interaction, indication = null, onClick = t.onClick)
     ) {
         // a representative cover, washed under a gradient so the label stays readable
@@ -217,14 +215,36 @@ private fun FolderLine(title: String, subtitle: String, colour: androidx.compose
 
 @Composable
 fun GameListScreen(title: String, games: List<GameEntity>, vm: SortieViewModel, onGame: (String) -> Unit, subtitle: String? = null) {
+    val items = remember(games) { games.map { LibraryItem.Game(it) } }
+    ItemListScreen(title, items, vm, onGame, subtitle)
+}
+
+/** A smart folder: games open their detail screen, apps and shortcuts launch directly (hold A toggles their favourite). */
+@Composable
+fun FolderScreen(view: FolderView, vm: SortieViewModel, onGame: (String) -> Unit) {
+    ItemListScreen(view.def.label, view.items, vm, onGame, view.problems.takeIf { it.isNotEmpty() }?.joinToString("; "))
+}
+
+@Composable
+private fun ItemListScreen(title: String, items: List<LibraryItem>, vm: SortieViewModel, onGame: (String) -> Unit, subtitle: String?) {
     val stats by vm.playStats.collectAsState()
     val saves by vm.saveStems.collectAsState()
+    val user by vm.user.collectAsState()
+    val apps by vm.apps.collectAsState()
+    val appLabels = remember(apps) { apps.associate { it.pkg to it.label } }
     var minFit by rememberSaveable { mutableStateOf(0) }
     var onDeviceOnly by rememberSaveable { mutableStateOf(true) }
     var notesOnly by rememberSaveable { mutableStateOf(false) }
-    val shown = remember(games, minFit, onDeviceOnly, notesOnly) {
-        games.filter { (!onDeviceOnly || !it.placeholder) && it.fit >= minFit && (!notesOnly || it.handWritten) }
+    val shown = remember(items, minFit, onDeviceOnly, notesOnly) {
+        items.filter { item ->
+            when (item) {
+                is LibraryItem.Game -> item.game.let { (!onDeviceOnly || !it.placeholder) && it.fit >= minFit && (!notesOnly || it.handWritten) }
+                else -> minFit == 0 && !notesOnly // fit and notes are game properties
+            }
+        }
     }
+    val mixed = remember(items) { items.any { it !is LibraryItem.Game } }
+    val open: (LibraryItem) -> Unit = { if (!vm.launchItem(it)) onGame(it.id) }
     Column(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             item {
@@ -238,17 +258,44 @@ fun GameListScreen(title: String, games: List<GameEntity>, vm: SortieViewModel, 
                         subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
                     }
                     Spacer(Modifier.weight(1f))
-                    OutlinedButton(onClick = { shown.randomOrNull()?.let { onGame(it.id) } }, enabled = shown.isNotEmpty()) { Text("🎲 Pick one") }
+                    OutlinedButton(onClick = { shown.randomOrNull()?.let(open) }, enabled = shown.isNotEmpty()) { Text("🎲 Pick one") }
                     FilterChip(selected = minFit >= 4, onClick = { minFit = if (minFit >= 4) 0 else 4 }, label = { Text("★★★★+") })
                     FilterChip(selected = notesOnly, onClick = { notesOnly = !notesOnly }, label = { Text("✍ notes") })
                     FilterChip(selected = onDeviceOnly, onClick = { onDeviceOnly = !onDeviceOnly }, label = { Text("on device") })
                 }
             }
-            items(shown, key = {
-                it.id
-            }) { g -> GameRow(g, stats[g.id]?.minutes, hasSave = g.fileName.substringBeforeLast('.').lowercase() in saves, onClick = { onGame(g.id) }) }
+            items(shown, key = { it.id }) { item ->
+                when (item) {
+                    is LibraryItem.Game -> {
+                        val g = item.game
+                        GameRow(g, stats[g.id]?.minutes, hasSave = g.fileName.substringBeforeLast('.').lowercase() in saves, onClick = { onGame(g.id) })
+                    }
+                    is LibraryItem.App -> LauncherRow(
+                        item.label,
+                        "app · ${item.app.pkg}",
+                        favourite = item.id in user.favourites,
+                        onClick = { open(item) },
+                        onLongClick = { vm.toggleFavourite(item.id) },
+                        minutes = stats[item.id]?.minutes,
+                        tall = true
+                    ) { vm.appIcon(item.app.pkg) }
+                    is LibraryItem.Shortcut -> LauncherRow(
+                        item.label,
+                        "shortcut · ${appLabels[item.shortcut.pkg] ?: item.shortcut.pkg}",
+                        favourite = item.id in user.favourites,
+                        onClick = { open(item) },
+                        onLongClick = { vm.toggleFavourite(item.id) },
+                        minutes = stats[item.id]?.minutes,
+                        tall = true
+                    ) { vm.shortcutIcon(item.shortcut) }
+                }
+            }
         }
-        HintBar("A" to "open", "L1/R1" to "systems", "B" to "back")
+        if (mixed) {
+            HintBar("A" to "open", "hold A" to "favourite (apps)", "L1/R1" to "systems", "B" to "back")
+        } else {
+            HintBar("A" to "open", "L1/R1" to "systems", "B" to "back")
+        }
     }
 }
 
