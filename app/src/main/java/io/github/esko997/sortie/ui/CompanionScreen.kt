@@ -7,10 +7,13 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.BatteryManager
 import android.widget.ImageView
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,11 +49,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -99,10 +107,12 @@ fun CompanionScreen(displayId: Int) {
     LaunchedEffect(selected?.id, session?.gameId) { dock = false }
     // the host hands the controller away on every tap; not while a text field here needs the IME
     val host = LocalContext.current as? CompanionHost
-    val picking = launcher || dockSlot >= 0
+    // pickers and the open dock keep the controller here: their slots take the D-pad (A opens, hold A unpins), B closes
+    val picking = launcher || dockSlot >= 0 || dock
     LaunchedEffect(picking) {
         if (picking) host?.keepController = true else if (host?.keepController == true) host.releaseController()
     }
+    BackHandler(enabled = dock && !launcher && dockSlot < 0) { dock = false }
     Surface(Modifier.fillMaxSize(), color = Ink) {
         when {
             switcher.open && !switcher.overlay -> TouchSwitcher(graph.switcher, switcher, displayId)
@@ -249,9 +259,9 @@ private fun Panel(title: String, subtitle: String, status: String? = null, detai
 private fun gameLine(g: GameEntity): String = g.hook ?: listOfNotNull(g.year?.toString(), g.developer, g.genre).joinToString(" · ")
 
 /**
- * Bottom-left dot that unfurls a column of [DOCK_SLOTS] pinned apps/shortcuts (`user.dock`) up the left edge. Tap a slot to
- * start it on this display (same hand-off as [TouchLauncher]); tap an empty slot to pick what goes there; long-press a filled
- * slot to clear it. Touch only, like the rest of the companion.
+ * Bottom-left dot that unfurls a column of [DOCK_SLOTS] pinned apps/shortcuts (`user.dock`) up the left edge. Tap (or A on) a
+ * slot to start it on this display (same hand-off as [TouchLauncher]); an empty slot picks what goes there; long-press or hold
+ * A on a filled slot clears it. While open the slots hold the controller focus (the host keeps it here), starting at slot 0.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -269,19 +279,44 @@ private fun Dock(
     val apps by graph.apps.apps.collectAsState()
     val shortcuts by graph.shortcuts.shortcuts.collectAsState()
     LaunchedEffect(open) { if (open && graph.apps.apps.value.isEmpty()) graph.apps.refresh() }
+    val first = remember { FocusRequester() }
+    var firstFocused by remember { mutableStateOf(false) }
+    // Opened by touch the window is in touch mode and the controller arrives a few frames later: ask for keyboard mode and
+    // retry until slot 0 actually has the focus (same dance as ContextSheet and the switcher).
+    val inputMode = LocalInputModeManager.current
+    LaunchedEffect(open) {
+        if (!open) return@LaunchedEffect
+        repeat(30) {
+            if (firstFocused) return@LaunchedEffect
+            @OptIn(ExperimentalComposeUiApi::class)
+            inputMode.requestInputMode(InputMode.Keyboard)
+            runCatching { first.requestFocus() }
+            delay(50)
+        }
+    }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (open) {
             // slots run upward: slot 0 sits just above the dot
             for (slot in DOCK_SLOTS - 1 downTo 0) {
                 val item = user.dock.getOrNull(slot)?.takeIf { it.isNotEmpty() }?.let { resolve(it, apps, shortcuts) }
+                val interaction = remember { MutableInteractionSource() }
+                val focused by interaction.collectIsFocusedAsState()
+                if (slot == 0) LaunchedEffect(focused) { firstFocused = focused }
+                val unpin: (() -> Unit)? = if (item != null) ({ graph.user.setDockSlot(slot, null) }) else null
                 Box(
                     Modifier
+                        .then(if (slot == 0) Modifier.focusRequester(first) else Modifier)
+                        .focusGlow(focused, CircleShape)
                         .size(56.dp)
                         .clip(CircleShape)
                         .background(Slate.copy(alpha = if (item == null) 0.35f else 0.8f))
+                        // always attached: once the hold has emptied the slot, the handler must still swallow the A release
+                        .keyLongPress(unpin ?: {})
                         .combinedClickable(
+                            interactionSource = interaction,
+                            indication = null,
                             onClickLabel = item?.label ?: "Add to the dock",
-                            onLongClick = if (item != null) ({ graph.user.setDockSlot(slot, null) }) else null,
+                            onLongClick = unpin,
                             onClick = {
                                 if (item == null) {
                                     onFill(slot)

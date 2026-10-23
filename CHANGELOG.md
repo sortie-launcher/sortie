@@ -8,7 +8,8 @@
 - Guide: new `controls` field per game (`guide/blurbs.jsonl` → `build_guide.py` → `guide.json`); DB v4 adds `games.controls`.
 - Companion: while a game is selected, the panel mirrors its play stats, control notes, description and tags under the art
   (scrollable); while playing, the control notes sit under the timer. A bottom-left dot unfurls a 5-slot **dock** up the left
-  edge (`user.dock`): tap an empty slot to pin an app/shortcut, tap to start it on that screen, long-press to unpin; it folds
+  edge (`user.dock`): A/tap an empty slot to pin an app/shortcut, A/tap to start it on that screen, hold A/long-press to unpin,
+  B folds it. The open dock keeps the controller on the companion (`CompanionHost.keepController`) and focuses slot 0; it folds
   when the panel changes.
 - Settings → Help: a bundled **Manual** (`assets/MANUAL.md`, rendered by `ui/ManualScreen.kt`: headings, bullets, bold/italic).
 - Grids can scroll sideways (`user.gridHorizontal`, Settings → "Grids scroll sideways"): rows of square tiles, `user.gridRows`

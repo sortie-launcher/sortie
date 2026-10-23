@@ -45,8 +45,8 @@ leaving the list. With nothing selected it rotates through recommended unplayed 
 it shows what is playing, how long, and its control notes.
 
 - **+** (bottom-right): start any app on that screen.
-- **Dot** (bottom-left): the dock. Tap to unfurl five slots up the left edge; tap an empty slot to pin an app, tap a pinned app
-  to start it there, long-press to unpin.
+- **Dot** (bottom-left): the dock. Tap to unfurl five slots up the left edge; the controller moves to them. A / tap an empty
+  slot to pin an app, A / tap a pinned app to start it there, hold A / long-press to unpin, B folds it away.
 - **Battery and bell** (top-right): the bell opens the notification shade.
 
 Touching the companion hands the controller back to the other screen a moment later.
