@@ -17,7 +17,12 @@ fun SortieNav(vm: SortieViewModel) {
     val nav = rememberNavController()
     val enc = { s: String -> Uri.encode(s) }
     val systems by vm.systems.collectAsState()
-    LaunchedEffect(Unit) { Selection.openRoute.collect { route -> nav.navigate(route) { launchSingleTop = true } } }
+    LaunchedEffect(Unit) {
+        Selection.openRoute.collect { route ->
+            nav.navigate(route) { launchSingleTop = true }
+            Selection.openRoute.resetReplayCache()
+        }
+    }
     LaunchedEffect(Unit) {
         Hotkeys.handle(setOf(Hotkeys.Key.SEARCH, Hotkeys.Key.PREV_FOLDER, Hotkeys.Key.NEXT_FOLDER))
         Hotkeys.events.collect { key ->

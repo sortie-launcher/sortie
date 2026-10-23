@@ -14,7 +14,7 @@ object Selection {
     val closeCompanion = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /** Debug navigation requests from adb (`--es open diagnostics`). */
-    val openRoute = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val openRoute = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 1) // replay: emitted before the NavHost exists on cold start
 
     fun set(game: GameEntity?) {
         _current.value = game
