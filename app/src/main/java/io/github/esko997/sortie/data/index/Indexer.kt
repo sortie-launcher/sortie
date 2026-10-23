@@ -44,10 +44,11 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
         val problems = mutableListOf<String>()
         for (sys in snap.systems) {
             try {
-                val (f, u, r) = indexSystem(root, sys, snap.guide, snap.guideStamp, snap.library, force)
-                files += f
-                updated += u
-                removed += r
+                val r = indexSystem(root, sys, snap.guide, snap.guideStamp, snap.library, force)
+                files += r.files
+                updated += r.updated
+                removed += r.removed
+                variants += r.variants
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
