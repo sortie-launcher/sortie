@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 
 data class SystemCount(val systemId: String, val n: Int)
 
-data class PlayStat(val gameId: String, val minutes: Int, val lastPlayed: Long?)
+data class PlayStat(val gameId: String, val minutes: Int, val lastPlayed: Long?, val sessions: Int = 0)
 
 data class TileCover(val systemId: String, val cover: String, val fit: Int)
 
@@ -103,13 +103,19 @@ interface GameDao {
 
     @Query(
         "SELECT gameId, CAST(SUM(CASE WHEN abandoned = 0 AND endedAt IS NOT NULL THEN endedAt - startedAt ELSE 0 END) / 60000 AS INTEGER) AS minutes, " +
-            "MAX(startedAt) AS lastPlayed FROM sessions GROUP BY gameId"
+            "MAX(startedAt) AS lastPlayed, COUNT(*) AS sessions FROM sessions GROUP BY gameId"
     )
     fun playStats(): Flow<List<PlayStat>>
 
     @Query(
         "SELECT gameId, CAST(SUM(CASE WHEN abandoned = 0 AND endedAt IS NOT NULL THEN endedAt - startedAt ELSE 0 END) / 60000 AS INTEGER) AS minutes, " +
-            "MAX(startedAt) AS lastPlayed FROM sessions GROUP BY gameId ORDER BY lastPlayed DESC LIMIT :limit"
+            "MAX(startedAt) AS lastPlayed, COUNT(*) AS sessions FROM sessions WHERE gameId = :id GROUP BY gameId"
+    )
+    suspend fun playStat(id: String): PlayStat?
+
+    @Query(
+        "SELECT gameId, CAST(SUM(CASE WHEN abandoned = 0 AND endedAt IS NOT NULL THEN endedAt - startedAt ELSE 0 END) / 60000 AS INTEGER) AS minutes, " +
+            "MAX(startedAt) AS lastPlayed, COUNT(*) AS sessions FROM sessions GROUP BY gameId ORDER BY lastPlayed DESC LIMIT :limit"
     )
     fun recentlyPlayed(limit: Int = 30): Flow<List<PlayStat>>
 }

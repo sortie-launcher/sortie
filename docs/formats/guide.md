@@ -10,3 +10,8 @@ Exported by `library-tools/guide/build_guide.py` alongside the web guide. Keyed 
   }
 }
 ```
+
+### `controls`
+
+Optional hand-written control notes per game (`"controls": "L2/R2 strafe · hold Select = menu"` in `guide/blurbs.jsonl`). Shown on
+the game page and on the companion screen while the game is played.

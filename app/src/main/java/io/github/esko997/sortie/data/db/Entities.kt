@@ -39,7 +39,9 @@ data class GameEntity(
     val hack: Boolean,
     val addedAt: Long,
     // id of the file shown instead of this one (disc 1 of a set, or the preferred container format); null = shown
-    val variantOf: String? = null
+    val variantOf: String? = null,
+    /** Hand-written control notes from guide.json (see GuideEntry.controls). */
+    val controls: String? = null
 )
 
 /** Per-system bookkeeping so the indexer knows when metadata (gamelist, guide) changed since the last pass. */

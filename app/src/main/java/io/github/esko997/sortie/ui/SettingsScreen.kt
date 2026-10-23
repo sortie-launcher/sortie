@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
  * (directories, systems, profiles, folders) stays desktop-authored in the manifests and is shown in Diagnostics instead.
  */
 @Composable
-fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit) {
+fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit, onManual: () -> Unit) {
     val user by vm.user.collectAsState()
     val systems by vm.systems.collectAsState()
     val snap by vm.manifests.collectAsState()
@@ -56,7 +56,8 @@ fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit) {
             item { Toggle("Hero rotation on the idle companion screen", user.heroRotation) { vm.setHeroRotation(it) } }
             item { SectionTitle("Switcher") }
             item { Toggle("Overlay over running games (needs the draw-over-apps grant)", user.overlaySwitcher) { vm.setOverlaySwitcher(it) } }
-            item { SectionTitle("Diagnostics") }
+            item { SectionTitle("Help") }
+            item { FocusRow(onClick = onManual) { Line("Manual", "controls, home, lists, the companion screen, the switcher") } }
             item { FocusRow(onClick = onDiagnostics) { Line("Diagnostics", "index, manifests, Shizuku, launch log, wireless debugging") } }
             item { SectionTitle("Default launcher per system") }
             item {

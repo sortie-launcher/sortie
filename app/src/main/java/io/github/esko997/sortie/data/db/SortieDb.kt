@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [GameEntity::class, IndexMetaEntity::class, SessionEntity::class], version = 3, exportSchema = true)
+@Database(entities = [GameEntity::class, IndexMetaEntity::class, SessionEntity::class], version = 4, exportSchema = true)
 abstract class SortieDb : RoomDatabase() {
     abstract fun games(): GameDao
 
@@ -15,8 +15,12 @@ abstract class SortieDb : RoomDatabase() {
         fun open(context: Context): SortieDb = Room.databaseBuilder(context, SortieDb::class.java, "sortie.db")
             // Version 1 never left the developer's device. From here on, sessions are history: write real migrations.
             .fallbackToDestructiveMigrationFrom(1)
-            .addMigrations(MIGRATION_2_3)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
             .build()
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) = db.execSQL("ALTER TABLE games ADD COLUMN controls TEXT")
+        }
 
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {

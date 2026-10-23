@@ -131,7 +131,7 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
                 cover = media.find("covers", stem), screenshot = media.find("screenshots", stem), marquee = media.find("marquees", stem),
                 placeholder = fd.size == 0L, arriving = isArriving, hack = hackRx?.containsMatchIn(fd.file.name) ?: false,
                 // first seen = the file's own mtime (adb and Syncthing preserve it)
-                addedAt = sig?.addedAt ?: fd.mtime
+                addedAt = sig?.addedAt ?: fd.mtime, controls = g?.controls?.takeIf { it.isNotBlank() }
             )
         }
         rows.chunked(SQLITE_CHUNK).forEach { dao.upsertAll(it) }

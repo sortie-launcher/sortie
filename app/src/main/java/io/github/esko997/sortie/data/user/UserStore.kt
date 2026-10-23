@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.data.user
 
 import android.util.Log
+import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
 import io.github.esko997.sortie.data.manifest.UserData
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -83,6 +84,13 @@ class UserStore(private val file: File, private val scope: CoroutineScope = Coro
 
     fun setSystemProfile(systemId: String, profileId: String?) =
         update { it.copy(systemProfiles = if (profileId == null) it.systemProfiles - systemId else it.systemProfiles + (systemId to profileId)) }
+
+    /** Pins [itemId] (null clears) into dock [slot]; the list is padded to [DOCK_SLOTS] with empty strings. */
+    fun setDockSlot(slot: Int, itemId: String?) = update {
+        val slots = MutableList(DOCK_SLOTS) { i -> it.dock.getOrNull(i).orEmpty() }
+        if (slot in slots.indices) slots[slot] = itemId.orEmpty()
+        it.copy(dock = slots)
+    }
 
     fun setHeroRotation(on: Boolean) = update { it.copy(heroRotation = on) }
 

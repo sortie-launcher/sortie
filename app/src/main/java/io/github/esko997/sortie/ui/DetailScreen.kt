@@ -79,7 +79,15 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel) {
                     )
                 }
                 game.hook?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = accent, modifier = Modifier.padding(top = 8.dp)) }
-                stats[game.id]?.let { Text("Played ${it.minutes} min", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp)) }
+                stats[game.id]?.let { Text(playedLine(it), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp)) }
+                game.controls?.let {
+                    Text(
+                        "Controls: $it",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
                 val sortieInteraction = remember { MutableInteractionSource() }
                 val profilesInteraction = remember { MutableInteractionSource() }
                 val favInteraction = remember { MutableInteractionSource() }

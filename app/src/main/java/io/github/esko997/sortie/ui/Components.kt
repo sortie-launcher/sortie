@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.ui
 
 import android.graphics.BlurMaskFilter
+import android.text.format.DateUtils
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -52,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.github.esko997.sortie.data.db.GameEntity
+import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.index.cleanTitle
 import kotlin.math.PI
 import kotlin.math.sin
@@ -274,3 +276,16 @@ fun SectionTitle(text: String) {
 fun ColourChip(colour: Color) {
     Box(Modifier.width(6.dp).height(40.dp).clip(RoundedCornerShape(3.dp)).background(colour))
 }
+
+/** "Played 95 min · 4 sessions · last 3 days ago" for a game's play stats. */
+fun playedLine(s: PlayStat): String {
+    val last = s.lastPlayed?.let { DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), DateUtils.DAY_IN_MILLIS).toString().lowercase() }
+    return listOfNotNull(
+        "Played ${s.minutes} min",
+        "${s.sessions} session" + if (s.sessions == 1) "" else "s",
+        last?.let { "last $it" }
+    ).joinToString(" · ")
+}
+
+/** The stem save files are matched on (`DeviceState.saveStems`): the file name without its extension, lower-cased. */
+fun GameEntity.saveStem(): String = fileName.substringBeforeLast('.').lowercase()

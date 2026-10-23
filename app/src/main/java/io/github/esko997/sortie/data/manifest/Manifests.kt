@@ -84,10 +84,15 @@ data class GuideFile(val built: String = "", val games: Map<String, GuideEntry> 
 data class GuideEntry(
     val fit: Int = 0,
     val hook: String = "",
+    /** Control notes shown on the companion while the game is played ("L2/R2 strafe · hold Select = menu"); hand-written. */
+    val controls: String = "",
     val flags: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
     val auto: Boolean = true
 )
+
+/** Slots in the companion dock. */
+const val DOCK_SLOTS = 5
 
 @Serializable
 data class UserData(
@@ -115,6 +120,8 @@ data class UserData(
     val shortcuts: Set<String> = emptySet(),
     /** Per-system default launch profile chosen on the device (system id → profile id); overrides the manifest's first choice. */
     val systemProfiles: Map<String, String> = emptyMap(),
+    /** Companion-screen dock: [DOCK_SLOTS] slots of app/shortcut ids (`""` = empty), unfurled from the bottom-left dot. */
+    val dock: List<String> = emptyList(),
     /** Hero rotation on the idle companion screen (and the ambient tint it drives). */
     val heroRotation: Boolean = true,
     /** Home-key switcher as overlay windows over the running games (needs the draw-over-apps grant) rather than Sortie's screens. */

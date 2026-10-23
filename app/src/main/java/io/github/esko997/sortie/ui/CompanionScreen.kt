@@ -7,8 +7,10 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.BatteryManager
 import android.widget.ImageView
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,8 +25,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -59,7 +63,9 @@ import io.github.esko997.sortie.data.apps.AppEntry
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.apps.ShortcutEntry
 import io.github.esko997.sortie.data.db.GameEntity
+import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.db.SessionEntity
+import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
 import io.github.esko997.sortie.shell.ScreenMover
 import io.github.esko997.sortie.shell.TaskSwitcher
 import kotlinx.coroutines.CoroutineScope
@@ -78,38 +84,69 @@ fun CompanionScreen(displayId: Int) {
     val switcher by graph.switcher.state.collectAsState()
     val session by graph.playLog.current.collectAsState()
     var launcher by rememberSaveable { mutableStateOf(false) }
+    var dock by rememberSaveable { mutableStateOf(false) }
+    var dockSlot by rememberSaveable { mutableStateOf(-1) } // slot being filled from the picker, -1 = none
     // Screen-level scope: a launch's controller hand-off must outlive the launcher list, which closes on the tap.
     val scope = rememberCoroutineScope()
-    LaunchedEffect(switcher.open) { if (switcher.open) launcher = false }
+    LaunchedEffect(switcher.open) {
+        if (switcher.open) {
+            launcher = false
+            dockSlot = -1
+        }
+    }
+    // the dock folds away whenever what the panel shows changes, so it never sits over new text
+    val selected by Selection.current.collectAsState()
+    LaunchedEffect(selected?.id, session?.gameId) { dock = false }
     // the host hands the controller away on every tap; not while a text field here needs the IME
     val host = LocalContext.current as? CompanionHost
-    LaunchedEffect(launcher) {
-        if (launcher) host?.keepController = true else if (host?.keepController == true) host.releaseController()
+    val picking = launcher || dockSlot >= 0
+    LaunchedEffect(picking) {
+        if (picking) host?.keepController = true else if (host?.keepController == true) host.releaseController()
     }
     Surface(Modifier.fillMaxSize(), color = Ink) {
         when {
             switcher.open && !switcher.overlay -> TouchSwitcher(graph.switcher, switcher, displayId)
             launcher -> TouchLauncher(graph, displayId, scope, onClose = { launcher = false })
+            dockSlot >= 0 -> AppPicker(graph, "Add to the dock", onClose = { dockSlot = -1 }) {
+                graph.user.setDockSlot(dockSlot, it.id)
+                dockSlot = -1
+            }
             else -> Box(Modifier.fillMaxSize()) {
                 // Exactly one of these is composed: the hero ticker only runs while nothing is being played.
                 val s = session
-                if (s != null) NowPlaying(graph, s) else HeroPanel()
+                if (s != null) NowPlaying(graph, s) else HeroPanel(graph)
                 CornerPlus(Modifier.align(Alignment.BottomEnd).padding(16.dp)) { launcher = true }
+                Dock(graph, displayId, scope, dock, Modifier.align(Alignment.BottomStart).padding(16.dp), onToggle = { dock = !dock }) { dockSlot = it }
                 StatusStrip(graph, Modifier.align(Alignment.TopEnd).padding(12.dp))
             }
         }
     }
 }
 
-/** The selected game, else a hero that changes every 9 s ([Selection.panel]); composed only while no session is open. */
+/**
+ * The selected game (with its description, notes and play stats mirrored from the detail screen, so they can be read without
+ * leaving the list), else a rotating hero ([Selection.panel]); composed only while no session is open.
+ */
 @Composable
-private fun HeroPanel() {
+private fun HeroPanel(graph: SortieApp.Graph) {
     val panel = remember { Selection.panel() }
     val game by panel.collectAsState(null)
+    val selected by Selection.current.collectAsState()
     val g = game
     val palette = rememberPalette(g?.cover ?: g?.screenshot)
     LaunchedEffect(palette) { Selection.heroPalette.value = palette }
-    Panel(title = g?.let(::displayTitle) ?: "Sortie", subtitle = g?.let(::gameLine).orEmpty(), onTap = g?.let { openOnOtherScreen(it) }) {
+    val detail = if (g != null && g.id == selected?.id) {
+        val stats by produceState<PlayStat?>(null, g.id) { value = graph.db.games().playStat(g.id) }
+        listOfNotNull(
+            stats?.let(::playedLine),
+            g.controls?.let { "Controls: $it" },
+            g.desc?.takeIf { it.isNotBlank() },
+            g.tags.takeIf { it.isNotBlank() }?.let { "Tags: " + it.replace(",", " · ") }
+        ).joinToString("\n\n")
+    } else {
+        null
+    }
+    Panel(title = g?.let(::displayTitle) ?: "Sortie", subtitle = g?.let(::gameLine).orEmpty(), detail = detail, onTap = g?.let { openOnOtherScreen(it) }) {
         val art = g?.screenshot ?: g?.cover
         if (art != null) CoverImage(art, Modifier.fillMaxSize(), ContentScale.Fit)
     }
@@ -130,6 +167,7 @@ private fun NowPlaying(graph: SortieApp.Graph, session: SessionEntity) {
             title = g?.let(::displayTitle) ?: id.substringAfterLast('/'),
             subtitle = g?.let(::gameLine).orEmpty(),
             status = status,
+            detail = g?.controls?.let { "Controls: $it" },
             onTap = g?.let {
                 openOnOtherScreen(it)
             }
@@ -166,12 +204,15 @@ private fun playingMinutes(startedAt: Long): Long {
     return ((now - startedAt) / MINUTE).coerceAtLeast(0)
 }
 
-/** Art area on top, then an optional status line, the title and a subtitle; text keeps clear of the corner button. */
+/**
+ * Art area on top, then an optional status line, the title, a subtitle and an optional scrollable [detail] block (which takes
+ * the lower half from the art); text keeps clear of the corner buttons.
+ */
 @Composable
-private fun Panel(title: String, subtitle: String, status: String? = null, onTap: (() -> Unit)? = null, art: @Composable () -> Unit) {
+private fun Panel(title: String, subtitle: String, status: String? = null, detail: String? = null, onTap: (() -> Unit)? = null, art: @Composable () -> Unit) {
     val tap = if (onTap != null) Modifier.clickable(onClick = onTap) else Modifier
     Column(Modifier.fillMaxSize().then(tap).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { art() }
+        Box(Modifier.weight(if (detail != null) 0.5f else 1f).fillMaxWidth(), contentAlignment = Alignment.Center) { art() }
         if (status != null) {
             Text(
                 status,
@@ -194,10 +235,85 @@ private fun Panel(title: String, subtitle: String, status: String? = null, onTap
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(start = 56.dp, top = 8.dp, end = 56.dp, bottom = 8.dp)
         )
+        if (detail != null) {
+            Text(
+                detail,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(0.5f).fillMaxWidth().padding(horizontal = 72.dp).verticalScroll(rememberScrollState())
+            )
+        }
     }
 }
 
 private fun gameLine(g: GameEntity): String = g.hook ?: listOfNotNull(g.year?.toString(), g.developer, g.genre).joinToString(" · ")
+
+/**
+ * Bottom-left dot that unfurls a column of [DOCK_SLOTS] pinned apps/shortcuts (`user.dock`) up the left edge. Tap a slot to
+ * start it on this display (same hand-off as [TouchLauncher]); tap an empty slot to pick what goes there; long-press a filled
+ * slot to clear it. Touch only, like the rest of the companion.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun Dock(
+    graph: SortieApp.Graph,
+    displayId: Int,
+    scope: CoroutineScope,
+    open: Boolean,
+    modifier: Modifier,
+    onToggle: () -> Unit,
+    onFill: (Int) -> Unit
+) {
+    val context = LocalContext.current
+    val user by graph.user.data.collectAsState()
+    val apps by graph.apps.apps.collectAsState()
+    val shortcuts by graph.shortcuts.shortcuts.collectAsState()
+    LaunchedEffect(open) { if (open && graph.apps.apps.value.isEmpty()) graph.apps.refresh() }
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (open) {
+            // slots run upward: slot 0 sits just above the dot
+            for (slot in DOCK_SLOTS - 1 downTo 0) {
+                val item = user.dock.getOrNull(slot)?.takeIf { it.isNotEmpty() }?.let { resolve(it, apps, shortcuts) }
+                Box(
+                    Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(Slate.copy(alpha = if (item == null) 0.35f else 0.8f))
+                        .combinedClickable(
+                            onClickLabel = item?.label ?: "Add to the dock",
+                            onLongClick = if (item != null) ({ graph.user.setDockSlot(slot, null) }) else null,
+                            onClick = {
+                                if (item == null) {
+                                    onFill(slot)
+                                } else {
+                                    onToggle()
+                                    scope.launch {
+                                        if (!launchOn(context, graph, item, displayId)) return@launch
+                                        delay(HAND_OFF_DELAY_MS)
+                                        if (!graph.switcher.anchoredRecently()) graph.switcher.handOff(displayId)
+                                    }
+                                }
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (item == null) {
+                        Text("+", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 22.sp)
+                    } else {
+                        AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(40.dp)) { it.setImageDrawable(iconOf(graph, item)) }
+                    }
+                }
+            }
+        }
+        Box(
+            Modifier
+                .size(if (open) 20.dp else 14.dp)
+                .clip(CircleShape)
+                .background(if (open) Amber else Slate.copy(alpha = 0.8f))
+                .clickable(onClickLabel = "Dock", onClick = onToggle)
+        )
+    }
+}
 
 /** Small translucent round '+' in the corner of the idle panel; opens [TouchLauncher]. */
 /**

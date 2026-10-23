@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- Home: a **Continue** tile (last game played) leads every generated sort. Hold R1 on a system or folder tile opens a random
+  playable game in it.
+- Lists: **💾 started** chip — games with a save or state on the card (`DeviceState.saveStems`).
+- Game page: "Played N min · S sessions · last <when>" (`PlayStat.sessions`), plus hand-written control notes.
+- Guide: new `controls` field per game (`guide/blurbs.jsonl` → `build_guide.py` → `guide.json`); DB v4 adds `games.controls`.
+- Companion: while a game is selected, the panel mirrors its play stats, control notes, description and tags under the art
+  (scrollable); while playing, the control notes sit under the timer. A bottom-left dot unfurls a 5-slot **dock** up the left
+  edge (`user.dock`): tap an empty slot to pin an app/shortcut, tap to start it on that screen, long-press to unpin; it folds
+  when the panel changes.
+- Settings → Help: a bundled **Manual** (`assets/MANUAL.md`, rendered by `ui/ManualScreen.kt`: headings, bullets, bold/italic).
 - Grids can scroll sideways (`user.gridHorizontal`, Settings → "Grids scroll sideways"): rows of square tiles, `user.gridRows`
   (2–5) sets density. Home and browse share `ui/Tiles.kt` `ItemGrid`; section headers become rail columns; list view unchanged.
   The Apps screen keeps its vertical grid (its expanders/management rows are full-width).

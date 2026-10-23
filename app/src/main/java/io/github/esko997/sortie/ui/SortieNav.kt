@@ -84,7 +84,8 @@ fun SortieNav(vm: SortieViewModel) {
         }
         composable("search") { SearchScreen(vm, onGame = { nav.navigate("game/${enc(it)}") }) }
         composable("diagnostics") { DiagnosticsScreen(vm) }
-        composable("settings") { SettingsScreen(vm, onDiagnostics = { nav.navigate("diagnostics") }) }
+        composable("settings") { SettingsScreen(vm, onDiagnostics = { nav.navigate("diagnostics") }, onManual = { nav.navigate("manual") }) }
+        composable("manual") { ManualScreen() }
         composable("apps") { AppsScreen(vm) }
         composable("switcher") { SwitcherScreen() }
     }

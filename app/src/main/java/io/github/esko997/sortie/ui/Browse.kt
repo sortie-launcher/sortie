@@ -148,14 +148,17 @@ private fun ItemListScreen(title: String, items: List<LibraryItem>, vm: SortieVi
     var minFit by rememberSaveable { mutableStateOf(0) }
     var onDeviceOnly by rememberSaveable { mutableStateOf(true) }
     var notesOnly by rememberSaveable { mutableStateOf(false) }
+    var startedOnly by rememberSaveable { mutableStateOf(false) } // games with a save or state on the card
     var sheet by remember { mutableStateOf<LibraryItem?>(null) }
     val grid = user.browseLayout == "grid"
     BrowseLayoutHotkey(vm, grid)
-    val shown = remember(items, minFit, onDeviceOnly, notesOnly) {
+    val shown = remember(items, minFit, onDeviceOnly, notesOnly, startedOnly, saves) {
         items.filter { item ->
             when (item) {
-                is LibraryItem.Game -> item.game.let { (!onDeviceOnly || !it.placeholder) && it.fit >= minFit && (!notesOnly || it.handWritten) }
-                else -> minFit == 0 && !notesOnly // fit and notes are game properties
+                is LibraryItem.Game -> item.game.let {
+                    (!onDeviceOnly || !it.placeholder) && it.fit >= minFit && (!notesOnly || it.handWritten) && (!startedOnly || it.saveStem() in saves)
+                }
+                else -> minFit == 0 && !notesOnly && !startedOnly // fit, notes and saves are game properties
             }
         }
     }
@@ -174,6 +177,7 @@ private fun ItemListScreen(title: String, items: List<LibraryItem>, vm: SortieVi
             OutlinedButton(onClick = { shown.randomOrNull()?.let(open) }, enabled = shown.isNotEmpty()) { Text("🎲 Pick one") }
             FilterChip(selected = minFit >= 4, onClick = { minFit = if (minFit >= 4) 0 else 4 }, label = { Text("★★★★+") })
             FilterChip(selected = notesOnly, onClick = { notesOnly = !notesOnly }, label = { Text("✍ notes") })
+            FilterChip(selected = startedOnly, onClick = { startedOnly = !startedOnly }, label = { Text("💾 started") })
             FilterChip(selected = onDeviceOnly, onClick = { onDeviceOnly = !onDeviceOnly }, label = { Text("on device") })
         }
         ItemGrid(grid, user, Modifier.weight(1f)) {
@@ -187,7 +191,7 @@ private fun ItemListScreen(title: String, items: List<LibraryItem>, vm: SortieVi
                     onClick = { open(item) },
                     onLongClick = { sheet = item },
                     appLabel = { appLabels[it] ?: it },
-                    hasSave = item is LibraryItem.Game && item.game.fileName.substringBeforeLast('.').lowercase() in saves
+                    hasSave = item is LibraryItem.Game && item.game.saveStem() in saves
                 )
             }
         }

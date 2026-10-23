@@ -35,6 +35,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -52,7 +53,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.data.apps.LibraryItem
+import io.github.esko997.sortie.data.db.GameEntity
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Tile ids of the custom home layout (`user.layout`): `system:<id>`, `folder:<id>`, [APPS] for the built-in Apps folder, a game's
@@ -62,6 +65,7 @@ object HomeIds {
     const val SYSTEM = "system:"
     const val FOLDER = "folder:"
     const val APPS = "apps"
+    const val CONTINUE = "continue"
 
     fun isGame(id: String): Boolean = LibraryItem.isGameId(id) && !id.startsWith(SYSTEM) && !id.startsWith(FOLDER) && id != APPS
 }
@@ -88,6 +92,8 @@ private class HomeTile(
     val colour: Color? = null,
     val cover: String? = null,
     val item: LibraryItem? = null,
+    /** Hold R1: a random game of this system or folder (opens its detail). */
+    val random: (suspend () -> GameEntity?)? = null,
     val onClick: () -> Unit
 )
 
@@ -117,7 +123,9 @@ fun HomeScreen(
     val covers by vm.tileCovers.collectAsState()
     val layoutGames by vm.layoutGames.collectAsState()
     val stats by vm.playStats.collectAsState()
+    val lastPlayed by vm.lastPlayed.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val grid = user.homeLayout == "grid"
     val sort = user.homeSort.takeIf { s -> SORTS.any { it.first == s } } ?: "alpha"
     val custom = sort == "custom"
@@ -165,7 +173,8 @@ fun HomeScreen(
             "${f.items.size}" + if (f.problems.isNotEmpty()) " · rule problems" else "",
             f.items.size,
             "Folders",
-            colour = Amber
+            colour = Amber,
+            random = { f.items.filterIsInstance<LibraryItem.Game>().filter { !it.game.placeholder }.randomOrNull()?.game }
         ) { onFolder(f.def.id) }
     }
     val systemTile = { row: SystemRow ->
@@ -177,7 +186,8 @@ fun HomeScreen(
             row.count,
             if (sort == "generation") row.def.generation else "Systems",
             colour = parseColour(row.def.colour),
-            cover = covers[row.def.id]
+            cover = covers[row.def.id],
+            random = { vm.randomGameOf(row.def.id) }
         ) { onSystem(row.def.id) }
     }
     val tiles: List<HomeTile> = if (custom) {
@@ -205,9 +215,13 @@ fun HomeScreen(
             }
         }
     } else {
+        // the last game played leads every generated sort; the custom layout is the user's own
+        val continueTile = lastPlayed?.let { g ->
+            HomeTile(HomeIds.CONTINUE, "Continue", displayTitle(g), 0, "Folders", cover = g.cover ?: g.screenshot, item = LibraryItem.Game(g)) { onGame(g.id) }
+        }
         val folderish = folderTiles + appsTile
         val systemTiles = systems.map(systemTile)
-        when (sort) {
+        listOfNotNull(continueTile) + when (sort) {
             "count" -> folderish.sortedByDescending { it.count } + systemTiles.sortedByDescending { it.count }
             "generation" -> folderish.sortedBy { it.title.lowercase() } +
                 systemTiles.groupBy { it.section }.entries.sortedBy { generationRank(it.key) }.flatMap { it.value }
@@ -363,6 +377,13 @@ fun HomeScreen(
                                 val now = vm.toggleFavourite(item.id)
                                 Toast.makeText(context, if (now) "Added to favourites" else "Removed from favourites", Toast.LENGTH_SHORT).show()
                             }
+                        } ?: t.random?.let { pick ->
+                            {
+                                scope.launch {
+                                    val g = pick()
+                                    if (g != null) onGame(g.id) else Toast.makeText(context, "Nothing playable in ${t.title}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         }
                     )
                 }
@@ -371,8 +392,16 @@ fun HomeScreen(
         val view = "Select" to if (grid) "list view" else "grid view"
         when {
             lifted != null -> HintBar("D-pad" to "move", "A" to "drop here", "B" to "cancel")
-            custom -> HintBar("A" to "open", "hold A" to "move / remove", "Y" to "search", view, "L1/R1" to "systems", "X" to "swap screens")
-            else -> HintBar("A" to "open", "hold A" to "add to home", "Y" to "search", view, "L1/R1" to "systems", "X" to "swap screens")
+            custom -> HintBar(
+                "A" to "open",
+                "hold A" to "move / remove",
+                "hold R1" to "random",
+                "Y" to "search",
+                view,
+                "L1/R1" to "systems",
+                "X" to "swap screens"
+            )
+            else -> HintBar("A" to "open", "hold A" to "add to home", "hold R1" to "random", "Y" to "search", view, "L1/R1" to "systems", "X" to "swap screens")
         }
     }
 
@@ -429,7 +458,8 @@ private fun HomeTileView(
                 colour = t.colour,
                 cover = t.cover,
                 lifted = lifted,
-                onLongClick = onLongClick
+                onLongClick = onLongClick,
+                onFavourite = onFavourite
             )
             is LibraryItem.Game -> SquareTile(
                 t.title,
@@ -466,7 +496,12 @@ private fun HomeTileView(
             when (item) {
                 null -> {
                     val colour = t.colour ?: Amber
-                    FocusRow(onClick = onClick, onLongClick = onLongClick, colour = colour) { FolderLine(t.title, t.subtitle, colour) }
+                    FocusRow(
+                        onClick = onClick,
+                        onLongClick = onLongClick,
+                        colour = colour,
+                        onFavourite = onFavourite
+                    ) { FolderLine(t.title, t.subtitle, colour) }
                 }
                 is LibraryItem.Game -> GameRow(item.game, minutes, onClick = onClick, onLongClick = onLongClick, onFavourite = onFavourite)
                 is LibraryItem.App -> LauncherRow(t.title, t.subtitle, favourite, onClick, onLongClick, minutes, tall = true, onFavourite = onFavourite) {

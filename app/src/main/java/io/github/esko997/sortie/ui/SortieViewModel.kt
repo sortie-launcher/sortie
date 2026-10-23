@@ -231,6 +231,14 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
 
     fun gamesOf(systemId: String): Flow<List<GameEntity>> = dao.bySystem(systemId)
 
+    /** The game of the most recent play session (apps excluded), for the Home "Continue" tile. */
+    val lastPlayed: StateFlow<GameEntity?> = playStats.map { stats ->
+        stats.values.filter { LibraryItem.isGameId(it.gameId) && it.lastPlayed != null }.maxByOrNull { it.lastPlayed!! }?.let { dao.byId(it.gameId) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** A random playable game of a system (hold R1 on its Home tile). */
+    suspend fun randomGameOf(systemId: String): GameEntity? = dao.bySystem(systemId).first().filter { !it.placeholder }.randomOrNull()
+
     fun game(id: String): Flow<GameEntity?> = dao.observe(id)
 
     /** Favourited games, apps and shortcuts in one list, sorted by label. */

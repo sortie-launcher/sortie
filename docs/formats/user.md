@@ -24,6 +24,7 @@ Every key is optional; unknown keys are ignored.
 | `hidden` | ids | `[]` | entries kept out of smart folders |
 | `profileOverrides` | id → profile id | `{}` | per-game launch profile chosen in "Launch with…" |
 | `homeLayout` | `"list"` \| `"grid"` | `"list"` | home view; Select toggles it on Home |
+| `dock` | string[5] | [] | companion dock slots: app/shortcut ids, `""` empty |
 | `gridHorizontal` | bool | false | grids scroll sideways as rows of tiles (Thor top screen) |
 | `gridRows` | int | 3 | rows in a sideways grid (2–5); more rows = smaller tiles |
 | `gridColumns` | 2..10 | `5` | columns of every grid (home and browse screens) |
