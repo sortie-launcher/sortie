@@ -17,6 +17,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
@@ -60,7 +65,16 @@ private fun Display.describe(): String = "id=$displayId \"$name\" ${mode.physica
 
 @Composable
 private fun ProbeScreen(displays: List<String>, presentationTarget: String?) {
+    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as SortieApp
+    var report by remember { mutableStateOf("indexing…") }
+    LaunchedEffect(Unit) {
+        val snap = app.graph.manifests.snapshot.value
+        val r = app.graph.indexer.run()
+        report = "sortie dir ${app.graph.sortieDir} · systems ${snap.systems.size} · guide ${snap.guide.size} · errors ${snap.errors}\n" +
+            "indexed files=${r.files} updated=${r.updated} removed=${r.removed} in ${r.millis} ms · problems ${r.problems.take(3)}"
+    }
     Column(modifier = Modifier.padding(24.dp)) {
+        Text(report, style = MaterialTheme.typography.bodySmall)
         Text("Sortie", style = MaterialTheme.typography.displayMedium)
         Text("M0 probe · primary display", style = MaterialTheme.typography.titleMedium)
         displays.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
