@@ -117,7 +117,8 @@ fun HomeScreen(
                                 " · BIOS missing: ${it.joinToString()}"
                             } ?: ""
                             ),
-                        parseColour(row.def.colour)
+                        parseColour(row.def.colour),
+                        cover = covers[row.def.id]
                     ) { onSystem(row.def.id) }
                 )
             }

@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Feedback round 1: Apps folder (launch installed apps, favourite them), controller hints on every screen, home grid layout
+  with 1:1 tiles washed with a representative cover (Select toggles list/grid, columns in user.json), hero cards on the idle
+  companion screen, debug `--es open <route>`. Design note for recommendation snapshots (docs/RECOMMENDATIONS.md).
 - Vita launches through EmuCoreV using `<file>.titleid` sidecars written by the desktop; indexer ignores sidecar files.
 - Shizuku-backed screen mover (capability-gated) with Diagnostics controls; debug `--es open <route>` hook; lower Gradle and
   Kotlin daemon memory limits.
