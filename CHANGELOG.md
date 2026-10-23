@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Shizuku-backed screen mover (capability-gated) with Diagnostics controls; debug `--es open <route>` hook; lower Gradle and
+  Kotlin daemon memory limits.
 - M4 (in progress): palette theming on the detail screen, per-share absolute roots, manifests for DMG/Vert/Nova, GitHub
   Actions debug build, release checklist, BIOS-missing and save-present badges; fixed a CursorWindow race that crash-looped the
   folder evaluator during indexing.
