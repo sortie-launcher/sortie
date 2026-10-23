@@ -19,7 +19,7 @@ fun SortieNav(vm: SortieViewModel) {
     val systems by vm.systems.collectAsState()
     LaunchedEffect(Unit) {
         Selection.openRoute.collect { route ->
-            nav.navigate(route) { launchSingleTop = true }
+            runCatching { nav.navigate(route) { launchSingleTop = true } } // a typo from adb must not crash the launcher
             Selection.openRoute.resetReplayCache()
         }
     }
@@ -84,5 +84,6 @@ fun SortieNav(vm: SortieViewModel) {
         }
         composable("search") { SearchScreen(vm, onGame = { nav.navigate("game/${enc(it)}") }) }
         composable("diagnostics") { DiagnosticsScreen(vm) }
+        composable("apps") { AppsScreen(vm) }
     }
 }
