@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- user.json writes are serialised (one collector writes the newest state); concurrent per-update writers could leave an older
+  state on disk after a burst of layout moves or favourites. Regression test `UserStoreTest`.
 - Small fixes (feedback round 4): hold-A works on the controller (`Modifier.keyLongPress`: the first key repeat is the long
   press; `combinedClickable` only hears touch) — context sheets on tiles, rows, apps; the home grid is focusable only while a tile
   is lifted (a permanently focusable grid had swallowed the tile outline and D-pad up/down); hero and Now-playing titles drop

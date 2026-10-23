@@ -6,13 +6,19 @@ import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
-/** Favourites, hidden entries and per-game profile overrides, persisted as `<root>/sortie/user.json` (device-owned). */
+/**
+ * Favourites, hidden entries, layout and per-game profile overrides, persisted as `<root>/sortie/user.json` (device-owned).
+ * Writes are serialised through one collector that always writes the newest state: concurrent writers of their own snapshots
+ * would race on the same `.tmp` file and could leave an older state on disk after a burst of edits (layout moves, favourites).
+ */
 class UserStore(private val file: File, private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)) {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -21,18 +27,31 @@ class UserStore(private val file: File, private val scope: CoroutineScope = Coro
     private val _data = MutableStateFlow(load())
     val data: StateFlow<UserData> = _data
 
+    /** One slot: a burst of updates collapses into a single write of whatever [_data] holds when the writer gets to it. */
+    private val dirty = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /** Completes after each write; tests await it to observe the file. */
+    val written = MutableSharedFlow<UserData>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    init {
+        scope.launch { dirty.collect { write(_data.value) } }
+    }
+
     private fun load(): UserData = runCatching { json.decodeFromString(UserData.serializer(), file.readText()) }.getOrDefault(UserData())
 
     private fun update(f: (UserData) -> UserData) {
-        val next = _data.updateAndGet(f)
-        scope.launch {
-            runCatching {
-                file.parentFile?.mkdirs()
-                val tmp = File(file.path + ".tmp")
-                tmp.writeText(json.encodeToString(UserData.serializer(), next))
-                if (!tmp.renameTo(file)) Log.w("UserStore", "rename failed for ${file.path}")
-            }.onFailure { Log.w("UserStore", "write user.json", it) }
-        }
+        _data.update(f)
+        dirty.tryEmit(Unit)
+    }
+
+    private fun write(snapshot: UserData) {
+        runCatching {
+            file.parentFile?.mkdirs()
+            val tmp = File(file.path + ".tmp")
+            tmp.writeText(json.encodeToString(UserData.serializer(), snapshot))
+            if (!tmp.renameTo(file)) Log.w("UserStore", "rename failed for ${file.path}")
+        }.onFailure { Log.w("UserStore", "write user.json", it) }
+        written.tryEmit(snapshot)
     }
 
     fun toggleFavourite(id: String) = update { it.copy(favourites = if (id in it.favourites) it.favourites - id else it.favourites + id) }
@@ -58,9 +77,4 @@ class UserStore(private val file: File, private val scope: CoroutineScope = Coro
     fun setLayout(ids: List<String>) = update { it.copy(layout = ids.distinct()) }
 
     fun showShortcut(id: String, shown: Boolean) = update { it.copy(shortcuts = if (shown) it.shortcuts + id else it.shortcuts - id) }
-}
-
-private fun <T> MutableStateFlow<T>.updateAndGet(f: (T) -> T): T {
-    update(f)
-    return value
 }
