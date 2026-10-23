@@ -36,6 +36,12 @@ class LaunchManager(
     /** Hook for the activity: called right before an emulator is started on the given display ("top"/"bottom"/"same"). */
     var beforeLaunch: ((display: String) -> Unit)? = null
 
+    /** Supplied by the activity: which display Sortie itself is on right now. */
+    var currentDisplayId: (() -> Int)? = null
+
+    /** Called right after an emulator was started, with the display it was sent to (or null for "wherever the system put it"). */
+    var afterLaunch: ((displayId: Int?) -> Unit)? = null
+
     private val _log = MutableStateFlow<List<LogEntry>>(emptyList())
     val log: StateFlow<List<LogEntry>> = _log
 
@@ -60,6 +66,7 @@ class LaunchManager(
         val attempts = mutableListOf<Attempt>()
         val candidates = only?.let { listOf(it) } ?: profilesFor(game)
         var started: LaunchProfile? = null
+        var startedDisplay: Int? = null
         for (profile in candidates) {
             if (!isInstalled(profile)) {
                 attempts += Attempt(profile.id, "", "package ${profile.`package`} not installed")
@@ -76,6 +83,7 @@ class LaunchManager(
                 context.startActivity(intent, options?.toBundle())
                 attempts += Attempt(profile.id, command, "started" + (displayNote?.let { " ($it)" } ?: ""))
                 started = profile
+                startedDisplay = displayId
                 break
             } catch (e: CancellationException) {
                 throw e
@@ -91,6 +99,7 @@ class LaunchManager(
         attempts.forEach { Log.i("SortieLaunch", "${game.id} via ${it.profileId}: ${it.outcome} | ${it.command}") }
         // Record the session outside the try/catch so a logging failure can never trigger a second launch.
         started?.let { runCatching { playLog.start(game.id, it.id, it.display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) } }
+        if (started != null) afterLaunch?.invoke(startedDisplay) // last: the activity may finish itself here
         return started != null
     }
 
@@ -119,7 +128,16 @@ class LaunchManager(
         val id = when (display) {
             "top" -> Display.DEFAULT_DISPLAY
             "bottom" -> secondary?.displayId ?: return Triple(null, null, "no secondary display, launched on the current one")
-            else -> return Triple(null, null, null)
+            // "same": games go to the top screen on a dual-screen device whose navigation lives on the bottom
+            else -> if (secondary != null && screens.navigation == "bottom" && (currentDisplayId?.invoke() ?: 0) != Display.DEFAULT_DISPLAY) {
+                Display.DEFAULT_DISPLAY
+            } else {
+                return Triple(
+                    null,
+                    null,
+                    null
+                )
+            }
         }
         return Triple(ActivityOptions.makeBasic().setLaunchDisplayId(id), id, null)
     }

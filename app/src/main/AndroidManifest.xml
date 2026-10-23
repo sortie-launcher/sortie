@@ -16,12 +16,26 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
+            android:stateNotNeeded="true"
             android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density|fontScale|smallestScreenSize|layoutDirection|locale">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Optional HOME role: Sortie can be the device's default launcher (Settings > Default apps > Home). -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
+        <activity
+            android:name=".CompanionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"

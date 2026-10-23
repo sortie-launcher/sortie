@@ -37,6 +37,7 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel) {
     val profiles = remember(game.id, user.profileOverrides[game.id], snap.loadedAt) { vm.profilesFor(game) }
     val fav = game.id in user.favourites
     val launchFocus = remember { FocusRequester() }
+    LaunchedEffect(game.id) { Selection.set(game) }
     LaunchedEffect(game.id) { runCatching { launchFocus.requestFocus() } }
     androidx.compose.runtime.DisposableEffect(Unit) {
         Hotkeys.handle(setOf(Hotkeys.Key.FAVOURITE))

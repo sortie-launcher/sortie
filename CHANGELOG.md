@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- M3 (in progress): companion panel on the other screen, X swaps screens, launches target the top screen when navigating
+  from the bottom, HOME role, single-instance guard.
 - M2: smart folders from folders.json (rule engine with tests, repository, home counts, folder screen, Pick one, Select
   context, hide); desktop validator sortie-card/validate_folders.py; first-seen time from file mtime.
 - Project skeleton, spec, plan and on-card data formats.

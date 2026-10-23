@@ -38,6 +38,7 @@ import io.github.esko997.sortie.data.db.GameEntity
 fun HomeScreen(vm: SortieViewModel, onSystem: (String) -> Unit, onFolder: (String) -> Unit, onSearch: () -> Unit, onDiagnostics: () -> Unit) {
     val systems by vm.systems.collectAsState()
     val folders by vm.folders.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(Unit) { Selection.set(null) }
     val total by vm.total.collectAsState()
     val index by vm.index.collectAsState()
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp)) {
