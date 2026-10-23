@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Overlay picker search: the touch-only overlay window becomes focusable while its app picker is open (`SwitcherOverlay.
+  allowTextInput`), so the IME stays attached; restored and the controller re-anchored when the picker closes. Known wart: Gboard
+  uses its fullscreen extract UI on that window while typing (not on Sortie's own screens); Done/Back returns to the filtered grid.
 - Title cleaning moved to `data/index/Titles.kt` `cleanTitle` with tests: revision markers need a digit or a lone letter after a
   space, so Revenge/Revelations/Revolution keep their words.
 - Round 4b: `AppPicker` (search field + icon grid) opens any installed app or opted-in shortcut on a chosen display — the

@@ -30,7 +30,14 @@ import io.github.esko997.sortie.ui.Hotkeys
  * [Hotkeys] like everywhere else, B closes.
  */
 class SwitcherOverlay(private val context: Context) {
-    private class Window(val displayId: Int, val manager: WindowManager, val view: View, val owner: Owner)
+    private class Window(
+        val displayId: Int,
+        val manager: WindowManager,
+        val view: View,
+        val owner: Owner,
+        val params: WindowManager.LayoutParams,
+        val controller: Boolean
+    )
 
     private val windows = mutableMapOf<Int, Window>()
 
@@ -88,8 +95,23 @@ class SwitcherOverlay(private val context: Context) {
                 ).apply { title = "Sortie switcher" }
                 wm.addView(root, params)
                 owner.start()
-                windows[id] = Window(id, wm, root, owner)
+                windows[id] = Window(id, wm, root, owner, params, controller)
             }.onFailure { Log.w(TAG, "overlay on display $id", it) }
+        }
+    }
+
+    /**
+     * The touch-only window must take input focus while its app picker is open, or the IME attaches and is dropped at once.
+     * [displayId] null restores every window to its controller policy.
+     */
+    fun allowTextInput(displayId: Int?) {
+        for (w in windows.values) {
+            val focusable = w.controller || w.displayId == displayId
+            val notFocusable = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+            val flags = if (focusable) w.params.flags and notFocusable.inv() else w.params.flags or notFocusable
+            if (flags == w.params.flags) continue
+            w.params.flags = flags
+            runCatching { w.manager.updateViewLayout(w.view, w.params) }.onFailure { Log.w(TAG, "focusable ${w.displayId}", it) }
         }
     }
 

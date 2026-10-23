@@ -28,6 +28,7 @@ class SwitcherHost(private val graph: SortieApp.Graph) {
     fun install() {
         graph.switcher.presenter = ::present
         graph.switcher.dismisser = overlay::hide
+        graph.switcher.textInput = overlay::allowTextInput
     }
 
     private fun present(focusDisplay: Int): Boolean {

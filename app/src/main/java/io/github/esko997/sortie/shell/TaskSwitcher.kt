@@ -87,10 +87,22 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
     /** Display to hand the controller to when the overlay closes (set by a move while the overlay keeps the controller). */
     private var pendingAnchor: Int? = null
 
-    /** "Open app…" for [displayId]: both screens show the picker. */
-    fun startPicking(displayId: Int) = _state.update { it.copy(picking = displayId) }
+    /** Installed by the UI layer: lets the overlay window on a display take input focus (IME) while its picker is open. */
+    var textInput: ((displayId: Int?) -> Unit)? = null
 
-    fun stopPicking() = _state.update { it.copy(picking = null) }
+    /** "Open app…" for [displayId]: that screen shows the picker. */
+    fun startPicking(displayId: Int) {
+        _state.update { it.copy(picking = displayId) }
+        if (_state.value.overlay) textInput?.invoke(displayId)
+    }
+
+    fun stopPicking() {
+        _state.update { it.copy(picking = null) }
+        if (_state.value.overlay) {
+            textInput?.invoke(null)
+            overlayDisplay?.let { anchor(it) } // the controller may have followed the touched window; give it back
+        }
+    }
 
     /** An app was started on [displayId] from the picker: the switcher closes and the controller goes to that display. */
     fun picked(displayId: Int) {
