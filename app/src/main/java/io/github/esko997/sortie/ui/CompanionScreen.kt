@@ -77,7 +77,7 @@ fun CompanionScreen(displayId: Int) {
     LaunchedEffect(switcher.open) { if (switcher.open) launcher = false }
     Surface(Modifier.fillMaxSize(), color = Ink) {
         when {
-            switcher.open -> TouchSwitcher(graph.switcher, switcher, displayId)
+            switcher.open && !switcher.overlay -> TouchSwitcher(graph.switcher, switcher, displayId)
             launcher -> TouchLauncher(graph, displayId, scope, onClose = { launcher = false })
             else -> Box(Modifier.fillMaxSize()) {
                 // Exactly one of these is composed: the hero ticker only runs while nothing is being played.
@@ -282,7 +282,7 @@ private const val HAND_OFF_DELAY_MS = 500L
 
 /** This display's running apps; tap raises one here, the button sends it to the other screen. Empty screen offers the others. */
 @Composable
-private fun TouchSwitcher(switcher: TaskSwitcher, state: TaskSwitcher.State, displayId: Int) {
+fun TouchSwitcher(switcher: TaskSwitcher, state: TaskSwitcher.State, displayId: Int) {
     val here = state.on(displayId)
     val elsewhere = state.entries.filter { it.task.displayId != displayId }
     val bringing = here.isEmpty()

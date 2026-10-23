@@ -10,7 +10,9 @@ if ! command -v adb >/dev/null && command -v distrobox >/dev/null; then ADB=(dis
 build()   { if command -v java >/dev/null; then ./gradlew -q assembleDebug; else distrobox enter ubuntu -- bash -c 'export ANDROID_HOME=$HOME/Android/Sdk; cd "'"$PWD"'" && ./gradlew -q assembleDebug'; fi; ls -la app/build/outputs/apk/debug/app-debug.apk | awk '{print $5" bytes"}'; }
 install() {
   "${ADB[@]}" install -r app/build/outputs/apk/debug/app-debug.apk </dev/null | tail -1
-  # a reinstall drops the default-home choice; restore it when Sortie was the home app (SORTIE_HOME=1)
+  # a reinstall drops the default-home choice; restore it when Sortie was the home app (SORTIE_HOME=1). The appops survive a
+  # reinstall but not an uninstall; granting them again is harmless.
+  for op in MANAGE_EXTERNAL_STORAGE SYSTEM_ALERT_WINDOW; do "${ADB[@]}" shell appops set io.github.esko997.sortie $op allow </dev/null >/dev/null || true; done
   [ "${SORTIE_HOME:-0}" = 1 ] && "${ADB[@]}" shell cmd package set-home-activity io.github.esko997.sortie/.MainActivity </dev/null >/dev/null || true
 }
 run()     { "${ADB[@]}" shell am start -n io.github.esko997.sortie/.MainActivity </dev/null >/dev/null; sleep 4; "${ADB[@]}" logcat -d -t 300 </dev/null | grep -E "FATAL|AndroidRuntime.*sortie" | tail -20 || true; }

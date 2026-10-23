@@ -74,8 +74,15 @@ class MainActivity : ComponentActivity() {
         if (summoned || (intent.hasCategory(Intent.CATEGORY_HOME) && !intent.hasExtra("open") && !intent.hasExtra("launch"))) {
             intent.removeExtra(TaskSwitcher.EXTRA_SWITCHER)
             val switcher = (application as SortieApp).graph.switcher
-            lifecycleScope.launch {
-                if (summoned || switcher.anyRunning()) {
+            if (summoned) {
+                // the secondary home already decided: show the switcher route here (no overlay grant)
+                switcher.open()
+                Selection.openRoute.tryEmit("switcher")
+            } else {
+                // Home on the top screen: overlay when granted, else the switcher route in this activity
+                lifecycleScope.launch {
+                    if (!switcher.anyRunning()) return@launch
+                    if (switcher.presenter?.invoke(TaskSwitcher.TOP) == true) return@launch
                     switcher.open()
                     Selection.openRoute.tryEmit("switcher")
                 }

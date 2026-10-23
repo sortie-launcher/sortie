@@ -19,6 +19,7 @@ import io.github.esko997.sortie.data.user.UserStore
 import io.github.esko997.sortie.launch.LaunchManager
 import io.github.esko997.sortie.shell.ScreenMover
 import io.github.esko997.sortie.shell.TaskSwitcher
+import io.github.esko997.sortie.ui.SwitcherHost
 import java.io.File
 
 /** Hand-rolled service locator; small enough that a DI framework would be more code than it saves. */
@@ -27,7 +28,7 @@ class SortieApp :
     SingletonImageLoader.Factory {
     val graph: Graph by lazy { Graph(this) }
 
-    class Graph(app: SortieApp) {
+    class Graph(val app: SortieApp) {
         val sortieDir: File = locateSortieDir(app)
         val manifests = ManifestStore(sortieDir)
         val db = SortieDb.open(app)
@@ -41,6 +42,10 @@ class SortieApp :
         val apps = AppsRepository(app)
         val shortcuts = ShortcutsRepository(app)
         val folders = FolderRepository(db, manifests, user.data, apps.apps, shortcuts.shortcuts)
+
+        init {
+            SwitcherHost(this).install() // overlay switcher when the draw-over-apps grant exists; activity route otherwise
+        }
     }
 
     override fun onCreate() {

@@ -16,6 +16,12 @@
   controller is handed back to the other screen). While a play session is open (`PlayLog.current`) the panel shows the game
   (or app) with "Playing · N min", ticking once a minute; the hero rotation runs only when nothing is being played.
   Scope note for RetroArch/RetroAchievements companion controls: docs/NOW_PLAYING.md (not built).
+- Switcher overlay (feedback round 3): with `appops set <pkg> SYSTEM_ALERT_WINDOW allow` the Home-key switcher is a pair of
+  `TYPE_APPLICATION_OVERLAY` windows (`shell/SwitcherOverlay`, `ui/SwitcherHost`) over the running games instead of Sortie's
+  screens: controller carousel on the display that had the controller, touch carousel on the other, dark scrim, games keep
+  running underneath (Home on the top screen also resumes Sortie's HOME activity; the game is raised again over it). B closes;
+  A / Y / Quick swap act and close; Y/Select go to the overlay only, never to Sortie's screens below. Without the grant the
+  activity route is used as before. `tools/dev.sh install` grants both appops.
 - Idle cost (feedback round 3): the focus glow pulses for 3 s after focus lands and then holds (an endless frame-clock pulse
   kept Sortie redrawing at 120 Hz, ~70% of a core while idle; the blurred glow is rasterised once per size). Measured: home
   idle 0% CPU and 0 frames; companion visible while a game runs: ~3 frames per hero change, none while "Now playing".

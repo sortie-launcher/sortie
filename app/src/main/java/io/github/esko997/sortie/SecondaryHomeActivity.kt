@@ -21,7 +21,7 @@ class SecondaryHomeActivity : CompanionHost() {
     /** A Home press while the second screen had the controller lands here (singleTop): that is the app switcher's summons. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.hasCategory(Intent.CATEGORY_SECONDARY_HOME)) (application as SortieApp).graph.switcher.summon()
+        if (intent.hasCategory(Intent.CATEGORY_SECONDARY_HOME)) (application as SortieApp).graph.switcher.summon(myDisplayId())
     }
 }
 

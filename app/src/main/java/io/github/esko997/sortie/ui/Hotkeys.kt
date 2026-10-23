@@ -33,17 +33,20 @@ object Hotkeys {
         handled.value = owners.keys.toSet()
     }
 
+    /** The hotkey a key code maps to, or null for keys the framework handles (A/B/D-pad). */
+    fun keyFor(code: Int): Key? = when (code) {
+        KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_MENU -> Key.SEARCH
+        KeyEvent.KEYCODE_BUTTON_Y -> Key.FAVOURITE
+        KeyEvent.KEYCODE_BUTTON_SELECT -> Key.CONTEXT
+        KeyEvent.KEYCODE_BUTTON_X -> Key.SWAP_SCREENS
+        KeyEvent.KEYCODE_BUTTON_L1 -> Key.PREV_FOLDER
+        KeyEvent.KEYCODE_BUTTON_R1 -> Key.NEXT_FOLDER
+        else -> null
+    }
+
     /** Returns true when the key was a hotkey that a screen consumes. */
     fun onKeyDown(code: Int): Boolean {
-        val key = when (code) {
-            KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_MENU -> Key.SEARCH
-            KeyEvent.KEYCODE_BUTTON_Y -> Key.FAVOURITE
-            KeyEvent.KEYCODE_BUTTON_SELECT -> Key.CONTEXT
-            KeyEvent.KEYCODE_BUTTON_X -> Key.SWAP_SCREENS
-            KeyEvent.KEYCODE_BUTTON_L1 -> Key.PREV_FOLDER
-            KeyEvent.KEYCODE_BUTTON_R1 -> Key.NEXT_FOLDER
-            else -> return false
-        }
+        val key = keyFor(code) ?: return false
         return key in handled.value && events.tryEmit(key)
     }
 }

@@ -26,17 +26,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.shell.TaskSwitcher
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Sortie's app switcher, controller-driven: one carousel per screen with the apps running there. A raises the focused app on
@@ -44,20 +49,23 @@ import io.github.esko997.sortie.shell.TaskSwitcher
  * while something is running, or from the home screen. The companion screen mirrors its own carousel for touch.
  */
 @Composable
-fun SwitcherScreen() {
+fun SwitcherScreen(keys: Flow<Hotkeys.Key> = Hotkeys.events, claimHotkeys: Boolean = true, owner: Boolean = true) {
     val switcher = (LocalContext.current.applicationContext as SortieApp).graph.switcher
     val state by switcher.state.collectAsState()
     var focused by remember { mutableStateOf<TaskSwitcher.Entry?>(null) }
     var focusedScreen by remember { mutableStateOf(TaskSwitcher.TOP) }
     val secondary = remember { switcher.secondaryDisplay() }
-    DisposableEffect(Unit) {
-        switcher.open()
-        onDispose { switcher.close() }
+    // As a navigation route the screen opens and closes the switcher state itself; inside the overlay the host does.
+    if (owner) {
+        DisposableEffect(Unit) {
+            switcher.open()
+            onDispose { switcher.close() }
+        }
     }
     LaunchedEffect(Unit) {
-        Hotkeys.handle(setOf(Hotkeys.Key.FAVOURITE, Hotkeys.Key.CONTEXT))
+        if (claimHotkeys) Hotkeys.handle(setOf(Hotkeys.Key.FAVOURITE, Hotkeys.Key.CONTEXT))
         try {
-            Hotkeys.events.collect { key ->
+            keys.collect { key ->
                 val e = focused ?: return@collect
                 when (key) {
                     Hotkeys.Key.FAVOURITE -> switcher.other(e.task.displayId)?.let { switcher.moveTo(e, it) }
@@ -66,7 +74,7 @@ fun SwitcherScreen() {
                 }
             }
         } finally {
-            Hotkeys.release(setOf(Hotkeys.Key.FAVOURITE, Hotkeys.Key.CONTEXT))
+            if (claimHotkeys) Hotkeys.release(setOf(Hotkeys.Key.FAVOURITE, Hotkeys.Key.CONTEXT))
         }
     }
     Column(Modifier.fillMaxSize()) {
@@ -90,7 +98,19 @@ fun SwitcherScreen() {
                 focusedScreen = d
             }
             val onBlur = { e: TaskSwitcher.Entry, _: Int -> if (focused === e) focused = null }
-            LaunchedEffect(state.entries.isNotEmpty()) { if (state.entries.isNotEmpty()) runCatching { first.requestFocus() } }
+            // In the overlay the window gains focus only after the controller is anchored to its display, a few hundred ms
+            // later; keep asking (and leave touch input mode) until a card reports focus.
+            val inputMode = LocalInputModeManager.current
+            LaunchedEffect(state.entries.isNotEmpty()) {
+                if (state.entries.isEmpty()) return@LaunchedEffect
+                repeat(50) {
+                    if (focused != null) return@LaunchedEffect
+                    @OptIn(ExperimentalComposeUiApi::class)
+                    inputMode.requestInputMode(InputMode.Keyboard)
+                    runCatching { first.requestFocus() }
+                    delay(40)
+                }
+            }
             ScreenRow("Top screen", TaskSwitcher.TOP, state, switcher, first, onFocus, onBlur)
             if (secondary != null) ScreenRow("Bottom screen", secondary, state, switcher, null, onFocus, onBlur)
             Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

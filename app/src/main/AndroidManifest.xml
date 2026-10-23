@@ -4,6 +4,8 @@
     <!-- Reads the whole card (ROMs, gamelists, art). Granted once over adb: appops set <pkg> MANAGE_EXTERNAL_STORAGE allow -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
+    <!-- Switcher overlay over running games (optional). Granted once over adb: appops set <pkg> SYSTEM_ALERT_WINDOW allow -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Offline by construction: no INTERNET permission, ever. -->
     <application
         android:name=".SortieApp"
