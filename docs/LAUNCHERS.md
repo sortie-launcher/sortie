@@ -51,3 +51,15 @@ Fixtures came from [PPSSPP's public demo](https://www.ppsspp.org/legacybuilds) a
 [GB Assembly Tutorial](https://gbdev.io/gb-asm-tutorial/part1/hello_world.html). No commercial ROM, BIOS or emulator is
 bundled with Sortie. Other presets retain their stated source-checked or device-tested status; an installed package does
 not prove that its core, BIOS, storage permission or game is ready.
+
+## Beginner-guide walkthrough — 2026-10-24
+
+The [getting-started path](GETTING_STARTED.md) was exercised in a fresh, isolated Android 13/API 33 x86_64 emulator:
+**Set up library → Add a system… → Game Boy Color → Add a folder… → Save → Try a launch → Play**.
+[uCity](https://hh.gbdev.io/game/ucity/) reached its title screen in **RetroArch 1.22.2 / Gambatte**. Without a gamelist,
+Sortie displayed the file-derived title `ucity`, as shown in the guide.
+
+The Gambatte core was preinstalled from a cached binary, so this pass did not exercise RetroArch's Online Updater.
+This proves the illustrated setup-to-launch path, not game performance, physical-controller behaviour or compatibility
+on a particular handheld. The [capture record](screenshots/readme/PROVENANCE.md) identifies the APK and fixtures and
+distinguishes this actual homebrew launch from the non-playable demo entries used for the README tour.

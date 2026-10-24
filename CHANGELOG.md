@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Rework the README around the Split-S branding, a real screenshot tour and an immediate AI-collaboration disclosure.
+  Add an illustrated beginner guide covering first-game setup, required versus optional features, emulator prerequisites,
+  safe updates and recovery. Its Game Boy Color/uCity setup-to-launch path was exercised on an isolated Android 13
+  emulator with RetroArch 1.22.2/Gambatte; capture provenance distinguishes that launch from illustrative library entries.
+  Clarify configuration storage and the current filename-keyed guide-sharing limits; retire the old probe screenshots.
 - Hosted CI installs supported Android SDK packages (`platform-tools` and API 35) explicitly instead of requesting the
   retired `tools` package. The first hosted style/test/APK build and both artifact uploads passed after this correction.
 - Adopt the amber Split-S identity: adaptive Android launcher icon with a monochrome layer for themed icons,
