@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.BatteryManager
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -33,6 +34,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -42,6 +44,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -75,14 +78,18 @@ import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
+import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.shell.ScreenMover
 import io.github.esko997.sortie.shell.TaskSwitcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
- * What the other screen shows: the game being played (while a play session is open), else the selected game's art and hook or
+ * What the other screen shows: the game being browsed while Sortie's navigation is on screen (even with a game running
+ * behind it), else the game being played (while a play session is open), else the selected game's art and hook or
  * a rotating hero; while the switcher is open, the apps running on this very display as a touch carousel. A corner '+' opens a
  * touch list of apps to start on this display. The host hands the controller back to the other screen on every touch, so every
  * control here is touch and nothing requests focus.
@@ -105,7 +112,9 @@ fun CompanionScreen(displayId: Int) {
     }
     // the dock folds away whenever what the panel shows changes, so it never sits over new text
     val selected by Selection.current.collectAsState()
-    LaunchedEffect(selected?.id, session?.gameId) { dock = false }
+    val navigationVisible by Selection.navigationVisible.collectAsState()
+    val magazine by Selection.magazine.collectAsState()
+    LaunchedEffect(selected?.id, session?.gameId, magazine?.issue?.id, magazine?.articleId) { dock = false }
     // the host hands the controller away on every tap; not while a text field here needs the IME
     val host = LocalContext.current as? CompanionHost
     // pickers and the open dock keep the controller here: their slots take the D-pad (A opens, hold A unpins), B closes
@@ -122,10 +131,14 @@ fun CompanionScreen(displayId: Int) {
                 graph.user.setDockSlot(dockSlot, it.id)
                 dockSlot = -1
             }
+            navigationVisible && magazine != null -> MagazineCompanion(magazine!!)
             else -> Box(Modifier.fillMaxSize()) {
-                // Exactly one of these is composed: the hero ticker only runs while nothing is being played.
+                // Exactly one of these is composed: the hero ticker only runs while nothing is being played. Browsing another
+                // game with the navigation visible takes the panel without ending the session; once the navigation is gone (the
+                // game is in front again) or nothing else is selected, Now playing returns.
                 val s = session
-                if (s != null) NowPlaying(graph, s) else HeroPanel(graph)
+                val browsingOther = navigationVisible && selected != null && selected?.id != s?.gameId
+                if (s != null && !browsingOther) NowPlaying(graph, s) else HeroPanel(graph)
                 CornerPlus(Modifier.align(Alignment.BottomEnd).padding(16.dp)) { launcher = true }
                 Dock(graph, displayId, scope, dock, Modifier.align(Alignment.BottomStart).padding(16.dp), onToggle = { dock = !dock }) { dockSlot = it }
                 // one element per corner, all on the same 44 dp inset: battery · bell / dock · '+'
@@ -137,8 +150,9 @@ fun CompanionScreen(displayId: Int) {
 }
 
 /**
- * The selected game (with its description, notes and play stats mirrored from the detail screen, so they can be read without
- * leaving the list), else a rotating hero ([Selection.panel]); composed only while no session is open.
+ * The selected game (with its description, the user's notes and play stats mirrored from the detail screen, so they can be
+ * read without leaving the list), else a rotating hero ([Selection.panel]); composed while no session is open, or while the
+ * navigation shows another game than the one being played.
  */
 @Composable
 private fun HeroPanel(graph: SortieApp.Graph) {
@@ -148,7 +162,9 @@ private fun HeroPanel(graph: SortieApp.Graph) {
     val g = game
     val palette = rememberPalette(g?.cover ?: g?.screenshot)
     LaunchedEffect(palette) { Selection.heroPalette.value = palette }
-    val detail = if (g != null && g.id == selected?.id) {
+    val selectedGame = g != null && g.id == selected?.id
+    val notes = if (g != null && selectedGame) rememberAnnotation(graph, g.id) else null
+    val detail = if (g != null && selectedGame) {
         val stats by produceState<PlayStat?>(null, g.id) { value = graph.db.games().playStat(g.id) }
         listOfNotNull(
             stats?.let(::playedLine),
@@ -159,16 +175,59 @@ private fun HeroPanel(graph: SortieApp.Graph) {
     } else {
         null
     }
-    Panel(title = g?.let(::displayTitle) ?: "Sortie", subtitle = g?.let(::gameLine).orEmpty(), detail = detail, onTap = g?.let { openOnOtherScreen(it) }) {
+    Panel(
+        title = g?.let(::displayTitle) ?: "Sortie",
+        subtitle = g?.hook.orEmpty(),
+        metadata = g?.let { gameLine(graph, it) },
+        detail = detail,
+        notes = notes,
+        action = { if (g != null) key(g.id) { HeroQueueButton(graph, g.id) } },
+        onTap = g?.let { openOnOtherScreen(it) }
+    ) {
         val art = g?.screenshot ?: g?.cover
         if (art != null) CoverImage(art, Modifier.fillMaxSize(), ContentScale.Fit)
+    }
+}
+
+/** The user's annotation for [id], live (an edit on the other screen shows at once); null while none is recorded. */
+@Composable
+private fun rememberAnnotation(graph: SortieApp.Graph, id: String): GameAnnotation? {
+    val flow = remember(id) { graph.user.data.map { it.gameAnnotations[id] }.distinctUntilChanged() }
+    return flow.collectAsState(graph.user.data.value.gameAnnotations[id]).value
+}
+
+/** Keyed by the displayed game so a rotating hero cannot retarget a button press halfway through a gesture. */
+@Composable
+private fun HeroQueueButton(graph: SortieApp.Graph, id: String) {
+    val queued by remember(id) { graph.user.data.map { id in it.wantToPlay }.distinctUntilChanged() }
+        .collectAsState(id in graph.user.data.value.wantToPlay)
+    val context = LocalContext.current
+    val interaction = remember { MutableInteractionSource() }
+    OutlinedButton(
+        onClick = {
+            val added = graph.user.toggleWantToPlay(id)
+            Toast.makeText(context, if (added) "Added to Want to play" else "Removed from Want to play", Toast.LENGTH_SHORT).show()
+        },
+        modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+            .focusGlow(interaction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape),
+        interactionSource = interaction,
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = if (queued) Amber.copy(alpha = 0.18f) else Color.Transparent,
+            contentColor = Amber
+        )
+    ) {
+        Text(if (queued) "Remove from Want to play" else "Want to play")
     }
 }
 
 /** Tapping the hero or now-playing card opens the game's entry in Sortie's navigation, which lives on the other screen. */
 private fun openOnOtherScreen(g: GameEntity): () -> Unit = { Selection.openRoute.tryEmit("game/${Uri.encode(g.id)}") }
 
-/** The open session: a game's art and hook, or an app's/shortcut's icon and label, with the minutes played so far. */
+/**
+ * The open session: a game's art and hook, or an app's/shortcut's icon and label, with the minutes played so far. A game with
+ * reference cards offers them here; the open card replaces the panel until closed and is kept per game while it runs
+ * ([ReferenceSelection]), so the switcher, launcher or browsing on the other screen hand it back unchanged.
+ */
 @Composable
 private fun NowPlaying(graph: SortieApp.Graph, session: SessionEntity) {
     val id = session.gameId
@@ -176,11 +235,30 @@ private fun NowPlaying(graph: SortieApp.Graph, session: SessionEntity) {
     if (LibraryItem.isGameId(id)) {
         val game by produceState<GameEntity?>(null, id) { value = graph.db.games().byId(id) }
         val g = game
+        val cards = rememberReferenceCards(graph, id)
+        val pick = ReferenceSelection.pick(id, session.startedAt)
+        val picked = cards.firstOrNull { it.id == pick.cardId } ?: cards.firstOrNull()
+        if (pick.open && picked != null) {
+            ReferenceCompanion(
+                graph,
+                cards,
+                picked,
+                status,
+                onShow = { ReferenceSelection.show(id, session.startedAt, it.id) },
+                onClose = { ReferenceSelection.show(id, session.startedAt, picked.id, open = false) }
+            )
+            return
+        }
         Panel(
             title = g?.let(::displayTitle) ?: id.substringAfterLast('/'),
-            subtitle = g?.let(::gameLine).orEmpty(),
+            subtitle = g?.hook.orEmpty(),
+            metadata = g?.let { gameLine(graph, it) },
             status = status,
             detail = g?.controls?.let { "Controls: $it" },
+            notes = rememberAnnotation(graph, id),
+            action = {
+                if (picked != null) ReferenceEntryButton(cards.size) { ReferenceSelection.show(id, session.startedAt, picked.id) }
+            },
             onTap = g?.let {
                 openOnOtherScreen(it)
             }
@@ -222,10 +300,22 @@ private fun playingMinutes(startedAt: Long): Long {
  * the lower half from the art); text keeps clear of the corner buttons.
  */
 @Composable
-private fun Panel(title: String, subtitle: String, status: String? = null, detail: String? = null, onTap: (() -> Unit)? = null, art: @Composable () -> Unit) {
+private fun Panel(
+    title: String,
+    subtitle: String,
+    metadata: String? = null,
+    status: String? = null,
+    detail: String? = null,
+    notes: GameAnnotation? = null,
+    action: @Composable () -> Unit = {},
+    onTap: (() -> Unit)? = null,
+    art: @Composable () -> Unit
+) {
     val tap = if (onTap != null) Modifier.clickable(onClick = onTap) else Modifier
+    val hasNotes = notes != null && !notes.isEmpty()
+    val lower = detail != null || hasNotes
     Column(Modifier.fillMaxSize().then(tap).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.weight(if (detail != null) 0.5f else 1f).fillMaxWidth(), contentAlignment = Alignment.Center) { art() }
+        Box(Modifier.weight(if (lower) 0.5f else 1f).fillMaxWidth(), contentAlignment = Alignment.Center) { art() }
         if (status != null) {
             Text(
                 status,
@@ -242,24 +332,44 @@ private fun Panel(title: String, subtitle: String, status: String? = null, detai
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(start = 56.dp, top = if (status != null) 4.dp else 16.dp, end = 56.dp)
         )
-        Text(
-            subtitle,
-            color = Amber,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(start = 56.dp, top = 8.dp, end = 56.dp, bottom = 8.dp)
-        )
-        if (detail != null) {
+        if (!metadata.isNullOrBlank()) {
             Text(
-                detail,
-                style = MaterialTheme.typography.bodyMedium,
+                metadata,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(0.5f).fillMaxWidth().padding(horizontal = 72.dp).verticalScroll(rememberScrollState())
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(start = 56.dp, top = 4.dp, end = 56.dp, bottom = 4.dp)
             )
+        }
+        if (subtitle.isNotBlank()) {
+            Text(
+                subtitle,
+                color = Amber,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(start = 56.dp, top = 8.dp, end = 56.dp, bottom = 8.dp)
+            )
+        }
+        action()
+        if (lower) {
+            // the user's own notes ("where was I?" first) above the guide text, in one scrollable block
+            Column(Modifier.weight(0.5f).fillMaxWidth().padding(horizontal = 72.dp).verticalScroll(rememberScrollState())) {
+                if (notes != null && hasNotes) GameAnnotationSummary(notes, Modifier.padding(bottom = 12.dp))
+                if (!detail.isNullOrEmpty()) {
+                    Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
     }
 }
 
-private fun gameLine(g: GameEntity): String = g.hook ?: listOfNotNull(g.year?.toString(), g.developer, g.genre).joinToString(" · ")
+@Composable
+private fun gameLine(graph: SortieApp.Graph, g: GameEntity): String {
+    val manifest by graph.manifests.snapshot.collectAsState()
+    return remember(g, manifest.systems) {
+        val platform = manifest.systems.firstOrNull { it.id == g.systemId }?.label?.takeIf { it.isNotBlank() } ?: g.systemId.uppercase()
+        listOfNotNull(platform, g.year?.toString(), g.developer, g.genre).filter { it.isNotBlank() }.joinToString(" · ")
+    }
+}
 
 /**
  * Bottom-left dot that unfurls a column of [DOCK_SLOTS] pinned apps/shortcuts (`user.dock`) up the left edge. Tap (or A on) a

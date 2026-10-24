@@ -13,10 +13,14 @@ import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import io.github.esko997.sortie.data.apps.AppsRepository
 import io.github.esko997.sortie.data.apps.ShortcutsRepository
+import io.github.esko997.sortie.data.backup.BackupManager
 import io.github.esko997.sortie.data.db.SortieDb
 import io.github.esko997.sortie.data.folders.FolderRepository
 import io.github.esko997.sortie.data.index.DeviceState
 import io.github.esko997.sortie.data.index.Indexer
+import io.github.esko997.sortie.data.magazine.BundledMagazines
+import io.github.esko997.sortie.data.magazine.MagazineGames
+import io.github.esko997.sortie.data.magazine.MagazineRepository
 import io.github.esko997.sortie.data.manifest.ManifestStore
 import io.github.esko997.sortie.data.user.PlayLog
 import io.github.esko997.sortie.data.user.UserStore
@@ -39,6 +43,8 @@ class SortieApp :
         val user = UserStore(File(sortieDir, "user.json"))
         val playLog = PlayLog(db.games(), File(sortieDir, "playlog.jsonl"), manifests.snapshot.value.device.device)
         val indexer = Indexer(db.games(), manifests)
+        val magazines = MagazineRepository(sortieDir, BundledMagazines.forApp(app))
+        val magazineGames = MagazineGames(db.games()) { manifests.snapshot.value.systems }
         val launcher = LaunchManager(app, manifests, user, playLog)
         val deviceState = DeviceState(manifests)
         val screenMover = ScreenMover(app)
@@ -46,6 +52,15 @@ class SortieApp :
         val apps = AppsRepository(app)
         val shortcuts = ShortcutsRepository(app)
         val folders = FolderRepository(db, manifests, user.data, apps.apps, shortcuts.shortcuts)
+        val backup = BackupManager(
+            app,
+            db,
+            user,
+            playLog,
+            sortieDir,
+            deviceName = { manifests.snapshot.value.device.device },
+            availableLaunchables = { apps.apps.value.mapTo(HashSet()) { it.id } + shortcuts.shortcuts.value.map { it.id } }
+        )
 
         init {
             SwitcherHost(this).install() // overlay switcher when the draw-over-apps grant exists; activity route otherwise

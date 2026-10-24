@@ -1,11 +1,13 @@
 package io.github.esko997.sortie
 
+import android.app.ActivityManager
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.os.Environment
+import android.os.SystemClock
 import android.view.Display
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -16,12 +18,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import io.github.esko997.sortie.shell.TaskSwitcher
 import io.github.esko997.sortie.ui.AmbientBackground
 import io.github.esko997.sortie.ui.Hotkeys
@@ -34,11 +39,36 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     private val vm: SortieViewModel by viewModels()
     private var companionShown = false
+    private var nav: NavHostController? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        // One navigation instance per process: Home can spawn a second one on the default display while another lives on
-        // the secondary display (after a swap). The newest wins.
+        // Started by an X swap: carry on with the state the instance on the other screen saved (back stack, screen state,
+        // view-model state) as if this were a recreation.
+        val state = savedInstanceState ?: takeHandoff(intent)
+        super.onCreate(state)
+        val existing = instances.firstOrNull { it !== this && !it.isFinishing }
+        val homeIntent = intent.hasCategory(Intent.CATEGORY_HOME) && !intent.hasExtra("open") && !intent.hasExtra("launch")
+        if (state == null && existing != null && (homeIntent || intent.hasExtra(TaskSwitcher.EXTRA_SWITCHER))) {
+            val switcher = (application as SortieApp).graph.switcher
+            val underlay = switcher.homeTask(myDisplayId())
+            // Focus a real surface BEFORE removing this temporary HOME. Removing the focused Home task while its
+            // replacement is still queued makes Android repeatedly launch Home to fill the empty display.
+            val restored = when {
+                underlay != null -> revealOwnTask(underlay)
+                existing.myDisplayId() == myDisplayId() -> revealOwnTask(existing.taskId)
+                else -> existing.startCompanion(myDisplayId())
+            }
+            if (restored) {
+                if (intent.hasExtra(TaskSwitcher.EXTRA_SWITCHER)) {
+                    existing.handleIntent(intent)
+                } else if (intent.getBooleanExtra(TaskSwitcher.EXTRA_FROM_HOME_KEY, false)) {
+                    existing.showHomeSwitcher(myDisplayId(), underlay)
+                }
+                if (taskId == existing.taskId) finish() else finishAndRemoveTask()
+                return
+            }
+        }
+        // One navigation instance per process; ordinary launches and screen-swap handoffs replace the old instance.
         instances.filter { it !== this }.forEach { it.finishAndRemoveTask() }
         instances.clear()
         instances += this
@@ -71,11 +101,18 @@ class MainActivity : ComponentActivity() {
                         Modifier.fillMaxSize().safeDrawingPadding(),
                         color = Color.Transparent,
                         contentColor = MaterialTheme.colorScheme.onSurface
-                    ) { SortieNav(vm) }
+                    ) {
+                        val controller = rememberNavController()
+                        DisposableEffect(controller) {
+                            nav = controller
+                            onDispose { nav = null }
+                        }
+                        SortieNav(vm, controller)
+                    }
                 }
             }
         }
-        if (savedInstanceState == null) handleIntent(intent) // never re-fire a launch on activity recreation
+        if (state == null) handleIntent(intent) // never re-fire a launch, Home switcher or debug route on recreation or a swap
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -92,7 +129,8 @@ class MainActivity : ComponentActivity() {
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
         val summoned = intent.hasExtra(TaskSwitcher.EXTRA_SWITCHER)
-        if (summoned || (intent.hasCategory(Intent.CATEGORY_HOME) && !intent.hasExtra("open") && !intent.hasExtra("launch"))) {
+        val homeKey = intent.hasCategory(Intent.CATEGORY_HOME) && intent.getBooleanExtra(TaskSwitcher.EXTRA_FROM_HOME_KEY, false)
+        if (summoned || (homeKey && !intent.hasExtra("open") && !intent.hasExtra("launch"))) {
             intent.removeExtra(TaskSwitcher.EXTRA_SWITCHER)
             val switcher = (application as SortieApp).graph.switcher
             if (summoned) {
@@ -100,13 +138,7 @@ class MainActivity : ComponentActivity() {
                 switcher.open()
                 Selection.openRoute.tryEmit("switcher")
             } else {
-                // Home on the top screen: overlay when granted, else the switcher route in this activity
-                lifecycleScope.launch {
-                    if (!switcher.anyRunning()) return@launch
-                    if (switcher.presenter?.invoke(TaskSwitcher.TOP) == true) return@launch
-                    switcher.open()
-                    Selection.openRoute.tryEmit("switcher")
-                }
+                showHomeSwitcher(myDisplayId(), switcher.homeTask(myDisplayId()))
             }
             return
         }
@@ -125,15 +157,35 @@ class MainActivity : ComponentActivity() {
         vm.launchById(id, intent.getStringExtra("profile"))
     }
 
+    private fun showHomeSwitcher(focusDisplay: Int, homeTask: Int?) {
+        val switcher = (application as SortieApp).graph.switcher
+        lifecycleScope.launch {
+            if (!switcher.anyRunning()) return@launch
+            if (switcher.presenter?.invoke(focusDisplay, homeTask) == true) return@launch
+            switcher.open()
+            Selection.openRoute.tryEmit("switcher")
+            if (focusDisplay != myDisplayId()) switcher.anchor(myDisplayId())
+        }
+    }
+
     override fun onStart() {
         super.onStart()
+        Selection.navigationVisible.value = true
         val granted = Environment.isExternalStorageManager()
         if (granted && SortieApp.relocateIfNeeded(this, (application as SortieApp).graph)) return
         vm.onStart(granted)
     }
 
+    override fun onStop() {
+        (application as SortieApp).graph.switcher.homeStopped(this)
+        super.onStop()
+        // on a swap the instance that left may stop after the new one started: only the last instance says it is gone
+        if (instances.all { it === this }) Selection.navigationVisible.value = false
+    }
+
     override fun onResume() {
         super.onResume()
+        (application as SortieApp).graph.switcher.homeResumed(this)
         vm.onForeground() // closes an open play session when we come back from an emulator
         showCompanion()
     }
@@ -184,24 +236,37 @@ class MainActivity : ComponentActivity() {
         startCompanion(target.displayId)
     }
 
-    private fun startCompanion(displayId: Int) {
+    /** AppTask can raise our own navigation/companion without Shizuku or creating another activity instance. */
+    private fun revealOwnTask(id: Int): Boolean {
+        val task = getSystemService(ActivityManager::class.java).appTasks.firstOrNull { it.taskInfo.taskId == id } ?: return false
+        return runCatching { task.moveToFront() }.isSuccess
+    }
+
+    private fun startCompanion(displayId: Int): Boolean {
         val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId)
         val intent = if (displayId == Display.DEFAULT_DISPLAY) {
             Intent(this, CompanionActivity::class.java)
         } else {
             Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_SECONDARY_HOME).setClass(this, SecondaryHomeActivity::class.java)
         }
-        runCatching { startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options.toBundle()) }
+        return runCatching { startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options.toBundle()) }.isSuccess
     }
 
     /**
-     * X: move Sortie to the other screen. Apps cannot move a task between displays, so finish here and relaunch there.
+     * X: move Sortie to the other screen. Apps cannot move a task between displays, so finish here and relaunch there, handing
+     * this instance's saved state to the new one in process memory (no Binder size limit; see [takeHandoff]).
      * Leaving the default display: cover it with the companion first. An empty default display makes the system start HOME,
      * and HOME is this singleTask activity, which would be pulled straight back to the default display.
      */
     private fun swapScreens() {
         val target = otherDisplay() ?: return
-        val intent = Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        // the switcher route opens and closes the switcher for this window only: the new instance starts where it was opened from
+        nav?.let { if (it.currentDestination?.route == "switcher") it.popBackStack() }
+        val saved = Bundle()
+        onSaveInstanceState(saved)
+        val token = SystemClock.elapsedRealtime()
+        handoff = Handoff(token, saved)
+        val intent = Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra(EXTRA_HANDOFF, token)
         val options = ActivityOptions.makeBasic().setLaunchDisplayId(target.displayId)
         if (target.displayId == Display.DEFAULT_DISPLAY) {
             Selection.closeCompanion.tryEmit(Unit)
@@ -219,7 +284,25 @@ class MainActivity : ComponentActivity() {
 
     private fun displayManager() = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
 
+    private class Handoff(val token: Long, val state: Bundle)
+
     private companion object {
         val instances = mutableListOf<MainActivity>()
+
+        const val EXTRA_HANDOFF = "handoff"
+        const val HANDOFF_TTL_MS = 10_000L
+
+        /** One slot: the latest swap's saved state, until the instance it started takes it. */
+        private var handoff: Handoff? = null
+
+        /** The state [swapScreens] left for the instance it started: only for that intent's token, and only briefly. */
+        fun takeHandoff(intent: Intent?): Bundle? {
+            val token = intent?.getLongExtra(EXTRA_HANDOFF, 0L) ?: 0L
+            intent?.removeExtra(EXTRA_HANDOFF)
+            val h = handoff ?: return null
+            val expired = SystemClock.elapsedRealtime() - h.token > HANDOFF_TTL_MS
+            if (h.token == token || expired) handoff = null
+            return h.state.takeIf { h.token == token && !expired }
+        }
     }
 }

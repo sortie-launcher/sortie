@@ -48,6 +48,12 @@ class PlayLog(private val dao: GameDao, private val file: File, private val devi
     /** Called when Sortie regains the foreground. */
     suspend fun end() = mutex.withLock { closeOpen(abandoned = false) }
 
+    /**
+     * Runs [block] with session logging held: a [start] or [end] arriving meanwhile waits until it returns, so a backup sees
+     * (and a restore writes) the sessions table without a session opening or closing underneath. [block] gets the open session.
+     */
+    suspend fun <T> paused(block: suspend (open: SessionEntity?) -> T): T = mutex.withLock { block(dao.openSession()) }
+
     private suspend fun closeOpen(abandoned: Boolean) {
         val open = dao.openSession()
         _current.value = null

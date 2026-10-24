@@ -1,5 +1,8 @@
 package io.github.esko997.sortie.ui
 
+import android.content.Intent
+import android.provider.Settings
+import android.view.inputmethod.InputMethodManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 /**
@@ -29,10 +33,11 @@ import androidx.compose.ui.unit.dp
  * (directories, systems, profiles, folders) stays desktop-authored in the manifests and is shown in Diagnostics instead.
  */
 @Composable
-fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit, onManual: () -> Unit) {
+fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit, onManual: () -> Unit, onBackup: () -> Unit) {
     val user by vm.user.collectAsState()
     val systems by vm.systems.collectAsState()
     val snap by vm.manifests.collectAsState()
+    val context = LocalContext.current
     var picking by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -61,8 +66,20 @@ fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit, onManual: () 
             item { Toggle("Hero rotation on the idle companion screen", user.heroRotation) { vm.setHeroRotation(it) } }
             item { SectionTitle("Switcher") }
             item { Toggle("Overlay over running games (needs the draw-over-apps grant)", user.overlaySwitcher) { vm.setOverlaySwitcher(it) } }
+            item { SectionTitle("Radial keyboard") }
+            item {
+                FocusRow(onClick = { context.startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)) }) {
+                    Line("Enable radial keyboard…", "optional offline joystick typing; enable Sortie Radial Keyboard in Android settings")
+                }
+            }
+            item {
+                FocusRow(onClick = { context.getSystemService(InputMethodManager::class.java).showInputMethodPicker() }) {
+                    Line("Choose keyboard…", "select the radial keyboard or switch back to your usual keyboard")
+                }
+            }
             item { SectionTitle("Help") }
             item { FocusRow(onClick = onManual) { Line("Manual", "controls, home, lists, the companion screen, the switcher") } }
+            item { FocusRow(onClick = onBackup) { Line("Backup and restore", "export preferences, notes and play history to a file; restore one") } }
             item { FocusRow(onClick = onDiagnostics) { Line("Diagnostics", "index, manifests, Shizuku, launch log, wireless debugging") } }
             item { SectionTitle("Default launcher per system") }
             item {
@@ -104,8 +121,9 @@ private fun Toggle(label: String, on: Boolean, onChange: (Boolean) -> Unit) {
     }
 }
 
+/** Title over a dimmer value line; the body of most settings rows (also used by [BackupScreen]). */
 @Composable
-private fun Line(title: String, value: String) {
+internal fun Line(title: String, value: String) {
     Column {
         Text(title, style = MaterialTheme.typography.bodyLarge)
         Text(value, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

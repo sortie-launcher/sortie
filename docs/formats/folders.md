@@ -35,6 +35,11 @@ Sort keys: `fit`, `title`, `year`, `lastPlayed`, `playMinutes`, `added`, `system
 `:desc`, comma-separated. `random` shuffles the members each time the folder is re-evaluated (library, play
 data, favourites or manifests changed); next to other keys it is the final tiebreaker (`fit:desc,random`).
 
+The ids `want-to-play`, `finished` and `shelved` are reserved for Sortie's built-in personal shelves. They use `wantToPlay`
+and `gameProgress` in [user.json](user.md), not rules from this file. A `folders.json` entry with a reserved id is ignored and
+reported on the built-in folder. These folders always appear on Custom Home, are title-sorted and omit hidden games.
+Ids temporarily absent from the game index are retained in the user's data and return when indexed.
+
 ## Recently played tags (`recentTags`)
 
 `{ "recentTags": { "minShared": 1, "window": 3 } }` matches a game whose guide `tags` share at least

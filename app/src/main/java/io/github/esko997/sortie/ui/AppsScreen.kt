@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -70,16 +71,39 @@ fun AppsScreen(vm: SortieViewModel) {
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         if (label != null) showCreators = false
     }
+    val gridState = rememberLazyGridState()
+    val memory = rememberGridMemory()
+    // every grid item's key, in order, for restoring the focus and position by key
+    val gridKeys = buildList<Any> {
+        add("title")
+        add("add-shortcut")
+        if (showCreators) creators.forEach { add("create:" + it.component.flattenToShortString()) }
+        add("browse-shortcuts")
+        if (showAll) {
+            if (allShortcuts.isEmpty()) add("no-shortcuts")
+            allShortcuts.forEach { add("all:" + it.id) }
+        }
+        if (shortcuts.isNotEmpty()) {
+            add("h-shortcuts")
+            shortcuts.forEach { add(it.id) }
+            add("h-apps")
+        }
+        apps.forEach { add(it.id) }
+    }
+    RememberGridPosition(memory, gridState, gridKeys)
     Column(Modifier.fillMaxSize()) {
         LazyVerticalGrid(
             GridCells.Fixed(if (grid) user.appColumns.coerceAtLeast(1) else 1),
             Modifier.weight(1f),
+            state = gridState,
             contentPadding = PaddingValues(12.dp),
             verticalArrangement = Arrangement.spacedBy(if (grid) 10.dp else 2.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             fullItem("title") { Text("Apps · ${apps.size}", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp)) }
-            fullItem("add-shortcut") { Expander("Add shortcut from…", showCreators) { showCreators = !showCreators } }
+            fullItem("add-shortcut") {
+                RememberedItem(memory, "add-shortcut") { Expander("Add shortcut from…", showCreators) { showCreators = !showCreators } }
+            }
             if (showCreators) {
                 items(creators, key = { "create:" + it.component.flattenToShortString() }, span = { GridItemSpan(maxLineSpan) }) { c ->
                     LauncherRow(c.label, c.component.packageName, favourite = false, onClick = {
@@ -88,7 +112,9 @@ fun AppsScreen(vm: SortieViewModel) {
                     }) { vm.appIcon(c.component.packageName) }
                 }
             }
-            fullItem("browse-shortcuts") { Expander("Browse all shortcuts… (${allShortcuts.size})", showAll) { showAll = !showAll } }
+            fullItem("browse-shortcuts") {
+                RememberedItem(memory, "browse-shortcuts") { Expander("Browse all shortcuts… (${allShortcuts.size})", showAll) { showAll = !showAll } }
+            }
             if (showAll) {
                 if (allShortcuts.isEmpty()) {
                     fullItem("no-shortcuts") {
@@ -114,30 +140,34 @@ fun AppsScreen(vm: SortieViewModel) {
                 fullItem("h-shortcuts") { SectionTitle("Shortcuts · ${shortcuts.size}") }
                 items(shortcuts, key = { it.id }) { s ->
                     val item = LibraryItem.Shortcut(s)
-                    ItemCell(
-                        item,
-                        grid,
-                        vm,
-                        favourite = s.id in user.favourites,
-                        minutes = stats[s.id]?.minutes,
-                        onClick = { vm.launchShortcut(s) },
-                        onLongClick = { sheet = item },
-                        appLabel = appLabel
-                    )
+                    RememberedItem(memory, s.id) {
+                        ItemCell(
+                            item,
+                            grid,
+                            vm,
+                            favourite = s.id in user.favourites,
+                            minutes = stats[s.id]?.minutes,
+                            onClick = { vm.launchShortcut(s) },
+                            onLongClick = { sheet = item },
+                            appLabel = appLabel
+                        )
+                    }
                 }
                 fullItem("h-apps") { SectionTitle("Apps") }
             }
             items(apps, key = { it.id }) { app ->
                 val item = LibraryItem.App(app)
-                ItemCell(
-                    item,
-                    grid,
-                    vm,
-                    favourite = app.id in user.favourites,
-                    minutes = stats[app.id]?.minutes,
-                    onClick = { vm.launchApp(app) },
-                    onLongClick = { sheet = item }
-                )
+                RememberedItem(memory, app.id) {
+                    ItemCell(
+                        item,
+                        grid,
+                        vm,
+                        favourite = app.id in user.favourites,
+                        minutes = stats[app.id]?.minutes,
+                        onClick = { vm.launchApp(app) },
+                        onLongClick = { sheet = item }
+                    )
+                }
             }
         }
         HintBar("A" to "open / toggle", "hold A" to "favourite / add to home", "Select" to if (grid) "list view" else "grid view", "B" to "back")

@@ -10,6 +10,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
@@ -47,12 +48,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.UserData
 import kotlinx.coroutines.delay
 
@@ -62,7 +68,8 @@ val LiftColour = Color(0xFF38BDF8)
 /**
  * 1:1 tile shared by the home and browse grids. With a [cover] the art is cropped square under a bottom gradient so [title] stays
  * readable; [colour] marks a system or folder tile (colour wash, dot, idle border, cover washed at 45%); [icon] tiles (apps,
- * shortcuts) show the icon centred on Slate with the label below. The focus glow uses the cover's palette accent when
+ * shortcuts) show the icon centred on Slate, with a label only when the tile has enough room for readable text.
+ * The focus glow uses the cover's palette accent when
  * [paletteGlow] is set (decoded only once the tile is focused, then cached), else [colour], else Amber. [lifted] marks the tile
  * being moved in the home edit mode: [LiftColour] glow and a larger scale.
  */
@@ -81,7 +88,8 @@ fun SquareTile(
     lifted: Boolean = false,
     icon: (() -> Drawable?)? = null,
     onLongClick: (() -> Unit)? = null,
-    onFavourite: (() -> Unit)? = null
+    onFavourite: (() -> Unit)? = null,
+    annotation: GameAnnotation? = null
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -103,20 +111,35 @@ fun SquareTile(
             .combinedClickable(interactionSource = interaction, indication = null, onClick = onClick, onLongClick = onLongClick)
     ) {
         if (icon != null) {
-            Column(
-                Modifier.fillMaxSize().padding(10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                IconView(icon, 64)
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleSmall,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+            BoxWithConstraints(Modifier.fillMaxSize().padding(10.dp)) {
+                // Below 100dp of usable width, labels crowd the icon; enlarged text needs proportionally more room.
+                val compact = maxWidth < 100.dp * LocalDensity.current.fontScale
+                if (compact) {
+                    val iconSize = minOf(64.dp, maxWidth, maxHeight).value.toInt()
+                    Box(
+                        Modifier.fillMaxSize().semantics { contentDescription = title },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconView(icon, iconSize)
+                    }
+                } else {
+                    Column(
+                        Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            IconView(icon, minOf(64.dp, maxWidth, maxHeight).value.toInt())
+                        }
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.titleSmall,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         } else {
             if (cover != null) {
@@ -152,20 +175,26 @@ fun SquareTile(
                 }
             }
         }
+        annotation?.let {
+            ControllerBadge(it, Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 8.dp, end = if (favourite) 32.dp else 8.dp))
+        }
         if (favourite) Text("★", color = Amber, style = MaterialTheme.typography.titleMedium, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp))
     }
 }
 
 /**
- * The grid every browse surface uses: a horizontal grid of [UserData.gridRows] rows of square tiles when the user prefers
- * sideways scrolling (the Thor's wide top screen), a vertical grid of [UserData.gridColumns] otherwise; a one-column vertical
- * list when [grid] is false. Square tiles size themselves from the fixed axis, so density follows rows/columns.
+ * Horizontal rows or vertical columns, capped by the space available for readable square tiles.
+ * Saved preferences are never changed; lists retain one column. Padding has already been removed
+ * from the cross-axis space supplied to [ReadableGridCells].
  */
 @Composable
 fun ItemGrid(grid: Boolean, user: UserData, modifier: Modifier = Modifier, state: LazyGridState = rememberLazyGridState(), content: LazyGridScope.() -> Unit) {
+    val preferred = if (user.gridHorizontal) user.gridRows else user.gridColumns
+    val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
+    val cells = remember(preferred, fontScale) { ReadableGridCells(preferred, fontScale) }
     if (grid && user.gridHorizontal) {
         LazyHorizontalGrid(
-            GridCells.Fixed(user.gridRows.coerceAtLeast(1)),
+            cells,
             modifier,
             state = state,
             contentPadding = PaddingValues(12.dp),
@@ -175,7 +204,7 @@ fun ItemGrid(grid: Boolean, user: UserData, modifier: Modifier = Modifier, state
         )
     } else {
         LazyVerticalGrid(
-            GridCells.Fixed(if (grid) user.gridColumns.coerceAtLeast(1) else 1),
+            if (grid) cells else GridCells.Fixed(1),
             modifier,
             state = state,
             contentPadding = PaddingValues(12.dp),
@@ -183,6 +212,17 @@ fun ItemGrid(grid: Boolean, user: UserData, modifier: Modifier = Modifier, state
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             content = content
         )
+    }
+}
+
+/** Keep at least 88 dp (scaled for larger text) per tile, reducing only the requested density. */
+private data class ReadableGridCells(val preferred: Int, val fontScale: Float) : GridCells {
+    override fun Density.calculateCrossAxisCellSizes(availableSize: Int, spacing: Int): List<Int> {
+        val minimum = (88.dp * fontScale).roundToPx()
+        val fits = ((availableSize + spacing) / (minimum + spacing)).coerceAtLeast(1)
+        return with(GridCells.Fixed(preferred.coerceIn(1, fits))) {
+            calculateCrossAxisCellSizes(availableSize, spacing)
+        }
     }
 }
 
@@ -247,3 +287,13 @@ fun homeAction(vm: SortieViewModel, id: String, placed: Boolean, context: Contex
         val now = vm.toggleHome(id)
         Toast.makeText(context, if (now) "Added to home" else "Removed from home", Toast.LENGTH_SHORT).show()
     }
+
+/** Toggles game [id] in Want to play (R2, the context sheet, the detail button) with a toast like the favourite one. */
+fun toggleWantToPlay(vm: SortieViewModel, id: String, context: Context) {
+    val now = vm.toggleWantToPlay(id)
+    Toast.makeText(context, if (now) "Added to Want to play" else "Removed from Want to play", Toast.LENGTH_SHORT).show()
+}
+
+/** "Want to play" / "Remove from Want to play" for game [id] in a [ContextSheet]. */
+fun wantToPlayAction(vm: SortieViewModel, id: String, queued: Boolean, context: Context): SheetAction =
+    SheetAction(if (queued) "Remove from Want to play" else "Want to play") { toggleWantToPlay(vm, id, context) }

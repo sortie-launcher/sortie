@@ -35,6 +35,8 @@ Canonical inputs (read-only for Sortie):
   tags) keyed by system + filename.
 - `sortie/systems.json`, `sortie/launchers.json`, `sortie/folders.json`, `sortie/device.json` :
   see docs/formats.
+- `sortie/magazines/<issue-id>/issue.json`, Markdown articles and local images: offline recommendation issues (format v1,
+  see formats/README.md). Reading positions are app-private preferences, separate from card data and exported backups.
 
 Outputs (owned by Sortie, append-only or small):
 
@@ -50,7 +52,8 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 ### Core (M1)
 - System folders, one per configured system, ordered and named by `systems.json`.
 - Game list per folder with cover thumbnail, title, fit stars, players, year, hack/translation badge.
-- Instant fuzzy search across games and apps from any screen.
+- Search across games with optional text; OR within systems/tags/genres, AND between dimensions. Tags include game-page flags.
+  More filters: favourites, Want to play, never launched, fit ≥ 4, on-device-only (default). Filter before paging; show full count.
 - Detail view: hero art, description, hook, tags, play time, last played, launch button, overrides.
 - Launch through profiles with ordered fallbacks; per-game override; "open with" fallback.
 - Favourites folder holding games and apps alike.
@@ -72,19 +75,33 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   back to the other screen when they appear or are tapped (`AnchorActivity`).
 - App switcher (Shizuku): Home while something runs shows each screen's running apps on both screens; apps can be raised,
   moved between screens, swapped or closed. Companion-side carousel is touch, navigation-side is controller.
+- Opening the overlay preserves the foreground Sortie surface when Home covers navigation or a companion; otherwise the
+  external app is restored beneath it. A primary HOME instance created after X relays to existing navigation rather than
+  replacing it, including after swapping back. B leaves that page/display intact.
+- Only HOME/SECONDARY_HOME intents marked `android.intent.extra.FROM_HOME_KEY` summon the overlay (or Sortie's explicit
+  switcher request); framework fallback launches do not. A temporary primary HOME focuses the existing own task with
+  `ActivityManager.AppTask.moveToFront()` or starts its companion before finishing. If neither succeeds, it remains a usable
+  Home instead of leaving an empty focused Home task that the framework would continually relaunch.
 
 ### Home and browse layout (feedback round 3)
-- Home sorts: Alphabetical, Game count, Generation (generated, fixed; systems and folders only) and Custom (exactly the tiles
-  the user placed, in order; may also hold games, apps and shortcuts). Chosen with the Sort chips under the home header.
-- "Add to home" / "Remove from home" on every openable item (hold A or long press): systems and folders on Home, games,
-  apps and shortcuts on the browse screens and Apps. Custom tiles: hold A → Move · Remove; a moved tile is lifted (blue glow,
-  larger), the D-pad moves it one slot per press, A drops, B cancels; touch drops it on the tapped tile.
+- Home sorts: Alphabetical, Game count and Generation are generated, fixed and systems-only. Custom retains the user's pin
+  order and automatically includes every smart folder, Apps and Continue (the last game played, first unless moved).
+  By Console shows a console strip and its games. Sort chips select the view.
+- "Add to home" / "Remove from home" on systems, games, apps and shortcuts (hold A or long press). Smart folders, Apps and
+  Continue always live on Custom and cannot be removed. Every Custom tile supports Move: the lifted tile has a blue glow,
+  the D-pad moves it one slot per press, A drops, B cancels; touch drops it on the tapped tile.
 - Browse screens (system lists, folders, search, Apps) share one list↔grid setting. Grid tiles are 1:1: cropped cover with
   the title over a bottom gradient, ★ when favourited, focus glow in the cover's palette accent; apps and shortcuts show their
   icon on slate with the label below. Columns = `gridColumns`.
 - Launcher shortcuts are opt-in: Apps lists only `user.shortcuts` (pinned to Sortie or added with "Add shortcut from…" are
   opted in automatically; "Browse all shortcuts…" toggles the rest). Smart folders see a shortcut only if it is opted in,
   favourited or placed on home.
+- Home has a direct Manual book button beside Settings and a Magazines entry.
+- Offline magazines: shelf → contents → article, B one level back; article D-pad scroll, Left/Right page, L1/R1 previous/next
+  article, A library page. Saved scroll positions and Continue reading survive reopening; X retains the current article.
+  Bad issues are isolated, missing images do not block text, and paths cannot escape an issue. No WebView or remote fetching.
+  While an issue is open, the other display shows section jumps/current heading, article selection and previous/next controls.
+  The panel follows navigation across X; session-owned actions reject stale taps, and leaving the issue clears the panel.
 
 ### Library hygiene (M3)
 - Multi-disc grouping (.m3u or disc tags), duplicate-format hiding (PBP next to CHD), hacks

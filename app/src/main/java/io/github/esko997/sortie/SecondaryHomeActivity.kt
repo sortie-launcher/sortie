@@ -8,6 +8,7 @@ import android.view.Display
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import io.github.esko997.sortie.shell.TaskSwitcher
 import io.github.esko997.sortie.ui.CompanionScreen
 import io.github.esko997.sortie.ui.SortieTheme
 
@@ -21,7 +22,10 @@ class SecondaryHomeActivity : CompanionHost() {
     /** A Home press while the second screen had the controller lands here (singleTop): that is the app switcher's summons. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.hasCategory(Intent.CATEGORY_SECONDARY_HOME)) (application as SortieApp).graph.switcher.summon(myDisplayId())
+        if (intent.hasCategory(Intent.CATEGORY_SECONDARY_HOME) && intent.getBooleanExtra(TaskSwitcher.EXTRA_FROM_HOME_KEY, false)) {
+            val switcher = (application as SortieApp).graph.switcher
+            switcher.summon(myDisplayId(), switcher.homeTask(myDisplayId()))
+        }
     }
 }
 
@@ -43,6 +47,7 @@ abstract class CompanionHost : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        graph().switcher.homeResumed(this)
         if (!graph().switcher.anchoredRecently()) scheduleHandOff()
     }
 
@@ -77,6 +82,11 @@ abstract class CompanionHost : ComponentActivity() {
     override fun onPause() {
         handler.removeCallbacks(handOff)
         super.onPause()
+    }
+
+    override fun onStop() {
+        graph().switcher.homeStopped(this)
+        super.onStop()
     }
 
     protected fun myDisplayId(): Int = display?.displayId ?: Display.DEFAULT_DISPLAY

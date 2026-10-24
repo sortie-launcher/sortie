@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Intent
 import android.graphics.drawable.Drawable
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.apps.AppEntry
@@ -11,15 +12,19 @@ import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.apps.ShortcutCreator
 import io.github.esko997.sortie.data.apps.ShortcutEntry
 import io.github.esko997.sortie.data.db.GameEntity
+import io.github.esko997.sortie.data.db.LibrarySearch
 import io.github.esko997.sortie.data.db.PlayStat
+import io.github.esko997.sortie.data.db.SearchFilters
 import io.github.esko997.sortie.data.db.byIds
-import io.github.esko997.sortie.data.db.likeEscape
+import io.github.esko997.sortie.data.db.toRoom
 import io.github.esko997.sortie.data.folders.FolderView
 import io.github.esko997.sortie.data.index.Indexer
+import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.LaunchProfile
 import io.github.esko997.sortie.data.manifest.SystemDef
 import io.github.esko997.sortie.launch.IntentBuilder
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -42,8 +47,16 @@ data class SystemRow(val def: SystemDef, val count: Int)
 
 data class IndexState(val running: Boolean = false, val report: Indexer.Report? = null)
 
+/** One Search result page: the first matches in order and how many match in total. */
+data class SearchPage(val games: List<GameEntity>, val total: Int)
+
+/** A picker choice: the stored [value], what to show, its game count, and [caution] for flag-only badge labels. */
+data class SearchOption(val value: String, val label: String, val n: Int, val caution: Boolean = false)
+
+data class SearchFacets(val systems: List<SearchOption>, val tags: List<SearchOption>, val genres: List<SearchOption>)
+
 /** One view model for the whole app; screens are thin. */
-class SortieViewModel(app: Application) : AndroidViewModel(app) {
+class SortieViewModel(app: Application, private val saved: SavedStateHandle) : AndroidViewModel(app) {
     private val graph = (app as SortieApp).graph
     private val dao = graph.db.games()
     val manifests = graph.manifests.snapshot
@@ -79,6 +92,16 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
         // A manifest deploy from the desktop is the explicit signal that the card changed.
         viewModelScope.launch { manifests.map { it.loadedAt }.drop(1).distinctUntilChanged().collect { reindex() } }
         viewModelScope.launch { user.map { it.heroRotation }.distinctUntilChanged().collect { Selection.heroRotation.value = it } }
+    }
+
+    /** Publishes personal notes only after the card write succeeds; returns an error for the editor to display. */
+    suspend fun saveGameAnnotation(id: String, annotation: GameAnnotation): String? = try {
+        graph.user.saveGameAnnotation(id, annotation.normalised())
+        null
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (failure: Exception) {
+        failure.message ?: "Unable to write user.json"
     }
 
     fun setSystemProfile(systemId: String, profileId: String?) = graph.user.setSystemProfile(systemId, profileId)
@@ -158,8 +181,12 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
         graph.user.setHomeSort(sort)
     }
 
-    /** The sort to return to when "By Console" is left with B. */
-    private var homeSortBefore = "alpha"
+    /** The sort to return to when "By Console" is left with B (survives a screen swap via the saved state). */
+    private var homeSortBefore: String
+        get() = saved[HOME_SORT_BEFORE] ?: "alpha"
+        set(v) {
+            saved[HOME_SORT_BEFORE] = v
+        }
 
     fun leaveConsoleSort() = graph.user.setHomeSort(homeSortBefore.takeIf { it != "console" } ?: "alpha")
 
@@ -170,7 +197,11 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** The console shown by the "By Console" home sort (session state; first system until chosen). */
-    val homeConsole = MutableStateFlow<String?>(null)
+    val homeConsole = MutableStateFlow<String?>(saved[HOME_CONSOLE])
+
+    init {
+        viewModelScope.launch { homeConsole.collect { saved[HOME_CONSOLE] = it } }
+    }
 
     fun cycleHomeConsole(delta: Int) {
         val ids = systems.value.map { it.def.id }
@@ -273,7 +304,37 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
 
-    fun search(q: String): Flow<List<GameEntity>> = dao.search(likeEscape(q))
+    /**
+     * Search results for [filters]: the first [limit] matches plus the count of all of them, from one WHERE clause. user.json
+     * changes re-query only while the favourites or Want to play filter is on, and only when that set changes.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun search(filters: SearchFilters, limit: Int): Flow<SearchPage> =
+        user.map { u -> (if (filters.favourites) u.favourites else emptySet()) to (if (filters.wantToPlay) u.wantToPlay else emptySet()) }
+            .distinctUntilChanged()
+            .flatMapLatest { (favs, queue) ->
+                combine(
+                    dao.searchPage(LibrarySearch.page(filters, favs, queue, limit).toRoom()),
+                    dao.searchCount(LibrarySearch.count(filters, favs, queue).toRoom())
+                ) { games, total -> SearchPage(games, total) }
+            }
+
+    /** Values Search's pickers offer, with game counts; collected only while a picker is open. */
+    fun searchFacets(onDeviceOnly: Boolean): Flow<SearchFacets> {
+        val all = !onDeviceOnly
+        val systems = combine(manifests, dao.systemFacets(all)) { snap, counts ->
+            val labels = snap.systems.associate { it.id to it.label }
+            counts.map { SearchOption(it.value, labels[it.value] ?: it.value, it.n) }.sortedBy { it.label.lowercase() }
+        }
+        return combine(systems, dao.labelCombos(all), dao.genreFacets(all)) { s, combos, genres ->
+            SearchFacets(
+                systems = s,
+                // tags first, then flag-only cautions and notes, each by name (labelFacets sorts by name)
+                tags = LibrarySearch.labelFacets(combos).sortedBy { it.caution }.map { SearchOption(it.value, it.value, it.n, it.caution) },
+                genres = genres.map { SearchOption(it.value, it.value, it.n) }
+            )
+        }
+    }
 
     fun profilesFor(game: GameEntity): List<Pair<LaunchProfile, Boolean>> = graph.launcher.profilesFor(game).map { it to graph.launcher.isInstalled(it) }
 
@@ -294,6 +355,12 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
         val now = id !in user.value.favourites
         graph.user.toggleFavourite(id)
         return now
+    }
+
+    /** Toggles [id] in the Want to play queue (games only; apps and shortcuts are ignored) and returns whether it is queued now. */
+    fun toggleWantToPlay(id: String): Boolean {
+        if (!HomeIds.isGame(id)) return id in user.value.wantToPlay
+        return graph.user.toggleWantToPlay(id)
     }
 
     fun setOverride(id: String, profileId: String?) = graph.user.setOverride(id, profileId)
@@ -329,5 +396,10 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
             if (!stillRunning) graph.playLog.end()
         }
         graph.screenMover.sweepStaleLaunchers()
+    }
+
+    private companion object {
+        const val HOME_CONSOLE = "homeConsole"
+        const val HOME_SORT_BEFORE = "homeSortBefore"
     }
 }

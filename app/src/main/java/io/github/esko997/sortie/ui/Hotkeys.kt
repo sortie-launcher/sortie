@@ -5,11 +5,12 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
  * Controller grammar (docs/SPEC.md): A select · B back · X swap screens · Y favourite · Start search · Select context menu ·
- * L1/R1 previous/next folder. A and B are handled by the framework (focus click / back); the rest arrive here as events that
- * the current screen interprets. Keeping it an event bus avoids every screen owning a key handler.
+ * L1/R1 previous/next folder · R2 Want to play. A and B are handled by the framework (focus click / back); the rest arrive here
+ * as events that the current screen interprets. Keeping it an event bus avoids every screen owning a key handler. R2 on a game
+ * tile or row never gets here: the focused tile consumes it (`Modifier.wantToPlayKey`); the event serves the game detail screen.
  */
 object Hotkeys {
-    enum class Key { SEARCH, FAVOURITE, CONTEXT, SWAP_SCREENS, PREV_FOLDER, NEXT_FOLDER }
+    enum class Key { SEARCH, FAVOURITE, CONTEXT, SWAP_SCREENS, PREV_FOLDER, NEXT_FOLDER, WANT_TO_PLAY }
 
     val events = MutableSharedFlow<Key>(extraBufferCapacity = 8)
 
@@ -41,6 +42,7 @@ object Hotkeys {
         KeyEvent.KEYCODE_BUTTON_X -> Key.SWAP_SCREENS
         KeyEvent.KEYCODE_BUTTON_L1 -> Key.PREV_FOLDER
         KeyEvent.KEYCODE_BUTTON_R1 -> Key.NEXT_FOLDER
+        KeyEvent.KEYCODE_BUTTON_R2 -> Key.WANT_TO_PLAY
         else -> null
     }
 

@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
-# Build + lint + unit tests inside the Ubuntu distrobox when the host has no JDK. Exit code is the Gradle exit code.
-cd "$(dirname "$0")/.."
-if command -v java >/dev/null; then ./gradlew -q ktlintFormat assembleDebug ktlintCheck testDebugUnitTest "$@"; else
-  distrobox enter ubuntu -- bash -c 'export ANDROID_HOME=$HOME/Android/Sdk; cd "'"$PWD"'" && ./gradlew -q ktlintFormat assembleDebug ktlintCheck testDebugUnitTest '"$*"' 2>&1 | sed "s/\x1b\[[0-9;]*m//g" | grep -E "^e:|Execution failed|\.kt:[0-9]+:[0-9]+:|FAILED" | head -8; exit ${PIPESTATUS[0]}'
+# Non-mutating debug/release builds, style checks and unit tests. Formatting is an explicit developer action.
+set -euo pipefail
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
+tasks=(--console=plain ktlintCheck testDebugUnitTest testReleaseUnitTest assembleDebug assembleRelease)
+if command -v java >/dev/null 2>&1; then
+  exec ./gradlew "${tasks[@]}" "$@"
 fi
+if ! command -v distrobox >/dev/null 2>&1; then
+  printf '%s\n' 'Install JDK 17 and the Android SDK, or provide the Ubuntu distrobox used by this helper.' >&2
+  exit 127
+fi
+exec distrobox enter ubuntu -- bash -c \
+  'export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"; cd -- "$1"; shift; exec ./gradlew "$@"' \
+  sortie-build "$PWD" "${tasks[@]}" "$@"

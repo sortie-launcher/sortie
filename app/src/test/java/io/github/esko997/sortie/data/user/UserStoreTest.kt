@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.data.user
 
+import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.UserData
 import java.io.File
 import java.nio.file.Files
@@ -13,6 +14,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UserStoreTest {
@@ -47,6 +51,97 @@ class UserStoreTest {
         assertEquals(false, file.exists())
         gate.open()
         assertEquals("custom", UserStore(file).data.value.homeSort)
+    }
+
+    /** A durable save is on disk when it returns and published only then. */
+    @Test
+    fun commitWritesBeforePublishing() = runBlocking {
+        val file = fresh()
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val note = GameAnnotation(returnNote = "Chapter 3, by the well")
+        store.saveGameAnnotation("snes/a.sfc", note)
+        assertEquals(note, UserStore(file).data.value.gameAnnotations["snes/a.sfc"])
+        store.saveGameAnnotation("snes/a.sfc", GameAnnotation(returnNote = "  "))
+        assertEquals(emptyMap<String, GameAnnotation>(), UserStore(file).data.value.gameAnnotations)
+    }
+
+    /** An ordinary edit made while a durable write is in flight is neither lost nor reordered under the durable result. */
+    @Test
+    fun editDuringDurableWriteIsKept() = runBlocking {
+        val file = fresh()
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val note = GameAnnotation(mappingNotes = "Y = jump")
+        store.commit { base ->
+            store.setDockSlot(0, "app:org.ppsspp.ppsspp") // lands after the durable op read its base
+            base.copy(gameAnnotations = base.gameAnnotations + ("snes/a.sfc" to note))
+        }
+        val published = store.data.value
+        assertEquals(note, published.gameAnnotations["snes/a.sfc"])
+        assertEquals("app:org.ppsspp.ppsspp", published.dock.first())
+        withTimeout(5_000) { store.written.first { it == published } }
+        assertEquals(published, UserStore(file).data.value)
+    }
+
+    /** When user.json cannot be written, a durable save throws and publishes nothing; edits made meanwhile still stand. */
+    @Test
+    fun failedCommitPublishesNothing() = runBlocking {
+        val blocker = Files.createTempFile("sortie", "file").toFile() // a regular file where the directory should be
+        val store = UserStore(File(blocker, "user.json"), CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val failure = runCatching {
+            store.commit { base ->
+                store.setHomeSort("custom")
+                base.copy(gameAnnotations = mapOf("snes/a.sfc" to GameAnnotation(mappingNotes = "Y = jump")))
+            }
+        }.exceptionOrNull()
+        assertNotNull(failure)
+        assertEquals(emptyMap<String, GameAnnotation>(), store.data.value.gameAnnotations)
+        assertEquals("custom", store.data.value.homeSort)
+        assertNotNull(store.writeError.value)
+    }
+
+    /** A replace whose expected state is stale writes nothing and changes nothing. */
+    @Test
+    fun staleReplaceWritesNothing() = runBlocking {
+        val file = fresh()
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val replaced = store.replace(expected = UserData(homeSort = "count"), next = UserData(favourites = setOf("x")))
+        assertEquals(false, replaced)
+        assertEquals(UserData(), store.data.value)
+        assertEquals(false, file.exists())
+    }
+
+    /**
+     * A user.json from before the queue loads with an empty queue and every other preference intact; toggling keeps favourites,
+     * the layout and the rest untouched, keeps ids the index does not have and persists across a reload.
+     */
+    @Test
+    fun wantToPlayTogglesPersistAndLeaveTheLayout() = runBlocking {
+        val file = fresh()
+        file.writeText(
+            """{"favourites": ["snes/a.sfc"], "homeSort": "custom", "layout": ["system:snes", "apps"], "gridColumns": 7,""" +
+                """ "gameAnnotations": {"snes/a.sfc": {"returnNote": "World 3"}}}"""
+        )
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val before = store.data.value
+        assertEquals(emptySet<String>(), before.wantToPlay)
+        assertEquals(listOf("system:snes", "apps"), before.layout)
+
+        assertTrue(store.toggleWantToPlay("snes/a.sfc"))
+        assertTrue(store.toggleWantToPlay("gba/Not Indexed Yet.gba"))
+        assertEquals(before.layout, store.data.value.layout) // the built-in folder is always on Custom; nothing is placed
+        assertEquals(setOf("snes/a.sfc"), store.data.value.favourites)
+
+        store.toggleFavourite("snes/a.sfc") // favourites and the queue are independent both ways
+        assertEquals(setOf("snes/a.sfc", "gba/Not Indexed Yet.gba"), store.data.value.wantToPlay)
+        assertFalse(store.toggleWantToPlay("snes/a.sfc"))
+        assertFalse(store.toggleWantToPlay("gba/Not Indexed Yet.gba"))
+        assertTrue(store.toggleWantToPlay("snes/b.sfc"))
+        assertFalse(store.toggleWantToPlay("app:org.ppsspp.ppsspp")) // games only
+
+        val expected = before.copy(favourites = emptySet(), wantToPlay = setOf("snes/b.sfc"))
+        assertEquals(expected, store.data.value)
+        withTimeout(5_000) { store.written.first { it == expected } }
+        assertEquals(expected, UserStore(file).data.value)
     }
 
     /** Holds every dispatched block until [open]; then runs them inline on the calling thread. */

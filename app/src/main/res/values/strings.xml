@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Sortie</string>
+    <string name="radial_keyboard_name">Sortie radial keyboard</string>
+    <string name="radial_keyboard_subtype">English (radial)</string>
 </resources>

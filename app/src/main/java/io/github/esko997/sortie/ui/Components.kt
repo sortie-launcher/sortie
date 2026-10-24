@@ -56,6 +56,7 @@ import androidx.compose.ui.zIndex
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.index.cleanTitle
+import io.github.esko997.sortie.data.manifest.GameAnnotation
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.PI
@@ -159,6 +160,22 @@ fun Modifier.keyLongPress(onLongClick: (() -> Unit)?, onHoldR1: (() -> Unit)? = 
     }
 }
 
+/**
+ * R2 on a focused game tile or row toggles that game's Want to play membership, once per press: only the first key-down acts.
+ * A held trigger repeats the key-down; those repeats and the release are swallowed, so a hold never flickers the membership —
+ * also when the toggle removed the tile (Want to play folder) and the focus moved to a neighbour before the repeats arrive.
+ * Text fields, apps, folders and settings rows never carry it, so R2 there reaches nothing.
+ */
+fun Modifier.wantToPlayKey(onToggle: (() -> Unit)?): Modifier = if (onToggle == null) {
+    this
+} else {
+    onPreviewKeyEvent { e ->
+        if (e.key != Key.ButtonR2) return@onPreviewKeyEvent false
+        if (e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) onToggle()
+        true
+    }
+}
+
 /** A focus-aware row: [focusGlow] outline in [colour] plus a subtle surface when focused (D-pad). Long press = context menu. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -219,9 +236,13 @@ fun GameRow(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     hasSave: Boolean = false,
-    onFavourite: (() -> Unit)? = null
+    onFavourite: (() -> Unit)? = null,
+    /** The user's controller requirement for [game] (from `user.gameAnnotations`, looked up by the caller); unknown draws nothing. */
+    annotation: GameAnnotation? = null,
+    /** R2: toggles [game] in Want to play (see [wantToPlayKey]). */
+    onWantToPlay: (() -> Unit)? = null
 ) {
-    FocusRow(onClick = onClick, modifier = Modifier.heroOnFocus(game), onLongClick = onLongClick, onFavourite = onFavourite) {
+    FocusRow(onClick = onClick, modifier = Modifier.heroOnFocus(game).wantToPlayKey(onWantToPlay), onLongClick = onLongClick, onFavourite = onFavourite) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Cover(game)
             Column(Modifier.padding(start = 12.dp).weight(1f)) {
@@ -249,6 +270,7 @@ fun GameRow(
                     if (game.arriving) Badge("arriving", Color(0xFF1E3A8A))
                     if ((minutes ?: 0) > 0) Badge("${minutes}m played", Color(0xFF14532D))
                     if (hasSave) Badge("save", Color(0xFF3F3F46))
+                    annotation?.let { ControllerBadge(it, Modifier.padding(end = 6.dp, top = 2.dp)) }
                 }
             }
         }

@@ -97,5 +97,18 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+        <!-- Optional radial controller keyboard. A normal IME: inert until the user enables it in system keyboard settings.
+             Own process so launcher restarts never kill a keyboard mid-typing; it never touches the launcher graph. -->
+        <service
+            android:name=".keyboard.RadialInputMethodService"
+            android:label="@string/radial_keyboard_name"
+            android:permission="android.permission.BIND_INPUT_METHOD"
+            android:process=":keyboard"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data android:name="android.view.im" android:resource="@xml/radial_keyboard" />
+        </service>
     </application>
 </manifest>

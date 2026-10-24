@@ -3,17 +3,16 @@ package io.github.esko997.sortie.ui
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -25,17 +24,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.folders.FolderView
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
+import io.github.esko997.sortie.data.manifest.GameAnnotation
 
 /** Select toggles list↔grid on a browse screen; one persisted setting (`user.browseLayout`) for all of them, separate from home. */
 @Composable
@@ -49,8 +44,8 @@ fun BrowseLayoutHotkey(vm: SortieViewModel, grid: Boolean) {
 }
 
 /**
- * Hold-A / long-press sheet for a game, app or shortcut: Favourite · Add to (Remove from) home, plus for shortcuts whether the
- * Apps screen lists them (`user.shortcuts`).
+ * Hold-A / long-press sheet for a game, app or shortcut: Favourite · Add to (Remove from) home, plus Want to play for games and,
+ * for shortcuts, whether the Apps screen lists them (`user.shortcuts`).
  */
 @Composable
 fun ItemSheet(item: LibraryItem, vm: SortieViewModel, onDismiss: () -> Unit) {
@@ -59,6 +54,7 @@ fun ItemSheet(item: LibraryItem, vm: SortieViewModel, onDismiss: () -> Unit) {
     val actions = buildList {
         add(SheetAction(if (item.id in user.favourites) "Remove from favourites" else "Favourite") { vm.toggleFavourite(item.id) })
         add(homeAction(vm, item.id, item.id in user.layout, context))
+        if (item is LibraryItem.Game) add(wantToPlayAction(vm, item.id, item.id in user.wantToPlay, context))
         if (item is LibraryItem.Shortcut) {
             val shown = item.id in user.shortcuts
             add(SheetAction(if (shown) "Hide from Apps" else "Show in Apps") { vm.showShortcut(item.id, !shown) })
@@ -78,7 +74,8 @@ fun ItemCell(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     appLabel: (String) -> String = { it },
-    hasSave: Boolean = false
+    hasSave: Boolean = false,
+    annotation: GameAnnotation? = null
 ) {
     val context = LocalContext.current
     val fav = {
@@ -88,19 +85,30 @@ fun ItemCell(
     when (item) {
         is LibraryItem.Game -> {
             val g = item.game
+            val queue = { toggleWantToPlay(vm, g.id, context) }
             if (grid) {
                 SquareTile(
                     displayTitle(g),
                     onClick,
-                    modifier = Modifier.heroOnFocus(g),
+                    modifier = Modifier.heroOnFocus(g).wantToPlayKey(queue),
                     cover = g.cover ?: g.screenshot,
                     paletteGlow = true,
                     favourite = favourite,
+                    annotation = annotation,
                     onLongClick = onLongClick,
                     onFavourite = fav
                 )
             } else {
-                GameRow(g, minutes, onClick = onClick, onLongClick = onLongClick, hasSave = hasSave, onFavourite = fav)
+                GameRow(
+                    g,
+                    minutes,
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                    hasSave = hasSave,
+                    onFavourite = fav,
+                    annotation = annotation,
+                    onWantToPlay = queue
+                )
             }
         }
         is LibraryItem.App -> if (grid) {
@@ -133,12 +141,13 @@ fun GameListScreen(title: String, games: List<GameEntity>, vm: SortieViewModel, 
     ItemListScreen(title, items, vm, onGame, subtitle)
 }
 
-/** A smart folder: games open their detail screen, apps and shortcuts launch directly; hold A for favourite / add to home. */
+/** A smart folder: games open their detail screen, apps and shortcuts launch directly; hold A for favourite / add to home, R2 Want to play. */
 @Composable
 fun FolderScreen(view: FolderView, vm: SortieViewModel, onGame: (String) -> Unit) {
     ItemListScreen(view.def.label, view.items, vm, onGame, view.problems.takeIf { it.isNotEmpty() }?.joinToString("; "))
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ItemListScreen(title: String, items: List<LibraryItem>, vm: SortieViewModel, onGame: (String) -> Unit, subtitle: String?) {
     val stats by vm.playStats.collectAsState()
@@ -153,98 +162,64 @@ private fun ItemListScreen(title: String, items: List<LibraryItem>, vm: SortieVi
     var sheet by remember { mutableStateOf<LibraryItem?>(null) }
     val grid = user.browseLayout == "grid"
     BrowseLayoutHotkey(vm, grid)
-    val shown = remember(items, minFit, onDeviceOnly, notesOnly, startedOnly, saves) {
+    val shown = remember(items, minFit, onDeviceOnly, notesOnly, startedOnly, saves, user.gameAnnotations) {
         items.filter { item ->
             when (item) {
                 is LibraryItem.Game -> item.game.let {
-                    (!onDeviceOnly || !it.placeholder) && it.fit >= minFit && (!notesOnly || it.handWritten) && (!startedOnly || it.saveStem() in saves)
+                    val personal = user.gameAnnotations[it.id]
+                    val hasNotes = it.handWritten || personal?.mappingNotes?.isNotBlank() == true || personal?.returnNote?.isNotBlank() == true
+                    (!onDeviceOnly || !it.placeholder) && it.fit >= minFit && (!notesOnly || hasNotes) && (!startedOnly || it.saveStem() in saves)
                 }
                 else -> minFit == 0 && !notesOnly && !startedOnly // fit, notes and saves are game properties
             }
         }
     }
+    val gridState = rememberLazyGridState()
+    val memory = rememberGridMemory()
+    RememberGridPosition(memory, gridState, remember(shown) { shown.map { it.id } })
     val open: (LibraryItem) -> Unit = { if (!vm.launchItem(it)) onGame(it.id) }
     Column(Modifier.fillMaxSize()) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp)
-        ) {
-            Column {
-                Text("$title · ${shown.size}", style = MaterialTheme.typography.titleLarge)
-                subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+        Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp)) {
+            Text("$title · ${shown.size}", style = MaterialTheme.typography.titleLarge)
+            subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                OutlinedButton(onClick = { shown.randomOrNull()?.let(open) }, enabled = shown.isNotEmpty()) { Text("🎲 Pick one", maxLines = 1) }
+                FilterChip(selected = minFit >= 4, onClick = { minFit = if (minFit >= 4) 0 else 4 }, label = { Text("★★★★+", maxLines = 1) })
+                FilterChip(selected = notesOnly, onClick = { notesOnly = !notesOnly }, label = { Text("✍ notes", maxLines = 1) })
+                FilterChip(selected = startedOnly, onClick = { startedOnly = !startedOnly }, label = { Text("💾 started", maxLines = 1) })
+                FilterChip(selected = onDeviceOnly, onClick = { onDeviceOnly = !onDeviceOnly }, label = { Text("on device", maxLines = 1) })
             }
-            Spacer(Modifier.weight(1f))
-            OutlinedButton(onClick = { shown.randomOrNull()?.let(open) }, enabled = shown.isNotEmpty()) { Text("🎲 Pick one") }
-            FilterChip(selected = minFit >= 4, onClick = { minFit = if (minFit >= 4) 0 else 4 }, label = { Text("★★★★+") })
-            FilterChip(selected = notesOnly, onClick = { notesOnly = !notesOnly }, label = { Text("✍ notes") })
-            FilterChip(selected = startedOnly, onClick = { startedOnly = !startedOnly }, label = { Text("💾 started") })
-            FilterChip(selected = onDeviceOnly, onClick = { onDeviceOnly = !onDeviceOnly }, label = { Text("on device") })
         }
-        ItemGrid(grid, user, Modifier.weight(1f)) {
+        ItemGrid(grid, user, Modifier.weight(1f), state = gridState) {
             items(shown, key = { it.id }) { item ->
-                ItemCell(
-                    item,
-                    grid,
-                    vm,
-                    favourite = item.id in user.favourites,
-                    minutes = stats[item.id]?.minutes,
-                    onClick = { open(item) },
-                    onLongClick = { sheet = item },
-                    appLabel = { appLabels[it] ?: it },
-                    hasSave = item is LibraryItem.Game && item.game.saveStem() in saves
-                )
-            }
-        }
-        HintBar("A" to "open", "hold A" to "favourite / add to home", "Select" to if (grid) "list view" else "grid view", "L1/R1" to "systems", "B" to "back")
-    }
-    sheet?.let { ItemSheet(it, vm) { sheet = null } }
-}
-
-@Composable
-fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
-    var q by rememberSaveable { mutableStateOf("") }
-    val results by remember(q) {
-        if (q.trim().length >= 2) {
-            vm.search(q.trim()).let { f ->
-                flow {
-                    delay(200)
-                    f.collect { emit(it) }
+                RememberedItem(memory, item.id) {
+                    ItemCell(
+                        item,
+                        grid,
+                        vm,
+                        favourite = item.id in user.favourites,
+                        minutes = stats[item.id]?.minutes,
+                        annotation = user.gameAnnotations[item.id],
+                        onClick = { open(item) },
+                        onLongClick = { sheet = item },
+                        appLabel = { appLabels[it] ?: it },
+                        hasSave = item is LibraryItem.Game && item.game.saveStem() in saves
+                    )
                 }
             }
-        } else {
-            flowOf(emptyList())
         }
-    }.collectAsState(emptyList())
-    val stats by vm.playStats.collectAsState()
-    val user by vm.user.collectAsState()
-    var sheet by remember { mutableStateOf<LibraryItem?>(null) }
-    val grid = user.browseLayout == "grid"
-    BrowseLayoutHotkey(vm, grid)
-    Column(Modifier.fillMaxSize().padding(12.dp)) {
-        OutlinedTextField(
-            q,
-            { q = it },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            placeholder = { Text("title, genre, developer, description…") },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
+        HintBar(
+            "A" to "open",
+            "hold A" to "favourite / add to home",
+            "R2" to "want to play",
+            "Select" to if (grid) "list view" else "grid view",
+            "L1/R1" to "systems",
+            "B" to "back"
         )
-        ItemGrid(grid, user, Modifier.weight(1f).padding(top = 8.dp)) {
-            items(results, key = { it.id }) { g ->
-                val item = LibraryItem.Game(g)
-                ItemCell(
-                    item,
-                    grid,
-                    vm,
-                    favourite = g.id in user.favourites,
-                    minutes = stats[g.id]?.minutes,
-                    onClick = { onGame(g.id) },
-                    onLongClick = { sheet = item }
-                )
-            }
-        }
-        HintBar("A" to "open", "hold A" to "favourite / add to home", "Select" to if (grid) "list view" else "grid view", "B" to "back")
     }
     sheet?.let { ItemSheet(it, vm) { sheet = null } }
 }

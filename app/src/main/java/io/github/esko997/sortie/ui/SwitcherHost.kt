@@ -31,7 +31,7 @@ class SwitcherHost(private val graph: SortieApp.Graph) {
         graph.switcher.textInput = overlay::allowTextInput
     }
 
-    private fun present(focusDisplay: Int): Boolean {
+    private fun present(focusDisplay: Int, homeTask: Int?): Boolean {
         if (!overlay.available || !graph.user.data.value.overlaySwitcher) return false
         val switcher = graph.switcher
         val displays = listOfNotNull(TaskSwitcher.TOP, switcher.secondaryDisplay()).distinct()
@@ -48,9 +48,9 @@ class SwitcherHost(private val graph: SortieApp.Graph) {
                 }
             }
         }
-        // Home on the top screen also resumed Sortie's HOME activity over the game: raise the game again so it keeps running
-        // under the overlay, and give the controller to the overlay's display (a focusable window alone does not do that).
-        if (overlay.shown) switcher.reveal(focusDisplay)
+        // Home can cover navigation or a companion after an X swap, not just a game. Restore that exact surface rather
+        // than raising an unrelated background app; the overlay keeps the controller on the invoking display.
+        if (overlay.shown) switcher.reveal(focusDisplay, homeTask)
         return overlay.shown
     }
 }

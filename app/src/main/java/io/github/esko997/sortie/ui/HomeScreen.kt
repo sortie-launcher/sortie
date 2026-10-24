@@ -4,11 +4,14 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -33,6 +37,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,16 +55,20 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
+import io.github.esko997.sortie.data.manifest.GameAnnotation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Tile ids of the custom home layout (`user.layout`): `system:<id>`, `folder:<id>`, [APPS] for the built-in Apps folder, a game's
- * index id (`<system>/<file>`), or the LibraryItem ids `app:<pkg>` and `shortcut:<pkg>/<id>`.
+ * Tile ids of the custom home layout (`user.layout`): `system:<id>`, `folder:<id>`, [APPS] for the built-in Apps folder,
+ * [CONTINUE] for the last game played, a game's index id (`<system>/<file>`), or the LibraryItem ids `app:<pkg>` and
+ * `shortcut:<pkg>/<id>`.
  */
 object HomeIds {
     const val SYSTEM = "system:"
@@ -67,7 +76,21 @@ object HomeIds {
     const val APPS = "apps"
     const val CONTINUE = "continue"
 
-    fun isGame(id: String): Boolean = LibraryItem.isGameId(id) && !id.startsWith(SYSTEM) && !id.startsWith(FOLDER) && id != APPS
+    fun isGame(id: String): Boolean = LibraryItem.isGameId(id) && !id.startsWith(SYSTEM) && !id.startsWith(FOLDER) && id != APPS && id != CONTINUE
+
+    /** Continue, smart folders and Apps are always on Custom (the generated sorts hold systems only), so they cannot be removed. */
+    fun isAutomatic(id: String): Boolean = id == CONTINUE || id == APPS || id.startsWith(FOLDER)
+
+    /**
+     * The Custom home's order: [layout] as saved, plus the automatic entries it does not hold yet — Continue first, then every
+     * smart folder ([folders]: tile ids in manifest order) and Apps last. Each id appears once; unresolved ids keep their place.
+     */
+    fun custom(layout: List<String>, folders: List<String>): List<String> = buildList {
+        if (CONTINUE !in layout) add(CONTINUE)
+        addAll(layout)
+        addAll(folders)
+        add(APPS)
+    }.distinct()
 }
 
 val SORTS = listOf("alpha" to "Alphabetical", "count" to "Game count", "generation" to "Generation", "custom" to "Custom", "console" to "By Console")
@@ -80,8 +103,8 @@ private fun generationRank(generation: String): Int = BITS.find(generation)?.gro
 private val AppsGrey = Color(0xFF9AA3AD)
 
 /**
- * One home entry: a system, smart folder or the Apps folder ([colour] set), or, on the custom layout only, a game, app or
- * shortcut ([item] set). [id] is the custom-layout tile id; [section] groups the generated sorts.
+ * One home entry: a system, or on Custom only, a smart folder, the Apps folder, Continue, a game, app or shortcut. [colour]
+ * marks systems and folders, [item] the launchable entries. [id] is the custom-layout tile id; [section] groups the generated sorts.
  */
 private class HomeTile(
     val id: String,
@@ -100,10 +123,12 @@ private class HomeTile(
 )
 
 /**
- * Home: systems and folders in one of three generated, fixed orders (alphabetical, game count, generation) or the user's custom
- * layout, which can also hold games, apps and shortcuts. Custom tiles have an edit mode: hold A → Move lifts the tile, the D-pad
- * moves it one slot per press, A drops (persisted via `setLayout`), B cancels; touch drops it on the tapped tile.
+ * Home: systems in one of three generated, fixed orders (alphabetical, game count, generation) or the custom layout, which
+ * also holds Continue, every smart folder and Apps ([HomeIds.custom]) plus the systems, games, apps and shortcuts the user placed.
+ * Custom tiles have an edit mode: hold A → Move lifts the tile, the D-pad moves it one slot per press, A drops (persisted via
+ * `setLayout`), B cancels; touch drops it on the tapped tile.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     vm: SortieViewModel,
@@ -112,7 +137,10 @@ fun HomeScreen(
     onGame: (String) -> Unit,
     onSearch: () -> Unit,
     onDiagnostics: () -> Unit,
-    onApps: () -> Unit
+    onApps: () -> Unit,
+    onManual: () -> Unit,
+    onMagazines: () -> Unit,
+    onJournal: () -> Unit
 ) {
     val systems by vm.systems.collectAsState()
     val folders by vm.folders.collectAsState()
@@ -136,7 +164,7 @@ fun HomeScreen(
     val homeConsole by vm.homeConsole.collectAsState()
     LaunchedEffect(console, systems) { if (console && homeConsole == null && systems.isNotEmpty()) vm.homeConsole.value = systems.first().def.id }
     var sheet by remember { mutableStateOf<HomeTile?>(null) }
-    // edit mode: the lifted tile id and the working copy of user.layout it is being moved through
+    // edit mode: the lifted tile id and the working copy of the custom order (HomeIds.custom) it is being moved through
     var lifted by remember { mutableStateOf<String?>(null) }
     var moving by remember { mutableStateOf<List<String>?>(null) }
     val cancelMove = {
@@ -146,7 +174,14 @@ fun HomeScreen(
     val currentGrid by rememberUpdatedState(grid)
     val currentConsole by rememberUpdatedState(console)
     val currentOnSearch by rememberUpdatedState(onSearch)
-    LaunchedEffect(Unit) { Selection.set(null) }
+    val gridState = rememberLazyGridState()
+    val memory = rememberGridMemory()
+    // Home shows no game, except a focused game tile and By Console's game list, which set the selection themselves. Coming
+    // back to a game tile (Back, or the X swap) keeps the selection, so the companion does not drop the game meanwhile.
+    LaunchedEffect(Unit) {
+        val back = memory.focused
+        if (!console && back != HomeIds.CONTINUE && back?.let(HomeIds::isGame) != true) Selection.set(null)
+    }
     LaunchedEffect(sort) { cancelMove() }
     BackHandler(enabled = lifted != null) { cancelMove() }
     BackHandler(enabled = console && lifted == null) { vm.leaveConsoleSort() }
@@ -168,14 +203,14 @@ fun HomeScreen(
         }
     }
 
-    val appsTile = HomeTile(HomeIds.APPS, "Apps", "${apps.size}", apps.size, "Folders", colour = AppsGrey, onClick = onApps)
+    val appsTile = HomeTile(HomeIds.APPS, "Apps", "${apps.size}", apps.size, "", colour = AppsGrey, onClick = onApps)
     val folderTiles = folders.map { f ->
         HomeTile(
             HomeIds.FOLDER + f.def.id,
             f.def.label,
             "${f.items.size}" + if (f.problems.isNotEmpty()) " · rule problems" else "",
             f.items.size,
-            "Folders",
+            "",
             colour = Amber,
             random = { f.items.filterIsInstance<LibraryItem.Game>().filter { !it.game.placeholder }.randomOrNull()?.game }
         ) { onFolder(f.def.id) }
@@ -194,15 +229,19 @@ fun HomeScreen(
             random = { vm.randomGameOf(row.def.id) }
         ) { onSystem(row.def.id) }
     }
+    val customIds = HomeIds.custom(user.layout, folderTiles.map { it.id })
     val tiles: List<HomeTile> = if (custom) {
         val systemById = systems.associateBy { it.def.id }
         val folderById = folderTiles.associateBy { it.id }
         val appById = apps.associateBy { it.id }
         val shortcutById = shortcuts.associateBy { it.id }
         val appLabels = apps.associate { it.pkg to it.label }
-        // ids that no longer resolve (uninstalled app, removed system) are skipped here but stay in user.json
-        (moving ?: user.layout).distinct().mapNotNull { id ->
+        // ids that no longer resolve (uninstalled app, removed system, nothing played yet) are skipped here but stay in user.json
+        (moving ?: customIds).mapNotNull { id ->
             when {
+                id == HomeIds.CONTINUE -> lastPlayed?.let { g ->
+                    HomeTile(id, "Continue", displayTitle(g), 0, "", cover = g.cover ?: g.screenshot, item = LibraryItem.Game(g)) { onGame(g.id) }
+                }
                 id == HomeIds.APPS -> appsTile
                 id.startsWith(HomeIds.SYSTEM) -> systemById[id.removePrefix(HomeIds.SYSTEM)]?.let(systemTile)
                 id.startsWith(HomeIds.FOLDER) -> folderById[id]
@@ -219,23 +258,17 @@ fun HomeScreen(
             }
         }
     } else {
-        // the last game played leads every generated sort; the custom layout is the user's own
-        val continueTile = lastPlayed?.let { g ->
-            HomeTile(HomeIds.CONTINUE, "Continue", displayTitle(g), 0, "Folders", cover = g.cover ?: g.screenshot, item = LibraryItem.Game(g)) { onGame(g.id) }
-        }
-        val folderish = folderTiles + appsTile
+        // the generated sorts list systems only; Continue, folders and Apps live on Custom
         val systemTiles = systems.map(systemTile)
-        listOfNotNull(continueTile) + when (sort) {
-            "count" -> folderish.sortedByDescending { it.count } + systemTiles.sortedByDescending { it.count }
-            "generation" -> folderish.sortedBy { it.title.lowercase() } +
-                systemTiles.groupBy { it.section }.entries.sortedBy { generationRank(it.key) }.flatMap { it.value }
-            else -> folderish.sortedBy { it.title.lowercase() } + systemTiles.sortedBy { it.title.lowercase() }
+        when (sort) {
+            "count" -> systemTiles.sortedByDescending { it.count }
+            "generation" -> systemTiles.groupBy { it.section }.entries.sortedBy { generationRank(it.key) }.flatMap { it.value }
+            else -> systemTiles.sortedBy { it.title.lowercase() }
         }
     }
 
     // D-pad step across the grid's minor axis while a tile is lifted: a row in a vertical grid, a column in a horizontal one
     val horizontal = grid && user.gridHorizontal
-    val cols = if (!grid) 1 else if (horizontal) user.gridRows.coerceAtLeast(1) else user.gridColumns.coerceAtLeast(1)
     // Moves the lifted tile to [target]'s slot; unresolved ids keep their place in the working list.
     val placeAt = placeAt@{ target: String ->
         val id = lifted ?: return@placeAt
@@ -256,9 +289,28 @@ fun HomeScreen(
         moving?.let { vm.setLayout(it) }
         cancelMove()
     }
+    val headers = !custom && (!grid || sort == "generation") // section headers: every generated sort in list view, only generation in grid view
+    // every grid item's key, in order, for restoring the focus and position by key
+    val gridKeys = buildList<Any> {
+        var section: String? = null
+        tiles.forEach { t ->
+            if (headers && t.section != section) add("h:${t.section}")
+            section = t.section
+            add(t.id)
+        }
+    }
     val liftKeys = Modifier.onPreviewKeyEvent { e ->
         if (lifted == null) return@onPreviewKeyEvent false
         val down = e.type == KeyEventType.KeyDown
+        // Custom layouts have no spanning headers. Use the measured cross-axis count, not the saved density:
+        // a smaller display may fit fewer slots. A partially filled grid still clamps moves to the last tile.
+        val cols = if (!grid) {
+            1
+        } else {
+            (
+                gridState.layoutInfo.visibleItemsInfo.maxOfOrNull { if (horizontal) it.row else it.column }?.plus(1) ?: 1
+                ).coerceAtLeast(1)
+        }
         when (e.key) {
             Key.DirectionLeft -> if (down) moveBy(if (horizontal) -cols else -1)
             Key.DirectionRight -> if (down) moveBy(if (horizontal) cols else 1)
@@ -270,7 +322,6 @@ fun HomeScreen(
         }
         true
     }
-    val gridState = rememberLazyGridState()
     LaunchedEffect(moving) {
         val id = lifted ?: return@LaunchedEffect
         val i = tiles.indexOfFirst { it.id == id }
@@ -278,27 +329,39 @@ fun HomeScreen(
     }
 
     Column(Modifier.fillMaxSize()) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
-            Text("Sortie", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.width(12.dp))
-            Clock()
-            Spacer(Modifier.width(12.dp))
-            Text("$total games", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (index.running) {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Sortie", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.width(12.dp))
-                CircularProgressIndicator(Modifier.height(18.dp).width(18.dp), strokeWidth = 2.dp)
+                Clock()
+                Spacer(Modifier.width(12.dp))
+                Text("$total games", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                if (index.running) {
+                    Spacer(Modifier.width(12.dp))
+                    CircularProgressIndicator(Modifier.height(18.dp).width(18.dp), strokeWidth = 2.dp)
+                }
             }
-            Spacer(Modifier.weight(1f))
-            OutlinedButton(onClick = onApps) { Text("Apps") }
-            Spacer(Modifier.width(8.dp))
-            OutlinedButton(onClick = onSearch) { Text("Search") }
-            Spacer(Modifier.width(8.dp))
-            OutlinedButton(onClick = onDiagnostics) { Text("Settings") }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                OutlinedButton(onClick = onApps) { Text("Apps", maxLines = 1) }
+                OutlinedButton(onClick = onSearch) { Text("Search", maxLines = 1) }
+                OutlinedButton(onClick = onMagazines) { Text("Magazines", maxLines = 1) }
+                OutlinedButton(onClick = onJournal) { Text("Journal", maxLines = 1) }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onManual, modifier = Modifier.semantics { contentDescription = "Manual" }) {
+                        Text("📖", maxLines = 1)
+                    }
+                    OutlinedButton(onClick = onDiagnostics) { Text("Settings", maxLines = 1) }
+                }
+            }
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(horizontal = 12.dp)
+            modifier = Modifier.padding(horizontal = 12.dp).horizontalScroll(rememberScrollState())
         ) {
             Text("Sort", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             SORTS.forEach { (id, label) -> SortChip(label, selected = sort == id) { vm.setHomeSort(id) } }
@@ -320,7 +383,7 @@ fun HomeScreen(
             val chosen = systems.firstOrNull { it.def.id == homeConsole }
             if (chosen != null) {
                 val games by remember(chosen.def.id) { vm.gamesOf(chosen.def.id) }.collectAsState(emptyList())
-                Box(Modifier.weight(1f)) { GameListScreen(chosen.def.label, games, vm, onGame) }
+                Box(Modifier.weight(1f)) { key(chosen.def.id) { GameListScreen(chosen.def.label, games, vm, onGame) } } // filters/focus per console
             } else {
                 Spacer(Modifier.weight(1f))
             }
@@ -341,19 +404,8 @@ fun HomeScreen(
         // Focusable only while lifting: a permanently focusable container swallows D-pad focus itself (no tile outline, no
         // up/down between tiles).
         val liftFocus = if (lifted != null) Modifier.focusRequester(gridFocus).onFocusChanged { gridFocused = it.isFocused }.focusable() else Modifier
+        RememberGridPosition(memory, gridState, gridKeys)
         ItemGrid(grid, user, Modifier.weight(1f).then(liftFocus).then(liftKeys), state = gridState) {
-            if (custom && tiles.isEmpty()) {
-                fullItem("empty") {
-                    Text(
-                        "Your custom home is empty. Hold A on anything (a system, folder, game, app or shortcut) and choose Add to home.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-            }
-            // section headers: every generated sort in list view, only the generation sort in grid view
-            val headers = !custom && (!grid || sort == "generation")
             var section: String? = null
             tiles.forEach { t ->
                 if (headers && t.section != section) {
@@ -362,36 +414,41 @@ fun HomeScreen(
                 }
                 section = t.section
                 item(key = t.id) {
-                    HomeTileView(
-                        t,
-                        grid,
-                        vm,
-                        lifted = lifted == t.id,
-                        favourite = t.id in user.favourites,
-                        minutes = stats[t.id]?.minutes,
-                        onClick = {
-                            if (lifted != null) {
-                                placeAt(t.id)
-                                drop()
-                            } else {
-                                t.onClick()
-                            }
-                        },
-                        onLongClick = { if (lifted == null) sheet = t },
-                        onFavourite = t.item?.let { item ->
-                            {
-                                val now = vm.toggleFavourite(item.id)
-                                Toast.makeText(context, if (now) "Added to favourites" else "Removed from favourites", Toast.LENGTH_SHORT).show()
-                            }
-                        } ?: t.random?.let { pick ->
-                            {
-                                scope.launch {
-                                    val g = pick()
-                                    if (g != null) onGame(g.id) else Toast.makeText(context, "Nothing playable in ${t.title}", Toast.LENGTH_SHORT).show()
+                    RememberedItem(memory, t.id) {
+                        HomeTileView(
+                            t,
+                            grid,
+                            vm,
+                            lifted = lifted == t.id,
+                            favourite = t.id in user.favourites,
+                            minutes = stats[t.id]?.minutes,
+                            annotation = t.item?.id?.let { user.gameAnnotations[it] },
+                            onClick = {
+                                if (lifted != null) {
+                                    placeAt(t.id)
+                                    drop()
+                                } else {
+                                    t.onClick()
                                 }
-                            }
-                        }
-                    )
+                            },
+                            onLongClick = { if (lifted == null) sheet = t },
+                            onFavourite = t.item?.let { item ->
+                                {
+                                    val now = vm.toggleFavourite(item.id)
+                                    Toast.makeText(context, if (now) "Added to favourites" else "Removed from favourites", Toast.LENGTH_SHORT).show()
+                                }
+                            } ?: t.random?.let { pick ->
+                                {
+                                    scope.launch {
+                                        val g = pick()
+                                        if (g != null) onGame(g.id) else Toast.makeText(context, "Nothing playable in ${t.title}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            // not while a tile is lifted: the grid holds the focus then, and R2 must not edit the queue mid-move
+                            onWantToPlay = (t.item as? LibraryItem.Game)?.takeIf { lifted == null }?.let { g -> { toggleWantToPlay(vm, g.id, context) } }
+                        )
+                    }
                 }
             }
         }
@@ -412,16 +469,19 @@ fun HomeScreen(
     }
 
     sheet?.let { t ->
+        val game = t.item as? LibraryItem.Game
+        val queue = game?.let { wantToPlayAction(vm, it.id, it.id in user.wantToPlay, context) }
         val actions = if (custom) {
-            listOf(
+            listOfNotNull(
                 SheetAction("Move") {
-                    moving = user.layout.distinct()
+                    moving = customIds
                     lifted = t.id
                 },
-                SheetAction("Remove from home") { vm.removeFromLayout(t.id) }
+                SheetAction("Remove from home") { vm.removeFromLayout(t.id) }.takeUnless { HomeIds.isAutomatic(t.id) },
+                queue
             )
         } else {
-            listOf(homeAction(vm, t.id, t.id in user.layout, context))
+            listOfNotNull(homeAction(vm, t.id, t.id in user.layout, context), queue)
         }
         ContextSheet(t.title, actions) { sheet = null }
     }
@@ -435,7 +495,7 @@ private fun SortChip(label: String, selected: Boolean, onClick: () -> Unit) {
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = { Text(label) },
+        label = { Text(label, maxLines = 1) },
         modifier = Modifier.focusGlow(focused, FilterChipDefaults.shape),
         interactionSource = interaction
     )
@@ -450,9 +510,12 @@ private fun HomeTileView(
     lifted: Boolean,
     favourite: Boolean,
     minutes: Int?,
+    annotation: GameAnnotation?,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    onFavourite: (() -> Unit)?
+    onFavourite: (() -> Unit)?,
+    /** R2 on a game tile (see [wantToPlayKey]); null for systems, folders, apps and shortcuts. */
+    onWantToPlay: (() -> Unit)?
 ) {
     val item = t.item
     if (grid) {
@@ -471,11 +534,12 @@ private fun HomeTileView(
             is LibraryItem.Game -> SquareTile(
                 t.title,
                 onClick,
-                modifier = Modifier.heroOnFocus(item.game),
+                modifier = Modifier.heroOnFocus(item.game).wantToPlayKey(onWantToPlay),
                 subtitle = t.subtitle,
                 cover = t.cover,
                 paletteGlow = true,
                 favourite = favourite,
+                annotation = annotation,
                 lifted = lifted,
                 onLongClick = onLongClick,
                 onFavourite = onFavourite
@@ -511,7 +575,15 @@ private fun HomeTileView(
                         onFavourite = onFavourite
                     ) { FolderLine(t.title, t.subtitle, colour) }
                 }
-                is LibraryItem.Game -> GameRow(item.game, minutes, onClick = onClick, onLongClick = onLongClick, onFavourite = onFavourite)
+                is LibraryItem.Game -> GameRow(
+                    item.game,
+                    minutes,
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                    onFavourite = onFavourite,
+                    annotation = annotation,
+                    onWantToPlay = onWantToPlay
+                )
                 is LibraryItem.App -> LauncherRow(t.title, t.subtitle, favourite, onClick, onLongClick, minutes, tall = true, onFavourite = onFavourite) {
                     vm.appIcon(item.app.pkg)
                 }

@@ -25,6 +25,16 @@ object Selection {
     /** Candidates for the idle hero rotation (set by the view model). */
     val heroes = MutableStateFlow<List<GameEntity>>(emptyList())
 
+    /**
+     * Sortie's navigation activity is on screen (started). While it is, the companion shows the game being browsed even with
+     * a play session open; once it stops (the game is back in front), the companion returns to Now playing. Set by MainActivity.
+     */
+    val navigationVisible = MutableStateFlow(false)
+
+    /** Reader navigation for the other display; cleared when its owning magazine screen leaves composition. */
+    internal val magazine = MutableStateFlow<MagazineCompanionState?>(null)
+    internal val magazineActions = MutableSharedFlow<MagazineAction>(extraBufferCapacity = 16)
+
     fun set(game: GameEntity?) {
         _current.value = game
     }

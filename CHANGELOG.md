@@ -1,6 +1,57 @@
 # Changelog
 
 ## Unreleased
+- Per-game offline reference cards: write Markdown, import text or images, edit/delete, and pan/zoom maps. During gameplay,
+  the companion can display and page through cards by touch without taking controller input from the game.
+- Magazine highlights, personal notes and a persistent scrapbook: mark paragraphs with Y, clip recommendations with Select,
+  reopen their source passages or linked game pages, and keep excerpts readable even when an issue is absent.
+- Finished and Shelved are built-in Custom shelves with optional personal verdicts. Status is explicit, mutually exclusive,
+  independent of favourites/Want to play, and retained for temporarily missing games.
+- Home's weekly Journal combines recorded sessions with dated notes and explicitly selected screenshot attachments.
+  Local-day/week boundaries, unknown session lengths, draft cancellation, offline persistence and display swaps are supported.
+  New personal metadata is included in JSON backups; reference images and journal screenshots must be copied separately.
+- Compact app and shortcut grid tiles are now icon-only, with the cutoff adapting to tile width and font scale.
+  Larger tiles and list rows retain labels; accessibility names remain available on icon-only tiles.
+- Stress-test fix: opening the Home switcher over Sortie preserves the exact navigation/companion task instead of raising a
+  stale background app. Home after an X swap relays to the existing navigation instance, preserving its display, page and filters.
+  Only genuine Home-key requests open the overlay; framework Home launches stay quiet. Relays focus the existing Sortie task
+  before retiring the temporary Home activity, avoiding a framework Home relaunch loop.
+- Search is now a text-optional library explorer: multi-select System, Tags (including game-page flags) and Genre, plus
+  favourites, Want to play, unplayed, fit ★★★★+ and on-device filters. Exact labels, combined SQL filtering before paging,
+  full result counts, saved browsing state and controller-accessible pickers.
+- Home has a direct Manual book button beside Settings.
+- Offline recommendation magazines: native issue shelf, contents, illustrated Markdown articles, library links, controller
+  reading controls and persisted reading positions. Packs use local files only; malformed issues and unsafe paths are isolated.
+- The magazine companion shows tappable section headings with the current section highlighted, issue contents and a folded
+  next-article corner. It follows X swaps, preserves article positions, and clears on leaving the issue; single-screen reading is unchanged.
+- Held B dismisses the radial keyboard before release without backing out of the app; a short B still dismisses on release.
+- D-pad Down from Search's text field focuses game results in grid or list view, including after the keyboard is closed.
+- Home's Alphabetical, Game count and Generation sorts show systems only. Custom automatically includes every smart folder,
+  Apps and Continue, preserving existing pins and supporting reordering without duplicate tiles.
+- The switcher restores pinned/PiP players to fullscreen before raising or moving them, clearing their PiP bounds without
+  recreating the task. Internal focus anchors no longer trigger a user-leave hint that can send the player back into PiP.
+- Optional Android radial keyboard: transparent app overlay, eight left-stick groups and four right-stick characters plus
+  four diagonal editing actions. Supports trigger layers, touch, held delete/space and native editor actions. Enable/select
+  through Settings; no global hotkey, network access or typed history. Verified in Chrome and Sortie, including Sortie input
+  on both Thor displays. Suppresses the extraction editor even on handheld firmware that forces fullscreen IMEs.
+- Want to play is separate from favourites: toggle from a companion hero, a game's page, R2 on a focused game, or its context
+  sheet. The built-in folder is always on Custom Home; queue membership persists and is included in backups.
+- Companion heroes and game now-playing panels show platform, year, developer and genre below the title, even when a guide
+  hook is present. Platform names come from the system manifest, with the system ID as a fallback.
+- X screen swaps preserve the current page/back stack, search and filters, grid/list position and controller selection.
+  Programmatically showing the companion no longer opens the Home switcher; the Home key still opens it.
+- Settings → Backup and restore exports preferences and closed play sessions. Restore previews changes, saves a safety copy,
+  replaces preferences and merges history without duplicating sessions or deleting newer history. Android pins and grants
+  remain Android-owned; ROMs, artwork and emulator saves are not included.
+- Game pages have editable controller requirement badges and mapping notes, plus a personal "Where was I?" reminder.
+  Saves are durable; Cancel discards drafts, and Clear all + Save removes the entry without changing desktop guide notes.
+  Badges appear in grids/lists; personal notes appear on the companion while browsing and playing.
+- Browsing another game updates the companion even while a game session is running in the background, without ending that session.
+- Folder and system titles have their own row above the filters. Pick one, fit, notes, started and on-device controls wrap
+  as whole buttons on smaller screens, so long names cannot squeeze their labels or hide the last filter.
+- Home adapts to smaller displays when screens are swapped: header actions reflow, sorts scroll sideways, and controller
+  hints wrap without splitting words. Home/game grids cap density by available space and text scale without changing saved
+  preferences or scroll direction; custom-layout D-pad moves follow the actual grid. Icon tiles reserve room for their labels.
 - System tiles show the console's logo when `<card>/sortie/logos/<systemId>.png` exists (desktop-rendered from the slate-es-de
   theme by `sortie-card/gen_logos.py`, black strokes turned white for dark tiles); the cover stays as a faint backdrop.
 - First run with the card on an SD card: once the all-files grant arrives and `device.json` becomes readable, Sortie restarts
@@ -10,7 +61,7 @@
 - Repo tidy for publishing: personal device identifiers out of `docs/HANDOFF.md`, `examples/card/` minimal card, README rewrite.
 - Home header shows a 24-hour clock (one recomposition a minute). The companion hero follows the focused game while browsing
   grids and lists (`Modifier.heroOnFocus`), not only the game page. Manual scrolls with the D-pad (focusable list, Up/Down/Page).
-- Home: a **Continue** tile (last game played) leads every generated sort. Hold R1 on a system or folder tile opens a random
+- Home: a **Continue** tile (last game played) leads Custom unless moved. Hold R1 on a system or folder tile opens a random
   playable game in it.
 - Lists: **💾 started** chip — games with a save or state on the card (`DeviceState.saveStems`).
 - Game page: "Played N min · S sessions · last <when>" (`PlayStat.sessions`), plus hand-written control notes.

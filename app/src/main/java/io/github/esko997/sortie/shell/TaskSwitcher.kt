@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.shell
 
+import android.app.Activity
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
@@ -61,11 +62,26 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state
 
-    /** Installed by the UI layer: shows the overlay with the controller on the given display, or returns false. Main thread. */
-    var presenter: ((focusDisplay: Int) -> Boolean)? = null
+    /** Shows the overlay; [homeTask] is the Sortie surface Home covered, or null to reveal the previous external app. Main thread. */
+    var presenter: ((focusDisplay: Int, homeTask: Int?) -> Boolean)? = null
 
     /** Installed by the UI layer: tears the overlay down. Main thread. */
     var dismisser: (() -> Unit)? = null
+
+    // Main-thread lifecycle state. Keep a surface through onPause: HOME intent delivery itself pauses an activity.
+    // onStop removes it once an external app really covers it; instance identity protects a newer recreation from an old stop.
+    private val visibleHomes = mutableMapOf<Int, Activity>()
+
+    fun homeResumed(activity: Activity) {
+        visibleHomes[activity.display?.displayId ?: TOP] = activity
+    }
+
+    fun homeStopped(activity: Activity) {
+        val display = activity.display?.displayId ?: TOP
+        if (visibleHomes[display] === activity) visibleHomes.remove(display)
+    }
+
+    fun homeTask(displayId: Int): Int? = visibleHomes[displayId]?.taskId
 
     fun open(overlay: Boolean = false, focusDisplay: Int? = null) {
         overlayDisplay = if (overlay) focusDisplay else null
@@ -129,9 +145,9 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
      * screens (games keep running underneath); otherwise Sortie's navigation comes to the top screen with the switcher route.
      * Nothing happens when nothing is running.
      */
-    fun summon(focusDisplay: Int = TOP) = scope.launch {
+    fun summon(focusDisplay: Int, homeTask: Int?) = scope.launch {
         if (!anyRunning()) return@launch
-        val presented = withContext(Dispatchers.Main) { presenter?.invoke(focusDisplay) ?: false }
+        val presented = withContext(Dispatchers.Main) { presenter?.invoke(focusDisplay, homeTask) ?: false }
         if (presented) return@launch
         open()
         val options = ActivityOptions.makeBasic().setLaunchDisplayId(TOP)
@@ -206,11 +222,16 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
         ok
     }
 
-    /** Raises the top app of [displayId] back over Sortie's own activity (after a Home press) and anchors the controller there. */
-    fun reveal(displayId: Int) = scope.launch {
+    /** Restores the exact Sortie surface Home covered, or the prior external app, then anchors the overlay's display. */
+    fun reveal(displayId: Int, homeTask: Int?) = scope.launch {
         lock.withLock {
-            reloadLocked()
-            _state.value.on(displayId).firstOrNull()?.let { mover.focusTask(it.task) }
+            val task = if (homeTask != null) {
+                mover.rootTasks().firstOrNull { it.id == homeTask }
+            } else {
+                reloadLocked()
+                _state.value.on(displayId).firstOrNull()?.task
+            }
+            task?.let { mover.focusTask(it) }
         }
         anchor(displayId)
     }
@@ -222,7 +243,8 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
      */
     fun anchor(displayId: Int): Boolean = runCatching {
         val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId)
-        val intent = Intent(context, AnchorActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+        val intent = Intent(context, AnchorActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or Intent.FLAG_ACTIVITY_NO_USER_ACTION)
         lastAnchorAt = System.currentTimeMillis()
         context.startActivity(intent, options.toBundle())
         true
@@ -273,5 +295,8 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
 
         /** Intent extra on MainActivity: open the switcher route (set by [summon]). */
         const val EXTRA_SWITCHER = "switcher"
+
+        /** Android's Home-key discriminator: automatic HOME starts during task/display changes do not carry it. */
+        const val EXTRA_FROM_HOME_KEY = "android.intent.extra.FROM_HOME_KEY"
     }
 }

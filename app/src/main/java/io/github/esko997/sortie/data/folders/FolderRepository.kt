@@ -11,6 +11,10 @@ import io.github.esko997.sortie.data.db.SortieDb
 import io.github.esko997.sortie.data.manifest.FolderDef
 import io.github.esko997.sortie.data.manifest.ManifestStore
 import io.github.esko997.sortie.data.manifest.UserData
+import io.github.esko997.sortie.data.manifest.WANT_TO_PLAY_FOLDER_ID
+import io.github.esko997.sortie.data.user.GameProgress
+import io.github.esko997.sortie.data.user.Shelf
+import io.github.esko997.sortie.data.user.idsOn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
@@ -25,7 +29,8 @@ import kotlinx.coroutines.flow.map
 data class FolderView(val def: FolderDef, val items: List<LibraryItem>, val problems: List<String>)
 
 /**
- * Evaluates every folder in `folders.json` whenever the library, apps, shortcuts, play stats, favourites or the manifests change.
+ * Evaluates every folder in `folders.json`, plus the built-in Want to play, Finished and Shelved folders, whenever the library,
+ * apps, shortcuts, play stats, favourites, the queue, the shelves or the manifests change.
  * The full-table read runs inside a transaction so the indexer cannot change rows under the cursor (that race crashed the
  * process once with "Couldn't read row N from CursorWindow"), inputs are debounced while an index pass is writing, and any
  * failure degrades to the previous result instead of propagating.
@@ -56,10 +61,7 @@ class FolderRepository(
             }.filter { it.id !in u.hidden }
             val byId = items.associateBy { it.id }
             val subjects = items.map { subjectOf(it, stats[it.id], it.id in u.favourites, now) }
-            snap.folders.map { def ->
-                val result = RuleEngine.evaluate(def, subjects)
-                FolderView(def, result.subjects.mapNotNull { byId[it.id] }, result.problems)
-            }
+            evaluateFolders(snap.folders, u.wantToPlay, u.gameProgress, subjects, byId)
         }.catch { e ->
             Log.w(TAG, "folder evaluation failed", e)
             emit(emptyList())
@@ -108,5 +110,40 @@ class FolderRepository(
 
     companion object {
         private const val TAG = "Folders"
+    }
+}
+
+private const val WANT_TO_PLAY_LABEL = "Want to play"
+
+/**
+ * The manifest folders, then the built-in folders: Want to play ([wantToPlay]), Finished and Shelved (games whose [progress]
+ * names that shelf). Each lists its games found in [subjects] (already limited to indexed, unhidden entries), in title order,
+ * through the same [RuleEngine] include path as any folder. They are always present — empty when nothing resolves — so their
+ * home tiles keep working after the last removal; unresolved ids are skipped here and stay in user.json. A `folders.json`
+ * entry claiming a reserved id is dropped (reported on that built-in folder) so `folder:<id>` names one folder only.
+ */
+internal fun evaluateFolders(
+    defs: List<FolderDef>,
+    wantToPlay: Set<String>,
+    progress: Map<String, GameProgress>,
+    subjects: List<Subject>,
+    byId: Map<String, LibraryItem>
+): List<FolderView> {
+    val builtIn = listOf(FolderDef(WANT_TO_PLAY_FOLDER_ID, WANT_TO_PLAY_LABEL, include = wantToPlay.toList(), sort = "title:asc")) +
+        Shelf.entries.map { FolderDef(it.folderId, it.label, include = progress.idsOn(it).toList(), sort = "title:asc") }
+    val reservedIds = builtIn.mapTo(HashSet()) { it.id }
+    val (reserved, manifest) = defs.partition { it.id in reservedIds }
+    val views = manifest.map { def ->
+        val result = RuleEngine.evaluate(def, subjects)
+        FolderView(def, result.subjects.mapNotNull { byId[it.id] }, result.problems)
+    }
+    return views + builtIn.map { def ->
+        val games = RuleEngine.evaluate(def, subjects).subjects.filter { it.kind == Subject.Kind.GAME }
+        val problems = if (reserved.none { it.id == def.id }) {
+            emptyList()
+        } else {
+            listOf("folders.json defines \"${def.id}\", which is reserved for this built-in folder; that entry is ignored")
+        }
+        FolderView(def, games.mapNotNull { byId[it.id] }, problems)
     }
 }

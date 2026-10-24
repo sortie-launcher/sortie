@@ -25,7 +25,7 @@ class ScreenMover(private val context: Context) {
     enum class Status { UNAVAILABLE, NOT_RUNNING, PERMISSION_NEEDED, READY }
 
     /** One leaf task: [id] is the task id, [rootId] the root task it lives in (the unit `display move-stack` moves). */
-    data class RootTask(val rootId: Int, val id: Int, val displayId: Int, val component: String, val visible: Boolean) {
+    data class RootTask(val rootId: Int, val id: Int, val displayId: Int, val component: String, val visible: Boolean, val pinned: Boolean) {
         val pkg: String get() = component.substringBefore('/')
     }
 
@@ -39,7 +39,7 @@ class ScreenMover(private val context: Context) {
     private var service: IShellService? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val args = Shizuku.UserServiceArgs(ComponentName(context.packageName, ShellService::class.java.name))
-        .daemon(false).processNameSuffix("shell").version(1)
+        .daemon(false).processNameSuffix("shell").version(2)
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
             service = IShellService.Stub.asInterface(binder)
@@ -95,22 +95,7 @@ class ScreenMover(private val context: Context) {
     }
 
     /** Parses `cmd activity stack list`: a RootTask line, then one `taskId=` line per leaf task in it (top-most first). */
-    suspend fun rootTasks(): List<RootTask> {
-        val out = exec("cmd activity stack list")
-        val tasks = ArrayList<RootTask>()
-        var current: Pair<Int, Int>? = null
-        for (line in out.lineSequence()) {
-            ROOT_RX.find(line)?.let {
-                current = it.groupValues[1].toInt() to it.groupValues[2].toInt()
-                return@let
-            }
-            val c = current ?: continue
-            TASK_RX.find(line)?.let { m ->
-                tasks += RootTask(c.first, m.groupValues[1].toInt(), c.second, m.groupValues[2], m.groupValues[3] == "true")
-            }
-        }
-        return tasks
-    }
+    suspend fun rootTasks(): List<RootTask> = parseRootTasks(exec("cmd activity stack list"))
 
     /** Tasks that are apps the user can switch to: not Sortie, not a launcher, not a placeholder. Top-most first per display. */
     suspend fun appTasks(): List<RootTask> =
@@ -118,10 +103,18 @@ class ScreenMover(private val context: Context) {
 
     /** Moves a whole root task (display move-stack works on root tasks only). */
     suspend fun moveTask(task: RootTask, toDisplay: Int): Boolean =
-        ok(exec("cmd activity display move-stack ${task.rootId} $toDisplay"), "move ${task.rootId} -> $toDisplay")
+        restorePinnedTask(task) && ok(exec("cmd activity display move-stack ${task.rootId} $toDisplay"), "move ${task.rootId} -> $toDisplay")
 
-    /** Raises the task on its own display. Does not change which display has key focus: see `AnchorActivity` for that. */
-    suspend fun focusTask(task: RootTask): Boolean = ok(exec("am task focus ${task.id}"), "focus ${task.id}")
+    /** Restores a pinned player to fullscreen, then raises the task on its display; [AnchorActivity] handles key focus. */
+    suspend fun focusTask(task: RootTask): Boolean = restorePinnedTask(task) && ok(exec("am task focus ${task.id}"), "focus ${task.id}")
+
+    private suspend fun restorePinnedTask(task: RootTask): Boolean {
+        if (!task.pinned) return true
+        val reply = withContext(Dispatchers.IO) {
+            runCatching { service?.restorePinnedTask(task.rootId) ?: "-1\nshell service not bound" }.getOrElse { "-1\n${it.message}" }
+        }
+        return ok(reply, "restore PiP ${task.id}")
+    }
 
     /** `am stack remove` takes any task id, leaf tasks included (ActivityTaskManager.removeTask). */
     suspend fun removeTask(task: RootTask): Boolean = ok(exec("am stack remove ${task.id}"), "remove ${task.id}")
@@ -186,5 +179,23 @@ class ScreenMover(private val context: Context) {
         private const val REQUEST_CODE = 7001
         private val ROOT_RX = Regex("""^\s*(?:RootTask|Stack) id=(\d+)\b.*\bdisplayId=(\d+)""")
         private val TASK_RX = Regex("""taskId=(\d+): ([\w.]+/[\w.$]+).*visible=(true|false)""")
+
+        internal fun parseRootTasks(output: String): List<RootTask> {
+            val tasks = ArrayList<RootTask>()
+            var current: Pair<Int, Int>? = null
+            var pinned = false
+            for (line in output.lineSequence()) {
+                ROOT_RX.find(line)?.let {
+                    current = it.groupValues[1].toInt() to it.groupValues[2].toInt()
+                    pinned = false
+                }
+                if ("mWindowingMode=" in line) pinned = "mWindowingMode=pinned" in line
+                val c = current ?: continue
+                TASK_RX.find(line)?.let { m ->
+                    tasks += RootTask(c.first, m.groupValues[1].toInt(), c.second, m.groupValues[2], m.groupValues[3] == "true", pinned)
+                }
+            }
+            return tasks
+        }
     }
 }

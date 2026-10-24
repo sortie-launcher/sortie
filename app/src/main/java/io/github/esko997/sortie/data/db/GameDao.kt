@@ -4,7 +4,10 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.RawQuery
 import androidx.room.Update
+import androidx.sqlite.db.SimpleSQLiteQuery
+import androidx.sqlite.db.SupportSQLiteQuery
 import kotlinx.coroutines.flow.Flow
 
 data class SystemCount(val systemId: String, val n: Int)
@@ -16,6 +19,19 @@ data class TileCover(val systemId: String, val cover: String, val fit: Int)
 data class NameRow(val id: String, val fileName: String, val placeholder: Boolean)
 
 data class Signature(val id: String, val mtime: Long, val size: Long, val addedAt: Long, val arriving: Boolean)
+
+/** What magazine reference matching needs of a game row (see data.magazine.MagazineGames). */
+data class MatchRow(
+    val id: String,
+    val systemId: String,
+    val fileName: String,
+    val path: String,
+    val title: String,
+    val size: Long,
+    val placeholder: Boolean,
+    val arriving: Boolean,
+    val hack: Boolean
+)
 
 /** SQLite binds at most 999 variables on older Android builds; every `IN (:ids)` goes through [chunked]. */
 const val SQLITE_CHUNK = 500
@@ -57,6 +73,10 @@ interface GameDao {
     @Query("SELECT * FROM games WHERE systemId = :systemId AND variantOf IS NULL ORDER BY sortTitle")
     fun bySystem(systemId: String): Flow<List<GameEntity>>
 
+    /** Shown games of [systemIds], narrow rows for magazine reference matching. */
+    @Query("SELECT id, systemId, fileName, path, title, size, placeholder, arriving, hack FROM games WHERE systemId IN (:systemIds) AND variantOf IS NULL")
+    suspend fun matchRows(systemIds: List<String>): List<MatchRow>
+
     @Query("SELECT * FROM games WHERE id = :id")
     suspend fun byId(id: String): GameEntity?
 
@@ -66,12 +86,30 @@ interface GameDao {
     @Query("SELECT * FROM games WHERE id IN (:ids)")
     suspend fun byIdsChunk(ids: List<String>): List<GameEntity>
 
+    /** Search results ([LibrarySearch.page]); also re-run when play sessions change, for the "unplayed" filter. */
+    @RawQuery(observedEntities = [GameEntity::class, SessionEntity::class])
+    fun searchPage(query: SupportSQLiteQuery): Flow<List<GameEntity>>
+
+    /** Number of all search matches ([LibrarySearch.count]), independent of the page limit. */
+    @RawQuery(observedEntities = [GameEntity::class, SessionEntity::class])
+    fun searchCount(query: SupportSQLiteQuery): Flow<Int>
+
+    /** Search's System picker: shown games per system ([withPlaceholders] = also games not copied to the device). */
+    @Query("SELECT systemId AS value, COUNT(*) AS n FROM games WHERE variantOf IS NULL AND (:withPlaceholders OR placeholder = 0) GROUP BY systemId")
+    fun systemFacets(withPlaceholders: Boolean): Flow<List<FacetCount>>
+
     @Query(
-        "SELECT * FROM games WHERE placeholder = 0 AND variantOf IS NULL AND (title LIKE '%' || :q || '%' ESCAPE '\\' " +
-            "OR genre LIKE '%' || :q || '%' ESCAPE '\\' " +
-            "OR developer LIKE '%' || :q || '%' ESCAPE '\\' OR desc LIKE '%' || :q || '%' ESCAPE '\\') ORDER BY fit DESC, sortTitle LIMIT :limit"
+        "SELECT genre AS value, COUNT(*) AS n FROM games WHERE variantOf IS NULL AND genre IS NOT NULL AND TRIM(genre) != '' " +
+            "AND (:withPlaceholders OR placeholder = 0) GROUP BY genre ORDER BY genre COLLATE NOCASE"
     )
-    fun search(q: String, limit: Int = 200): Flow<List<GameEntity>>
+    fun genreFacets(withPlaceholders: Boolean): Flow<List<FacetCount>>
+
+    /** Distinct tag/flag lists for Search's Tags picker; [LibrarySearch.labelFacets] splits them into labels. */
+    @Query(
+        "SELECT tags, flags, COUNT(*) AS n FROM games WHERE variantOf IS NULL AND (tags != '' OR flags != '') " +
+            "AND (:withPlaceholders OR placeholder = 0) GROUP BY tags, flags"
+    )
+    fun labelCombos(withPlaceholders: Boolean): Flow<List<LabelCombo>>
 
     @Query("SELECT * FROM games WHERE placeholder = 0 AND variantOf IS NULL")
     suspend fun allPlayable(): List<GameEntity>
@@ -101,6 +139,27 @@ interface GameDao {
     @Query("SELECT * FROM sessions WHERE endedAt IS NULL ORDER BY startedAt DESC LIMIT 1")
     suspend fun openSession(): SessionEntity?
 
+    /** Every session, oldest first (backup export and restore merge). */
+    @Query("SELECT * FROM sessions ORDER BY startedAt, rowId")
+    suspend fun allSessions(): List<SessionEntity>
+
+    /**
+     * Sessions that may belong to the journal week `[from, to)`: started in it, or started earlier and ended (or still open)
+     * after [from]. The journal decides which of them count ([io.github.esko997.sortie.data.journal.weekPlay]).
+     */
+    @Query("SELECT * FROM sessions WHERE startedAt < :to AND (startedAt >= :from OR endedAt IS NULL OR endedAt > :from) ORDER BY startedAt, rowId")
+    fun sessionsTouching(from: Long, to: Long): Flow<List<SessionEntity>>
+
+    /** Shown games whose title matches [pattern] (a LIKE pattern built with [likeEscape]), for the journal's game link. */
+    @Query("SELECT * FROM games WHERE variantOf IS NULL AND title LIKE :pattern ESCAPE '\\' ORDER BY sortTitle LIMIT :limit")
+    suspend fun titleMatches(pattern: String, limit: Int): List<GameEntity>
+
+    @Insert
+    suspend fun insertSessions(s: List<SessionEntity>): List<Long>
+
+    @Query("DELETE FROM sessions WHERE rowId IN (:rowIds)")
+    suspend fun deleteSessionsChunk(rowIds: List<Long>): Int
+
     @Query(
         "SELECT gameId, CAST(SUM(CASE WHEN abandoned = 0 AND endedAt IS NOT NULL THEN endedAt - startedAt ELSE 0 END) / 60000 AS INTEGER) AS minutes, " +
             "MAX(startedAt) AS lastPlayed, COUNT(*) AS sessions FROM sessions GROUP BY gameId"
@@ -122,5 +181,9 @@ interface GameDao {
 
 suspend fun GameDao.byIds(ids: Collection<String>): List<GameEntity> = chunked(ids) { byIdsChunk(it) }
 
+suspend fun GameDao.deleteSessions(rowIds: List<Long>): Int = rowIds.chunked(SQLITE_CHUNK).sumOf { deleteSessionsChunk(it) }
+
 /** Escapes LIKE wildcards in user input (the queries use ESCAPE '\'). */
 fun likeEscape(q: String): String = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+fun SqlQuery.toRoom(): SupportSQLiteQuery = SimpleSQLiteQuery(sql, args.toTypedArray())

@@ -1,0 +1,133 @@
+package io.github.esko997.sortie.data.backup
+
+import io.github.esko997.sortie.data.db.SessionEntity
+import io.github.esko997.sortie.data.journal.JournalAttachment
+import io.github.esko997.sortie.data.journal.JournalEntry
+import io.github.esko997.sortie.data.magazine.MagazineClipping
+import io.github.esko997.sortie.data.manifest.ControllerSupport
+import io.github.esko997.sortie.data.manifest.GameAnnotation
+import io.github.esko997.sortie.data.manifest.UserData
+import io.github.esko997.sortie.data.reference.ReferenceCard
+import io.github.esko997.sortie.data.user.GameProgress
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class BackupFormatTest {
+    private val user = UserData(
+        favourites = setOf("snes/Super Metroid (USA).sfc", "shortcut:com.droiddeck.launcher/game-42"),
+        // queued games are independent of favourites; an id the restoring device has not indexed yet must survive too
+        wantToPlay = setOf("ps2/Armored Core 3 (USA).chd", "gba/Not On This Card.gba"),
+        homeSort = "custom",
+        layout = listOf("system:snes", "folder:want-to-play", "ps2/Armored Core 3 (USA).chd"),
+        dock = listOf("app:org.ppsspp.ppsspp", "", "", "", ""),
+        gameAnnotations = mapOf("ps2/Armored Core 3 (USA).chd" to GameAnnotation(ControllerSupport.GAMEPAD, "L2/R2 strafe", "Mission 12, garage")),
+        gameProgress = mapOf("snes/Super Metroid (USA).sfc" to GameProgress("finished", "2026-10-24", "Worth returning to.")),
+        magazineClippings = listOf(
+            MagazineClipping(
+                id = "clipping",
+                issueId = "field-notes-001",
+                articleId = "garage",
+                block = 4,
+                text = "Build around your preferred range.",
+                note = "Try a lighter frame.",
+                gameIds = listOf("ps2/Armored Core 3 (USA).chd")
+            )
+        ),
+        referenceCards = mapOf(
+            "ps2/Armored Core 3 (USA).chd" to listOf(ReferenceCard(id = "reference", title = "Garage", body = "# Loadout\nKeep spare energy."))
+        ),
+        journalEntries = listOf(
+            JournalEntry(
+                id = "entry",
+                date = "2026-10-24",
+                text = "First airborne build.",
+                gameId = "ps2/Armored Core 3 (USA).chd",
+                sessionStartedAt = 1_000_000,
+                attachments = listOf(JournalAttachment(path = "journal/media/entry/screenshot.png", name = "Garage screenshot"))
+            )
+        )
+    )
+
+    private fun closed(id: String, start: Long, minutes: Long, rowId: Long = 0) =
+        SessionEntity(rowId = rowId, gameId = id, profileId = "p", startedAt = start, endedAt = start + minutes * 60000)
+
+    private fun valid(text: String) = parseBackup(text) as ParsedBackup.Valid
+
+    @Test
+    fun roundTripKeepsPreferencesAndClosedSessionsOnly() {
+        val open = SessionEntity(rowId = 9, gameId = "psx/Running.chd", profileId = null, startedAt = 5_000_000, endedAt = null)
+        val backup = buildBackup(user, listOf(closed("a", 1_000_000, 30, rowId = 1), open), 42, "thor", "0.0.1")
+        val parsed = valid(encodeBackup(backup))
+        assertEquals(user, parsed.backup.user)
+        assertEquals(listOf(BackupSession("a", "p", 1_000_000, 1_000_000 + 30 * 60000)), parsed.backup.sessions)
+        assertEquals("psx/Running.chd", parsed.backup.openSessionExcluded?.gameId)
+        assertEquals(0, parsed.openIgnored)
+    }
+
+    @Test
+    fun repeatRestoreAddsNothingAndDeviceSessionsWin() {
+        val incoming = listOf(BackupSession("a", "p", 1_000, 1_000 + 60000), BackupSession("b", null, 2_000, 2_000 + 120000))
+        // the device already has "a" (different row id, a later end) and a session newer than the backup
+        val device = listOf(closed("a", 1_000, 5, rowId = 77), closed("c", 9_000_000, 10, rowId = 78))
+        val first = planSessionMerge(incoming, device)
+        assertEquals(listOf("b"), first.toInsert.map { it.gameId })
+        assertEquals(1, first.alreadyPresent)
+        assertEquals(2L, first.addedMinutes)
+        val afterFirst = device + first.toInsert.mapIndexed { i, s -> s.copy(rowId = 100L + i) }
+        val second = planSessionMerge(incoming, afterFirst)
+        assertTrue(second.toInsert.isEmpty())
+        assertEquals(2, second.alreadyPresent)
+    }
+
+    @Test
+    fun unfinishedSessionsInTheFileAreNeverImported() {
+        val sessions = listOf(BackupSession("a", null, 1_000, null), BackupSession("b", null, 2_000, 3_000))
+        val text = encodeBackup(BackupFile(createdAt = 1, user = user, sessions = sessions))
+        val parsed = valid(text)
+        assertEquals(1, parsed.openIgnored)
+        assertEquals(listOf("b"), planSessionMerge(parsed.backup.sessions, emptyList()).toInsert.map { it.gameId })
+    }
+
+    @Test
+    fun malformedTruncatedForeignAndNewerFilesAreRejected() {
+        val good = encodeBackup(buildBackup(user, listOf(closed("a", 1_000, 1)), 1, "thor", "0.0.1"))
+        val rejected = listOf(
+            good.substring(0, good.length / 2),
+            "",
+            "[1, 2]",
+            """{"favourites": []}""",
+            """{"format": "sortie-backup"}""",
+            """{"format": "sortie-backup", "version": ${BackupFile.VERSION + 1}, "createdAt": 1, "user": {}, "sessions": []}""",
+            """{"format": "sortie-backup", "version": 1, "user": {}, "sessions": []}""",
+            """{"format": "sortie-backup", "version": 1, "createdAt": 1, "user": {}, "sessions": [{"gameId": "a", "startedAt": 5000, "endedAt": 10}]}""",
+            """{"format": "sortie-backup", "version": 1, "createdAt": 1, "user": {}, "sessions": [{"gameId": "", "startedAt": 5000, "endedAt": 6000}]}"""
+        )
+        rejected.forEach { assertTrue("accepted: $it", parseBackup(it) is ParsedBackup.Invalid) }
+    }
+
+    /** Well-formed JSON that lacks a section must not pass as an all-defaults backup (restoring it would wipe every preference). */
+    @Test
+    fun backupsMissingASectionAreRejected() {
+        val rejected = listOf(
+            """{"format": "sortie-backup", "version": 1, "createdAt": 1}""",
+            """{"format": "sortie-backup", "version": 1, "createdAt": 1, "sessions": []}""",
+            """{"format": "sortie-backup", "version": 1, "createdAt": 1, "user": {"favourites": []}}""",
+            """{"format": "sortie-backup", "version": 1, "createdAt": 1, "user": null, "sessions": []}""",
+            """{"format": "sortie-backup", "version": 1, "createdAt": 1, "user": [], "sessions": {}}"""
+        )
+        rejected.forEach { assertTrue("accepted: $it", parseBackup(it) is ParsedBackup.Invalid) }
+    }
+
+    @Test
+    fun outOfRangePreferencesAreClamped() {
+        val text = """{"format": "sortie-backup", "version": 1, "createdAt": 1, "sessions": [],""" +
+            """ "user": {"gridColumns": 99, "gridRows": 0, "layout": ["x", "x"]}}"""
+        val u = valid(text).backup.user
+        assertEquals(10, u.gridColumns)
+        assertEquals(2, u.gridRows)
+        assertEquals(listOf("x"), u.layout)
+        assertNull(valid(text).backup.openSessionExcluded)
+    }
+}

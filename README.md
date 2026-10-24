@@ -12,19 +12,26 @@ Also runs on single-screen handhelds (tested on the AYANEO Pocket DMG).
 
 ## What it does
 
-- Home of systems and smart folders in five sorts (alphabetical, game count, generation, custom layout, by console); a
-  **Continue** tile for the last game played; grids that scroll sideways or down, 2–7 tiles per row.
-- Lists with filters (fit ★★★★+, hand-written notes, started/has a save, on device), search, a random pick.
+- Five Home sorts: alphabetical, game count and generation show systems only; Custom holds every smart folder, Apps, your
+  pins and a **Continue** tile; By Console shows a console's games. Grids scroll sideways or down, with configurable density.
+- Lists with filters (fit ★★★★+, hand-written notes, started/has a save, on device), a random pick; Search combines systems,
+  tags/flags, genres, favourites, Want to play and unplayed, with optional text and a full match count.
 - Game pages with cover, hook, description, play stats, control notes; **Launch with…** picks a launcher per game; a default
   launcher per system in Settings; falls back through the manifest order to "Open with…".
 - Smart folders from JSON rules (tags, fit, play time, days since played, recent-tags similarity …).
+- Personal Finished and Shelved folders with verdicts, separate from favourites and the Want to play queue.
+- Per-game offline reference cards: Markdown notes and zoomable maps/images, available on the companion during gameplay.
+- A weekly gaming journal built from real play sessions, with dated notes and explicitly picked screenshot attachments.
 - Installed apps and launcher shortcuts as first-class items (favourite them, add them to home, pin them to the dock).
 - Dual screen: the companion shows the focused game's art and notes while you browse, what's playing while you play, a
   5-slot dock and a touch launcher; Home key opens a switcher that moves running apps between screens (needs Shizuku).
 - Zero idle cost: nothing animates, polls or ticks while you're not pressing anything (one recomposition a minute for the clock).
 - Play log on the card (`playlog.jsonl`), favourites and preferences in `user.json` — plain files you own.
+- Offline illustrated recommendation magazines: issue shelf, contents, articles, source notes and remembered reading positions.
+  Highlight passages, add notes and clip recommendations into a persistent scrapbook with source and game links.
+  On dual-screen devices, the other screen offers section links, issue contents and previous/next article controls.
 
-A full user manual is bundled: Settings → Help → Manual (`app/src/main/assets/MANUAL.md`).
+A full user manual is bundled: the book button beside Settings on Home, or Settings → Help → Manual (`app/src/main/assets/MANUAL.md`).
 
 ## How it fits together
 
@@ -38,7 +45,9 @@ Sortie reads a `sortie/` directory at the root of your card (or primary storage)
 | `folders.json` | desktop | smart folders (rules) and manual folders |
 | `guide.json` | desktop | per-game fit, hook, flags, tags, control notes |
 | `logos/` | desktop | optional system logos for the home tiles |
-| `user.json`, `playlog.jsonl` | device | favourites, preferences, play sessions |
+| `magazines/<issue-id>/` | desktop | offline `issue.json`, Markdown articles and bundled pictures |
+| `user.json`, `playlog.jsonl` | device | preferences, personal shelves/notes/clippings/reference metadata, play sessions |
+| `reference/`, `journal/media/` | device | copied reference images and journal screenshots (separate from JSON backups) |
 
 Formats are documented in [docs/formats/](docs/formats/); [examples/card/](examples/card/) is a complete minimal card.
 The desktop side (generating manifests from your ROM tree, scraping with ES-DE, rendering logos) is yours to script — Sortie

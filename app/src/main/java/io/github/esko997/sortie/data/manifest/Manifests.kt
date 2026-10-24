@@ -1,6 +1,15 @@
 package io.github.esko997.sortie.data.manifest
 
+import io.github.esko997.sortie.data.journal.JournalEntry
+import io.github.esko997.sortie.data.magazine.MagazineClipping
+import io.github.esko997.sortie.data.reference.ReferenceCard
+import io.github.esko997.sortie.data.user.GameProgress
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonElement
 
 /** Mirrors docs/formats. Unknown keys are ignored so the files can evolve ahead of the app. */
@@ -91,12 +100,62 @@ data class GuideEntry(
     val auto: Boolean = true
 )
 
+/**
+ * What a game needs beyond the built-in controller, as recorded by the user on the device. [UNKNOWN] is the default and claims
+ * nothing: it is not a compatibility statement and draws no badge. Serialised by [key] (stable, lower-case).
+ */
+@Serializable(with = ControllerSupportSerializer::class)
+enum class ControllerSupport(val key: String, val label: String, val badge: String) {
+    UNKNOWN("unknown", "Not recorded", ""),
+    GAMEPAD("gamepad", "Plays on the controller", "Pad OK"),
+    POINTER("pointer", "Needs a pointer (mouse / light gun)", "Pointer"),
+    MOTION("motion", "Needs motion controls", "Motion"),
+    TOUCH("touch", "Needs the touch screen", "Touch")
+}
+
+/** Unknown keys (a newer build's value) decode as [ControllerSupport.UNKNOWN] instead of failing the whole user.json. */
+object ControllerSupportSerializer : KSerializer<ControllerSupport> {
+    override val descriptor = PrimitiveSerialDescriptor("io.github.esko997.sortie.ControllerSupport", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: ControllerSupport) = encoder.encodeString(value.key)
+
+    override fun deserialize(decoder: Decoder): ControllerSupport {
+        val key = decoder.decodeString()
+        return ControllerSupport.entries.firstOrNull { it.key == key } ?: ControllerSupport.UNKNOWN
+    }
+}
+
+/**
+ * The user's own per-game notes: what the game needs ([controller]), personal [mappingNotes] (supplementing the guide's
+ * `controls`, which stay separate), and [returnNote] — "where was I?", shown on the companion while browsing and playing.
+ */
+@Serializable
+data class GameAnnotation(
+    val controller: ControllerSupport = ControllerSupport.UNKNOWN,
+    val mappingNotes: String = "",
+    val returnNote: String = ""
+) {
+    /** Nothing recorded: the entry is dropped from [UserData.gameAnnotations] rather than stored. */
+    fun isEmpty(): Boolean = controller == ControllerSupport.UNKNOWN && mappingNotes.isBlank() && returnNote.isBlank()
+
+    /** Surrounding whitespace trimmed; an all-blank note becomes empty. */
+    fun normalised(): GameAnnotation = copy(mappingNotes = mappingNotes.trim(), returnNote = returnNote.trim())
+}
+
 /** Slots in the companion dock. */
 const val DOCK_SLOTS = 5
+
+/** Reserved id of the built-in Want to play folder (tile `folder:want-to-play`); a `folders.json` entry with this id is ignored. */
+const val WANT_TO_PLAY_FOLDER_ID = "want-to-play"
 
 @Serializable
 data class UserData(
     val favourites: Set<String> = emptySet(),
+    /**
+     * Games queued to play later, shown by the built-in [WANT_TO_PLAY_FOLDER_ID] folder; independent of [favourites] and never
+     * removed on launch. Ids that are not (or no longer) in the index are kept and resolve again once the game is indexed.
+     */
+    val wantToPlay: Set<String> = emptySet(),
     val hidden: Set<String> = emptySet(),
     val profileOverrides: Map<String, String> = emptyMap(),
     /** Home layout: "list" or "grid"; grid columns are editable here or cycled on the device. */
@@ -111,11 +170,12 @@ data class UserData(
     val appColumns: Int = 8,
     /** Browse screens (system, folder, apps, search): "list" or "grid". */
     val browseLayout: String = "list",
-    /** Home tile order: "alpha", "count", "generation" (all generated, fixed) or "custom" (the user's [layout]). */
+    /** Home tile order: "alpha", "count", "generation" (generated, fixed, systems only) or "custom" (built from [layout]). */
     val homeSort: String = "alpha",
     /**
-     * The custom home layout, in order. Tile ids: `system:<systemId>`, `folder:<folderId>`, a game id, `app:<pkg>`,
-     * `shortcut:<pkg>/<shortcutId>`. Only this layout can hold games, apps and shortcuts; the generated sorts cannot.
+     * The custom home layout, in order. Tile ids: `system:<systemId>`, `folder:<folderId>`, `apps`, `continue`, a game id,
+     * `app:<pkg>`, `shortcut:<pkg>/<shortcutId>`. Continue, every smart folder and Apps show on Custom even when absent here
+     * (Continue first, the others appended); moving a tile saves the whole order. The generated sorts hold systems only.
      */
     val layout: List<String> = emptyList(),
     /** Shortcuts the user opted in to (ids `shortcut:<pkg>/<id>`); every other launcher shortcut stays out of the lists. */
@@ -127,5 +187,15 @@ data class UserData(
     /** Hero rotation on the idle companion screen (and the ambient tint it drives). */
     val heroRotation: Boolean = true,
     /** Home-key switcher as overlay windows over the running games (needs the draw-over-apps grant) rather than Sortie's screens. */
-    val overlaySwitcher: Boolean = true
+    val overlaySwitcher: Boolean = true,
+    /** Per-game controller requirement, mapping notes and "where was I?" notes (game id → annotation); empty entries are absent. */
+    val gameAnnotations: Map<String, GameAnnotation> = emptyMap(),
+    /** Independent of favourites and Want to play; a game has at most one personal shelf status. */
+    val gameProgress: Map<String, GameProgress> = emptyMap(),
+    /** Personal excerpts, recommendation clippings and notes; magazine packs stay read-only. */
+    val magazineClippings: List<MagazineClipping> = emptyList(),
+    /** Locally authored/imported reference cards keyed by exact library game id. */
+    val referenceCards: Map<String, List<ReferenceCard>> = emptyMap(),
+    /** Dated personal journal entries; recorded sessions remain in the play-history database. */
+    val journalEntries: List<JournalEntry> = emptyList()
 )
