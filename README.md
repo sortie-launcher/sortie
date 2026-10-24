@@ -1,5 +1,7 @@
 # Sortie
 
+<img src="branding/logo.svg" alt="Sortie — amber Split-S logo" width="480">
+
 An offline, controller-first game launcher for Android handhelds. Point it at the game folders already on your device and
 the emulators you have installed, or feed it a library curated on a desktop (ES-DE gamelists and artwork, hand-written notes
 and taste scores). It never scrapes, has no network permission, and never downloads or bundles games, BIOS files or emulators.
@@ -120,6 +122,23 @@ only. Details, publishing and update behaviour: [docs/RELEASE.md](docs/RELEASE.m
 - [docs/RELEASE.md](docs/RELEASE.md) — signing key custody, versions, signed APKs, beta status and magazine content
 - [docs/NOW_PLAYING.md](docs/NOW_PLAYING.md) — scope note for RetroArch companion controls (not built)
 - [CHANGELOG.md](CHANGELOG.md)
+
+## Branding
+
+The amber Split-S is Sortie's mark. [Brand assets](branding/) include a transparent `mark.svg`, an outlined
+`logo.svg` wordmark, a square `icon.svg` / 512px `icon.png`, and a 1280×640 `social-preview.svg` / `social-preview.png`.
+The SVGs are self-contained; lettering is outlined from Lato Heavy Italic and Lato Regular, so no fonts need to be installed.
+Colours: amber `#F2B134`, ink `#101418`, and light text `#E6E8EB`.
+
+The Android foreground uses the same geometry, centered inside the adaptive icon's 66dp safe circle. Its alpha shape
+also supplies Android 13+ themed icons. Keep the SVG mark and Android vector in sync when changing the geometry.
+Regenerate the PNG exports with ImageMagick, for example `magick -background none branding/icon.svg branding/icon.png`
+and `magick -background none branding/social-preview.svg branding/social-preview.png`.
+
+To set GitHub's repository-specific link image, upload `branding/social-preview.png` under **Settings → Social preview**.
+GitHub does not expose this upload through the public REST/GraphQL APIs or `gh`; repositories also have no independent
+avatar (the owner or organization avatar is shared). The matching [Sortie Zines](https://github.com/sortie-launcher/sortie-zines)
+identity uses the Split-S inside a folded page.
 
 ## Licence
 
