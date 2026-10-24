@@ -101,9 +101,10 @@ there is none do they fall back to a distrobox container named `ubuntu` holding 
 covered in [docs/RELEASE.md](docs/RELEASE.md); never uninstall a daily install to get a differently signed build onto it.
 
 **Magazines are opt-in.** A normal build contains no magazine issues and never downloads any. The Field Notes issues
-live in a separate content repository (`sortie-zines`); to bundle them, clone it yourself and pass its `issues/` folder:
+live in [sortie-launcher/sortie-zines](https://github.com/sortie-launcher/sortie-zines); clone it alongside the app and pass its `issues/` folder:
 
 ```
+git clone https://github.com/sortie-launcher/sortie-zines.git ../sortie-zines
 tools/build.sh -PsortieMagazinesDir=../sortie-zines/issues
 ```
 

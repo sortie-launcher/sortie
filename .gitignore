@@ -24,6 +24,7 @@ captures/
 *.pfx
 # tools/init-release-key.sh password file (the key lives outside the repository; this guards accidental copies)
 store-password
+bitwarden-import.txt
 # tools/release.sh output (signed APKs and checksums)
 /dist/
 # Private maintainer notes, evidence and session handoffs (never published)

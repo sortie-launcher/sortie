@@ -13,8 +13,9 @@ sources. Do not merge their old branches into this history or push them with `--
 patches so removed material cannot return through ancestry.
 
 Private maintainer notes belong under ignored `.local/`, not `docs/`. Keep signing files outside both repositories.
-After choosing and creating the GitHub repositories, add their remotes to the sanitized checkouts and push only `main`.
-Run the hosted workflow there; no GitHub upload or hosted CI run was part of local publication preparation.
+The repositories are [sortie-launcher/sortie](https://github.com/sortie-launcher/sortie) and
+[sortie-launcher/sortie-zines](https://github.com/sortie-launcher/sortie-zines). Their SSH origins are configured on the
+sanitized checkouts. Push only `main`, then run the hosted workflow; local verification is not a hosted CI result.
 Source publication does not distribute an APK. APK distribution additionally requires the key-backup and upgrade checks
 below.
 
@@ -28,18 +29,23 @@ again; leaking it means anyone can sign an "update" that Android accepts.
   `${XDG_DATA_HOME:-~/.local/share}/sortie/signing` (or `$SORTIE_SIGNING_DIR`). It must be outside the repository and
   owner-only. The script writes `sortie-release.p12` (PKCS12, RSA 3072, alias `sortie-release`) and `store-password`
   (random; also the key password), prints the certificate SHA-256, and refuses to overwrite or rotate an existing key.
-- **Back up both files together**, offline and encrypted (for example an encrypted USB drive kept away from the build
-  machine). The keystore without its password file is useless, and so is the password without the keystore.
-  Test the backup by reading it back (`keytool -list` against the copy) before relying on it.
+- Back up **both files together** to another machine and test recovery before distributing an APK. The keystore without
+  its password file is useless, and so is the password without the keystore. Read the stored copies back, verify their
+  hashes, and prove the password opens the private key matching the release certificate.
+- An additional offline, encrypted copy (for example an encrypted USB drive) is recommended. Online machine backups
+  protect against losing the build machine, but are not an offline recovery copy.
 - Never commit, upload, paste or send either file. `.gitignore` excludes `*.p12`, `*.jks`, `*.keystore`, `store-password`
   and `dist/`, but the real protection is keeping the files outside the repository.
 - Do not rotate the key during the beta. A new key means a different app as far as installed copies are concerned.
 - The certificate SHA-256 fingerprint is public information. Record it with the first release so later builds can be
   compared against it.
 
-**Custody status (2026-10-24):** the release key exists on the maintainer's build machine, outside the repository. Its
-certificate SHA-256 is `c4fc71bdee0987939c7af166465241c9c1bd3fc6c0a486d9dd76546975414cf4`. Re-running key creation refuses to
-overwrite it. **No off-machine backup has been made yet.** Make and verify the backup before the first APK leaves the machine.
+**Custody status:** the release key remains outside the repositories. Its certificate SHA-256 is
+`c4fc71bdee0987939c7af166465241c9c1bd3fc6c0a486d9dd76546975414cf4`; key creation refuses to overwrite it.
+Both signing files have verified owner-only backups on two separate machines: directory mode `0700`, files `0600`.
+Each stored copy was reopened, its bytes checked against the source, and its password used to recover a private key
+matching that certificate. Temporary transfer authorization was removed. Hostnames and paths are recorded privately.
+These are online backups; remote disk encryption and an additional offline copy have not been verified.
 
 ## Versions
 
@@ -199,7 +205,7 @@ verifies with `apksigner` as a single v2 signer with the certificate above.
 
 ### Remaining gates
 
-- [ ] Off-machine, tested backup of the release keystore **and** password file.
+- [x] Off-machine, tested backups of the release keystore **and** password file on two separate machines.
 - [ ] Broader launch-and-return coverage beyond PPSSPP 1.20.4 and RetroArch 1.22.2/Gambatte on API 33.
 - [ ] Hardware coverage beyond the devices actually tested: Android versions, single/dual screen, touch/controller,
   storage layouts and OEM settings screens.
