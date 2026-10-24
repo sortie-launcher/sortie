@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <!-- a chevron: launch / sortie -->
-    <path android:fillColor="#F2B134" android:pathData="M34,30 L62,54 L34,78 L42,78 L70,54 L42,30 Z" />
+    <!-- Split-S: centered within the adaptive icon's 66dp safe zone. -->
+    <group android:scaleX="0.52" android:scaleY="0.52" android:translateX="29.56" android:translateY="29.04">
+        <path android:fillColor="#F2B134"
+            android:pathData="M28 8H94L80 26H36L28 36H66L74 44H8L4 40Z M16 52H82L86 56L62 88H0L14 70H54L62 60H24Z" />
+    </group>
 </vector>
