@@ -1,6 +1,37 @@
 # Changelog
 
 ## Unreleased
+- On-device library setup (Home → Library, Settings → Library and emulators): add built-in or custom systems, several game
+  folders each through a controller/touch folder browser, file types, installed emulators in fallback order, BIOS and save
+  folders; re-index and remove systems. Saves merge into existing manifests (unknown fields and unedited entries kept), are
+  refused when files are unreadable or changed meanwhile, and commit atomically with recovery after interruption. Removing a
+  system never touches game files, saves or personal records. Home offers setup when no games are indexed.
+- Built-in emulator presets label device-tested versus source-checked launch methods and state core/BIOS prerequisites.
+  Sortie never downloads games, BIOS files or emulators.
+- The `sortie` folder saved by Library is remembered: missing storage no longer falls through to another volume. A missing or
+  unreadable game folder keeps its games (reported, not treated as empty); moved folders refresh stored paths even when file
+  size/time are unchanged; an invalid or interrupted configuration can no longer empty the index.
+- Failed game, app and shortcut launches show a plain explanation (missing file, emulator not installed, no emulator, refused
+  request) instead of failing silently; details remain in Diagnostics.
+- All files access screen in plain language with settings fallbacks; overlay, input-method and Home-role entries say where to
+  go when Android cannot open the page. Diagnostics lists real displays and offers screen moves only when Shizuku and two
+  switched-on displays are available.
+- Release tooling: `tools/init-release-key.sh` creates one persistent release key outside the repository;
+  `tools/release.sh` builds, verifies and checksums a signed, non-debuggable APK with no debug-key fallback. Validated
+  `versionCode`/`versionName` overrides. `tools/build.sh` checks style, runs debug and release unit tests and builds both
+  variants without formatting. Signed upgrade, launch compatibility and friend usability gates remain open (docs/RELEASE.md).
+- Shortcut pin requests from other apps (`requestPinShortcut`) now ask first: a dialog names the shortcut and the requesting
+  app/package with Add or Cancel (Cancel focused). Cancel, Back or leaving adds nothing; expired or invalid requests explain why.
+- Public-audience Field Notes zines now ship in the APK: nine revised issues, 41 articles and 131 bundled images, with
+  portable game references, public source provenance and compact rights notices rather than personal library assumptions.
+- Magazine contents list Games mentioned with All/On this device filtering; game pages link back through Featured in.
+  Matching respects platforms and editions, offers multiple local copies, and excludes placeholders/missing/arriving files
+  from availability. Opening a magazine link never launches a game.
+- Versioned magazine publication uses reproducible catalogs, build-time asset verification and staged private extraction.
+  Higher revisions win one shelf entry per issue ID; card copies win ties and are never overwritten. Existing external
+  version 1 packs remain readable; reading IDs and personal clippings are preserved.
+- Touching magazine list entries now places controller focus before acting, so filtering local games does not jump to the
+  issue header. Article links from game pages keep the original contents return location.
 - Per-game offline reference cards: write Markdown, import text or images, edit/delete, and pan/zoom maps. During gameplay,
   the companion can display and page through cards by touch without taking controller input from the game.
 - Magazine highlights, personal notes and a persistent scrapbook: mark paragraphs with Y, clip recommendations with Select,

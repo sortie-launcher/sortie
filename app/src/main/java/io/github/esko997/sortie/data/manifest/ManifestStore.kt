@@ -2,6 +2,7 @@ package io.github.esko997.sortie.data.manifest
 
 import android.os.FileObserver
 import android.util.Log
+import io.github.esko997.sortie.data.setup.ManifestCommit
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,14 +31,14 @@ class ManifestStore(private val sortieDir: File, private val scope: CoroutineSco
     )
 
     private val json = Json { ignoreUnknownKeys = true }
-    private val _snapshot = MutableStateFlow(load())
+    private val _snapshot = MutableStateFlow(load(previous = null))
     val snapshot: StateFlow<Snapshot> = _snapshot
     private val changes = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
     private var observer: FileObserver? = null
 
     init {
         @OptIn(FlowPreview::class)
-        scope.launch { changes.debounce(400).collect { _snapshot.value = load() } }
+        scope.launch { changes.debounce(400).collect { _snapshot.value = load(_snapshot.value) } }
         watch()
     }
 
@@ -58,14 +59,39 @@ class ManifestStore(private val sortieDir: File, private val scope: CoroutineSco
     }
 
     suspend fun reloadNow() {
-        _snapshot.value = withContext(Dispatchers.IO) { load() }
+        _snapshot.value = withContext(Dispatchers.IO) { load(_snapshot.value) }
         watch()
     }
 
-    private fun load(): Snapshot {
+    /**
+     * Reads the set under the [ManifestCommit] lock, after finishing any interrupted on-device setup commit, so a snapshot never
+     * mixes files from before and after a library change. If the commit cannot be finished (no write access yet) its staged
+     * copies are read instead and the reason is listed in [Snapshot.errors]. If the interrupted change no longer matches the
+     * files (damaged copy, edited meanwhile) the files are not published at all: [previous] (the last complete set this
+     * process read) is kept, or an empty library on a first load, with the reason in [Snapshot.errors].
+     */
+    private fun load(previous: Snapshot?): Snapshot = ManifestCommit.withLock(sortieDir) { loadLocked(previous) }
+
+    private fun loadLocked(previous: Snapshot?): Snapshot {
         val errors = mutableListOf<String>()
+        val recovery = ManifestCommit.recover(sortieDir)
+        recovery.error?.let { errors += it }
+        if (!recovery.consistent) {
+            Log.w(TAG, "not publishing an inconsistent manifest set: ${recovery.error}")
+            val kept = previous ?: Snapshot(
+                device = DeviceManifest(root = sortieDir.parentFile?.path ?: "/"),
+                systems = emptyList(),
+                library = LibraryRules(),
+                profiles = emptyMap(),
+                folders = emptyList(),
+                guide = emptyMap(),
+                guideStamp = ""
+            )
+            return kept.copy(loadedAt = System.currentTimeMillis(), errors = errors)
+        }
+        fun file(name: String): File = recovery.pending[name] ?: File(sortieDir, name)
         fun <T> read(name: String, default: T, parse: (String) -> T): T {
-            val f = File(sortieDir, name)
+            val f = file(name)
             if (!f.isFile) {
                 errors += "$name missing"
                 return default
@@ -80,7 +106,7 @@ class ManifestStore(private val sortieDir: File, private val scope: CoroutineSco
         val systemsFile = read("systems.json", SystemsManifest()) { json.decodeFromString(SystemsManifest.serializer(), it) }
         val launchers = read("launchers.json", LaunchersManifest()) { json.decodeFromString(LaunchersManifest.serializer(), it) }
         val folders = read("folders.json", FoldersManifest()) { json.decodeFromString(FoldersManifest.serializer(), it) }
-        val guideFile = File(sortieDir, "guide.json")
+        val guideFile = file("guide.json")
         val guide = read("guide.json", GuideFile()) { json.decodeFromString(GuideFile.serializer(), it) }
         val guideStamp = if (guideFile.isFile) "${guideFile.length()}:${guideFile.lastModified()}:${guide.built}" else ""
         // the card we actually found wins over a stale root in device.json

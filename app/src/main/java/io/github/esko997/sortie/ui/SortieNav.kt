@@ -50,12 +50,15 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
         Hotkeys.events.collect { key ->
             val route = nav.currentBackStackEntry?.destination?.route ?: ""
             when (key) {
-                Hotkeys.Key.SEARCH -> if (route != "search") nav.navigate("search") { launchSingleTop = true }
+                Hotkeys.Key.SEARCH -> if (route != "search" && route != "library") nav.navigate("search") { launchSingleTop = true }
                 Hotkeys.Key.PREV_FOLDER, Hotkeys.Key.NEXT_FOLDER -> if (route == "home") {
                     // on Home L1/R1 page the sort modes, or the consoles while "By Console" is the sort
                     val delta = if (key == Hotkeys.Key.NEXT_FOLDER) 1 else -1
                     if (vm.user.value.homeSort == "console") vm.cycleHomeConsole(delta) else vm.cycleHomeSort(delta, SORTS.map { it.first })
-                } else if (route != "magazines" && route != MAGAZINE_ARTICLE_ROUTE && route != "journal" && route != "reference/{id}" && systems.isNotEmpty()) {
+                } else if (
+                    route != "library" && route != "magazines" && route != MAGAZINE_ARTICLE_ROUTE &&
+                    route != "journal" && route != "reference/{id}" && systems.isNotEmpty()
+                ) {
                     val cur = nav.currentBackStackEntry?.arguments?.getString("id")
                     val i = systems.indexOfFirst { it.def.id == cur }
                     val next = when {
@@ -89,7 +92,8 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
                 onApps = { nav.navigate("apps") },
                 onManual = { nav.navigate("manual") },
                 onMagazines = { nav.navigate("magazines") },
-                onJournal = { nav.navigate("journal") }
+                onJournal = { nav.navigate("journal") },
+                onLibrary = { nav.navigate("library") }
             )
         }
         composable("system/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
@@ -117,8 +121,15 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
         composable("search") { SearchScreen(vm, onGame = { nav.navigate("game/${enc(it)}") }) }
         composable("diagnostics") { DiagnosticsScreen(vm) }
         composable("settings") {
-            SettingsScreen(vm, onDiagnostics = { nav.navigate("diagnostics") }, onManual = { nav.navigate("manual") }, onBackup = { nav.navigate("backup") })
+            SettingsScreen(
+                vm,
+                onDiagnostics = { nav.navigate("diagnostics") },
+                onManual = { nav.navigate("manual") },
+                onBackup = { nav.navigate("backup") },
+                onLibrary = { nav.navigate("library") }
+            )
         }
+        composable("library") { LibrarySetupScreen(graph, onDone = { nav.popBackStack() }, onGame = openIndexedGame) }
         composable("backup") { BackupScreen(vm) }
         composable("manual") { ManualScreen() }
         composable("magazines") {

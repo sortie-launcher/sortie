@@ -2,6 +2,7 @@ package io.github.esko997.sortie
 
 import android.app.Activity
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.os.Process
 import android.os.StrictMode
@@ -29,6 +30,7 @@ import io.github.esko997.sortie.shell.ScreenMover
 import io.github.esko997.sortie.shell.TaskSwitcher
 import io.github.esko997.sortie.ui.SwitcherHost
 import java.io.File
+import java.io.IOException
 
 /** Hand-rolled service locator; small enough that a DI framework would be more code than it saves. */
 class SortieApp :
@@ -110,8 +112,31 @@ class SortieApp :
             activity.finishAffinity()
         }
 
-        /** The card root is not known until device.json is read, so look for `sortie/device.json` on every mounted volume. */
+        private const val LOCATION_PREFS = "sortie_location"
+        private const val PINNED_DIR = "sortieDir"
+
+        /**
+         * Remembers [directory] (the card's `sortie` folder that on-device library setup just saved to, or the current one) in
+         * app-private preferences so [locateSortieDir] keeps using it. Synchronous disk write: call off the main thread.
+         * Throws [IOException] when the preference could not be written.
+         */
+        fun pinSortieDir(app: Application, directory: File) {
+            val ok = app.getSharedPreferences(LOCATION_PREFS, Context.MODE_PRIVATE).edit()
+                .putString(PINNED_DIR, directory.absoluteFile.normalize().path).commit()
+            if (!ok) throw IOException("Could not remember the library location ${directory.path}")
+        }
+
+        /** The directory [pinSortieDir] remembered, whether or not it is currently mounted; null before any setup save. */
+        fun pinnedSortieDir(app: Application): File? =
+            app.getSharedPreferences(LOCATION_PREFS, Context.MODE_PRIVATE).getString(PINNED_DIR, null)?.takeIf { it.isNotEmpty() }?.let(::File)
+
+        /**
+         * A pinned directory always wins, even while its card is missing: falling through to another volume would show an
+         * empty or different library as if personal data were lost. Unpinned (desktop-prepared cards), look for
+         * `sortie/device.json` on every mounted volume, since the card root is not known until device.json is read.
+         */
         fun locateSortieDir(app: Application): File {
+            pinnedSortieDir(app)?.let { return it }
             val candidates = buildList {
                 app.getExternalFilesDirs(null).filterNotNull().forEach { d ->
                     // .../Android/data/<pkg>/files -> volume root

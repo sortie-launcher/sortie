@@ -7,8 +7,11 @@ import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.Display
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.manifest.LaunchProfile
@@ -30,7 +33,10 @@ class LaunchManager(
     private val user: UserStore,
     private val playLog: PlayLog
 ) {
-    data class Attempt(val profileId: String, val command: String, val outcome: String)
+    /** Why an attempt did not start, for the user-facing failure message (the [Attempt.outcome] keeps the exact error). */
+    enum class Reason { STARTED, NO_PROFILE, FILE_MISSING, NOT_INSTALLED, NOT_FOUND, DENIED, ERROR }
+
+    data class Attempt(val profileId: String, val command: String, val outcome: String, val reason: Reason = Reason.STARTED)
 
     data class LogEntry(val at: String, val gameId: String, val attempts: List<Attempt>, val launched: Boolean)
 
@@ -42,6 +48,8 @@ class LaunchManager(
 
     private val _log = MutableStateFlow<List<LogEntry>>(emptyList())
     val log: StateFlow<List<LogEntry>> = _log
+
+    private val main = Handler(Looper.getMainLooper())
 
     fun profilesFor(game: GameEntity): List<LaunchProfile> {
         val snap = manifests.snapshot.value
@@ -60,18 +68,28 @@ class LaunchManager(
         val candidates = only?.let { listOf(it) } ?: profilesFor(game)
         var started: LaunchProfile? = null
         var startedDisplay: Int? = null
-        for (profile in candidates) {
+        // Nothing to try: the file is gone or the system has no profile. Recorded as an attempt so Diagnostics shows it.
+        val blocked = when {
+            definitelyMissing(file) -> Attempt("file", "", "file not found: ${file.path}", Reason.FILE_MISSING)
+            candidates.isEmpty() -> Attempt("none", "", "no launch profile for system ${game.systemId}", Reason.NO_PROFILE)
+            else -> null
+        }
+        blocked?.let { attempts += it }
+        for (profile in if (blocked == null) candidates else emptyList()) {
             if (!isInstalled(profile)) {
-                attempts += Attempt(profile.id, "", "package ${profile.`package`} not installed")
+                attempts += Attempt(profile.id, "", "package ${profile.`package`} not installed", Reason.NOT_INSTALLED)
                 continue
             }
-            val uri = runCatching { FileProvider.getUriForFile(context, "${context.packageName}.files", file) }.getOrNull()
-            val titleId = sidecarTitleId(file)
-            val intent = if (profile.generic) openWith(file, uri) else IntentBuilder.build(profile, IntentBuilder.vars(file, game.systemId, uri, titleId))
-            val (options, displayId, displayNote) = displayOptions(profile.display)
-            val command = IntentBuilder.describe(intent, displayId)
-            if (uri != null && !profile.generic && IntentBuilder.usesContentUri(profile)) grant(intent, uri)
+            // Everything that touches the file, the profile's template or the display belongs to the attempt: a malformed
+            // profile or an unreadable sidecar is reported like a failed start, and the next profile is tried.
+            var command = ""
             try {
+                val uri = runCatching { FileProvider.getUriForFile(context, "${context.packageName}.files", file) }.getOrNull()
+                val titleId = sidecarTitleId(file)
+                val intent = if (profile.generic) openWith(file, uri) else IntentBuilder.build(profile, IntentBuilder.vars(file, game.systemId, uri, titleId))
+                val (options, displayId, displayNote) = displayOptions(profile.display)
+                command = IntentBuilder.describe(intent, displayId)
+                if (uri != null && !profile.generic && IntentBuilder.usesContentUri(profile)) grant(intent, uri)
                 context.startActivity(intent, options?.toBundle())
                 attempts += Attempt(profile.id, command, "started" + (displayNote?.let { " ($it)" } ?: ""))
                 started = profile
@@ -80,15 +98,19 @@ class LaunchManager(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: ActivityNotFoundException) {
-                attempts += Attempt(profile.id, command, "activity not found: ${e.message}")
+                attempts += Attempt(profile.id, command, "activity not found: ${e.message}", Reason.NOT_FOUND)
             } catch (e: SecurityException) {
-                attempts += Attempt(profile.id, command, "security: ${e.message}")
+                attempts += Attempt(profile.id, command, "security: ${e.message}", Reason.DENIED)
             } catch (e: Exception) {
-                attempts += Attempt(profile.id, command, "${e.javaClass.simpleName}: ${e.message}")
+                attempts += Attempt(profile.id, command, "${e.javaClass.simpleName}: ${e.message}", Reason.ERROR)
             }
         }
         _log.update { (listOf(LogEntry(LocalTime.now().format(TS), game.id, attempts, started != null)) + it).take(50) }
         attempts.forEach { Log.i("SortieLaunch", "${game.id} via ${it.profileId}: ${it.outcome} | ${it.command}") }
+        if (started == null) {
+            val system = manifests.snapshot.value.systems.firstOrNull { it.id == game.systemId }?.label ?: game.systemId
+            notify(gameFailureMessage(game.title, system, attempts, candidates.associate { it.id to it.label }), sortieDisplay())
+        }
         // Record the session outside the try/catch so a logging failure can never trigger a second launch.
         started?.let { runCatching { playLog.start(game.id, it.id, it.display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) } }
         if (started != null) afterLaunch?.invoke(startedDisplay) // last: the activity may finish itself here
@@ -107,33 +129,87 @@ class LaunchManager(
         val (options, targetId, displayNote) = if (displayId != null) {
             Triple(ActivityOptions.makeBasic().setLaunchDisplayId(displayId), displayId, "companion")
         } else {
-            displayOptions("same")
+            // a display lookup that fails must not lose the launch: let the system place it, and say so in the log
+            runCatching { displayOptions("same") }.getOrElse { Triple(null, null, "display rule failed: ${it.message}") }
         }
-        val outcome = try {
+        val failure: Pair<Reason, String>? = try {
             start(options?.toBundle())
             null
         } catch (e: CancellationException) {
             throw e
+        } catch (e: ActivityNotFoundException) {
+            Reason.NOT_FOUND to "activity not found: ${e.message}"
+        } catch (e: SecurityException) {
+            Reason.DENIED to "security: ${e.message}"
         } catch (e: Exception) {
-            "${e.javaClass.simpleName}: ${e.message}"
+            Reason.ERROR to "${e.javaClass.simpleName}: ${e.message}"
         }
-        val launched = outcome == null
+        val launched = failure == null
         val described = command + (targetId?.let { " --display $it" } ?: "")
-        val attempt = Attempt(id.substringBefore(':'), described, outcome ?: ("started" + (displayNote?.let { " ($it)" } ?: "")))
+        val attempt = Attempt(
+            id.substringBefore(':'),
+            described,
+            failure?.second ?: ("started" + (displayNote?.let { " ($it)" } ?: "")),
+            failure?.first ?: Reason.STARTED
+        )
         _log.update { (listOf(LogEntry(LocalTime.now().format(TS), id, listOf(attempt), launched)) + it).take(50) }
         Log.i("SortieLaunch", "$id: ${attempt.outcome} | ${attempt.command}")
-        if (!launched) return false
+        if (failure != null) {
+            notify(externalFailureMessage(appLabel(id), id.startsWith(SHORTCUT_PREFIX), failure.first), displayId ?: sortieDisplay())
+            return false
+        }
         if (displayId != null) return true
         runCatching { playLog.start(id, null, "same") }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
         afterLaunch?.invoke(targetId) // last: the activity may finish itself here
         return true
     }
 
-    /** `<game>.titleid` next to the file (or `<stem>.psvita`, ES-DE's convention) holds a title id when the emulator needs one. */
-    private fun sidecarTitleId(file: File): String? {
-        val dir = file.parentFile ?: return null
-        return listOf(File(dir, file.name + ".titleid"), File(dir, file.nameWithoutExtension + ".psvita"))
+    /**
+     * True only when the game file is certainly gone: its folder is missing (card removed) or listable without it. A folder
+     * that exists but cannot be listed says nothing, so the launch is still tried and the emulator reports what it can.
+     */
+    private fun definitelyMissing(file: File): Boolean = runCatching {
+        if (file.isFile) return@runCatching false
+        val dir = file.parentFile ?: return@runCatching true
+        !dir.exists() || dir.list() != null
+    }.getOrDefault(false)
+
+    /** Sortie's display for a message; null (default display) when no activity supplies it or it has gone away. */
+    private fun sortieDisplay(): Int? = runCatching { currentDisplayId?.invoke() }.getOrNull()
+
+    /**
+     * Tells the user why a launch did not start: a long toast on [displayId] (else Sortie's default display context). Owned
+     * here, not by a screen, so failures from any activity or companion picker are shown exactly once even when navigation
+     * has finished. Safe from any thread.
+     */
+    fun notify(message: String, displayId: Int?) {
+        main.post {
+            runCatching {
+                val app = context.applicationContext
+                val display = displayId?.let { app.getSystemService(DisplayManager::class.java)?.getDisplay(it) }
+                Toast.makeText(display?.let { app.createDisplayContext(it) } ?: app, message, Toast.LENGTH_LONG).show()
+            }.onFailure { Log.w("SortieLaunch", "failure toast", it) }
+        }
+    }
+
+    /** The installed app's own name for an `app:<pkg>` or `shortcut:<pkg>/<id>` id; null when it is not installed. */
+    private fun appLabel(id: String): String? {
+        val pkg = id.substringAfter(':').substringBefore('/').takeIf { it.isNotBlank() } ?: return null
+        val pm = context.packageManager
+        return runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrNull()?.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * `<game>.titleid` next to the file (or `<stem>.psvita`, ES-DE's convention) holds a title id when the emulator needs one.
+     * An unreadable sidecar is logged and treated as absent: most profiles don't use it.
+     */
+    private fun sidecarTitleId(file: File): String? = runCatching {
+        val dir = file.parentFile ?: return@runCatching null
+        listOf(File(dir, file.name + ".titleid"), File(dir, file.nameWithoutExtension + ".psvita"))
             .firstOrNull { it.isFile && it.length() in 1..64 }?.readText()?.trim()?.takeIf { it.isNotEmpty() }
+    }.getOrElse {
+        Log.w("SortieLaunch", "title id sidecar for ${file.name}", it)
+        null
     }
 
     private fun openWith(file: File, uri: Uri?): Intent {
@@ -167,5 +243,56 @@ class LaunchManager(
 
     companion object {
         private val TS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
+        private const val SHORTCUT_PREFIX = "shortcut:"
+        private const val DETAILS = "Details are in Settings → Diagnostics."
+
+        /**
+         * What to tell the user when no profile started [title]. [labels] maps profile ids to their names. The first problem that
+         * stops every launch wins (missing file, no emulator set up); otherwise the last attempt that reached Android explains
+         * the failure, and when every emulator is missing that is the message.
+         */
+        fun gameFailureMessage(title: String, system: String, attempts: List<Attempt>, labels: Map<String, String>): String {
+            val name = title.ifBlank { "this game" }
+            if (attempts.any { it.reason == Reason.FILE_MISSING }) {
+                return "Can't start $name: its file isn't on this device right now. " +
+                    "Check that the storage card is inserted, then re-index in Settings → Diagnostics."
+            }
+            if (attempts.isEmpty() || attempts.any { it.reason == Reason.NO_PROFILE }) {
+                return "Can't start $name: no emulator is set up for $system yet. Add one in Settings."
+            }
+            fun label(a: Attempt) = labels[a.profileId] ?: a.profileId
+            val tried = attempts.lastOrNull { it.reason != Reason.NOT_INSTALLED && it.reason != Reason.STARTED }
+            if (tried == null) {
+                val missing = attempts.filter { it.reason == Reason.NOT_INSTALLED }.map(::label).distinct()
+                val names = if (missing.size <= 2) missing.joinToString(" or ") else missing.take(2).joinToString(", ") + " or another emulator"
+                val verb = if (missing.size == 1) "isn't" else "aren't"
+                return "Can't start $name: $names $verb installed. Install it, or choose another emulator for $system in Settings."
+            }
+            val emulator = label(tried)
+            return when (tried.reason) {
+                Reason.NOT_FOUND ->
+                    "Can't start $name: $emulator didn't accept the game. Its launch settings may not match the installed version; " +
+                        "try another emulator from the game's page. $DETAILS"
+                Reason.DENIED -> "Can't start $name: Android didn't let Sortie open $emulator. $DETAILS"
+                else -> "Can't start $name with $emulator. $DETAILS"
+            }
+        }
+
+        /** What to tell the user when an app ([shortcut] = false) or one of its shortcuts did not open; [label] null = not installed. */
+        fun externalFailureMessage(label: String?, shortcut: Boolean, reason: Reason): String {
+            if (label == null) {
+                return if (shortcut) "Can't open that shortcut: its app isn't installed any more." else "Can't open that app: it isn't installed any more."
+            }
+            val what = if (shortcut) "this $label shortcut" else label
+            return when (reason) {
+                Reason.NOT_FOUND -> if (shortcut) {
+                    "Can't open $what: $label may have removed or disabled it. Add it again from the Apps screen."
+                } else {
+                    "Can't open $label: it may have been disabled or have no screen to open."
+                }
+                Reason.DENIED -> "Can't open $what: Android didn't allow it. $DETAILS"
+                else -> "Can't open $what. $DETAILS"
+            }
+        }
     }
 }

@@ -1,138 +1,169 @@
-# Friend-ready preview and public release
+# Signed APK releases
 
-## Goal and release gate
+Sortie is distributed as a signed APK sent directly to a tester or attached to a GitHub release. There is no Google Play
+listing, app store account, update server, automatic updater, telemetry or download service. The goal, acceptance scenarios
+and current evidence for the first beta are in [BETA.md](BETA.md); this file is the maintainer's procedure.
 
-A new user can install Sortie, select their own games, configure a supported installed emulator, launch a game and return
-without editing JSON, using ADB, or depending on the author's desktop ROM pipeline. Updating Sortie must preserve their data.
-The first audience is one nontechnical friend, not an app-store launch. Feature breadth is not the release gate.
+## One permanent release key
 
-**Current status (2026-10-24): not yet friend-ready.** The launcher has substantial device testing, but a blank installation
-still expects externally authored manifests. Release signing and a safe distribution/update path are not configured.
-The wizard described below is planned work, not a shipped feature.
+Android only installs an update over an existing app when both are signed by the **same certificate**. The release key is
+therefore permanent for the app id `io.github.esko997.sortie`: losing it means every installed copy can never be updated
+again; leaking it means anyone can sign an "update" that Android accepts.
 
-## Stage 1 — first friend preview (required)
+- Create it once with `tools/init-release-key.sh [directory]`. The default directory is
+  `${XDG_DATA_HOME:-~/.local/share}/sortie/signing` (or `$SORTIE_SIGNING_DIR`). It must be outside the repository and
+  owner-only. The script writes `sortie-release.p12` (PKCS12, RSA 3072, alias `sortie-release`) and `store-password`
+  (random; also the key password), prints the certificate SHA-256, and refuses to overwrite or rotate an existing key.
+- **Back up both files together**, offline and encrypted (for example an encrypted USB drive kept away from the build
+  machine). The keystore without its password file is useless, and so is the password without the keystore.
+  Test the backup by reading it back (`keytool -list` against the copy) before relying on it.
+- Never commit, upload, paste or send either file. `.gitignore` excludes `*.p12`, `*.jks`, `*.keystore` and `dist/`,
+  but the real protection is keeping the files outside the repository.
+- Do not rotate the key during the beta. A new key means a different app as far as installed copies are concerned.
+- The certificate SHA-256 fingerprint is public information. Record it with the first release so later builds can be
+  compared against it.
 
-### 1. Guided setup and repair
+**Custody status (2026-10-24):** the release key has been created at the default location on the maintainer's build machine.
+**No off-machine backup has been made yet.** Make and verify the backup before the first APK leaves the machine.
 
-Prefer an **in-app setup wizard**, not a second desktop installer. Keep the existing manifest format as the launch/indexing
-contract rather than introducing a competing configuration system.
+## Versions
 
-- [ ] Explain storage access, then choose internal storage or an SD card/library location. Support denial and cancellation.
-- [ ] Detect an existing Sortie configuration and offer to use it. Never overwrite a desktop-managed card or user data silently.
-- [ ] Select ROM directories, suggest systems from known folder names/extensions, and ask the user to confirm ambiguous matches.
-- [ ] Select an installed emulator per supported system; explain missing emulators and required emulator-side setup.
-- [ ] Generate a valid configuration and show scan progress, game counts and actionable errors. Artwork/guide data is optional.
-- [ ] Offer a real **Test launch** and verify the return-to-Sortie path before calling setup complete.
-- [ ] Offer default-Home selection only after a usable library exists; retain a clear route to Android's launcher settings.
-- [ ] Make setup available again from Settings: repair moved/missing folders, change emulators, rescan and cancel safely.
+- `versionCode` must increase for every APK that leaves the machine and is never reused. Android refuses to install an
+  update with a lower `versionCode` than the installed one.
+- `versionName` is the human version, `X.Y.Z` or `X.Y.Z-pre` (for example `0.1.0-beta.2`).
+- The defaults live in `app/build.gradle.kts` (currently code `2`, name `0.1.0-beta.1`). Override per build with
+  `-PsortieVersionCode=N -PsortieVersionName=X.Y.Z-beta.N`; Gradle rejects malformed values. Bump the defaults when a
+  version is released so an ordinary build cannot accidentally reuse a released number.
+- Add a `CHANGELOG.md` section for each distributed version.
 
-Start with a small, explicitly verified emulator/profile set. The existing evidence in `LAUNCHERS.md` is device/version
-specific, not a promise that every fork or current release behaves identically. Advanced custom profiles remain available.
-Selecting a directory does not configure the emulator's own storage grant, cores or BIOS: those prerequisites need honest
-instructions and launch diagnostics, not a fake success indicator. Do not download or bundle ROMs, BIOS, firmware or keys.
+## Building a release
 
-Implementation constraints confirmed by source review:
+```
+tools/build.sh                 # style check, debug + release unit tests, debug APK and an UNSIGNED release APK
+tools/release.sh -PsortieVersionCode=3 -PsortieVersionName=0.1.0-beta.2
+```
 
-- `Indexer.indexSystem` accepts absolute or card-relative roots, scans immediate files only, and identifies games by
-  `system-id/filename`. Duplicate filenames across roots collapse to one entry; do not silently promise recursive discovery
-  or distinct copies. Keep ids stable and force a rescan when a root changes: the incremental fast path compares size/mtime,
-  not the stored game path.
-- `ManifestStore.watch()` does not attach while its directory is absent. A first-run writer must explicitly create/load/watch
-  the completed configuration; merely writing files is insufficient. Stage and validate the complete set before publishing,
-  so observers/indexing cannot act on half-written setup. Existing empty or malformed files are not permission to overwrite.
-- `SortieApp.Graph` binds stores to one configuration directory for the process lifetime. Library selection needs an explicit,
-  persisted location/rebind design; the existing volume scan is not an arbitrary-directory preference.
-- Missing storage has a gap: the top-level unreadable-root guard preserves the index, but a missing secondary system root is
-  skipped before the unreadable flag is set, allowing its games to become stale. Reproduce and fix that case before exposing
-  arbitrary/multiple-volume selection. Do not describe all card-removal paths as already safe.
-- `SortieViewModel.launch()` currently discards `LaunchManager.launch()`'s failure result. Setup and ordinary launching need
-  visible, actionable failure feedback; a diagnostic log alone is not sufficient for a nontechnical user.
+`tools/release.sh` reads the key from the default signing directory (or `SORTIE_SIGNING_DIR`, or all three of
+`SORTIE_RELEASE_KEYSTORE`, `SORTIE_RELEASE_KEYSTORE_PASSWORD_FILE`, `SORTIE_RELEASE_KEY_ALIAS`). It:
 
-**Acceptance:** from a fresh app on a spare device/emulator, install an APK and configure a lawful local test game using only
-the touchscreen/controller. Launch it, return, reboot and launch again. Repeat with storage permission denied, no emulator,
-an empty folder, a missing card and an existing desktop-managed configuration. No existing library or personal data is lost.
-Do not uninstall the daily Thor to simulate a fresh install.
+- refuses signing files that are missing, inside the repository or readable by other users;
+- builds `assembleRelease` without the Gradle daemon, configuration cache or build cache;
+- fails instead of falling back to the debug key, and fails if signing is only partly configured;
+- verifies the APK has exactly one v2 signer whose certificate matches the release key, the expected package, a valid
+  version and no `debuggable` flag, and that the password was not written into build outputs or daemon logs;
+- writes `dist/sortie-<versionName>-code<versionCode>.apk` and its `.sha256`, and refuses to replace an existing file of the
+  same name with different contents.
 
-### 2. Stable identity, signing and updates
+It does not format code, upload, tag or publish anything. Publishing is a separate manual step.
+Without signing variables `assembleRelease` (including `tools/build.sh` and CI) produces an **unsigned** APK. That is build
+evidence only; Android will not install it, and it must not be distributed.
 
-- [ ] Confirm the distribution application id before the first outside installation. Keep `io.github.esko997.sortie` unless
-  there is a deliberate migration decision; do not rename it casually after users have data.
-- [ ] Create and securely back up an owner-controlled release signing key outside the repository. Configure release signing
-  through private environment/CI secrets; never distribute the key or use a transient developer debug key for friend releases.
-- [ ] Define monotonic `versionCode` values and human-readable preview versions; publish changelog entries for each build.
-- [ ] Verify an in-place update between two builds signed by the same release key, preserving settings, sessions, notes,
-  media, magazine reading state, shortcut ownership and Android grants.
-- [ ] Provide a trusted APK download, version and checksum, plus short sideload/update instructions.
+## Distributing
 
-A different signing certificate cannot replace an existing installation with the same app id. Current daily debug installs
-need a separately planned transition; **uninstalling them is not an acceptable migration shortcut**. JSON backups do not
-restore Android shortcut pins/grants or every app-private preference. Do not rotate signing keys mid-preview.
-Distribution signing must fail clearly when credentials are missing; never silently fall back to a debug certificate.
-An unsigned CI build is useful verification, but must remain visibly labelled and separate from distribution artifacts.
+1. Make sure the key backup exists (see above) and `tools/build.sh` passes.
+2. Run `tools/release.sh` with a new `versionCode` and `versionName`.
+3. Install the APK on an isolated test device (below) over the previous release and check that data survived.
+4. Send the APK with its SHA-256 and the changelog section, or attach them to a GitHub release. Name the version in the
+   message so the tester can compare it with Android's app info.
 
-Keep minification disabled initially. It is an optional later optimization, not a public-release requirement; enable it only
-with release-variant device tests covering serialization, Room, reflection and the Shizuku service.
+Tester instructions: download the APK, check the SHA-256 if you can, open it and allow your browser or file manager to
+install unknown apps when Android asks. For an update, open the new APK and choose **Update**; never uninstall first,
+because uninstalling removes Sortie's Android-owned and app-private data (see the manual's *Backup and restore*).
+If Android says the app is not compatible or the package conflicts, stop and report it: that means a signature mismatch.
 
-### 3. Optional capabilities and safe defaults
+## Debug and release signatures
 
-- [ ] Ordinary browsing/launching works without Shizuku, overlay access, default-Home status or the radial keyboard.
-- [ ] Explain each optional permission at the feature that needs it. Handle revoked grants and Shizuku stopping/rebooting.
-- [ ] Replace the first-run ADB instructions with plain-language guidance and handle an unavailable OEM permission-settings
-  activity. Connect the overlay setting to Android's permission screen instead of only saving the preference.
-- [ ] Single-screen, touch-only and controller navigation remain usable. In particular, `DiagnosticsScreen` still passes
-  literal display ids `0` and `4` to `moveTopApp`; use discovered displays and hide actions that cannot be performed.
-- [ ] Explain limitations of task moving/switching on unsupported firmware; do not equate missing capability with app failure.
-- [ ] Verify that setup, upgrades and normal use never silently change another launcher's settings or close unrelated tasks.
+Debug and release builds share the app id but not the certificate: `tools/build.sh` and `tools/dev.sh` produce
+debug-key-signed builds, `tools/release.sh` release-key-signed ones. Android therefore refuses to install a release APK over
+a debug install (and the reverse), usually as "App not installed" or `INSTALL_FAILED_UPDATE_INCOMPATIBLE`.
 
-### 4. Data safety and recovery
+**Never uninstall a daily-use debug installation to get past this error.** Uninstalling deletes Sortie's app database
+(play history not yet exported), magazine reading positions, the remembered library location, shortcut pins, granted
+permissions and the Home role. Instead:
 
-- [ ] Complete a full export/restore round trip on a spare installation, including the new personal-data features.
-- [ ] Provide an understandable attachment-preservation workflow. Current JSON exports include reference/journal metadata,
-  **not** `reference/` images or `journal/media/` screenshots; a nontechnical user must not mistake that for a complete backup.
-- [ ] Document what stays Android-owned or app-private, including shortcut pins/grants and magazine reading positions.
-- [ ] Exercise full/unwritable storage, card removal/reinsertion and interrupted writes without erasing a previously indexed
-  library, replacing valid settings with defaults or claiming an unsuccessful save succeeded.
-- [ ] Preserve stable game ids when changing configured paths, or show and implement an explicit migration of personal data.
+- Keep daily development devices on debug builds, updated with `tools/dev.sh install` (`adb install -r`).
+- Exercise release builds and release-to-release upgrades on an **isolated test device**: an Android emulator (AVD) or a
+  spare handheld that holds no one's daily setup. A second Android user on the same device is not isolation: Android
+  requires every user's copy of a package to have the same signer.
+- Moving a daily device from debug to release signing is a deliberate migration, not a fix: it requires an uninstall, so do
+  it only with the owner's agreement, after a verified backup export and a copy of the card's `sortie/` folder, and only
+  once the release update path has been proven on the test device.
 
-### 5. Supportable friend handoff
+## Release gates for the beta
 
-- [ ] A short first-run guide: install, grant storage, add one system, test launch, optional Home role, update and recover.
-- [ ] An honest compatibility list for the friend's actual device, Android version and emulator versions.
-- [ ] Errors explain what to do next: missing emulator/core/BIOS, unreadable folder, invalid config or unsupported launch.
-- [ ] A user-initiated diagnostic export that previews/redacts personal paths, filenames, notes and launch arguments.
-  Existing Diagnostics/logcat output is useful to developers but is not automatically safe to post publicly.
-- [ ] Run one observed setup session with the friend. Record where instructions are needed; fix that friction before adding
-  new launchers or distribution channels. Collect feedback without adding telemetry by default.
+Implemented in source on `beta/0.1` (acceptance evidence is tracked in [BETA.md](BETA.md), not here):
 
-## Stage 2 — wider public release
+- On-device library setup and maintenance (Home/Settings → Library): multiple systems and folders, built-in emulator
+  presets with plain prerequisites, BIOS/save folders, re-index, safe removal, existing desktop configurations preserved.
+- Missing or unreadable storage keeps the previous index and the remembered settings location; failed launches show a message.
+- Plain-language All files access screen with fallbacks; overlay/Shizuku/Home role/radial keyboard stay optional.
+- Persistent release key tooling, versioning and verified signed APK packaging.
 
-- [ ] Review the complete publishable tree and history for personal paths, device identifiers, secrets and private content.
-  Ship clean examples rather than the author's real card manifests or backups.
-- [ ] Audit dependency licences and provide notices. Separately review system logos, cover art, magazine pictures and article
-  sources; an MIT code licence does not grant redistribution rights to those assets. Keep optional content packs separate.
-- [ ] Test exported activities/providers/services, URI grants, externally supplied intents, malformed packs/manifests and
-  path containment. Release builds must not expose debug launch hooks or be debuggable.
-- [ ] Expand the device matrix: supported Android versions, single/dual-screen, controller/touch, font scaling, different
-  storage layouts and permission denial. Existing Thor/DMG evidence is not an all-Android compatibility claim.
-- [ ] Add signed release automation only after key custody and repository ownership are settled; protect signing secrets from
-  untrusted pull requests. Publishing is a separate explicit operation, not part of a normal local build.
-- [ ] Establish issue templates, supported-version policy, release notes and an offline/privacy statement.
-- [ ] Consider Play Store or other stores separately: broad file access and installed-app visibility need distribution-policy
-  review. A direct friend APK does not require solving store approval or an in-app updater first.
+Still open before handing an APK to a nontechnical friend:
 
-## Build verification and evidence
+- [ ] Off-machine, tested backup of the release keystore **and** password file.
+- [ ] A signed release built by `tools/release.sh`, installed on an isolated device, then updated in place by a second
+  signed build with a higher `versionCode`, preserving settings, notes, sessions, attachments and magazine positions.
+- [ ] Launch-and-return coverage across the presets. So far, on the API 33 test emulator, a library set up on the device
+  launched a lawful homebrew PSP disc image (ISO) in PPSSPP 1.20.4 and the game was seen running. Loose `.elf` PSP homebrew
+  did not start that way. Other emulators (including RetroArch cores), return/reboot and real handhelds through the
+  on-device setup are not yet proven. Compatibility depends on the device and emulator version; presets marked "not tested
+  on a device" remain unverified.
+- [ ] An observed first-time setup by someone unfamiliar with the code; fix the friction found before adding features.
+- [ ] A rights review of bundled third-party media before any public upload (see the README's *Licence*), including
+  `field-notes-009/media/windjammers-disc-duel-beach.webp`, whose upstream source is unknown.
+- [ ] Hardware coverage beyond the devices actually tested: Android versions, single/dual screen, touch/controller,
+  storage layouts and OEM settings screens. Existing Thor/DMG/emulator evidence is not a general compatibility claim.
 
-`./tools/build.sh` now checks style, runs JVM tests for **debug and release**, and builds both APK variants. It does not format
-source, hide build output or flatten forwarded arguments into shell code. Run formatting explicitly when desired.
-CI runs the same task set and keeps the debug APK and **unsigned** release APK as distinct artifacts. An unsigned artifact
-is compile/package evidence only: it is not an installable friend release and the workflow does not sign or publish it.
+Later, for a wider public release:
 
-Verified in the isolated current-source snapshot on 2026-10-24:
+- Review the published tree and history for personal paths, device identifiers and private content.
+- Audit dependency licences and provide notices.
+- Test exported components, URI grants, malformed manifests/packs and path containment; release builds must not expose
+  debug launch hooks.
+- Signed CI automation only after key custody and repository ownership are settled; never expose signing secrets to
+  untrusted pull requests.
+- App stores are a separate decision: broad file access and installed-app visibility need store-policy review.
 
-- [x] Actual `tools/build.sh` completed: debug and unsigned release APKs built; ktlint passed.
-- [x] 130 JVM tests passed for each build variant (zero failures, errors or skips).
-- [x] APK inspection reports release `debuggable=false`; signature verification confirms it is currently unsigned.
-- [x] A deliberate nonexistent Gradle task returns a nonzero helper exit status with the full error visible.
-- [x] Building leaves application source unchanged; there is no implicit formatter competing with another agent's edits.
-- [ ] Run the workflow on GitHub after a remote exists. Local success is not a claim that hosted CI has run.
-- [ ] Exercise a genuinely release-signed APK on a spare device. No release APK was installed on a daily handheld in this pass.
+Keep minification disabled until release-variant device tests cover serialization, Room, reflection and the Shizuku service.
+
+## Publishing bundled magazine issues
+
+This is content publication, separate from release signing or the setup work above. Public zines are taste-led but written
+for a general audience; they do not assume the reader owns a particular library or handheld. Include games outside the
+local collection. Keep operational audits and personal data outside published packs.
+
+From the repository root, validate and publish an explicitly chosen authoring directory:
+
+```sh
+python3 tools/publish-magazines.py /path/to/issue-sources --check
+python3 tools/publish-magazines.py /path/to/issue-sources
+```
+
+The directory contains one `<issue-id>/` folder per issue. In the author's workspace it is `../guide/magazines`, but ordinary
+builds never read that location. Publication stages a complete snapshot into `app/src/main/assets/magazines/`, including a
+reproducible size/SHA-256 catalog. A failed final swap restores the prior output. Review the asset changes with the source
+changes; do not hand-edit only the packaged copy.
+
+- Use schema 2, positive `revision`, stable issue/article/reference IDs and portable `games` references. Increment revision
+  for a correction; retain the original publication date. Check cross-issue identity and meaningful edition aliases.
+- Run the publisher's schema/path/privacy checks. Also review prose and source claims, decode every image, inspect cover
+  pixels for private wording, and verify provenance. The publisher does not replace editorial review or pixel inspection.
+- Keep a compact rights notice and source credits. Third-party images/manual extracts are not MIT; attribution and
+  non-commercial distribution are not grants of permission. The earlier zine pass did not perform separate clearance; review the distribution position before public upload.
+- `verifyMagazineAssets` runs before builds and rejects files differing from the catalog. Build from the committed assets
+  without network fetching or private paths. `BundledMagazineAssetsTest` also opens every bundled article with the app parser.
+- Smoke the installed APK: merged shelf, public text/images/sources, all/local game lists, library links and Featured in,
+  B hierarchy, page/shoulder navigation, Continue reading after restart, and dual-screen X/section navigation where available.
+- Upgrade existing installations with `install -r`, never uninstall a daily handheld. Verify user data and card packs stay
+  untouched. Higher revision wins, card wins a tie, and malformed card copies cannot hide valid bundled editions.
+
+The initial public bundle is Field Notes 001–009, revision 2: 41 articles, 131 images, about 12 MB. The release-signing and
+friend-readiness gates above remain separate; a tested debug APK is not a signed public release.
+
+Evidence recorded by the separate magazine integration session on 2026-10-24 (not re-run by the beta integrator on the Thor): `tools/build.sh --no-daemon --max-workers=2` passed style checks,
+152 JVM tests per variant, and both APK builds. Both APKs contain the same verified nine-issue catalog. On the AYN Thor,
+the debug APK was installed with `-r`; all 41 articles' lead images, prose and offline Sources were opened. Local filtering,
+reciprocal links/back focus, paging, article boundaries, section jumps, X swaps and restart/resume were exercised.
+Original reading preferences were restored after testing; `user.json` and all nine original card manifests remained
+byte-identical. This did not test game emulation or install the unsigned release APK.

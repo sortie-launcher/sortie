@@ -1,7 +1,73 @@
 # Sortie manual
 
-Sortie is an offline, controller-first game launcher. Card contents (systems, folders, launchers, art and guide notes) are
-written on the desktop and deployed. Preferences, personal game notes and play history live on the device.
+Sortie is an offline, controller-first game launcher. It lists the games already on your device and starts them with the
+emulators you have installed. Set up your library on the device (below), or use a library prepared on a computer.
+Preferences, personal game notes and play history live on the device. Sortie has no internet access and never downloads games,
+BIOS files or emulators.
+
+## Getting started
+
+1. **All files access.** On first start Sortie asks for Android's *All files access*. It is needed to read your game folders
+   and to keep Sortie's settings and your notes. **Open settings** goes to the switch; if your device opens a different page,
+   look for Settings → Apps → Special app access → All files access → Sortie. Everything else Sortie can ask for is optional.
+
+2. **Install your emulators first** and finish each one's own first-run setup. Sortie only starts emulators that are already
+   installed. BIOS or firmware files, RetroArch cores (RetroArch → Online Updater) and emulator settings are set up inside
+   each emulator; Sortie cannot do that for you and does not supply them.
+
+3. **Home → Library** (or **Settings → Library and emulators**) → **Add a system…**. Pick the kind of games, e.g.
+   *PlayStation 2* or *Game Boy Advance*, or **Something else…** to name your own. Then:
+   - **Add a folder…** and browse to the folder that holds the game files themselves, then **Use this folder**. Add as many
+     folders as you need; they can be on internal storage or a memory card.
+   - Check **File types**. The suggestion fits most libraries; leave it empty to list every file in the folders.
+   - Under **Emulators**, the first *installed* one in the list starts games. **Add an emulator…** adds another; select one to
+     move it up/down or remove it. **Open with…** lets Android ask which app to use. Each system shows a **Before the first
+     game** note with that emulator's requirements and whether its launch method was tested on a device.
+   - **Save.** Sortie writes the settings, reads the folders and shows how many games it found, plus a few games to try.
+
+4. **Test a game.** Open one from the result and start it. Sortie can only tell that the emulator opened: check that the game
+   itself runs, then come back to Sortie.
+
+5. Optional: **Settings → Default home app** makes Sortie your Home screen; the same entry switches back to another launcher.
+
+Repeat **Add a system…** for each kind of game. You can leave Library while it saves or indexes: the work carries on.
+
+### What Sortie finds
+
+- Only files **directly inside** a chosen folder are listed. Subfolders are not searched: add each one as another folder.
+  The folder check tells you when subfolders hold matching files the list will miss.
+- Files must end in one of the system's file types. Two files with the same name in different folders of one system appear
+  as a single game.
+- PSP: Sortie hands disc images (ISO, CSO, CHD) to PPSSPP. Homebrew kept as **<name>/EBOOT.PBP** is not found, and a loose
+  **.elf** or **.prx** may not start from Sortie; start such homebrew from inside PPSSPP.
+- After copying new games, use **Library → Re-index every system** (or **Settings → Diagnostics → Re-index everything**).
+
+### Maintaining your library
+
+- Select a system in Library to rename it, add, replace or remove folders, change file types or reorder emulators. A system
+  keeps its identity when edited, so its favourites, notes and play history stay attached.
+- **BIOS and save folders** (optional): the BIOS folder lets Sortie mark games whose listed BIOS files are missing; save
+  folders let the **💾 started** filter recognise games with saves. Emulators keep their own BIOS and save settings.
+- **Remove from library…** takes a system off Sortie's lists only. Game files, saves and BIOS files stay where they are;
+  favourites, notes and play history are kept and return if the games are added again under the same system.
+- A library prepared on a computer keeps working. Library changes only what you edit; other systems and settings stay
+  exactly as written. If a settings file can't be read, Sortie says so and will not save over it. If the settings changed
+  on the card while you were editing, **Reload** keeps your draft and shows the current settings before you save again.
+- **Where these settings live**, at the bottom of Library, shows the **sortie** folder Sortie uses. After you save in Library,
+  Sortie keeps using that folder.
+
+### Missing storage, permissions and failed launches
+
+- If the memory card holding your games or Sortie's **sortie** folder is removed, Sortie keeps its index of your games and
+  does not start a new library elsewhere. Until the card is back, its systems, games and the notes stored on it may be
+  missing from the lists. **Reinsert the card** (or turn All files access back on), then re-index. Do not set the library up
+  again on other storage: your notes and preferences are in the original **sortie** folder.
+- A folder that is missing or unreadable is reported after indexing, and its games are kept until it is back.
+- When a game can't start, Sortie says why: file not present, emulator not installed, no emulator set up, or the emulator
+  refused the request. **Settings → Diagnostics** keeps the exact launch attempts.
+- Only All files access is required. Shizuku (moving apps between screens), *Display over other apps* (the overlay
+  switcher), the default Home role and the radial keyboard are optional and requested only where you turn those features
+  on. If Android can't open the right settings page, Sortie tells you where to find it.
 
 ## Controls
 
@@ -25,8 +91,11 @@ written on the desktop and deployed. Preferences, personal game notes and play h
 - **Continue** shows the last game you played and starts first on Custom; it can be moved like any other tile.
 - Hold A on a system, game, app or shortcut and choose *Add to home*. On Custom, hold A → *Move* lifts a tile; the D-pad moves
   it, A drops it, B cancels. Existing pins keep their order. Smart folders, Apps and Continue can be moved but not removed.
-- **Apps** lists installed apps and the shortcuts you have opted in to ("Browse all shortcuts…").
-- **📖**, beside Settings, opens this manual directly. **Magazines** opens the offline reading shelf; **Journal** opens your week in games.
+- **Apps** lists installed apps and the shortcuts you have opted in to ("Browse all shortcuts…"). When another app offers to
+  add a shortcut to Sortie, Sortie names the shortcut and the app and asks first: **Add** or **Cancel**.
+- **📖**, beside Settings, opens this manual directly. **Library** manages your systems, folders and emulators; **Magazines**
+  opens the offline reading shelf; **Journal** opens your week in games.
+- With no games yet, Home shows **Set up library** (or **Manage library** when systems are set up but no games were found).
 
 ## Lists and grids
 
@@ -63,13 +132,17 @@ Search accepts a title, tag, genre, developer or description fragment. Text is o
 
 ## Offline magazines
 
-**Home → Magazines** opens curated recommendation issues: an editorial, contents, illustrated articles, gameplay and
-mechanics explanations, reception and sources. Everything is bundled on the card; Sortie does not download anything.
+**Home → Magazines** opens illustrated offline zines: editorials, contents, gameplay and mechanics, history, reception and
+sources. APK updates can include new issues; you can also add your own packs on the card. Nothing is downloaded while reading.
+Pictures belong to their rights holders and are credited in each issue’s sources.
 
 - **A / tap** opens an issue or article. **B** goes article → contents → shelf → Home.
 - In an article, **D-pad Up/Down** scrolls; **Left/Right** pages; **L1/R1** changes article.
-- **A** in an article opens its listed game's library page, not the game itself. A recommendation is not proof the ROM is
-  installed; if it is not indexed here, Sortie says so.
+- **Games mentioned** in an issue lists games regardless of ownership. **All / On this device** toggles the local filter.
+  A file still copying, a placeholder or an unreadable file is not counted as available; availability is not a compatibility promise.
+- **A** in an article opens its game references or a matching library page, never launches the game. Multiple local copies
+  are offered separately; games not found here remain listed.
+- **Featured in** on a game page opens the articles that discuss it. **B** returns to the game page.
 - **Continue reading** and per-article positions survive leaving the reader and restarting Sortie. An X screen swap keeps
   the open page. Reading memory is app-private, not included in the current preference/history backup.
 - On two-screen devices, the other screen becomes a reading companion while an issue is open. **Sections** jumps to a
@@ -77,8 +150,10 @@ mechanics explanations, reception and sources. Everything is bundled on the card
   and the folded **Next article** corner turn articles without losing their reading positions. The controls follow an
   **X** swap and return the controller to the reading screen after a touch. Backing out to the shelf restores the normal
   companion; single-screen devices keep the controls above.
-- Copy a complete issue to **sortie/magazines/<issue-id>/** with **issue.json**, **articles/** and **media/** inside.
-  Reopen Magazines after copying. Incomplete or unsupported issues show an explanation without hiding the others.
+- Copy a complete extra issue to **sortie/magazines/<issue-id>/** with **issue.json**, **articles/** and **media/** inside.
+  Reopen Magazines after copying. One entry is shown per issue ID: the higher revision wins, and your card copy wins a tie.
+  Updates never overwrite your card pack. An incomplete or unsupported card issue is explained; a valid built-in edition
+  remains readable instead of being hidden.
 - **Y** in an article enters highlight mode: **Up/Down** chooses a paragraph, bullet or quote, and **A** opens its note editor.
   **Save** keeps the highlighted passage and your optional note; **Y / B** leaves highlight mode. Touch users can long-press a passage.
 - **Select** opens the reader menu: clip the whole recommendation, edit its note, or open **Scrapbook**. The magazine shelf
@@ -102,7 +177,7 @@ reappear when indexed again. The queue is saved on the card and included in back
 
 Art, fit stars, hook, description, play time and (when written) control notes. **A** launches with the first working launcher;
 **Select** lets you pick a launcher for this game permanently. The order tried: this game's choice → the system default from
-Settings → the manifest's order → "Open with…".
+Settings → the system's emulator list in Library → "Open with…". If nothing starts, a message says why.
 
 **Add notes / Edit notes** opens your own notes and controls:
 - **Where was I?**: save slot, next objective or anything useful when returning.
@@ -187,9 +262,10 @@ permission in Android's app settings.
 
 ## Settings
 
-Layouts (home/browse grid, sideways grids, rows and columns, app tile density), hero rotation, the overlay switcher, a default
-launcher per system, the optional **Radial keyboard**, **Backup and restore**, Diagnostics and this manual.
-Card contents and launcher definitions stay desktop-authored.
+**Library and emulators** (systems, game folders, emulators, BIOS/save folders, re-index), **Default home app** (once you
+have games), layouts (home/browse grid, sideways grids, rows and columns, app tile density), hero rotation, the overlay
+switcher, a default launcher per system, the optional **Radial keyboard**, **Backup and restore**, Diagnostics and this manual.
+Smart folders, guide notes, logos and custom launch profiles still come from a computer-prepared card if you use one.
 
 ## Radial keyboard
 
@@ -235,10 +311,25 @@ Reference images and journal screenshots are **not embedded in the JSON backup**
 **sortie/journal/media/** alongside it to preserve those attachments. Restoring the JSON alone keeps the text and metadata,
 but images are unavailable until their files are copied back to the same relative paths.
 
-Backups do not contain ROMs, artwork, emulator saves or desktop manifests. Android shortcut pins, permissions and the default
-home app are not restored. Shortcut IDs remain in the backup, but missing shortcuts must be pinned again from their source app.
+Backups do not contain ROMs, BIOS files, artwork, **emulator saves** (each emulator keeps its own; back those up from the
+emulator's folders), the game index (rebuilt from your folders), **playlog.jsonl**, or your library settings
+(**device.json**, **systems.json**, **launchers.json** and other settings files). To keep a library you set up on the device,
+copy the whole **sortie** folder shown in **Library → Where these settings live** as well.
+
+Some state lives only inside the app: play-history statistics (Sortie's minutes and sessions come from its own database;
+completed sessions are in the backup, **playlog.jsonl** is only a copy for computers and is not read back), magazine reading
+positions (*Continue reading*, not exported), the remembered location of the **sortie** folder and the game index. Android owns
+shortcut pins, permissions (All files access, Shizuku, Display over other apps), the keyboard choice and the default home
+app; none of them are restored. Shortcut IDs remain in the backup, but missing shortcuts must be pinned again from their
+source app.
+
+**Updating Sortie** means opening a newer APK from the same sender and choosing *Update*: Android replaces the app and keeps
+its data. **Uninstalling** deletes the app-only state above and Android's grants for Sortie; files in the **sortie** folder and
+your games stay on storage. Export a backup first if you ever must uninstall, and never uninstall just because Android
+refuses an update: ask whoever sent you the APK.
 
 ## Play log and saves
 
 Every launch is a session; sessions end when the game's window is gone. Minutes, session counts and "last played" feed the
-*Continue* tile, the *Recently played* / *Play next* folders and the **💾 started** chip (which reads the card's save folders).
+*Continue* tile, the *Recently played* / *Play next* folders and the **💾 started** chip (which reads the save folders set in
+**Library → BIOS and save folders**, or on a computer-prepared card).

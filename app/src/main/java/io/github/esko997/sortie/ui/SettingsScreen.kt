@@ -3,6 +3,7 @@ package io.github.esko997.sortie.ui
 import android.content.Intent
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,12 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
-/**
- * Device-side preferences only: per-system default launcher, layout and switcher behaviour. Everything that describes the card
- * (directories, systems, profiles, folders) stays desktop-authored in the manifests and is shown in Diagnostics instead.
- */
+/** Device preferences and entry points for library management, Android permissions and recovery. */
 @Composable
-fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit, onManual: () -> Unit, onBackup: () -> Unit) {
+fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit, onManual: () -> Unit, onBackup: () -> Unit, onLibrary: () -> Unit) {
     val user by vm.user.collectAsState()
     val systems by vm.systems.collectAsState()
     val snap by vm.manifests.collectAsState()
@@ -42,6 +40,16 @@ fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit, onManual: () 
     Column(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             item { Text("Settings", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp)) }
+            item { FocusRow(onClick = onLibrary) { Line("Library and emulators", "add or edit systems, game folders, emulators and BIOS/save locations") } }
+            if (systems.isNotEmpty()) {
+                item {
+                    FocusRow(onClick = {
+                        if (!openSettingsScreen(context, Intent(Settings.ACTION_HOME_SETTINGS), Intent(Settings.ACTION_SETTINGS))) {
+                            Toast.makeText(context, "Open Android Settings → Apps → Default apps → Home to choose your launcher.", Toast.LENGTH_LONG).show()
+                        }
+                    }) { Line("Default home app", "optional: choose Sortie or switch back to your previous launcher") }
+                }
+            }
             item { SectionTitle("Display") }
             item {
                 Toggle("Home layout: grid", user.homeLayout == "grid") { vm.setHomeLayout(if (it) "grid" else "list") }
@@ -65,10 +73,23 @@ fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit, onManual: () 
             }
             item { Toggle("Hero rotation on the idle companion screen", user.heroRotation) { vm.setHeroRotation(it) } }
             item { SectionTitle("Switcher") }
-            item { Toggle("Overlay over running games (needs the draw-over-apps grant)", user.overlaySwitcher) { vm.setOverlaySwitcher(it) } }
+            item {
+                Toggle("Overlay over running games (optional)", user.overlaySwitcher) { enabled ->
+                    vm.setOverlaySwitcher(enabled)
+                    if (enabled && !Settings.canDrawOverlays(context)) {
+                        if (!openOverlayPermissionSettings(context)) {
+                            Toast.makeText(context, "$OVERLAY_ACCESS_PATH. The regular switcher still works without it.", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
             item { SectionTitle("Radial keyboard") }
             item {
-                FocusRow(onClick = { context.startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)) }) {
+                FocusRow(onClick = {
+                    if (!openSettingsScreen(context, Intent(Settings.ACTION_INPUT_METHOD_SETTINGS), Intent(Settings.ACTION_SETTINGS))) {
+                        Toast.makeText(context, "Open Android Settings → System → Languages and input → On-screen keyboard.", Toast.LENGTH_LONG).show()
+                    }
+                }) {
                     Line("Enable radial keyboard…", "optional offline joystick typing; enable Sortie Radial Keyboard in Android settings")
                 }
             }

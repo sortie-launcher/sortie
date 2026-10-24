@@ -140,7 +140,8 @@ fun HomeScreen(
     onApps: () -> Unit,
     onManual: () -> Unit,
     onMagazines: () -> Unit,
-    onJournal: () -> Unit
+    onJournal: () -> Unit,
+    onLibrary: () -> Unit
 ) {
     val systems by vm.systems.collectAsState()
     val folders by vm.folders.collectAsState()
@@ -148,6 +149,7 @@ fun HomeScreen(
     val user by vm.user.collectAsState()
     val total by vm.total.collectAsState()
     val index by vm.index.collectAsState()
+    val manifest by vm.manifests.collectAsState()
     val apps by vm.apps.collectAsState()
     val shortcuts by vm.shortcuts.collectAsState()
     val covers by vm.tileCovers.collectAsState()
@@ -347,6 +349,7 @@ fun HomeScreen(
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = onApps) { Text("Apps", maxLines = 1) }
+                OutlinedButton(onClick = onLibrary) { Text("Library", maxLines = 1) }
                 OutlinedButton(onClick = onSearch) { Text("Search", maxLines = 1) }
                 OutlinedButton(onClick = onMagazines) { Text("Magazines", maxLines = 1) }
                 OutlinedButton(onClick = onJournal) { Text("Journal", maxLines = 1) }
@@ -357,6 +360,29 @@ fun HomeScreen(
                     OutlinedButton(onClick = onDiagnostics) { Text("Settings", maxLines = 1) }
                 }
             }
+        }
+        if (total == 0 && !index.running) {
+            Column(Modifier.weight(1f).fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    if (manifest.systems.isEmpty()) "Set up your library" else "No games found",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Text(
+                    if (manifest.systems.isEmpty()) {
+                        "Choose your game folders and installed emulators. Your games stay where they are."
+                    } else {
+                        "Check your folders, file types and storage connection in Library, then scan again."
+                    },
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                OutlinedButton(onClick = onLibrary) { Text(if (manifest.systems.isEmpty()) "Set up library" else "Manage library") }
+                Text(
+                    "You can also use Apps, read Magazines or open the Manual without adding games.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            return@Column
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,

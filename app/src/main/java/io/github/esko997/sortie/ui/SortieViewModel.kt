@@ -344,6 +344,10 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     fun launchById(id: String, profileId: String?) = viewModelScope.launch {
         val game = dao.byId(id) ?: run {
             android.util.Log.w("SortieLaunch", "no such game: $id")
+            graph.launcher.notify(
+                "That game isn't in the library on this device. Re-index in Settings → Diagnostics if it was just added.",
+                graph.launcher.currentDisplayId?.invoke()
+            )
             return@launch
         }
         val only = profileId?.let { manifests.value.profiles[it] }

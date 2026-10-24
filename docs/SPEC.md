@@ -35,8 +35,9 @@ Canonical inputs (read-only for Sortie):
   tags) keyed by system + filename.
 - `sortie/systems.json`, `sortie/launchers.json`, `sortie/folders.json`, `sortie/device.json` :
   see docs/formats.
-- `sortie/magazines/<issue-id>/issue.json`, Markdown articles and local images: offline recommendation issues (format v1,
-  see formats/README.md). Reading positions are app-private preferences, separate from card data and exported backups.
+- APK assets at `magazines/<issue-id>/` and optional card packs at `sortie/magazines/<issue-id>/`: offline zines with
+  `issue.json`, Markdown and local images (format v2; v1 external packs are imported). See formats/README.md.
+  Reading positions are app-private preferences, separate from card data and exported backups.
 
 Outputs (owned by Sortie, append-only or small):
 
@@ -98,8 +99,13 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   favourited or placed on home.
 - Home has a direct Manual book button beside Settings and a Magazines entry.
 - Offline magazines: shelf → contents → article, B one level back; article D-pad scroll, Left/Right page, L1/R1 previous/next
-  article, A library page. Saved scroll positions and Continue reading survive reopening; X retains the current article.
-  Bad issues are isolated, missing images do not block text, and paths cannot escape an issue. No WebView or remote fetching.
+  article, A game references/library pages (never launch). Saved scroll positions and Continue reading survive reopening;
+  X retains the current article. Issue contents list all mentioned games, with an On this device filter. Game detail's
+  Featured in opens exact articles and B returns to the game. References distinguish platforms/editions from local filenames;
+  several matches remain choices, while placeholders, missing and arriving files are not presented as available.
+  APK packs extract atomically into private storage once per catalog digest. The shelf merges by stable issue ID: higher
+  revision wins, card wins ties; no card pack is overwritten. A malformed card copy cannot hide a valid bundled issue.
+  Bad issues are isolated, missing optional images do not block text, and paths cannot escape an issue. No WebView or remote fetching.
   While an issue is open, the other display shows section jumps/current heading, article selection and previous/next controls.
   The panel follows navigation across X; session-owned actions reject stale taps, and leaving the issue clears the panel.
 

@@ -18,7 +18,8 @@ data class TileCover(val systemId: String, val cover: String, val fit: Int)
 
 data class NameRow(val id: String, val fileName: String, val placeholder: Boolean)
 
-data class Signature(val id: String, val mtime: Long, val size: Long, val addedAt: Long, val arriving: Boolean)
+/** What the indexer compares to decide whether a row is current: the file's identity, where it lives and how it is grouped. */
+data class Signature(val id: String, val path: String, val folder: String, val mtime: Long, val size: Long, val addedAt: Long, val arriving: Boolean)
 
 /** What magazine reference matching needs of a game row (see data.magazine.MagazineGames). */
 data class MatchRow(
@@ -64,7 +65,7 @@ interface GameDao {
     @Query("SELECT * FROM games WHERE variantOf = :primary ORDER BY fileName")
     suspend fun variantsOf(primary: String): List<GameEntity>
 
-    @Query("SELECT id, mtime, size, addedAt, arriving FROM games WHERE systemId = :systemId")
+    @Query("SELECT id, path, folder, mtime, size, addedAt, arriving FROM games WHERE systemId = :systemId")
     suspend fun signatures(systemId: String): List<Signature>
 
     @Query("SELECT systemId, COUNT(*) AS n FROM games WHERE placeholder = 0 AND variantOf IS NULL GROUP BY systemId")
