@@ -6,6 +6,8 @@
   safe updates and recovery. Its Game Boy Color/uCity setup-to-launch path was exercised on an isolated Android 13
   emulator with RetroArch 1.22.2/Gambatte; capture provenance distinguishes that launch from illustrative library entries.
   Clarify configuration storage and the current filename-keyed guide-sharing limits; retire the old probe screenshots.
+  A later pass tightens the README without dropping facts or links, restores full image descriptions and the accurate
+  "AI-assisted" disclosure, and moves branding maintenance notes to `branding/README.md`.
 - Hosted CI installs supported Android SDK packages (`platform-tools` and API 35) explicitly instead of requesting the
   retired `tools` package. The first hosted style/test/APK build and both artifact uploads passed after this correction.
 - Adopt the amber Split-S identity: adaptive Android launcher icon with a monochrome layer for themed icons,
