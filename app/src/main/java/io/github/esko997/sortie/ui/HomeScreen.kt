@@ -91,6 +91,8 @@ private class HomeTile(
     val section: String,
     val colour: Color? = null,
     val cover: String? = null,
+    /** A system's logo image; drawn in place of the title (the cover stays as a dimmed backdrop). */
+    val logo: String? = null,
     val item: LibraryItem? = null,
     /** Hold R1: a random game of this system or folder (opens its detail). */
     val random: (suspend () -> GameEntity?)? = null,
@@ -121,6 +123,7 @@ fun HomeScreen(
     val apps by vm.apps.collectAsState()
     val shortcuts by vm.shortcuts.collectAsState()
     val covers by vm.tileCovers.collectAsState()
+    val logos by vm.systemLogos.collectAsState()
     val layoutGames by vm.layoutGames.collectAsState()
     val stats by vm.playStats.collectAsState()
     val lastPlayed by vm.lastPlayed.collectAsState()
@@ -187,6 +190,7 @@ fun HomeScreen(
             if (sort == "generation") row.def.generation else "Systems",
             colour = parseColour(row.def.colour),
             cover = covers[row.def.id],
+            logo = logos[row.def.id],
             random = { vm.randomGameOf(row.def.id) }
         ) { onSystem(row.def.id) }
     }
@@ -459,6 +463,7 @@ private fun HomeTileView(
                 subtitle = t.subtitle.substringBefore(" · BIOS"),
                 colour = t.colour,
                 cover = t.cover,
+                logo = t.logo,
                 lifted = lifted,
                 onLongClick = onLongClick,
                 onFavourite = onFavourite

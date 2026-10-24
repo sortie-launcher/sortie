@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -73,6 +75,7 @@ fun SquareTile(
     subtitle: String? = null,
     colour: Color? = null,
     cover: String? = null,
+    logo: String? = null,
     paletteGlow: Boolean = false,
     favourite: Boolean = false,
     lifted: Boolean = false,
@@ -117,14 +120,27 @@ fun SquareTile(
             }
         } else {
             if (cover != null) {
-                CoverImage(cover, Modifier.fillMaxSize(), ContentScale.Crop, alpha = if (colour != null) 0.45f else 1f)
+                // behind a logo the cover is only a hint of the library; the logo is the name
+                CoverImage(cover, Modifier.fillMaxSize(), ContentScale.Crop, alpha = if (logo != null) 0.2f else if (colour != null) 0.45f else 1f)
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.35f to Color.Transparent, 1f to Ink.copy(alpha = 0.92f))))
             } else if (colour == null) {
                 Text(title.take(1), style = MaterialTheme.typography.displaySmall, color = Color(0xFF4A525C), modifier = Modifier.align(Alignment.Center))
             }
-            if (colour != null) Box(Modifier.padding(12.dp).size(10.dp).clip(RoundedCornerShape(5.dp)).background(colour).align(Alignment.TopStart))
+            if (logo != null) {
+                CoverImage(logo, Modifier.align(Alignment.Center).fillMaxWidth(0.82f).fillMaxHeight(0.5f), ContentScale.Fit)
+            } else if (colour != null) {
+                Box(Modifier.padding(12.dp).size(10.dp).clip(RoundedCornerShape(5.dp)).background(colour).align(Alignment.TopStart))
+            }
             Column(Modifier.align(Alignment.BottomStart).padding(10.dp)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (logo == null) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 subtitle?.let {
                     Text(
                         it,

@@ -1,0 +1,48 @@
+{
+ "profiles": [
+  {
+   "id": "armsx2",
+   "label": "ARMSX2",
+   "package": "come.nanodata.armsx2",
+   "activity": "com.armsx2.MainActivity",
+   "action": "android.intent.action.VIEW",
+   "data": "file://${file}"
+  },
+  {
+   "id": "armsx2-uri",
+   "label": "ARMSX2 (content URI)",
+   "package": "come.nanodata.armsx2",
+   "activity": "com.armsx2.MainActivity",
+   "action": "android.intent.action.VIEW",
+   "data": "${uri}",
+   "flags": [
+    "GRANT_READ_URI_PERMISSION"
+   ]
+  },
+  {
+   "id": "ra-snes9x",
+   "label": "RetroArch \u00b7 Snes9x",
+   "package": "com.retroarch",
+   "activity": "com.retroarch.browser.retroactivity.RetroActivityFuture",
+   "action": "android.intent.action.MAIN",
+   "extras": {
+    "ROM": "${file}",
+    "LIBRETRO": "/data/user/0/com.retroarch/cores/snes9x_libretro_android.so",
+    "CONFIGFILE": "/storage/emulated/0/Android/data/com.retroarch/files/retroarch.cfg",
+    "IME": "",
+    "DATADIR": "/data/user/0/com.retroarch",
+    "SDCARD": "/storage/emulated/0",
+    "EXTERNAL": "/storage/emulated/0/Android/data/com.retroarch/files"
+   },
+   "flags": [
+    "CLEAR_TASK",
+    "CLEAR_TOP"
+   ]
+  },
+  {
+   "id": "open-with",
+   "label": "Open with\u2026",
+   "generic": true
+  }
+ ]
+}

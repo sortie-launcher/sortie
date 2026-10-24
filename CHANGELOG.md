@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- System tiles show the console's logo when `<card>/sortie/logos/<systemId>.png` exists (desktop-rendered from the slate-es-de
+  theme by `sortie-card/gen_logos.py`, black strokes turned white for dark tiles); the cover stays as a faint backdrop.
+- First run with the card on an SD card: once the all-files grant arrives and `device.json` becomes readable, Sortie restarts
+  itself so every store binds to the card instead of primary storage.
+- Repo tidy for publishing: personal device identifiers out of `docs/HANDOFF.md`, `examples/card/` minimal card, README rewrite.
 - Home header shows a 24-hour clock (one recomposition a minute). The companion hero follows the focused game while browsing
   grids and lists (`Modifier.heroOnFocus`), not only the game page. Manual scrolls with the D-pad (focusable list, Up/Down/Page).
 - Home: a **Continue** tile (last game played) leads every generated sort. Hold R1 on a system or folder tile opens a random

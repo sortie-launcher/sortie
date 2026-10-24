@@ -1,0 +1,14 @@
+{
+ "device": "example",
+ "root": "/storage/XXXX-XXXX",
+ "screens": {
+  "count": 2,
+  "navigation": "bottom",
+  "presentationIndex": 0
+ },
+ "shizuku": true,
+ "saves": [
+  "/storage/emulated/0/saves"
+ ],
+ "biosDir": "/storage/emulated/0/Android/media/com.retroarch/RetroArch/system"
+}

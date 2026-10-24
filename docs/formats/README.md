@@ -12,5 +12,6 @@ JSON, UTF-8, trailing commas not allowed. Unknown keys are ignored so files can 
 | `guide.json` | desktop (build_guide.py) | taste layer: fit, hook, flags, tags per game |
 | `user.json` | device | favourites, overrides, hidden entries, home sort and custom layout, list/grid choices, opted-in shortcuts ([user.md](user.md)) |
 | `playlog.jsonl` | device | one JSON object per play session, append-only |
+| `logos/<systemId>.png` | desktop (gen_logos.py) | optional system logos for the home tiles; transparent PNG, ~512 px wide |
 
-See `../../examples/` for complete sample files.
+See `../../examples/card/sortie/` for a complete minimal card (two systems, four profiles, four folders).

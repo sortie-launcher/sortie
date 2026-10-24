@@ -19,6 +19,8 @@ import io.github.esko997.sortie.data.index.Indexer
 import io.github.esko997.sortie.data.manifest.LaunchProfile
 import io.github.esko997.sortie.data.manifest.SystemDef
 import io.github.esko997.sortie.launch.IntentBuilder
+import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +36,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class SystemRow(val def: SystemDef, val count: Int)
 
@@ -226,6 +229,13 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
 
     val tileCovers: StateFlow<Map<String, String>> =
         dao.tileCovers().map { l -> l.associate { it.systemId to it.cover } }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /** `<card>/sortie/logos/<systemId>.png` (desktop-rendered, see sortie-card/gen_logos.py): system tiles show it instead of a cover. */
+    val systemLogos: StateFlow<Map<String, String>> = manifests.map {
+        withContext(Dispatchers.IO) {
+            File(graph.sortieDir, "logos").listFiles { f -> f.extension == "png" }.orEmpty().associate { it.nameWithoutExtension to it.path }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val total: StateFlow<Int> = dao.total().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 

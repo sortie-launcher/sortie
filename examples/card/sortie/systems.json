@@ -1,0 +1,62 @@
+{
+ "systems": [
+  {
+   "id": "ps2",
+   "folder": "ps2",
+   "label": "PS2",
+   "generation": "128-bit",
+   "roots": [
+    "big-roms/ps2"
+   ],
+   "gamelist": "scraped-esde/gamelists/ps2/gamelist.xml",
+   "media": "scraped-esde/downloaded_media/ps2",
+   "profiles": [
+    "armsx2-uri",
+    "armsx2",
+    "open-with"
+   ],
+   "colour": "#f59e0b",
+   "count_hint": 97,
+   "bios": [],
+   "order": 0
+  },
+  {
+   "id": "snes",
+   "folder": "snes",
+   "label": "SNES",
+   "generation": "16-bit",
+   "roots": [
+    "roms/snes"
+   ],
+   "gamelist": "scraped-esde/gamelists/snes/gamelist.xml",
+   "media": "scraped-esde/downloaded_media/snes",
+   "profiles": [
+    "ra-snes9x",
+    "open-with"
+   ],
+   "colour": "#3b82f6",
+   "count_hint": 15,
+   "bios": [],
+   "order": 31
+  }
+ ],
+ "library": {
+  "skipFiles": [
+   "neogeo.zip",
+   "neogeo.7z",
+   "pgm.zip",
+   "pgm.7z",
+   "ngp.zip",
+   "stvbios.zip",
+   "stvbios.7z",
+   "naomi.zip",
+   "naomi.7z",
+   "awbios.zip",
+   "awbios.7z",
+   "decocass.zip",
+   "skns.zip",
+   "cvs.zip"
+  ],
+  "hackRegex": "(?i)\\((hack|translation|redux|patched|undub|un-working designs|one vision|true analogs|plus v[\\d.]+|english[^)]*|[^)]*patch)\\)|\\[[^\\]]*(hack|patch)[^\\]]*\\]"
+ }
+}

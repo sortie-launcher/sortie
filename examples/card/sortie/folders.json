@@ -1,0 +1,60 @@
+{
+ "folders": [
+  {
+   "id": "favourites",
+   "label": "Favourites",
+   "rule": {
+    "favourite": true
+   },
+   "apps": true,
+   "sort": "title:asc"
+  },
+  {
+   "id": "continue",
+   "label": "Continue",
+   "rule": {
+    "playMinutes": {
+     "gte": 1
+    }
+   },
+   "sort": "lastPlayed:desc",
+   "limit": 30
+  },
+  {
+   "id": "play-next",
+   "label": "Play next",
+   "rule": {
+    "all": [
+     {
+      "playMinutes": {
+       "eq": 0
+      }
+     },
+     {
+      "fit": {
+       "gte": 4
+      }
+     },
+     {
+      "recentTags": {
+       "minShared": 1,
+       "window": 3
+      }
+     }
+    ]
+   },
+   "sort": "random"
+  },
+  {
+   "id": "recent",
+   "label": "Recently added",
+   "rule": {
+    "daysSinceAdded": {
+     "lte": 30
+    }
+   },
+   "sort": "added:desc",
+   "limit": 200
+  }
+ ]
+}
