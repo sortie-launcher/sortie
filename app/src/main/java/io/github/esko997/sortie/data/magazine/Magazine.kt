@@ -384,7 +384,7 @@ internal fun mergeShelves(card: MagazineShelf, bundled: MagazineShelf): Magazine
     return MagazineShelf(card.dir, byId.values.sortedWith(NEWEST_FIRST), broken.sortedBy { it.folder }, problem)
 }
 
-private val NEWEST_FIRST = compareByDescending<ShelfIssue> { it.issue.publishedDate ?: LocalDate.MIN }.thenBy { it.issue.id }
+private val NEWEST_FIRST = compareByDescending<ShelfIssue> { it.issue.publishedDate ?: LocalDate.MIN }.thenByDescending { it.issue.id }
 
 /** Blocking; see [MagazineRepository.shelf]. Folders starting with `.` (e.g. a deploy in progress) are skipped. */
 internal fun readShelf(dir: File, source: IssueSource = IssueSource.CARD): MagazineShelf {

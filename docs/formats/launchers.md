@@ -41,7 +41,8 @@ games reference profiles by `id`; a system lists profiles in fallback order.
 
 Placeholders: `${file}` absolute path, `${uri}` content URI via Sortie's FileProvider, `${stem}`
 filename without extension, `${system}`, `${dir}`. `display` is `top`, `bottom` or `same` (default
-`same`). A profile with `generic: true` opens the Android chooser.
+`same`). A profile with `generic: true` opens the Android chooser only when explicitly selected by a game/system override
+or included in that system's profile list. It is not appended implicitly. Cancelling the chooser does not record a play session.
 
 Nothing in this file is validated against a built-in list of emulators. If a package is not
 installed, the profile is skipped and the next fallback is tried; the diagnostics screen says why.

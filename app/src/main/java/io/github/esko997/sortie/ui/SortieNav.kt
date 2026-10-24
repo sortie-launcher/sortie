@@ -39,6 +39,13 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
             }
         }
     }
+    LaunchedEffect(graph.user) {
+        graph.user.writeError.collect { error ->
+            if (error != null) {
+                Toast.makeText(context, "Changes aren't saved. Check storage and Settings → Backup and restore.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
     LaunchedEffect(Unit) {
         Selection.openRoute.collect { route ->
             runCatching { nav.navigate(route) { launchSingleTop = true } } // a typo from adb must not crash the launcher

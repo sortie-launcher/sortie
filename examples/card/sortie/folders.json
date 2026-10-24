@@ -1,15 +1,6 @@
 {
  "folders": [
   {
-   "id": "favourites",
-   "label": "Favourites",
-   "rule": {
-    "favourite": true
-   },
-   "apps": true,
-   "sort": "title:asc"
-  },
-  {
    "id": "continue",
    "label": "Continue",
    "rule": {

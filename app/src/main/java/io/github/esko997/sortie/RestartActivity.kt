@@ -7,9 +7,9 @@ import android.os.Process
 
 /**
  * Restarts Sortie's main process: runs in its own `:restart` process, kills the pid it was handed, starts MainActivity and
- * exits. Used once, on first run, when the all-files grant changes which card directory the stores must bind to (see
- * [SortieApp.relocateIfNeeded]). A new process is the only way to rebind every store; doing it from a sibling process avoids
- * relying on an alarm to come back, which Android may defer.
+ * exits. Used when the all-files grant changes the card directory, or when previously unavailable storage returns (see
+ * [SortieApp.relocateIfNeeded]). A new process rebinds every store; doing it from a sibling process avoids relying on an
+ * alarm to come back, which Android may defer.
  */
 class RestartActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {

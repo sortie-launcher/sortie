@@ -31,12 +31,27 @@ import kotlinx.serialization.json.Json
  * Durable operations ([replace], [commit]) share the collector's lock and never publish before their fsynced write succeeded.
  * Ordinary edits made while one is writing are applied to the published state as usual and also journaled; once the durable
  * write succeeds they are replayed onto its result (and saved by the collector), so neither side loses the other's changes.
+ *
+ * user.json is never overwritten with state that did not come from it: until this store has read it (or written it itself), an
+ * existing user.json (restored onto a card that was missing at startup, or one that could not be read or parsed then) is left
+ * alone and writes fail with [writeError]; a restart loads it ([reloadable]). The directory is only created when
+ * [mayCreateDirectory] allows it, so a missing remembered library folder is never recreated empty.
  */
-class UserStore(private val file: File, private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)) {
+class UserStore(
+    private val file: File,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    private val mayCreateDirectory: () -> Boolean = { true }
+) {
     private val json = Json {
         ignoreUnknownKeys = true
         prettyPrint = true
     }
+
+    /**
+     * Whether user.json holds this store's state: it was loaded at startup, or this store has written it since. Declared before
+     * [_data], whose initializer sets it. Changed under [writeLock] afterwards.
+     */
+    @Volatile private var owned = false
     private val _data = MutableStateFlow(load())
     val data: StateFlow<UserData> = _data
 
@@ -58,7 +73,18 @@ class UserStore(private val file: File, private val scope: CoroutineScope = Coro
         scope.launch { for (unit in dirty) writeLock.withLock { write(_data.value, sync = false) } }
     }
 
-    private fun load(): UserData = runCatching { json.decodeFromString(UserData.serializer(), file.readText()) }.getOrDefault(UserData())
+    private fun load(): UserData = decode()?.also { owned = true } ?: UserData()
+
+    /** user.json's contents, or null when it is missing, unreadable or not valid. */
+    private fun decode(): UserData? = try {
+        json.decodeFromString(UserData.serializer(), file.readText())
+    } catch (e: Exception) {
+        if (file.exists()) Log.w("UserStore", "read user.json", e)
+        null
+    }
+
+    /** True when a user.json this store did not load now reads: only a restart picks it up. Reads the file. */
+    fun reloadable(): Boolean = !owned && file.isFile && decode() != null
 
     /** Guards [_data] mutations against [inFlight] bookkeeping. */
     private val lock = Any()
@@ -77,7 +103,14 @@ class UserStore(private val file: File, private val scope: CoroutineScope = Coro
     /** Writes [snapshot] via `.tmp` + rename; [sync] also fsyncs the temp file first. Returns the failure, or null. Caller holds [writeLock]. */
     private fun write(snapshot: UserData, sync: Boolean): Throwable? {
         val failure = runCatching {
-            file.parentFile?.mkdirs()
+            val dir = file.parentFile
+            if (dir != null && !dir.isDirectory) {
+                if (!mayCreateDirectory()) throw IOException("the library folder ${dir.path} is unavailable; reconnect its storage")
+                dir.mkdirs()
+            }
+            if (!owned && file.exists()) {
+                throw IOException("Sortie has not loaded ${file.path} and won't save over it; reopen Sortie, or fix or move that file")
+            }
             val tmp = File(file.path + ".tmp")
             FileOutputStream(tmp).use { out ->
                 out.write(json.encodeToString(UserData.serializer(), snapshot).toByteArray())
@@ -85,6 +118,7 @@ class UserStore(private val file: File, private val scope: CoroutineScope = Coro
                 if (sync) out.fd.sync()
             }
             if (!tmp.renameTo(file)) throw IOException("could not replace ${file.path}")
+            owned = true
         }.exceptionOrNull()
         if (failure == null) {
             _writeError.value = null

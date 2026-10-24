@@ -20,8 +20,7 @@ Smart and manual folders. A folder is a query over the index plus optional manua
       ] },
       "include": [ "ps2/S.L.A.I. - Steel Lancer Arena International (USA).iso" ],
       "exclude": [ "gba/SD Gundam Force (USA).gba" ]
-    },
-    { "id": "favourites", "label": "Favourites", "rule": { "favourite": true }, "apps": true }
+    }
   ]
 }
 ```
@@ -35,10 +34,11 @@ Sort keys: `fit`, `title`, `year`, `lastPlayed`, `playMinutes`, `added`, `system
 `:desc`, comma-separated. `random` shuffles the members each time the folder is re-evaluated (library, play
 data, favourites or manifests changed); next to other keys it is the final tiebreaker (`fit:desc,random`).
 
-The ids `want-to-play`, `finished` and `shelved` are reserved for Sortie's built-in personal shelves. They use `wantToPlay`
-and `gameProgress` in [user.json](user.md), not rules from this file. A `folders.json` entry with a reserved id is ignored and
-reported on the built-in folder. These folders always appear on Custom Home, are title-sorted and omit hidden games.
-Ids temporarily absent from the game index are retained in the user's data and return when indexed.
+The ids `favourites`, `want-to-play`, `finished` and `shelved` are reserved for Sortie's built-in personal shelves. They use
+`favourites`, `wantToPlay` and `gameProgress` in [user.json](user.md), not rules from this file. A `folders.json` entry with a
+reserved id is ignored and reported on the built-in folder. These folders always appear on Custom Home, are title-sorted and
+omit hidden entries. Favourites holds favourited games, installed apps and shortcuts; the other three hold games only. Ids
+temporarily absent from the game index (or apps not installed) are retained in the user's data and return when available.
 
 ## Recently played tags (`recentTags`)
 

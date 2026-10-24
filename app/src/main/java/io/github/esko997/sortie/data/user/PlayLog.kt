@@ -66,7 +66,8 @@ class PlayLog(private val dao: GameDao, private val file: File, private val devi
 
     private suspend fun append(event: String, id: String, fields: Map<String, kotlinx.serialization.json.JsonElement>) = withContext(Dispatchers.IO) {
         runCatching {
-            file.parentFile?.mkdirs()
+            // best-effort sidecar (the database holds the history): never recreates a missing library folder
+            if (file.parentFile?.isDirectory != true) return@runCatching
             val obj = buildJsonObject {
                 put("ts", JsonPrimitive(OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)))
                 put("event", JsonPrimitive(event))

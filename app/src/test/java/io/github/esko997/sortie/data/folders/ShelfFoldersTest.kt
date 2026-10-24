@@ -2,6 +2,7 @@ package io.github.esko997.sortie.data.folders
 
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
+import io.github.esko997.sortie.data.manifest.FAVOURITES_FOLDER_ID
 import io.github.esko997.sortie.data.manifest.FolderDef
 import io.github.esko997.sortie.data.manifest.WANT_TO_PLAY_FOLDER_ID
 import io.github.esko997.sortie.data.user.FINISHED_FOLDER_ID
@@ -77,7 +78,7 @@ class ShelfFoldersTest {
         val trapt = game("Trapt")
         val defs = listOf(FolderDef(SHELVED_FOLDER_ID, "Mine", include = listOf(trapt.id)), FolderDef("all", include = listOf(trapt.id)))
         val views = resolve(emptyMap(), listOf(trapt), defs = defs)
-        assertEquals(setOf("all", WANT_TO_PLAY_FOLDER_ID, FINISHED_FOLDER_ID, SHELVED_FOLDER_ID), views.keys)
+        assertEquals(setOf("all", FAVOURITES_FOLDER_ID, WANT_TO_PLAY_FOLDER_ID, FINISHED_FOLDER_ID, SHELVED_FOLDER_ID), views.keys)
         assertTrue(views.ids(SHELVED_FOLDER_ID).isEmpty())
         assertEquals(1, views.getValue(SHELVED_FOLDER_ID).problems.size)
         assertTrue(views.getValue(FINISHED_FOLDER_ID).problems.isEmpty())

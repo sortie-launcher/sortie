@@ -117,7 +117,7 @@ private fun activeFilters(f: SearchFilters, systemLabel: (String) -> String): Li
     if (f.favourites) add(ActiveFilter("★ Favourites") { it.copy(favourites = false) })
     if (f.wantToPlay) add(ActiveFilter("Want to play") { it.copy(wantToPlay = false) })
     if (f.unplayed) add(ActiveFilter("Unplayed") { it.copy(unplayed = false) })
-    if (f.fourStars) add(ActiveFilter("★★★★+") { it.copy(fourStars = false) })
+    if (f.fourStars) add(ActiveFilter("Fit 4+") { it.copy(fourStars = false) })
     if (!f.onDeviceOnly) add(ActiveFilter("Incl. not on device") { it.copy(onDeviceOnly = true) })
 }
 
@@ -126,8 +126,8 @@ private val MORE_OPTIONS = listOf(
     SearchOption("favourites", "★ Favourites", 0),
     SearchOption("want", "Want to play", 0),
     SearchOption("unplayed", "Unplayed (never launched)", 0),
-    SearchOption("fit4", "★★★★+ (fit 4 or better)", 0),
-    SearchOption("device", "On device only", 0)
+    SearchOption("fit4", "Fit 4+ (guide rating 4 or 5)", 0),
+    SearchOption("device", "On device only (default)", 0)
 )
 
 private fun SearchFilters.moreSelected(): Set<String> = buildSet {
@@ -347,7 +347,8 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
                                     annotation = user.gameAnnotations[g.id],
                                     onClick = { onGame(g.id) },
                                     onLongClick = { sheet = item },
-                                    hasSave = g.saveStem() in saves
+                                    hasSave = g.saveStem() in saves,
+                                    platform = systemLabel(g.systemId)
                                 )
                             }
                         }
@@ -406,7 +407,7 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
             labelOf = { it },
             onToggle = { update(filters.toggleMore(it)) },
             onClear = { update(filters.copy(favourites = false, wantToPlay = false, unplayed = false, fourStars = false, onDeviceOnly = true)) },
-            clearShown = filters.moreCount() > 0,
+            active = filters.moreCount(),
             onDismiss = { picker = null }
         )
         null -> Unit
@@ -450,7 +451,9 @@ private fun NoResults(filters: SearchFilters, onClearFilters: () -> Unit, onIncl
 /**
  * Multi-select picker in the [ContextSheet] style: one row per value with its game count, A toggles and keeps the picker
  * open, Done or B closes it. [options] null = still loading. A picked value the library no longer offers (e.g. after
- * switching "on device only") is listed first so it can be unpicked. Flag-only badge labels carry a ⚑.
+ * switching "on device only") is listed first so it can be unpicked. Flag-only badge labels carry a ⚑. [active] is the count
+ * its [PickerChip] shows (More counts changes from the defaults, not ticked rows); the heading repeats it and Clear keeps its
+ * row while disabled, so the dialog does not resize or move under the pointer as values toggle.
  */
 @Composable
 private fun SearchPicker(
@@ -461,7 +464,7 @@ private fun SearchPicker(
     onToggle: (String) -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit,
-    clearShown: Boolean = selected.isNotEmpty()
+    active: Int = selected.size
 ) {
     val first = remember { FocusRequester() }
     var focusedOnce by remember { mutableStateOf(false) }
@@ -475,7 +478,7 @@ private fun SearchPicker(
     Dialog(onDismissRequest = onDismiss) {
         Column(Modifier.widthIn(max = 440.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Slate).padding(12.dp)) {
             Text(
-                if (selected.isEmpty()) title else "$title · ${selected.size} picked",
+                if (active > 0) "$title · $active" else title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
@@ -505,8 +508,13 @@ private fun SearchPicker(
             FocusRow(onClick = onDismiss, modifier = if (rows.isNullOrEmpty()) firstModifier else Modifier) {
                 Text("Done", style = MaterialTheme.typography.bodyLarge)
             }
-            if (clearShown) {
+            if (active > 0) {
                 FocusRow(onClick = onClear) { Text("Clear", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            } else {
+                // same footprint as the FocusRow above, not focusable: nothing to clear
+                Box(Modifier.fillMaxWidth().padding(8.dp)) {
+                    Text("Clear", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f))
+                }
             }
             HintBar("A" to "pick", "B" to "done")
         }

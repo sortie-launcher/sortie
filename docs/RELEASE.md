@@ -31,7 +31,7 @@ again; leaking it means anyone can sign an "update" that Android accepts.
 - `versionCode` must increase for every APK that leaves the machine and is never reused. Android refuses to install an
   update with a lower `versionCode` than the installed one.
 - `versionName` is the human version, `X.Y.Z` or `X.Y.Z-pre` (for example `0.1.0-beta.2`).
-- The defaults live in `app/build.gradle.kts` (currently code `2`, name `0.1.0-beta.1`). Override per build with
+- The defaults live in `app/build.gradle.kts` (currently code `5`, name `0.1.0-beta.4`). Override per build with
   `-PsortieVersionCode=N -PsortieVersionName=X.Y.Z-beta.N`; Gradle rejects malformed values. Bump the defaults when a
   version is released so an ordinary build cannot accidentally reuse a released number.
 - Add a `CHANGELOG.md` section for each distributed version.
@@ -40,7 +40,7 @@ again; leaking it means anyone can sign an "update" that Android accepts.
 
 ```
 tools/build.sh                 # style check, debug + release unit tests, debug APK and an UNSIGNED release APK
-tools/release.sh -PsortieVersionCode=3 -PsortieVersionName=0.1.0-beta.2
+tools/release.sh -PsortieVersionCode=6 -PsortieVersionName=0.1.0-beta.5
 ```
 
 `tools/release.sh` reads the key from the default signing directory (or `SORTIE_SIGNING_DIR`, or all three of
@@ -69,7 +69,8 @@ evidence only; Android will not install it, and it must not be distributed.
 Tester instructions: download the APK, check the SHA-256 if you can, open it and allow your browser or file manager to
 install unknown apps when Android asks. For an update, open the new APK and choose **Update**; never uninstall first,
 because uninstalling removes Sortie's Android-owned and app-private data (see the manual's *Backup and restore*).
-If Android says the app is not compatible or the package conflicts, stop and report it: that means a signature mismatch.
+If Android says the app is not compatible or the package conflicts, stop and report it. Signature, version or device
+compatibility can cause installation failures; uninstalling is not a safe diagnostic step.
 
 ## Debug and release signatures
 
@@ -93,23 +94,23 @@ permissions and the Home role. Instead:
 
 Implemented in source on `beta/0.1` (acceptance evidence is tracked in [BETA.md](BETA.md), not here):
 
-- On-device library setup and maintenance (Home/Settings → Library): multiple systems and folders, built-in emulator
+- On-device library setup and maintenance (Home → Library setup, Settings → Library and emulators): multiple systems and folders, built-in emulator
   presets with plain prerequisites, BIOS/save folders, re-index, safe removal, existing desktop configurations preserved.
 - Missing or unreadable storage keeps the previous index and the remembered settings location; failed launches show a message.
 - Plain-language All files access screen with fallbacks; overlay/Shizuku/Home role/radial keyboard stay optional.
 - Persistent release key tooling, versioning and verified signed APK packaging.
 
-Still open before handing an APK to a nontechnical friend:
+Acceptance and remaining distribution gates:
 
 - [ ] Off-machine, tested backup of the release keystore **and** password file.
-- [ ] A signed release built by `tools/release.sh`, installed on an isolated device, then updated in place by a second
-  signed build with a higher `versionCode`, preserving settings, notes, sessions, attachments and magazine positions.
-- [ ] Launch-and-return coverage across the presets. So far, on the API 33 test emulator, a library set up on the device
-  launched a lawful homebrew PSP disc image (ISO) in PPSSPP 1.20.4 and the game was seen running. Loose `.elf` PSP homebrew
-  did not start that way. Other emulators (including RetroArch cores), return/reboot and real handhelds through the
-  on-device setup are not yet proven. Compatibility depends on the device and emulator version; presets marked "not tested
-  on a device" remain unverified.
-- [ ] An observed first-time setup by someone unfamiliar with the code; fix the friction found before adding features.
+- [x] Signed beta.1/code2 updated in place to beta.2/code3 on isolated devices. Eleven durable files were byte-identical
+  before reopening (settings, notes, Room database/WAL, completed history and magazine positions); file permission and
+  running emulator processes were retained. SQLite's ephemeral shared-memory lock file changed normally.
+- [x] A source-blind newcomer configured PSP and Game Boy, added another root, visibly launched both games, saved personal
+  state and resumed reading after process restart. Reported usability findings were incorporated.
+- [ ] Broader launch-and-return coverage. PPSSPP 1.20.4 ISO and RetroArch 1.22.2/Gambatte are exercised on the API33 AVD;
+  see [LAUNCHERS.md](LAUNCHERS.md) for warm-launch behavior and limitations. Other presets retain their explicit untested
+  status; a present package does not prove its core, BIOS or game is ready.
 - [ ] A rights review of bundled third-party media before any public upload (see the README's *Licence*), including
   `field-notes-009/media/windjammers-disc-duel-beach.webp`, whose upstream source is unknown.
 - [ ] Hardware coverage beyond the devices actually tested: Android versions, single/dual screen, touch/controller,

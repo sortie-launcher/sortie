@@ -57,11 +57,13 @@ object LibraryPresets {
             "SDCARD" to "/storage/emulated/0",
             "EXTERNAL" to "/storage/emulated/0/Android/data/${build.pkg}/files"
         ),
-        flags = listOf("CLEAR_TASK", "CLEAR_TOP")
+        // Keep its singleInstance onNewIntent path: CLEAR_TASK can hang RetroArch's native onDestroy.
+        // Do not use QUITFOCUS: switching to Sortie must not kill a running game's unsaved state.
+        flags = listOf("CLEAR_TOP")
     )
 
     /** RetroArch cores whose boot through [retroArch] was seen on the device; the others use the same verified launch method. */
-    private val BOOTED_CORES = setOf("fbneo", "snes9x", "mednafen_ngp", "mupen64plus_next", "ppsspp")
+    private val BOOTED_CORES = setOf("fbneo", "snes9x", "mednafen_ngp", "mupen64plus_next", "ppsspp", "gambatte")
 
     private val OPEN_WITH = LaunchProfile(id = "open-with", label = "Open with…", generic = true)
 
@@ -155,7 +157,7 @@ object LibraryPresets {
         MUPEN_FZ.id to "The profile targets the paid Mupen64Plus FZ Pro package; the free edition has a different package and is untested.",
         EMUCOREV.id to "EmuCoreV starts titles that are already installed inside EmuCoreV, by title id: the id comes from the file name " +
             "(e.g. PCSE00001) or from a `<file>.titleid` text file next to it.",
-        OPEN_WITH.id to "Open with… asks Android which app should open the file; it always works as a fallback but nothing is preselected."
+        OPEN_WITH.id to "Open with… asks Android which app should open the file. Add it explicitly if wanted; Android may offer apps that cannot play the game."
     )
 
     private data class Spec(
@@ -381,6 +383,10 @@ object LibraryPresets {
                     " ${RA_SOURCE_ONLY.joinToString(" and ") { "${it.appLabel} (${it.pkg})" }} use the same launch interface with their own " +
                     "folders according to RetroArch's source, but were not tested on a device."
             )
+            add(
+                "After core setup, use RetroArch's Quit action before starting a game here. Save before changing games. " +
+                    "RetroArch 1.22 may close itself on the first attempt to open different content; if you return to Sortie, choose the game again."
+            )
         }
         profiles.forEach { p -> PROFILE_NOTES[p.id]?.let { add(it) } }
         if (spec.bios.isNotEmpty()) add("Expects in the BIOS folder: ${spec.bios.joinToString()} (Sortie only shows a badge when they are missing).")
@@ -408,7 +414,8 @@ object LibraryPresets {
                 generation = spec.generation,
                 roots = emptyList(),
                 extensions = spec.extensions,
-                profiles = profiles.map { it.id },
+                // A missing emulator should explain itself, not silently offer unrelated apps in Android's wildcard chooser.
+                profiles = profiles.filterNot { it.generic }.map { it.id },
                 colour = spec.colour,
                 order = index,
                 bios = spec.bios

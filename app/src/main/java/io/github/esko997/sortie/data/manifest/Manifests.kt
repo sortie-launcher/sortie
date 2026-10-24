@@ -145,6 +145,9 @@ data class GameAnnotation(
 /** Slots in the companion dock. */
 const val DOCK_SLOTS = 5
 
+/** Reserved id of the built-in Favourites folder (tile `folder:favourites`); a `folders.json` entry with this id is ignored. */
+const val FAVOURITES_FOLDER_ID = "favourites"
+
 /** Reserved id of the built-in Want to play folder (tile `folder:want-to-play`); a `folders.json` entry with this id is ignored. */
 const val WANT_TO_PLAY_FOLDER_ID = "want-to-play"
 

@@ -240,14 +240,20 @@ fun GameRow(
     /** The user's controller requirement for [game] (from `user.gameAnnotations`, looked up by the caller); unknown draws nothing. */
     annotation: GameAnnotation? = null,
     /** R2: toggles [game] in Want to play (see [wantToPlayKey]). */
-    onWantToPlay: (() -> Unit)? = null
+    onWantToPlay: (() -> Unit)? = null,
+    /** ★ before the title, as on [LauncherRow] and the grid's [SquareTile]. */
+    favourite: Boolean = false,
+    /** The system's display label, first in the metadata line (so a row without year/players/genre is never blank). */
+    platform: String? = null,
+    /** A leading badge naming the row's role, e.g. "Continue" on the home list. */
+    label: String? = null
 ) {
     FocusRow(onClick = onClick, modifier = Modifier.heroOnFocus(game).wantToPlayKey(onWantToPlay), onLongClick = onLongClick, onFavourite = onFavourite) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Cover(game)
             Column(Modifier.padding(start = 12.dp).weight(1f)) {
                 Text(
-                    displayTitle(game),
+                    (if (favourite) "★ " else "") + displayTitle(game),
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -255,7 +261,7 @@ fun GameRow(
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Stars(game.fit)
-                    val meta = listOfNotNull(game.year?.toString(), game.players?.let { "$it P" }, game.genre?.substringBefore(',')?.take(24))
+                    val meta = listOfNotNull(platform, game.year?.toString(), game.players?.let { "$it P" }, game.genre?.substringBefore(',')?.take(24))
                     Text(
                         "  " + meta.joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
@@ -265,6 +271,7 @@ fun GameRow(
                     )
                 }
                 Row {
+                    label?.let { Badge(it, Color(0xFF78350F)) }
                     if (game.hack) Badge("hack")
                     if (game.placeholder) Badge("not on device", Color(0xFF7F1D1D))
                     if (game.arriving) Badge("arriving", Color(0xFF1E3A8A))

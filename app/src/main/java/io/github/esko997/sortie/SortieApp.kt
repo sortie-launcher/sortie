@@ -40,9 +40,14 @@ class SortieApp :
 
     class Graph(val app: SortieApp) {
         val sortieDir: File = locateSortieDir(app)
+
+        /** The remembered library folder was missing when the stores below bound to it (see [needsRestart]). */
+        private val boundWhileMissing = pinnedSortieDir(app) != null && !sortieDir.isDirectory
         val manifests = ManifestStore(sortieDir)
         val db = SortieDb.open(app)
-        val user = UserStore(File(sortieDir, "user.json"))
+
+        // never recreates a remembered folder that is missing: preferences then wait for it instead of starting an empty one
+        val user = UserStore(File(sortieDir, "user.json"), mayCreateDirectory = { pinnedSortieDir(app) == null })
         val playLog = PlayLog(db.games(), File(sortieDir, "playlog.jsonl"), manifests.snapshot.value.device.device)
         val indexer = Indexer(db.games(), manifests)
         val magazines = MagazineRepository(sortieDir, BundledMagazines.forApp(app))
@@ -67,6 +72,13 @@ class SortieApp :
         init {
             SwitcherHost(this).install() // overlay switcher when the draw-over-apps grant exists; activity route otherwise
         }
+
+        /**
+         * True when storage that was unavailable as this process started is back: the remembered folder is mounted or restored,
+         * or a user.json that could not be read then now reads. Every store bound to what it found at startup, so only a
+         * [restart] loads it all. Touches the disk.
+         */
+        fun needsRestart(): Boolean = (boundWhileMissing && sortieDir.isDirectory) || user.reloadable()
     }
 
     override fun onCreate() {
@@ -92,14 +104,15 @@ class SortieApp :
     companion object {
         /**
          * The card directory the running process is bound to may be wrong on the very first run: before the all-files grant an
-         * SD card's `device.json` is unreadable, so [locateSortieDir] falls back to primary storage. The stores bind to one
-         * directory for the life of the process, so once the grant exists and discovery disagrees, the process is restarted
-         * through [RestartActivity], which runs in its own process, kills this one and starts MainActivity again (no alarms,
-         * works whether or not Sortie is the home app).
+         * SD card's `device.json` is unreadable, so [locateSortieDir] falls back to primary storage. Likewise a remembered folder
+         * may be missing at startup (card not mounted yet, folder deleted) and come back later. The stores bind to one directory
+         * and read it once for the life of the process, so once the grant exists and discovery disagrees, or that storage is back
+         * ([Graph.needsRestart]), the process is restarted through [RestartActivity], which runs in its own process, kills this
+         * one and starts MainActivity again (no alarms, works whether or not Sortie is the home app).
          */
         fun relocateIfNeeded(activity: Activity, graph: Graph): Boolean {
-            if (locateSortieDir(activity.application) == graph.sortieDir) return false
-            Log.i("Sortie", "card directory changed after the storage grant; restarting")
+            if (locateSortieDir(activity.application) == graph.sortieDir && !graph.needsRestart()) return false
+            Log.i("Sortie", "card directory changed or came back; restarting")
             restart(activity)
             return true
         }

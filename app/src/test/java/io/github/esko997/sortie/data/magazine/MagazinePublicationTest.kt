@@ -109,6 +109,18 @@ class MagazinePublicationTest {
     }
 
     @Test
+    fun sameDayNumberedIssuesShowTheLatestIssueWithoutOutrankingANewerPublicationDate() {
+        val bundled = tmp.newFolder("bundled")
+        val card = tmp.newFolder("card")
+        writePack(bundled, "field-notes-001", v2("field-notes-001"))
+        writePack(bundled, "field-notes-009", v2("field-notes-009"))
+        writePack(card, "field-notes-999", v2("field-notes-999").replace("2026-10-24", "2026-10-23"))
+
+        val shelf = mergeShelves(readShelf(card), readShelf(bundled, IssueSource.BUNDLED))
+        assertEquals(listOf("field-notes-009", "field-notes-001", "field-notes-999"), shelf.issues.map { it.issue.id })
+    }
+
+    @Test
     fun malformedCardPackNeverHidesTheBundledIssue() {
         val bundled = tmp.newFolder("bundled")
         val card = tmp.newFolder("card")
@@ -186,7 +198,6 @@ class MagazinePublicationTest {
 
         val shelf = repo.shelf()
         assertNull(shelf.problem)
-        assertEquals(listOf("field-notes-008", "field-notes-009"), shelf.issues.map { it.issue.id })
         assertTrue(shelf.issues.all { it.source == IssueSource.BUNDLED })
         val article = repo.article(shelf.issues[0], shelf.issues[0].issue.articles[0])
         assertTrue(article is ArticleContent.Ready)

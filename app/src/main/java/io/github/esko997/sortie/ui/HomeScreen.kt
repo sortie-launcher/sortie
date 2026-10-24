@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.ui
 
+import android.view.Display
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
@@ -55,10 +56,12 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.manifest.GameAnnotation
@@ -158,6 +161,14 @@ fun HomeScreen(
     val stats by vm.playStats.collectAsState()
     val lastPlayed by vm.lastPlayed.collectAsState()
     val context = LocalContext.current
+    val view = LocalView.current
+    // X moves Sortie to the other screen (MainActivity.swapScreens): only offered when there is one to move to
+    val presentationIndex = manifest.device.screens.presentationIndex
+    val canSwap = remember(view, presentationIndex) {
+        (view.display?.displayId ?: Display.DEFAULT_DISPLAY) != Display.DEFAULT_DISPLAY ||
+            (context.applicationContext as SortieApp).graph.switcher.secondaryDisplay() != null
+    }
+    val systemLabels = remember(manifest) { manifest.systems.associate { it.id to it.label } }
     val scope = rememberCoroutineScope()
     val grid = user.homeLayout == "grid"
     val sort = user.homeSort.takeIf { s -> SORTS.any { it.first == s } } ?: "alpha"
@@ -349,7 +360,7 @@ fun HomeScreen(
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = onApps) { Text("Apps", maxLines = 1) }
-                OutlinedButton(onClick = onLibrary) { Text("Library", maxLines = 1) }
+                OutlinedButton(onClick = onLibrary) { Text("Library setup", maxLines = 1) }
                 OutlinedButton(onClick = onSearch) { Text("Search", maxLines = 1) }
                 OutlinedButton(onClick = onMagazines) { Text("Magazines", maxLines = 1) }
                 OutlinedButton(onClick = onJournal) { Text("Journal", maxLines = 1) }
@@ -371,7 +382,7 @@ fun HomeScreen(
                     if (manifest.systems.isEmpty()) {
                         "Choose your game folders and installed emulators. Your games stay where they are."
                     } else {
-                        "Check your folders, file types and storage connection in Library, then scan again."
+                        "Check your folders, file types and storage connection in Library setup, then scan again."
                     },
                     style = MaterialTheme.typography.bodyLarge
                 )
@@ -446,8 +457,8 @@ fun HomeScreen(
                             grid,
                             vm,
                             lifted = lifted == t.id,
-                            favourite = t.id in user.favourites,
-                            minutes = stats[t.id]?.minutes,
+                            favourite = (t.item?.id ?: t.id) in user.favourites,
+                            minutes = stats[t.item?.id ?: t.id]?.minutes,
                             annotation = t.item?.id?.let { user.gameAnnotations[it] },
                             onClick = {
                                 if (lifted != null) {
@@ -472,25 +483,39 @@ fun HomeScreen(
                                 }
                             },
                             // not while a tile is lifted: the grid holds the focus then, and R2 must not edit the queue mid-move
-                            onWantToPlay = (t.item as? LibraryItem.Game)?.takeIf { lifted == null }?.let { g -> { toggleWantToPlay(vm, g.id, context) } }
+                            onWantToPlay = (t.item as? LibraryItem.Game)?.takeIf { lifted == null }?.let { g -> { toggleWantToPlay(vm, g.id, context) } },
+                            platform = (t.item as? LibraryItem.Game)?.game?.systemId?.let { systemLabels[it]?.takeIf(String::isNotBlank) ?: it }
                         )
                     }
                 }
             }
         }
-        val view = "Select" to if (grid) "list view" else "grid view"
+        val layoutHint = "Select" to if (grid) "list view" else "grid view"
+        val swapHint = ("X" to "swap screens").takeIf { canSwap }
         when {
             lifted != null -> HintBar("D-pad" to "move", "A" to "drop here", "B" to "cancel")
             custom -> HintBar(
-                "A" to "open",
-                "hold A" to "move / remove",
-                "hold R1" to "random",
-                "Y" to "search",
-                view,
-                "L1/R1" to "systems",
-                "X" to "swap screens"
+                *listOfNotNull(
+                    "A" to "open",
+                    "hold A" to "move / remove",
+                    "hold R1" to "random",
+                    "Y" to "search",
+                    layoutHint,
+                    "L1/R1" to "systems",
+                    swapHint
+                ).toTypedArray()
             )
-            else -> HintBar("A" to "open", "hold A" to "add to home", "hold R1" to "random", "Y" to "search", view, "L1/R1" to "systems", "X" to "swap screens")
+            else -> HintBar(
+                *listOfNotNull(
+                    "A" to "open",
+                    "hold A" to "add to home",
+                    "hold R1" to "random",
+                    "Y" to "search",
+                    layoutHint,
+                    "L1/R1" to "systems",
+                    swapHint
+                ).toTypedArray()
+            )
         }
     }
 
@@ -541,7 +566,9 @@ private fun HomeTileView(
     onLongClick: () -> Unit,
     onFavourite: (() -> Unit)?,
     /** R2 on a game tile (see [wantToPlayKey]); null for systems, folders, apps and shortcuts. */
-    onWantToPlay: (() -> Unit)?
+    onWantToPlay: (() -> Unit)?,
+    /** A game's system label for the list row (see [GameRow]). */
+    platform: String?
 ) {
     val item = t.item
     if (grid) {
@@ -608,7 +635,10 @@ private fun HomeTileView(
                     onLongClick = onLongClick,
                     onFavourite = onFavourite,
                     annotation = annotation,
-                    onWantToPlay = onWantToPlay
+                    onWantToPlay = onWantToPlay,
+                    favourite = favourite,
+                    platform = platform,
+                    label = if (t.id == HomeIds.CONTINUE) t.title else null
                 )
                 is LibraryItem.App -> LauncherRow(t.title, t.subtitle, favourite, onClick, onLongClick, minutes, tall = true, onFavourite = onFavourite) {
                     vm.appIcon(item.app.pkg)

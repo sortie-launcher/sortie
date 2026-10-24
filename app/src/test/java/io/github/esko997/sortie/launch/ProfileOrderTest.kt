@@ -17,15 +17,14 @@ class ProfileOrderTest {
     private fun ids(user: UserData) = profileOrder("cps3/jojo.zip", "cps3", user, manifest, profiles).map { it.id }
 
     @Test
-    fun manifestOrderThenGeneric() = assertEquals(listOf("ra-fbneo", "ra-mame", "open-with"), ids(UserData()))
+    fun anUnconfiguredChooserCannotHideMissingEmulators() = assertEquals(listOf("ra-fbneo", "ra-mame"), ids(UserData()))
 
     @Test
-    fun systemDefaultFromSettingsComesFirst() =
-        assertEquals(listOf("ra-mame", "ra-fbneo", "open-with"), ids(UserData(systemProfiles = mapOf("cps3" to "ra-mame"))))
+    fun systemDefaultFromSettingsComesFirst() = assertEquals(listOf("ra-mame", "ra-fbneo"), ids(UserData(systemProfiles = mapOf("cps3" to "ra-mame"))))
 
     @Test
     fun perGameOverrideBeatsSystemDefault() = assertEquals(
-        listOf("ra-fbneo", "ra-mame", "open-with"),
+        listOf("ra-fbneo", "ra-mame"),
         ids(UserData(profileOverrides = mapOf("cps3/jojo.zip" to "ra-fbneo"), systemProfiles = mapOf("cps3" to "ra-mame")))
     )
 
@@ -38,7 +37,14 @@ class ProfileOrderTest {
 
     @Test
     fun unknownAndOtherSystemsChoicesAreIgnored() = assertEquals(
-        listOf("ra-fbneo", "ra-mame", "open-with"),
+        listOf("ra-fbneo", "ra-mame"),
         ids(UserData(systemProfiles = mapOf("cps3" to "gone", "snes" to "ra-mame")))
     )
+
+    @Test
+    fun anExplicitChooserRetainsItsConfiguredPosition() {
+        val order = profileOrder("cps3/jojo.zip", "cps3", UserData(), listOf("ra-fbneo", "open-with", "ra-mame"), profiles)
+        assertEquals(listOf("ra-fbneo", "open-with", "ra-mame"), order.map { it.id })
+        assertEquals(emptyList<LaunchProfile>(), profileOrder("unknown/game", "unknown", UserData(), emptyList(), profiles))
+    }
 }

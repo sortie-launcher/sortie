@@ -21,7 +21,7 @@ Every key is optional; unknown keys are ignored.
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `favourites` | ids | `[]` | favourited games (`<system>/<file>`), apps (`app:<pkg>`) and shortcuts (`shortcut:<pkg>/<id>`) |
+| `favourites` | ids | `[]` | favourited games (`<system>/<file>`), apps (`app:<pkg>`) and shortcuts (`shortcut:<pkg>/<id>`), shown by the built-in `favourites` folder (title order, hidden entries left out; always on the custom home). Ids not in the index or not installed are kept and show once available |
 | `wantToPlay` | game ids | `[]` | the Want to play queue shown by the built-in `want-to-play` folder (title order, hidden games left out), independent of `favourites` and kept after launching. Ids not in the index are kept and show once indexed. The folder is always on the custom home (see `layout`); toggling the queue never changes `layout` |
 | `hidden` | ids | `[]` | entries kept out of smart folders |
 | `profileOverrides` | id → profile id | `{}` | per-game launch profile chosen in "Launch with…" |

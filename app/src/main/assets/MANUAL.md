@@ -15,18 +15,18 @@ BIOS files or emulators.
    installed. BIOS or firmware files, RetroArch cores (RetroArch → Online Updater) and emulator settings are set up inside
    each emulator; Sortie cannot do that for you and does not supply them.
 
-3. **Home → Library** (or **Settings → Library and emulators**) → **Add a system…**. Pick the kind of games, e.g.
+3. **Home → Library setup** (or **Settings → Library and emulators**) → **Add a system…**. Pick the kind of games, e.g.
    *PlayStation 2* or *Game Boy Advance*, or **Something else…** to name your own. Then:
    - **Add a folder…** and browse to the folder that holds the game files themselves, then **Use this folder**. Add as many
      folders as you need; they can be on internal storage or a memory card.
    - Check **File types**. The suggestion fits most libraries; leave it empty to list every file in the folders.
    - Under **Emulators**, the first *installed* one in the list starts games. **Add an emulator…** adds another; select one to
-     move it up/down or remove it. **Open with…** lets Android ask which app to use. Each system shows a **Before the first
-     game** note with that emulator's requirements and whether its launch method was tested on a device.
+     move it up/down or remove it. **Open with…** is optional: add it explicitly if you want Android to ask which app to use.
+     Each system shows a **Before the first game** note with the emulator's requirements and compatibility.
    - **Save.** Sortie writes the settings, reads the folders and shows how many games it found, plus a few games to try.
 
-4. **Test a game.** Open one from the result and start it. Sortie can only tell that the emulator opened: check that the game
-   itself runs, then come back to Sortie.
+4. **Test a game.** Open one from the result and choose **Play**. Sortie can only tell that the emulator opened: check that
+   the game itself runs, then come back to Sortie.
 
 5. Optional: **Settings → Default home app** makes Sortie your Home screen; the same entry switches back to another launcher.
 
@@ -40,7 +40,10 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
   as a single game.
 - PSP: Sortie hands disc images (ISO, CSO, CHD) to PPSSPP. Homebrew kept as **<name>/EBOOT.PBP** is not found, and a loose
   **.elf** or **.prx** may not start from Sortie; start such homebrew from inside PPSSPP.
-- After copying new games, use **Library → Re-index every system** (or **Settings → Diagnostics → Re-index everything**).
+- After copying new games, use **Library setup → Re-index every system** (or **Settings → Diagnostics → Re-index everything**).
+- After downloading RetroArch cores, use RetroArch's **Quit** action before starting a game here. Save before changing games.
+  RetroArch 1.22 may close itself on the first attempt to open different content; if you return to Sortie, choose the game
+  again. Sortie does not force-close a running game when you switch away to read or use another app.
 
 ### Maintaining your library
 
@@ -62,6 +65,9 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
   does not start a new library elsewhere. Until the card is back, its systems, games and the notes stored on it may be
   missing from the lists. **Reinsert the card** (or turn All files access back on), then re-index. Do not set the library up
   again on other storage: your notes and preferences are in the original **sortie** folder.
+- After reconnecting saved settings, **Library setup → Try again** may restart Sortie so every screen reads the restored
+  library and preferences. Returning to Sortie can do the same. Changes made while storage is missing are not saved;
+  Sortie will not replace a restored preferences file with the empty defaults it had while that file was unavailable.
 - A folder that is missing or unreadable is reported after indexing, and its games are kept until it is back.
 - When a game can't start, Sortie says why: file not present, emulator not installed, no emulator set up, or the emulator
   refused the request. **Settings → Diagnostics** keeps the exact launch attempts.
@@ -88,12 +94,14 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 (a strip of consoles with that console's games underneath). The first three sorts show emulation systems only.
 
 - **Custom** always includes every smart folder and **Apps**, alongside your pinned systems, games, apps and shortcuts.
+- **Favourites** is always in **Custom**, even when empty. It includes your favourited games, installed apps and shortcuts;
+  hidden items stay hidden. A star before a list-row title marks a favourite; **Fit 4+** is a separate guide-rating filter.
 - **Continue** shows the last game you played and starts first on Custom; it can be moved like any other tile.
 - Hold A on a system, game, app or shortcut and choose *Add to home*. On Custom, hold A → *Move* lifts a tile; the D-pad moves
   it, A drops it, B cancels. Existing pins keep their order. Smart folders, Apps and Continue can be moved but not removed.
 - **Apps** lists installed apps and the shortcuts you have opted in to ("Browse all shortcuts…"). When another app offers to
   add a shortcut to Sortie, Sortie names the shortcut and the app and asks first: **Add** or **Cancel**.
-- **📖**, beside Settings, opens this manual directly. **Library** manages your systems, folders and emulators; **Magazines**
+- **📖**, beside Settings, opens this manual directly. **Library setup** manages systems, folders and emulators; **Magazines**
   opens the offline reading shelf; **Journal** opens your week in games.
 - With no games yet, Home shows **Set up library** (or **Manage library** when systems are set up but no games were found).
 
@@ -112,7 +120,7 @@ to change the Apps grid density. The label cutoff adapts to tile width and your 
 On a narrow Home screen, header actions move below the clock, sort choices scroll sideways (touch or D-pad), and controller
 hints wrap as whole button/action pairs.
 
-System and folder filter chips: **★★★★+** (fit 4 or better), **✍ notes** (guide or personal notes), **💾 started** (a save or state exists
+System and folder filter chips: **Fit 4+** (guide rating 4 or 5), **✍ notes** (guide or personal notes), **💾 started** (a save or state exists
 on the card), **on device** (hide placeholders for games not copied yet). **🎲 Pick one** opens a random game from what is shown.
 The title stays above these controls. On smaller screens, the controls wrap onto additional rows rather than shrinking.
 
@@ -122,7 +130,8 @@ Search accepts a title, tag, genre, developer or description fragment. Text is o
 **Genre** to explore without typing. Tags include the badges on game pages, including hack and translation flags.
 
 - Pick several values in a filter to match **any** of them; different filters must **all** match.
-- **More** offers favourites, Want to play, unplayed (never launched), fit ★★★★+ and **On device only** (on by default).
+- **More** offers favourites, Want to play, unplayed (never launched), **Fit 4+** and **On device only (default)**.
+  The More count counts changes from those defaults, not the default on-device setting itself.
 - **A / tap** toggles a picker value; **Done / B** closes the picker. Its counts describe the library, not the other active filters.
 - Active filters appear below the buttons. Tap one to remove it; **Clear filters** keeps your search text.
 - The game count includes all matches. More results load as you scroll; the initial page is not a search limit.
@@ -175,9 +184,10 @@ reappear when indexed again. The queue is saved on the card and included in back
 
 ## A game's page
 
-Art, fit stars, hook, description, play time and (when written) control notes. **A** launches with the first working launcher;
-**Select** lets you pick a launcher for this game permanently. The order tried: this game's choice → the system default from
-Settings → the system's emulator list in Library → "Open with…". If nothing starts, a message says why.
+Art, fit stars, hook, description, play time and (when written) control notes. **Play / A** launches with the first working
+launcher; **Select** lets you pick one for this game permanently. The order tried: this game's choice → the system default
+from Settings → the system's emulator list in Library setup. **Open with…** is used only if you explicitly choose it or add it
+to that list. Cancelling Android's app chooser does not start a play session. If nothing starts, a message says why.
 
 **Add notes / Edit notes** opens your own notes and controls:
 - **Where was I?**: save slot, next objective or anything useful when returning.
@@ -314,7 +324,7 @@ but images are unavailable until their files are copied back to the same relativ
 Backups do not contain ROMs, BIOS files, artwork, **emulator saves** (each emulator keeps its own; back those up from the
 emulator's folders), the game index (rebuilt from your folders), **playlog.jsonl**, or your library settings
 (**device.json**, **systems.json**, **launchers.json** and other settings files). To keep a library you set up on the device,
-copy the whole **sortie** folder shown in **Library → Where these settings live** as well.
+copy the whole **sortie** folder shown in **Library setup → Where these settings live** as well.
 
 Some state lives only inside the app: play-history statistics (Sortie's minutes and sessions come from its own database;
 completed sessions are in the backup, **playlog.jsonl** is only a copy for computers and is not read back), magazine reading
@@ -330,6 +340,6 @@ refuses an update: ask whoever sent you the APK.
 
 ## Play log and saves
 
-Every launch is a session; sessions end when the game's window is gone. Minutes, session counts and "last played" feed the
-*Continue* tile, the *Recently played* / *Play next* folders and the **💾 started** chip (which reads the save folders set in
-**Library → BIOS and save folders**, or on a computer-prepared card).
+An emulator/app launch starts a session; opening and cancelling the app chooser does not. Sessions end when the game's
+window is gone. Minutes, session counts and "last played" feed the *Continue* tile and personal history. The **💾 started**
+chip reads the save folders set in **Library setup → BIOS and save folders**, or on a computer-prepared card.

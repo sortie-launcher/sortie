@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -142,6 +143,73 @@ class UserStoreTest {
         assertEquals(expected, store.data.value)
         withTimeout(5_000) { store.written.first { it == expected } }
         assertEquals(expected, UserStore(file).data.value)
+    }
+
+    /**
+     * A remembered library folder missing at startup: saves fail without recreating it, and once it is restored its user.json is
+     * never overwritten by the empty state this store started from (ordinary or durable writes); a restart loads it instead.
+     */
+    @Test
+    fun missingRememberedFolderIsNotRecreatedAndItsRestoredFileIsKept() = runBlocking {
+        val dir = File(Files.createTempDirectory("sortie").toFile(), "sortie")
+        val file = File(dir, "user.json")
+        val gate = Gate()
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + gate), mayCreateDirectory = { false })
+        assertEquals(UserData(), store.data.value)
+        store.toggleFavourite("snes/while-missing.sfc")
+        assertTrue(runCatching { store.commit { it.copy(homeSort = "custom") } }.isFailure)
+        gate.open() // the ordinary write runs now, inline
+        assertFalse(dir.exists())
+        assertNotNull(store.writeError.value)
+        assertFalse(store.reloadable())
+
+        val restored = UserData(favourites = setOf("snes/kept.sfc"), homeSort = "count", gridColumns = 7)
+        assertTrue(dir.mkdirs())
+        file.writeText(Json.encodeToString(UserData.serializer(), restored))
+        val bytes = file.readBytes()
+        store.toggleFavourite("snes/after-restore.sfc") // collector runs inline: the gate is open
+        assertTrue(runCatching { store.commit { it.copy(homeSort = "recent") } }.isFailure)
+        assertTrue(runCatching { store.replace(store.data.value, UserData(gridColumns = 3)) }.isFailure)
+        assertArrayEquals(bytes, file.readBytes())
+        assertEquals(emptyList<String>(), dir.list()!!.filter { it != "user.json" })
+        assertNotNull(store.writeError.value)
+        assertTrue(store.reloadable())
+        assertEquals(restored, UserStore(file).data.value)
+    }
+
+    /** Unpinned first run saves (creating the folder); after setup remembers it, a vanished folder is not recreated. */
+    @Test
+    fun firstRunPreferencesSaveButARememberedFolderIsNeverRecreated() = runBlocking {
+        val dir = File(Files.createTempDirectory("sortie").toFile(), "sortie")
+        val file = File(dir, "user.json")
+        var pinned = false
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO), mayCreateDirectory = { !pinned })
+        val first = store.commit { it.copy(homeSort = "custom") }
+        assertEquals(first, UserStore(file).data.value)
+        pinned = true // library setup remembered the folder in this same process
+        val second = store.commit { it.copy(favourites = setOf("snes/a.sfc")) }
+        assertEquals(second, UserStore(file).data.value)
+        assertFalse(store.reloadable())
+        assertTrue(dir.deleteRecursively()) // its storage goes away
+        assertTrue(runCatching { store.commit { it.copy(homeSort = "count") } }.isFailure)
+        assertFalse(dir.exists())
+        assertEquals(second, store.data.value)
+    }
+
+    /** A user.json that does not parse is never replaced by defaults; only once it parses does a restart help (no restart loop). */
+    @Test
+    fun unparsableFileIsKeptAndOnlyAFixedOneAsksForARestart() = runBlocking {
+        val file = fresh()
+        file.writeText("""{"favourites": ["snes/a.sfc"""")
+        val bytes = file.readBytes()
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        assertEquals(UserData(), store.data.value)
+        assertTrue(runCatching { store.commit { it.copy(homeSort = "custom") } }.isFailure)
+        assertArrayEquals(bytes, file.readBytes())
+        assertFalse(store.reloadable())
+        file.writeText("""{"favourites": ["snes/a.sfc"]}""")
+        assertTrue(store.reloadable())
+        assertEquals(setOf("snes/a.sfc"), UserStore(file).data.value.favourites)
     }
 
     /** Holds every dispatched block until [open]; then runs them inline on the calling thread. */

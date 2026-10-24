@@ -35,7 +35,6 @@
     "EXTERNAL": "/storage/emulated/0/Android/data/com.retroarch/files"
    },
    "flags": [
-    "CLEAR_TASK",
     "CLEAR_TOP"
    ]
   },

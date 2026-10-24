@@ -58,7 +58,8 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
     val stats by vm.playStats.collectAsState()
     var showProfiles by remember { mutableStateOf(false) }
     val snap by vm.manifests.collectAsState()
-    val profiles = remember(game.id, user.profileOverrides[game.id], snap.loadedAt) { vm.profilesFor(game) }
+    val apps by vm.apps.collectAsState()
+    val profiles = remember(game.id, user.profileOverrides[game.id], snap.loadedAt, apps, showProfiles) { vm.profilesFor(game) }
     val fav = game.id in user.favourites
     val queued = game.id in user.wantToPlay
     val context = LocalContext.current
@@ -139,7 +140,7 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
                     )
                 }
                 GameAnnotationSummary(annotation, Modifier.padding(top = 8.dp))
-                val sortieInteraction = remember { MutableInteractionSource() }
+                val playInteraction = remember { MutableInteractionSource() }
                 val profilesInteraction = remember { MutableInteractionSource() }
                 val notesInteraction = remember { MutableInteractionSource() }
                 val favInteraction = remember { MutableInteractionSource() }
@@ -157,12 +158,12 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
                         },
                         enabled = !game.placeholder,
                         modifier = Modifier
-                            .focusGlow(sortieInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape, accent)
+                            .focusGlow(playInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape, accent)
                             .focusRequester(launchFocus),
                         colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Ink),
-                        interactionSource = sortieInteraction
+                        interactionSource = playInteraction
                     ) {
-                        Text("Sortie")
+                        Text("Play")
                     }
                     OutlinedButton(
                         onClick = { showProfiles = !showProfiles },
@@ -243,7 +244,7 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     variants.forEach { v ->
-                        FocusRow(onClick = { vm.launch(v) }, colour = accent) { Text("Sortie ${v.fileName}", style = MaterialTheme.typography.bodySmall) }
+                        FocusRow(onClick = { vm.launch(v) }, colour = accent) { Text("Play ${v.fileName}", style = MaterialTheme.typography.bodySmall) }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -252,7 +253,7 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
                 Text(game.fileName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        HintBar("A" to "sortie", "Y" to "favourite", "R2" to "want to play", "Select" to "launch with…", "B" to "back")
+        HintBar("A" to "play", "Y" to "favourite", "R2" to "want to play", "Select" to "launch with…", "B" to "back")
     }
 }
 

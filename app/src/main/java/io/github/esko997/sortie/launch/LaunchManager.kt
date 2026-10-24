@@ -2,6 +2,7 @@ package io.github.esko997.sortie.launch
 
 import android.app.ActivityOptions
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
@@ -26,7 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
-/** Resolves a game to an ordered list of profiles (override, then system order, then the generic one), tries them, records what happened. */
+/** Tries the game's configured profiles in order (game override, system override, system list), recording each attempt. */
 class LaunchManager(
     private val context: Context,
     private val manifests: ManifestStore,
@@ -86,12 +87,17 @@ class LaunchManager(
             try {
                 val uri = runCatching { FileProvider.getUriForFile(context, "${context.packageName}.files", file) }.getOrNull()
                 val titleId = sidecarTitleId(file)
-                val intent = if (profile.generic) openWith(file, uri) else IntentBuilder.build(profile, IntentBuilder.vars(file, game.systemId, uri, titleId))
                 val (options, displayId, displayNote) = displayOptions(profile.display)
+                val intent = if (profile.generic) {
+                    openWith(file, uri, game.id, profile, displayId)
+                } else {
+                    IntentBuilder.build(profile, IntentBuilder.vars(file, game.systemId, uri, titleId))
+                }
                 command = IntentBuilder.describe(intent, displayId)
                 if (uri != null && !profile.generic && IntentBuilder.usesContentUri(profile)) grant(intent, uri)
                 context.startActivity(intent, options?.toBundle())
-                attempts += Attempt(profile.id, command, "started" + (displayNote?.let { " ($it)" } ?: ""))
+                val outcome = if (profile.generic) "chooser opened; waiting for app selection" else "started"
+                attempts += Attempt(profile.id, command, outcome + (displayNote?.let { " ($it)" } ?: ""))
                 started = profile
                 startedDisplay = displayId
                 break
@@ -111,10 +117,20 @@ class LaunchManager(
             val system = manifests.snapshot.value.systems.firstOrNull { it.id == game.systemId }?.label ?: game.systemId
             notify(gameFailureMessage(game.title, system, attempts, candidates.associate { it.id to it.label }), sortieDisplay())
         }
-        // Record the session outside the try/catch so a logging failure can never trigger a second launch.
-        started?.let { runCatching { playLog.start(game.id, it.id, it.display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) } }
-        if (started != null) afterLaunch?.invoke(startedDisplay) // last: the activity may finish itself here
+        // A chooser opening is not a game starting. Its private sender records only an actual selection.
+        started?.takeUnless { it.generic }?.let {
+            runCatching { playLog.start(game.id, it.id, it.display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
+            afterLaunch?.invoke(startedDisplay) // last: the activity may finish itself here
+        }
         return started != null
+    }
+
+    internal suspend fun chooserSelected(gameId: String, profileId: String, display: String, target: Int?, chosen: ComponentName) {
+        val attempt = Attempt(profileId, chosen.flattenToShortString(), "app selected")
+        _log.update { (listOf(LogEntry(LocalTime.now().format(TS), gameId, listOf(attempt), true)) + it).take(50) }
+        Log.i("SortieLaunch", "$gameId via $profileId: app selected | ${attempt.command}")
+        runCatching { playLog.start(gameId, profileId, display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
+        afterLaunch?.invoke(target)
     }
 
     /**
@@ -212,10 +228,11 @@ class LaunchManager(
         null
     }
 
-    private fun openWith(file: File, uri: Uri?): Intent {
+    private fun openWith(file: File, uri: Uri?, gameId: String, profile: LaunchProfile, displayId: Int?): Intent {
         val target = uri ?: Uri.fromFile(file)
         val view = Intent(Intent.ACTION_VIEW).setDataAndType(target, "*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        return Intent.createChooser(view, file.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return Intent.createChooser(view, file.name, ChooserLaunchReceiver.sender(context, gameId, profile, displayId))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
     private fun grant(intent: Intent, uri: Uri) {

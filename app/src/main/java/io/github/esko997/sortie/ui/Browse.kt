@@ -75,7 +75,9 @@ fun ItemCell(
     onLongClick: () -> Unit,
     appLabel: (String) -> String = { it },
     hasSave: Boolean = false,
-    annotation: GameAnnotation? = null
+    annotation: GameAnnotation? = null,
+    /** A game's system label for the list row's metadata line (see [GameRow]). */
+    platform: String? = null
 ) {
     val context = LocalContext.current
     val fav = {
@@ -107,7 +109,9 @@ fun ItemCell(
                     hasSave = hasSave,
                     onFavourite = fav,
                     annotation = annotation,
-                    onWantToPlay = queue
+                    onWantToPlay = queue,
+                    favourite = favourite,
+                    platform = platform
                 )
             }
         }
@@ -154,7 +158,9 @@ private fun ItemListScreen(title: String, items: List<LibraryItem>, vm: SortieVi
     val saves by vm.saveStems.collectAsState()
     val user by vm.user.collectAsState()
     val apps by vm.apps.collectAsState()
+    val manifests by vm.manifests.collectAsState()
     val appLabels = remember(apps) { apps.associate { it.pkg to it.label } }
+    val systemLabels = remember(manifests) { manifests.systems.associate { it.id to it.label } }
     var minFit by rememberSaveable { mutableStateOf(0) }
     var onDeviceOnly by rememberSaveable { mutableStateOf(true) }
     var notesOnly by rememberSaveable { mutableStateOf(false) }
@@ -188,7 +194,7 @@ private fun ItemListScreen(title: String, items: List<LibraryItem>, vm: SortieVi
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 OutlinedButton(onClick = { shown.randomOrNull()?.let(open) }, enabled = shown.isNotEmpty()) { Text("🎲 Pick one", maxLines = 1) }
-                FilterChip(selected = minFit >= 4, onClick = { minFit = if (minFit >= 4) 0 else 4 }, label = { Text("★★★★+", maxLines = 1) })
+                FilterChip(selected = minFit >= 4, onClick = { minFit = if (minFit >= 4) 0 else 4 }, label = { Text("Fit 4+", maxLines = 1) })
                 FilterChip(selected = notesOnly, onClick = { notesOnly = !notesOnly }, label = { Text("✍ notes", maxLines = 1) })
                 FilterChip(selected = startedOnly, onClick = { startedOnly = !startedOnly }, label = { Text("💾 started", maxLines = 1) })
                 FilterChip(selected = onDeviceOnly, onClick = { onDeviceOnly = !onDeviceOnly }, label = { Text("on device", maxLines = 1) })
@@ -207,7 +213,8 @@ private fun ItemListScreen(title: String, items: List<LibraryItem>, vm: SortieVi
                         onClick = { open(item) },
                         onLongClick = { sheet = item },
                         appLabel = { appLabels[it] ?: it },
-                        hasSave = item is LibraryItem.Game && item.game.saveStem() in saves
+                        hasSave = item is LibraryItem.Game && item.game.saveStem() in saves,
+                        platform = (item as? LibraryItem.Game)?.game?.systemId?.let { systemLabels[it]?.takeIf(String::isNotBlank) ?: it }
                     )
                 }
             }

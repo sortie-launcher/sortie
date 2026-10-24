@@ -9,6 +9,7 @@ import io.github.esko997.sortie.data.setup.LibraryConfiguration
 import io.github.esko997.sortie.data.setup.LibraryConflictException
 import io.github.esko997.sortie.data.setup.LibrarySetupStore
 import java.io.File
+import java.io.IOException
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -65,7 +66,7 @@ internal data class SetupResult(
 )
 
 /**
- * Library setup's writes and the forced re-index that follows them. Process-wide (one per [SortieApp.Graph]), so leaving the
+ * Library setup's writes and the incremental re-index that follows them. Process-wide (one per [SortieApp.Graph]), so leaving the
  * screen, opening a game page or the X screen swap never cancels a half-done multi-file save or loses its outcome; the screen
  * only shows [work] and [config]. One change at a time.
  */
@@ -86,7 +87,7 @@ internal class LibrarySetupModel private constructor(private val graph: SortieAp
         loading?.cancel()
         loading = scope.launch {
             _config.value = try {
-                SetupConfig.Loaded(withContext(Dispatchers.IO) { store.load() })
+                SetupConfig.Loaded(readConfiguration())
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -98,9 +99,24 @@ internal class LibrarySetupModel private constructor(private val graph: SortieAp
     /** Reads the card now, for a draft that must be re-based after a conflicting change; throws what the store's load throws. */
     suspend fun reload(): LibraryConfiguration {
         loading?.cancel()
-        val fresh = withContext(Dispatchers.IO) { store.load() }
+        val fresh = readConfiguration()
         _config.value = SetupConfig.Loaded(fresh)
         return fresh
+    }
+
+    private suspend fun readConfiguration(): LibraryConfiguration = withContext(Dispatchers.IO) {
+        val dir = graph.sortieDir
+        val remembered = SortieApp.pinnedSortieDir(graph.app) != null
+        if ((remembered && !dir.isDirectory) || dir.parentFile?.isDirectory != true) {
+            throw IOException(
+                "The library folder ${dir.path} is unavailable. Reconnect its storage or restore the settings folder, then try again. " +
+                    "Your library has not been reset."
+            )
+        }
+        if (dir.isDirectory && !dir.canRead()) {
+            throw IOException("The library folder ${dir.path} can't be read. Check the storage and Sortie's All files access, then try again.")
+        }
+        store.load()
     }
 
     /** False when another change is still running (nothing started). */

@@ -48,7 +48,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.data.manifest.ControllerSupport
@@ -226,15 +228,22 @@ private fun FieldLabel(text: String) {
 
 /**
  * Multi-line note field that a controller can leave: D-pad up/down from a physical gamepad/D-pad moves the focus instead of
- * the caret (the caret stays on the soft keyboard's own arrows and touch), and A brings up the keyboard.
+ * the caret (the caret stays on the soft keyboard's own arrows and touch), and A brings up the keyboard. The caret starts
+ * after existing text (so typing appends) and goes there again whenever the caller replaces [value]; the user's own caret
+ * moves and IME composition are kept while the text is theirs.
  */
 @Composable
 internal fun NoteField(value: String, onChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier, enabled: Boolean = true) {
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
+    var edited by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
+    val field = if (edited.text == value) edited else TextFieldValue(value, TextRange(value.length))
     OutlinedTextField(
-        value = value,
-        onValueChange = onChange,
+        value = field,
+        onValueChange = {
+            edited = it
+            if (it.text != value) onChange(it.text)
+        },
         enabled = enabled,
         placeholder = { Text(placeholder) },
         minLines = 2,

@@ -82,6 +82,8 @@
                 <action android:name="android.content.pm.action.CONFIRM_PIN_SHORTCUT" />
             </intent-filter>
         </activity>
+        <!-- One-shot callback from Android's app chooser; cancellation must not create a play session. -->
+        <receiver android:name=".launch.ChooserLaunchReceiver" android:exported="false" />
         <!-- Shizuku (optional): lets Sortie move running apps between screens as the shell user. Nothing works without the user's grant. -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"

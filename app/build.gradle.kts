@@ -14,7 +14,7 @@ plugins {
 // validated, for upgrade smokes and later releases (tools/release.sh passes its arguments through).
 val sortieVersionCode: Int = providers.gradleProperty("sortieVersionCode").orNull.let { raw ->
     if (raw == null) {
-        2
+        5
     } else {
         raw.takeIf { Regex("[1-9][0-9]{0,9}").matches(it) }?.toLong()?.takeIf { it <= 2_100_000_000L }?.toInt()
             ?: throw GradleException("sortieVersionCode must be a whole number from 1 to 2100000000, got \"$raw\"")
@@ -23,7 +23,7 @@ val sortieVersionCode: Int = providers.gradleProperty("sortieVersionCode").orNul
 val sortieVersionName: String = providers.gradleProperty("sortieVersionName").orNull.let { raw ->
     val semver = Regex("(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?")
     if (raw == null) {
-        "0.1.0-beta.1"
+        "0.1.0-beta.4"
     } else {
         raw.takeIf { it.length <= 64 && semver.matches(it) }
             ?: throw GradleException("sortieVersionName must look like 1.2.3 or 1.2.3-beta.4 (at most 64 characters), got \"$raw\"")

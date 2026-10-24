@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- On-device library setup (Home → Library, Settings → Library and emulators): add built-in or custom systems, several game
+- On-device library setup (Home → Library setup, Settings → Library and emulators): add built-in or custom systems, several game
   folders each through a controller/touch folder browser, file types, installed emulators in fallback order, BIOS and save
   folders; re-index and remove systems. Saves merge into existing manifests (unknown fields and unedited entries kept), are
   refused when files are unreadable or changed meanwhile, and commit atomically with recovery after interruption. Removing a
@@ -19,9 +19,20 @@
 - Release tooling: `tools/init-release-key.sh` creates one persistent release key outside the repository;
   `tools/release.sh` builds, verifies and checksums a signed, non-debuggable APK with no debug-key fallback. Validated
   `versionCode`/`versionName` overrides. `tools/build.sh` checks style, runs debug and release unit tests and builds both
-  variants without formatting. Signed upgrade, launch compatibility and friend usability gates remain open (docs/RELEASE.md).
+  variants without formatting. Signed upgrade and source-blind newcomer exercises passed; tested compatibility and remaining
+  key-custody/public-distribution gates are recorded in docs/BETA.md and docs/RELEASE.md.
 - Shortcut pin requests from other apps (`requestPinShortcut`) now ask first: a dialog names the shortcut and the requesting
   app/package with Add or Cancel (Cancel focused). Cancel, Back or leaving adds nothing; expired or invalid requests explain why.
+- Newcomer refinements: Play action, Library setup label, built-in Favourites shelf, favourite/platform list labels, Fit 4+
+  filters, stable More-filter dialog, Continue list badge and no screen-swap hint on single-screen devices. Existing notes
+  open with the cursor at the end. Same-day numbered magazine issues show the highest issue first.
+- Missing saved settings offer reconnect/restore guidance rather than first-run setup. Preference writes cannot recreate a
+  missing pinned folder or overwrite a restored/unreadable user.json with empty defaults. Recovery reloads every store;
+  failed preference writes warn on ordinary screens, not only in Backup/Journal.
+- New presets do not add an Android wildcard chooser implicitly, and cancelling the chooser records no play session.
+  Newly installed emulators become selectable from an already-open game page without restarting Sortie.
+- RetroArch presets keep its single-instance intent path instead of clearing its native activity. Background games are not
+  killed on focus loss; the emulator's different-content restart limitation is explained before the first game.
 - Public-audience Field Notes zines now ship in the APK: nine revised issues, 41 articles and 131 bundled images, with
   portable game references, public source provenance and compact rights notices rather than personal library assumptions.
 - Magazine contents list Games mentioned with All/On this device filtering; game pages link back through Featured in.

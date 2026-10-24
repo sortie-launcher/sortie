@@ -12,16 +12,18 @@ compatibility beyond the devices and emulator versions actually tested is not cl
 
 ## What it does
 
-- **Library** (on Home, or Settings → Library and emulators): add systems from a built-in list or name your own, choose one
+- **Library setup** (on Home, or Settings → Library and emulators): add systems from a built-in list or name your own, choose one
   or more game folders per system, pick installed emulators in fallback order, set BIOS/save folders, re-index and remove
   systems — no JSON editing or computer needed. Removing a system never deletes game files, saves or personal records.
 - Five Home sorts: alphabetical, game count and generation show systems only; Custom holds every smart folder, Apps, your
   pins and a **Continue** tile; By Console shows a console's games. Grids scroll sideways or down, with configurable density.
-- Lists with filters (fit ★★★★+, hand-written notes, started/has a save, on device), a random pick; Search combines systems,
+- Lists with filters (Fit 4+, hand-written notes, started/has a save, on device), a random pick; Search combines systems,
   tags/flags, genres, favourites, Want to play and unplayed, with optional text and a full match count.
 - Game pages with cover, hook, description, play stats, control notes; **Launch with…** picks a launcher per game; a default
-  launcher per system in Settings; falls back through the manifest order to "Open with…".
-- Smart folders from JSON rules (tags, fit, play time, days since played, recent-tags similarity …).
+  launcher per system in Settings; fallback follows the configured order. Android's "Open with…" chooser is explicit, not
+  silently added when an emulator is missing; cancelling it does not create a play session.
+- Smart folders from JSON rules (tags, fit, play time, days since played, recent-tags similarity …), plus a built-in
+  **Favourites** shelf for games, apps and shortcuts on Home → Custom.
 - Personal Finished and Shelved folders with verdicts, separate from favourites and the Want to play queue.
 - Per-game offline reference cards: Markdown notes and zoomable maps/images, available on the companion during gameplay.
 - A weekly gaming journal built from real play sessions, with dated notes and explicitly picked screenshot attachments.

@@ -1,5 +1,8 @@
 package io.github.esko997.sortie.ui
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -155,12 +158,24 @@ private const val CONFLICT_TEXT =
 /** Installed-package checks, cached until the window regains focus (e.g. after installing an emulator and coming back). */
 private class Installed(private val pm: PackageManager) {
     private val cache = HashMap<String, Boolean>()
+    private val labels = HashMap<String, String>()
 
     fun has(pkg: String): Boolean = cache.getOrPut(pkg) { runCatching { pm.getPackageInfo(pkg, 0) }.isSuccess }
+
+    /** The installed app's own name for [pkg] (the package id when Android won't say). */
+    fun label(pkg: String): String = labels.getOrPut(pkg) {
+        runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrNull()?.takeIf { it.isNotBlank() } ?: pkg
+    }
 
     /** No package: Android's chooser or a generic intent, always startable. */
     fun available(p: LaunchProfile): Boolean = p.`package`?.let(::has) ?: true
 }
+
+/**
+ * Whether [p] starts a libretro core inside its app (RetroArch). Sortie can see that the app is installed, never whether the
+ * core is: cores live in the app's private folder and are downloaded inside the app.
+ */
+private fun usesCore(p: LaunchProfile): Boolean = "LIBRETRO" in p.extras
 
 /**
  * Library setup: add, edit and remove systems (several game folders each, file types, emulators in order), the BIOS and save
@@ -510,7 +525,11 @@ private fun newSystemId(label: String, taken: Set<String>): String {
 /** "installed" etc. for an emulator, and whether that is a problem. */
 private fun profileStatus(p: LaunchProfile, installed: Installed): Pair<String, Boolean> {
     val pkg = p.`package` ?: return "asks Android which app opens the file" to false
-    return if (installed.has(pkg)) "installed" to false else "not installed ($pkg)" to true
+    return when {
+        !installed.has(pkg) -> "not installed ($pkg)" to true
+        usesCore(p) -> "app installed · set up the core inside the app; Sortie can't check cores" to false
+        else -> "installed" to false
+    }
 }
 
 private fun folderStatus(c: FolderCheck, anyType: Boolean): Pair<String, Boolean> = when (c.state) {
@@ -574,9 +593,19 @@ private fun Overview(
     val first = remember { FocusRequester() }
     FocusOnShow(target to (config != null), first)
     val at = { key: String -> if (key == target) Modifier.focusRequester(first) else Modifier }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    // Storage missing at startup and now back: the stores read it once per process, so only a restart reloads Home, systems
+    // and preferences. Otherwise just re-read the settings.
+    val retry: () -> Unit = {
+        scope.launch {
+            val activity = context.activity()
+            if (activity != null && withContext(Dispatchers.IO) { graph.needsRestart() }) SortieApp.restart(activity) else model.refresh()
+        }
+    }
 
     SetupPageFrame(hints = arrayOf("A" to "choose", "B" to "back")) {
-        Text("Library", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        Text("Library setup", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text(
             "The kinds of games on this device, the folders that hold them and the emulators that start them.",
             style = MaterialTheme.typography.bodyMedium,
@@ -606,7 +635,7 @@ private fun Overview(
             SetupConfig.Loading -> Note("Reading the library settings…")
             is SetupConfig.Failed -> {
                 Note("Couldn't read the library settings: ${configState.message}", error = true)
-                FocusRow(onClick = { model.refresh() }, modifier = at("retry")) { Line("Try again", "read the settings from the card again") }
+                FocusRow(onClick = retry, modifier = at("retry")) { Line("Try again", "read the settings from the card again") }
             }
             is SetupConfig.Loaded -> Unit
         }
@@ -619,7 +648,7 @@ private fun Overview(
                         "(keep a copy first), then come back here."
                 )
             }
-            if (!config.exists) {
+            if (!config.exists && config.errors.isEmpty()) {
                 Note(
                     "Nothing is set up yet. Add a system: pick what kind of games it is, choose the folders that hold them and the " +
                         "emulator that starts them. You can add more systems and change everything later."
@@ -665,6 +694,12 @@ private fun Overview(
         }
         FocusRow(onClick = onDone) { Line("Done", "back to Sortie") }
     }
+}
+
+private tailrec fun Context.activity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.activity()
+    else -> null
 }
 
 private fun emulatorSummary(def: SystemDef, config: LibraryConfiguration, installed: Installed): Pair<String, Boolean> {
@@ -749,7 +784,12 @@ private fun AddSystemPage(config: LibraryConfiguration, installed: Installed, on
             val ready = packaged.filter { installed.has(it.`package`!!) }
             val status = when {
                 preset.system.id in configured -> "Already in your library: opens its settings"
-                ready.isNotEmpty() -> "Installed: ${ready.joinToString(", ") { it.label }}"
+                ready.isNotEmpty() -> {
+                    val apps = ready.mapNotNull { it.`package` }.distinct().map(installed::label)
+                    val coreApps = ready.filter(::usesCore).mapNotNull { it.`package` }.distinct().map(installed::label)
+                    "Emulator app installed: ${apps.joinToString(", ")}" +
+                        if (coreApps.isEmpty()) "" else " · cores are set up separately in ${coreApps.joinToString(", ")}"
+                }
                 packaged.isNotEmpty() -> "Not installed yet: ${packaged.joinToString(", ") { it.label }}"
                 else -> "Opens games with an app you choose"
             }

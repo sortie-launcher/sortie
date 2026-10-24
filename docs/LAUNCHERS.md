@@ -1,7 +1,12 @@
-# Launch profiles that work on the AYN Thor (Android 13), verified 2026-10-23
+# Emulator launch compatibility
 
 Reference for `launchers.json` authoring. Placeholders: `${file}` absolute path, `${uri}` Sortie FileProvider content URI,
 `${stem}`, `${titleid}`. "Verified" means the game booted and was seen on screen through `adb exec-out screencap`.
+
+## Historical Thor checks
+
+The table below records AYN Thor / Android 13 checks from 2026-10-23, not a compatibility guarantee for every emulator
+version. On-device Library setup preserves existing custom profiles; its current presets may use a newer launch method.
 
 | System | Profile | Component / action | Payload | Verified |
 |---|---|---|---|---|
@@ -19,3 +24,30 @@ Notes
 - `file://` URIs require the app to relax StrictMode's file-URI check (done once in `SortieApp`).
 - Every attempt and the exact `am start` equivalent are in Diagnostics and in logcat under the `SortieLaunch` tag.
 - Debug builds accept `am start -n io.github.esko997.sortie/.MainActivity --es launch '<systemId>/<file>' [--es profile <id>]`.
+
+## Fresh beta setup checks — 2026-10-24
+
+On a disposable Android 13/API 33 x86_64 emulator, systems and folders were configured through Sortie's Library UI:
+
+- **PPSSPP 1.20.4:** the current preset sends `${uri}` with a read grant and MIME `application/octet-stream`. PPSSPP's
+  public cube demo, packaged as a homebrew ISO, visibly booted. A raw `file://` launch failed scoped-storage access on this
+  fresh installation. Loose ELF homebrew failed inside PPSSPP with a single-file content URI; open such homebrew inside
+  PPSSPP instead. Gold shares the upstream intent contract but was not installed or exercised.
+- **RetroArch 1.22.2 / Gambatte:** the GB Assembly Tutorial's Hello World ROM visibly booted with the current preset.
+  Returning to Sortie and choosing the same game resumed it in the same RetroArch process. The old `CLEAR_TASK` flag
+  stalled in native activity destruction; new presets use `CLEAR_TOP` without `CLEAR_TASK`.
+  A different content path caused RetroArch to exit on the first attempt and boot on the second, matching its upstream
+  `onNewIntent` implementation. This limitation is stated in setup and the manual. Quit RetroArch after core configuration
+  and save before changing games. Sortie does not force-stop the emulator or add `QUITFOCUS`: switching apps must not kill
+  an unsaved game. The first test emulator downloaded Gambatte through RetroArch's UI; the second reused that core binary
+  as a controlled fixture.
+- **Explicit Android chooser:** Back/cancel left the play log unchanged. Selecting PPSSPP visibly booted the ISO and
+  recorded one session. New system presets no longer silently append a wildcard chooser when no emulator is installed.
+
+Existing desktop profiles are deliberately not rewritten by setup. For a custom RetroArch profile, remove `CLEAR_TASK`
+from its flags to use the current handoff; keep `CLEAR_TOP`. The historical table above records the older configuration.
+
+Fixtures came from [PPSSPP's public demo](https://www.ppsspp.org/legacybuilds) and the
+[GB Assembly Tutorial](https://gbdev.io/gb-asm-tutorial/part1/hello_world.html). No commercial ROM, BIOS or emulator is
+bundled with Sortie. Other presets retain their stated source-checked or device-tested status; an installed package does
+not prove that its core, BIOS, storage permission or game is ready.
