@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Public-source preparation: private operational notes moved to ignored `.local/`, publication history scrubbed, and
+  contributor/release instructions made independent of the private desktop pipeline. Optional external magazine staging
+  rejects app-local content even through bind-mount aliases; clean-clone builds and bundled-to-empty transitions verified.
 - On-device library setup (Home → Library setup, Settings → Library and emulators): add built-in or custom systems, several game
   folders each through a controller/touch folder browser, file types, installed emulators in fallback order, BIOS and save
   folders; re-index and remove systems. Saves merge into existing manifests (unknown fields and unedited entries kept), are

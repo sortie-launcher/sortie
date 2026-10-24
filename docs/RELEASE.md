@@ -4,6 +4,20 @@ Sortie is distributed as a signed APK sent directly to a tester or attached to a
 listing, app store account, update server, automatic updater, telemetry or download service. This file is the maintainer's
 procedure plus the current beta's goal, acceptance criteria, evidence and known limitations.
 
+## Publishing the repositories
+
+The application and `sortie-zines` content are independent Git repositories. The application's publication history has
+been rewritten to remove private operational notes, personal machine identifiers and magazine media; author metadata
+uses a GitHub noreply address. Original development checkouts and recovery bundles are private backups, not publication
+sources. Do not merge their old branches into this history or push them with `--mirror`; transfer later work as reviewed
+patches so removed material cannot return through ancestry.
+
+Private maintainer notes belong under ignored `.local/`, not `docs/`. Keep signing files outside both repositories.
+After choosing and creating the GitHub repositories, add their remotes to the sanitized checkouts and push only `main`.
+Run the hosted workflow there; no GitHub upload or hosted CI run was part of local publication preparation.
+Source publication does not distribute an APK. APK distribution additionally requires the key-backup and upgrade checks
+below.
+
 ## One permanent release key
 
 Android only installs an update over an existing app when both are signed by the **same certificate**. The release key is
@@ -261,3 +275,23 @@ The current content set is Field Notes 001–009, revision 2: 41 articles, 131 i
 it was installed in place on an AYN Thor and every article's lead image, prose and offline sources were opened; local
 filtering, reciprocal links, paging, section jumps, screen swaps and restart/resume were exercised, and the existing user
 data and card packs were unchanged. That pass did not test emulation or install a release APK.
+
+### Publication verification — 2026-10-24
+
+- Built fresh application and content clones with cached dependencies and Gradle `--offline`: style checks, debug/release
+  unit tests and both APK variants passed. With content, each variant ran 205 tests with no failures, errors or skips.
+  Without content, 204 tests passed and the one bundled-content test was intentionally skipped.
+- Inspected both APKs: the bundled builds contain the pinned nine issues, 41 articles and 131 images, and every catalogued
+  file matches its recorded size/SHA-256. Default builds contain no magazine assets. Building with content and then without
+  it in the same checkout, without cleaning, removed all magazine assets and reproduced the original no-content APK bytes.
+- Actual Gradle invocations refused missing directories, an incorrect pin, corrupted files, symlinks, uncatalogued files,
+  content inside the app module (including a bind-mount alias), old source-asset folders and an empty property.
+- The publishing CLI validated all nine issues/125 portable game identities, reproduced the catalog in an external
+  directory, updated the pin explicitly, and refused omitted, in-repository and overlapping output directories.
+- Audited reachable Git objects for the known private identifiers and removed paths. Offline credential scans of historical
+  text and clean clones produced only reviewed public content/schema hashes and a deterministic test fixture; no credential
+  finding remained. This is bounded scanning evidence, not a claim of an exhaustive security audit.
+
+This pass exercised build/publication behavior and APK contents, not a new device installation. The reader smoke above
+predates the repository separation and used the same unchanged content. Release APKs from `tools/build.sh` remain unsigned;
+the separately verified signed beta candidate and its custody status are documented above.
