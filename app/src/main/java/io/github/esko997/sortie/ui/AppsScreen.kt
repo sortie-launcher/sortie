@@ -72,7 +72,7 @@ fun AppsScreen(vm: SortieViewModel) {
     }
     Column(Modifier.fillMaxSize()) {
         LazyVerticalGrid(
-            GridCells.Fixed(if (grid) user.gridColumns.coerceAtLeast(1) else 1),
+            GridCells.Fixed(if (grid) user.appColumns.coerceAtLeast(1) else 1),
             Modifier.weight(1f),
             contentPadding = PaddingValues(12.dp),
             verticalArrangement = Arrangement.spacedBy(if (grid) 10.dp else 2.dp),

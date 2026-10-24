@@ -148,6 +148,8 @@ class SortieViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setGridRows(n: Int) = graph.user.setGridRows(n)
 
+    fun setAppColumns(n: Int) = graph.user.setAppColumns(n)
+
     /** List or grid for every browse screen (system, folder, search, apps); one setting, separate from home. */
     fun setBrowseLayout(layout: String) = graph.user.setBrowseLayout(layout)
 

@@ -53,6 +53,11 @@ fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit, onManual: () 
                     Line("Grid columns (downward)", "${user.gridColumns} · A cycles 4–7")
                 }
             }
+            item {
+                FocusRow(onClick = { vm.setAppColumns(if (user.appColumns >= 12) 6 else user.appColumns + 2) }) {
+                    Line("App tiles per row (Apps screen)", "${user.appColumns} · A cycles 6–12")
+                }
+            }
             item { Toggle("Hero rotation on the idle companion screen", user.heroRotation) { vm.setHeroRotation(it) } }
             item { SectionTitle("Switcher") }
             item { Toggle("Overlay over running games (needs the draw-over-apps grant)", user.overlaySwitcher) { vm.setOverlaySwitcher(it) } }

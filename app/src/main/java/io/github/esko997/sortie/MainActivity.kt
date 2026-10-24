@@ -111,6 +111,11 @@ class MainActivity : ComponentActivity() {
             return
         }
         if (!BuildConfig.DEBUG) return
+        if (intent.getBooleanExtra("restart", false)) { // exercises the first-run restart path (RestartActivity is not exported)
+            intent.removeExtra("restart")
+            SortieApp.restart(this)
+            return
+        }
         intent.getStringExtra("open")?.let { route ->
             intent.removeExtra("open")
             Selection.openRoute.tryEmit(route)
@@ -123,7 +128,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         val granted = Environment.isExternalStorageManager()
-        if (granted && SortieApp.relocateIfNeeded(application, (application as SortieApp).graph)) return
+        if (granted && SortieApp.relocateIfNeeded(this, (application as SortieApp).graph)) return
         vm.onStart(granted)
     }
 

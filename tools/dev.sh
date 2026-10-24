@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Build, install and exercise Sortie on a connected device. Usage: tools/dev.sh [build|install|run|shot|all] [serial]
+# Never `adb uninstall` on a daily device to test: it also drops the Shizuku grant (re-grant from Diagnostics).
 # Device specifics come from the environment, not from this repo: SORTIE_SERIAL, SORTIE_TOP_DISPLAY, SORTIE_BOTTOM_DISPLAY
 # (physical display ids from `dumpsys SurfaceFlinger --display-id`).
 set -euo pipefail

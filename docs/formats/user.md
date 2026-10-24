@@ -27,6 +27,7 @@ Every key is optional; unknown keys are ignored.
 | `dock` | string[5] | [] | companion dock slots: app/shortcut ids, `""` empty |
 | `gridHorizontal` | bool | false | grids scroll sideways as rows of tiles (Thor top screen) |
 | `gridRows` | int | 3 | rows in a sideways grid (2–5); more rows = smaller tiles |
+| `appColumns` | int | 8 | Apps screen tiles per row (4–14) |
 | `gridColumns` | 2..10 | `5` | columns of every grid (home and browse screens) |
 | `browseLayout` | `"list"` \| `"grid"` | `"list"` | view of the browse screens (system lists, folders, search, Apps); Select toggles it there. One setting for all of them, separate from `homeLayout` |
 | `homeSort` | `"alpha"` \| `"count"` \| `"generation"` \| `"custom"` | `"alpha"` | home order. The first three are generated and fixed: folders (incl. Apps) first, then systems, by label, by game count (descending) or grouped by the system's `generation` (`8-bit` … `128-bit` ascending, then the rest in `systems.json` order). `custom` shows `layout` |

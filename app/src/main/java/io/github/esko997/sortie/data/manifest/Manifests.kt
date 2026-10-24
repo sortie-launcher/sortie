@@ -107,6 +107,8 @@ data class UserData(
     val gridHorizontal: Boolean = false,
     /** Horizontal grid: tiles per column; more rows = smaller tiles, denser. */
     val gridRows: Int = 3,
+    /** Apps screen grid: tiles per row (app icons are small, so denser than the game grid). */
+    val appColumns: Int = 8,
     /** Browse screens (system, folder, apps, search): "list" or "grid". */
     val browseLayout: String = "list",
     /** Home tile order: "alpha", "count", "generation" (all generated, fixed) or "custom" (the user's [layout]). */

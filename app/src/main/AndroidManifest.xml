@@ -66,6 +66,12 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <!-- Confirms ShortcutManager.requestPinShortcut (e.g. DroidDeck "add to home") while Sortie is the default launcher. -->
         <activity
+            android:name=".RestartActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:process=":restart"
+            android:theme="@android:style/Theme.NoDisplay" />
+        <activity
             android:name=".ShortcutPinActivity"
             android:exported="true"
             android:excludeFromRecents="true"
