@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Hosted CI installs supported Android SDK packages (`platform-tools` and API 35) explicitly instead of requesting the
+  retired `tools` package. The first hosted style/test/APK build and both artifact uploads passed after this correction.
 - Public-source preparation: private operational notes moved to ignored `.local/`, publication history scrubbed, and
   contributor/release instructions made independent of the private desktop pipeline. Optional external magazine staging
   rejects app-local content even through bind-mount aliases; clean-clone builds and bundled-to-empty transitions verified.

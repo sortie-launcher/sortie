@@ -209,7 +209,9 @@ verifies with `apksigner` as a single v2 signer with the certificate above.
 - [ ] Broader launch-and-return coverage beyond PPSSPP 1.20.4 and RetroArch 1.22.2/Gambatte on API 33.
 - [ ] Hardware coverage beyond the devices actually tested: Android versions, single/dual screen, touch/controller,
   storage layouts and OEM settings screens.
-- [ ] Run the CI workflow on GitHub once the repository is published; local builds are not a claim that hosted CI has run.
+- [x] Hosted GitHub CI passed after source publication: [build run 40135126335](https://github.com/sortie-launcher/sortie/actions/runs/40135126335)
+  checked style, ran both unit-test variants and built/uploaded debug and unsigned-release artifacts. CI does not sign
+  releases or bundle zines by default.
 
 Later, for a wider public release:
 
