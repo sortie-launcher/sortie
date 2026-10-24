@@ -4,6 +4,14 @@
 - Public-source preparation: private operational notes moved to ignored `.local/`, publication history scrubbed, and
   contributor/release instructions made independent of the private desktop pipeline. Optional external magazine staging
   rejects app-local content even through bind-mount aliases; clean-clone builds and bundled-to-empty transitions verified.
+- Controller editors route Down from the final note/verdict/reference field to Save rather than Cancel or Clear.
+  Over-limit drafts retain field focus; unchanged drafts can exit through Cancel. Clipping and journal editors use
+  explicit logical destinations too.
+- Compact Home keeps actions in a sideways-scrolling row, leaving room for tiles. Header/Search controls show controller
+  focus; Search opens its keyboard after touch and waits for the keyboard/layout transition before moving Down.
+- Browse focus memory tracks live input mode independently of restoration, preserving selection after mixed
+  touch/controller use. Home retains the selected tile across list/grid switches without stealing header navigation.
+- Backup summaries count Finished/Shelved entries accurately, use singular/plural labels and explain export/restore scope.
 - On-device library setup (Home → Library setup, Settings → Library and emulators): add built-in or custom systems, several game
   folders each through a controller/touch folder browser, file types, installed emulators in fallback order, BIOS and save
   folders; re-index and remove systems. Saves merge into existing manifests (unknown fields and unedited entries kept), are

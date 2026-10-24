@@ -149,10 +149,10 @@ No accounts, server, app store, automatic updater, ROM/BIOS downloads or telemet
 
 ### Evidence (2026-10-24)
 
-Signed candidates were built locally with `tools/release.sh`; none has been published. The checks below were run on
-beta.1–beta.4 (version codes 2–5). The latest local candidate, `sortie-0.1.0-beta.6-code7.apk` (SHA-256
-`727c6e4dbd6f616458a146ebc72d6bad98497cd02259ac8af00d5f1b0ea067e0`), verifies with `apksigner` as a single v2 signer
-with the certificate above.
+Signed candidates were built locally with `tools/release.sh`; none has been published. The recorded beta acceptance runs
+cover version codes 2–7, with the focused retests identified below. The latest local candidate,
+`sortie-0.1.0-beta.6-code7.apk` (SHA-256 `727c6e4dbd6f616458a146ebc72d6bad98497cd02259ac8af00d5f1b0ea067e0`),
+verifies with `apksigner` as a single v2 signer with the certificate above.
 
 - `tools/release.sh ktlintCheck test --continue`: style, 204 JVM tests per variant with no failures or skips, one expected
   v2 signer and a non-debuggable APK. Partial signing configuration is rejected.
@@ -165,8 +165,9 @@ with the certificate above.
   Their usability findings were fixed.
 - Signed code 2 → code 3 upgrade in place: all durable files (settings, user data, Room database/WAL, play log, reading
   preferences) byte-identical before reopening; only SQLite's shared-memory lock file changed. File permission and running
-  emulator processes survived. Code 4 → code 5 also installed in place. The signed beta survived a reboot with preferences
-  unchanged, and ignored the debug launch extra.
+  emulator processes survived. Later code 3 → code 6 → code 7 upgrades also preserved personal metadata, database/WAL and
+  reading/settings files before reopening, with PPSSPP still running. Code 7 survived reboot with preferences unchanged
+  and usable Home; code 5 ignored a valid debug launch extra.
 - Recovery: a missing pinned settings folder is not recreated by preference writes; stale empty state cannot overwrite a
   restored `user.json`; retry reloads every store once. Malformed `user.json`/`systems.json` are reported and never
   overwritten; a concurrent external edit rejects a stale draft and Reload preserves the external unknown field. Missing
@@ -176,6 +177,14 @@ with the certificate above.
 - Daily-use pass: 98 navigation checkpoints across 1280×800, 800×480 and 480×800 with a virtual gamepad, no Sortie crash or
   ANR; Finished/Shelved verdicts, reference cards, journal notes and reading positions survived restart. Compact-layout and
   controller-focus findings were fixed in later candidates.
+- Installed code 6 retests: final note/verdict/reference fields reached Save with Down/A at 1280×800 and 800×480;
+  over-limit drafts retained focus, cancellation preserved data, clipping/journal traversal worked, and backup summaries
+  counted shelf entries correctly.
+- Installed code 7 retests: repeated list/grid and folder/back navigation retained selection; deliberate Up still reached
+  the header. Compact Home/Search at 800×480 and portrait Home at 480×800 remained usable by pad and touch. Search opened
+  its keyboard after touch and Down reached filters/results. Temporary personal edits were removed after the checks.
+- Setup/cancel/edit/remove, multiple folders, malformed/external changes, missing storage, unavailable emulator,
+  permission denial, process restart and update-preservation acceptance scenarios were completed for the tested fixtures.
 - Backup export, replace preview, safety copy, repeat restore and cross-device session deduplication behaved as documented.
 
 ### Known limitations
@@ -191,8 +200,6 @@ with the certificate above.
 ### Remaining gates
 
 - [ ] Off-machine, tested backup of the release keystore **and** password file.
-- [ ] Automated edge-case coverage for setup/cancel/edit/remove, malformed external changes, missing storage, unavailable
-  emulators, permission denial, process restart and update preservation.
 - [ ] Broader launch-and-return coverage beyond PPSSPP 1.20.4 and RetroArch 1.22.2/Gambatte on API 33.
 - [ ] Hardware coverage beyond the devices actually tested: Android versions, single/dual screen, touch/controller,
   storage layouts and OEM settings screens.
