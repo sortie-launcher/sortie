@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -45,17 +46,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -104,6 +109,15 @@ private val BITS = Regex("^(\\d+)-bit", RegexOption.IGNORE_CASE)
 private fun generationRank(generation: String): Int = BITS.find(generation)?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE
 
 private val AppsGrey = Color(0xFF9AA3AD)
+
+/**
+ * Below this window height (a landscape phone or small handheld) the header keeps its actions on one sideways-scrolling line
+ * beside the title, so the tiles keep most of the screen. A 16:9 handheld's ~420 dp landscape screen keeps the wrapping header.
+ */
+private const val SHORT_HEIGHT_DP = 400
+
+/** Below this window width (portrait) the title gets its own line, followed by one sideways-scrolling line of actions. */
+private const val NARROW_WIDTH_DP = 480
 
 /**
  * One home entry: a system, or on Custom only, a smart folder, the Apps folder, Continue, a game, app or shortcut. [colour]
@@ -189,6 +203,9 @@ fun HomeScreen(
     val currentOnSearch by rememberUpdatedState(onSearch)
     val gridState = rememberLazyGridState()
     val memory = rememberGridMemory()
+    val inputModes = LocalInputModeManager.current
+    // Select over a focused tile: the switch replaces that tile's focus target, so the same tile is focused again afterwards
+    var reselectAfterSwitch by remember { mutableStateOf(false) }
     // Home shows no game, except a focused game tile and By Console's game list, which set the selection themselves. Coming
     // back to a game tile (Back, or the X swap) keeps the selection, so the companion does not drop the game meanwhile.
     LaunchedEffect(Unit) {
@@ -208,8 +225,17 @@ fun HomeScreen(
         Hotkeys.events.collect {
             if (lifted != null) return@collect
             when (it) {
-                Hotkeys.Key.FAVOURITE -> currentOnSearch()
-                Hotkeys.Key.CONTEXT -> if (!currentConsole) vm.setHomeLayout(if (currentGrid) "list" else "grid") // the console list toggles its own
+                Hotkeys.Key.FAVOURITE -> {
+                    // pressed on the controller: Search opens in keyboard (D-pad) mode, also when the last input was a touch
+                    @OptIn(ExperimentalComposeUiApi::class)
+                    inputModes.requestInputMode(InputMode.Keyboard)
+                    currentOnSearch()
+                }
+                // the console list toggles its own
+                Hotkeys.Key.CONTEXT -> if (!currentConsole) {
+                    reselectAfterSwitch = memory.holding
+                    vm.setHomeLayout(if (currentGrid) "list" else "grid")
+                }
 
                 else -> Unit
             }
@@ -340,38 +366,64 @@ fun HomeScreen(
         val i = tiles.indexOfFirst { it.id == id }
         if (i >= 0 && gridState.layoutInfo.visibleItemsInfo.none { it.key == id }) gridState.animateScrollToItem(i)
     }
-
-    Column(Modifier.fillMaxSize()) {
-        FlowRow(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Sortie", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+    LaunchedEffect(grid) {
+        if (reselectAfterSwitch) {
+            reselectAfterSwitch = false
+            memory.focusRemembered(gridState, gridKeys)
+        }
+    }
+    val identity: @Composable () -> Unit = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Sortie", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.width(12.dp))
+            Clock()
+            Spacer(Modifier.width(12.dp))
+            Text("$total games", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            if (index.running) {
                 Spacer(Modifier.width(12.dp))
-                Clock()
-                Spacer(Modifier.width(12.dp))
-                Text("$total games", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                if (index.running) {
-                    Spacer(Modifier.width(12.dp))
-                    CircularProgressIndicator(Modifier.height(18.dp).width(18.dp), strokeWidth = 2.dp)
-                }
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = onApps) { Text("Apps", maxLines = 1) }
-                OutlinedButton(onClick = onLibrary) { Text("Library setup", maxLines = 1) }
-                OutlinedButton(onClick = onSearch) { Text("Search", maxLines = 1) }
-                OutlinedButton(onClick = onMagazines) { Text("Magazines", maxLines = 1) }
-                OutlinedButton(onClick = onJournal) { Text("Journal", maxLines = 1) }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onManual, modifier = Modifier.semantics { contentDescription = "Manual" }) {
-                        Text("📖", maxLines = 1)
-                    }
-                    OutlinedButton(onClick = onDiagnostics) { Text("Settings", maxLines = 1) }
-                }
+                CircularProgressIndicator(Modifier.height(18.dp).width(18.dp), strokeWidth = 2.dp)
             }
         }
+    }
+    val actions: @Composable () -> Unit = {
+        HeaderButton("Apps", onApps)
+        HeaderButton("Library setup", onLibrary)
+        HeaderButton("Search", onSearch)
+        HeaderButton("Magazines", onMagazines)
+        HeaderButton("Journal", onJournal)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HeaderButton("📖", onManual, Modifier.semantics { contentDescription = "Manual" })
+            HeaderButton("Settings", onDiagnostics)
+        }
+    }
+    val configuration = LocalConfiguration.current
+    val short = configuration.screenHeightDp < SHORT_HEIGHT_DP
+    val narrow = configuration.screenWidthDp < NARROW_WIDTH_DP
+
+    Column(Modifier.fillMaxSize()) {
+        val header = Modifier.fillMaxWidth()
+        when {
+            narrow -> Column(header.padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                identity()
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { actions() }
+            }
+            short -> Row(header.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                identity()
+                Row(
+                    Modifier.padding(start = 12.dp).weight(1f).horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+                ) { actions() }
+            }
+            else -> FlowRow(
+                modifier = header.padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                identity()
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { actions() }
+            }
+        }
+
         if (total == 0 && !index.running) {
             Column(Modifier.weight(1f).fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -386,7 +438,7 @@ fun HomeScreen(
                     },
                     style = MaterialTheme.typography.bodyLarge
                 )
-                OutlinedButton(onClick = onLibrary) { Text(if (manifest.systems.isEmpty()) "Set up library" else "Manage library") }
+                HeaderButton(if (manifest.systems.isEmpty()) "Set up library" else "Manage library", onLibrary)
                 Text(
                     "You can also use Apps, read Magazines or open the Manual without adding games.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -550,6 +602,17 @@ private fun SortChip(label: String, selected: Boolean, onClick: () -> Unit) {
         modifier = Modifier.focusGlow(focused, FilterChipDefaults.shape),
         interactionSource = interaction
     )
+}
+
+/** A Home action button (header, empty library); [focusGlow] so the controller can see where it is. */
+@Composable
+private fun HeaderButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val interaction = remember { MutableInteractionSource() }
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.focusGlow(interaction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape),
+        interactionSource = interaction
+    ) { Text(text, maxLines = 1) }
 }
 
 /** Renders a [HomeTile] as a square tile (grid) or a row (list); [lifted] marks the tile being moved. */

@@ -9,7 +9,7 @@ knowledge in the on-card manifests rather than the APK.
 - **Launch intent** (what Sortie uses today, docs/LAUNCHERS.md): `RetroActivityFuture` with the `ROM`, `LIBRETRO`,
   `CONFIGFILE`, `IME`, `DATADIR`, `SDCARD`, `EXTERNAL` extras and CLEAR_TOP (not CLEAR_TASK). `--appendconfig` is the desktop
   command-line flag; the Android activity takes a whole config through `CONFIGFILE`, so per-launch settings mean pointing
-  `CONFIGFILE` at a config the desktop writes to the card (gen_manifests.py), not an extra on top of the user's config.
+  `CONFIGFILE` at a separate config file kept on the card, not an extra on top of the user's config.
 - **Network command interface**: with `network_cmd_enable = "true"` (port `network_cmd_port`, default 55355) RetroArch
   accepts plain-text UDP datagrams on localhost: `SAVE_STATE`, `LOAD_STATE`, `STATE_SLOT_PLUS`/`STATE_SLOT_MINUS`,
   `PAUSE_TOGGLE`, `SCREENSHOT`, `RESET`, `MENU_TOGGLE`, `QUIT`, and queries that reply on the same socket (`GET_STATUS` →

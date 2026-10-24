@@ -46,8 +46,8 @@ temporarily absent from the game index (or apps not installed) are retained in t
 `minShared` entries (default 1) with the union of the tags of the `window` (default 3) most recently played
 games (latest start in the play log). Only `tags` count, not `genre` text. The recent set is computed once per
 evaluation from the same candidates the folder sees, so hidden games do not count, and with nothing played yet
-nothing matches. Game-only: apps and shortcuts never match. With `playMinutes` and `fit` it makes the offline
-"what next" folder `gen_manifests.py` ships ("Pick one" on it is the recommendation):
+nothing matches. Game-only: apps and shortcuts never match. With `playMinutes` and `fit` it makes an offline
+"what next" folder ("Pick one" on it is the recommendation):
 
 ```json
 { "id": "play-next", "label": "Play next",
@@ -73,4 +73,5 @@ puts apps and shortcuts first ascending, last descending.
 { "id": "droiddeck", "label": "DroidDeck", "rule": { "source": { "eq": "com.droiddeck.launcher" } }, "apps": true }
 ```
 
-`validate_folders.py` knows these fields but previews games only (there are no apps on the desktop).
+Desktop tools that preview folder rules against a library should treat these fields the same way; a desktop library usually
+has no apps or shortcuts, so such a preview covers games only.

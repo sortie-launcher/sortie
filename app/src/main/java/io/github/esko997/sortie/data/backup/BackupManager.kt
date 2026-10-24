@@ -150,8 +150,8 @@ class BackupManager(
         }
         val lines = buildList {
             add(
-                "Saved $name: preferences, layout, dock, ${backup.user.wantToPlay.size} Want to play games, " +
-                    "${backup.user.gameAnnotations.size} game notes and ${backup.sessions.size} play sessions."
+                "Saved $name: all preferences and personal records, including favourites, Want to play, Finished/Shelved status, game notes, " +
+                    "reference-card text, magazine clippings and journal entries. Completed play sessions saved: ${backup.sessions.size}."
             )
             backup.openSessionExcluded?.let {
                 add("${it.gameId} is being played right now; its session is still open, so it is not in this backup. Export again after it ends.")
@@ -242,8 +242,8 @@ class BackupManager(
         }
         val lines = buildList {
             add(
-                "Preferences replaced from ${preview.source}: home layout and sort, favourites, hidden entries, launcher choices, dock, " +
-                    "${next.wantToPlay.size} Want to play games and ${next.gameAnnotations.size} game notes."
+                "Replaced all preferences and personal records from ${preview.source}, including layout, dock, favourites, Want to play, " +
+                    "Finished/Shelved status, game notes, reference-card text, magazine clippings and journal entries."
             )
             add(
                 "Play history merged: ${inserted.size} sessions added (${merge.addedMinutes} min); ${merge.alreadyPresent} already on this device were kept. " +

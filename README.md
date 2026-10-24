@@ -5,8 +5,10 @@ the emulators you have installed, or feed it a library curated on a desktop (ES-
 and taste scores). It never scrapes, has no network permission, and never downloads or bundles games, BIOS files or emulators.
 
 Primary target: the AYN Thor (Android 13, dual screen — the bottom screen becomes a companion panel, dock and app switcher).
-Also runs on single-screen handhelds (tested on the AYANEO Pocket DMG). Status: beta 0.1 in progress ([docs/BETA.md](docs/BETA.md));
-compatibility beyond the devices and emulator versions actually tested is not claimed.
+Also runs on single-screen handhelds (tested on the AYANEO Pocket DMG). Status: beta 0.1, planned for direct signed-APK
+distribution; no APK has been published yet. Goal, evidence and known limitations are in
+[docs/RELEASE.md](docs/RELEASE.md#beta-01). Compatibility beyond the devices and emulator versions actually tested is not
+claimed.
 
 ![home](docs/screenshots/m0-top.png)
 
@@ -32,11 +34,12 @@ compatibility beyond the devices and emulator versions actually tested is not cl
   5-slot dock and a touch launcher; Home key opens a switcher that moves running apps between screens (needs Shizuku).
 - Zero idle cost: nothing animates, polls or ticks while you're not pressing anything (one recomposition a minute for the clock).
 - Play log on the card (`playlog.jsonl`), favourites and preferences in `user.json` — plain files you own.
-- Offline illustrated magazines bundled with APK updates, plus optional on-card issues: shelf, contents, articles, sources
-  and remembered reading positions. Field Notes includes nine public-audience issues and 41 articles.
-  Games mentioned are independent of ownership; filter those present locally or follow Featured in links from game pages.
-  Higher issue revisions replace older shelf entries without overwriting card packs. Highlight passages, add notes and
-  clip recommendations into a persistent scrapbook. Dual-screen companions offer section jumps and article controls.
+- Offline illustrated magazines: shelf, contents, articles, sources and remembered reading positions. Issues come from
+  packs on the card or, in builds made with the separate zine content (see *Building*), bundled in the APK; the
+  default build bundles none. Games mentioned are independent of ownership; filter those present locally or follow
+  Featured in links from game pages. Higher issue revisions replace older shelf entries without overwriting card packs.
+  Highlight passages, add notes and clip recommendations into a persistent scrapbook. Dual-screen companions offer
+  section jumps and article controls.
 
 A full user manual is bundled: the book button beside Settings on Home, or Settings → Help → Manual (`app/src/main/assets/MANUAL.md`).
 
@@ -65,7 +68,8 @@ volume or start a fresh library, and the existing game index is kept until the s
 A missing or unreadable game folder likewise keeps its games and is reported, rather than treated as empty.
 
 Formats are documented in [docs/formats/](docs/formats/); [examples/card/](examples/card/) is a complete minimal card.
-A desktop pipeline (manifests from your ROM tree, ES-DE scraping, logos) is optional and yours to script.
+A desktop pipeline (manifests from your ROM tree, ES-DE scraping, logos) is optional and yours to script; nothing in this
+repository depends on one.
 [docs/LAUNCHERS.md](docs/LAUNCHERS.md) lists emulator intents verified on one device; the Library presets label which
 profiles were device-tested and which were only checked against the emulator's source.
 
@@ -89,17 +93,31 @@ tools/dev.sh install  # adb install -r of the debug APK + grants; SORTIE_HOME=1 
 tools/release.sh      # signed release APK + SHA-256 in dist/, using the key from tools/init-release-key.sh
 ```
 
-The helpers run Gradle through `distrobox enter ubuntu` when the host has no `java`. Debug builds accept
-`am start … --es open <route>` and `--es launch '<system>/<file>'` for scripting. Release signing, versions and the
-debug/release signature mismatch are covered in [docs/RELEASE.md](docs/RELEASE.md); never uninstall a daily install to
-get a differently signed build onto it.
+`./gradlew ktlintCheck testDebugUnitTest assembleDebug` works as well. The helpers use the `java` on your `PATH`; only when
+there is none do they fall back to a distrobox container named `ubuntu` holding the JDK and SDK. `tools/build.sh` and
+`tools/release.sh` pass extra arguments to Gradle. `tools/dev.sh` takes the adb serial and display ids from
+`SORTIE_SERIAL`, `SORTIE_TOP_DISPLAY` and `SORTIE_BOTTOM_DISPLAY`. Debug builds accept `am start … --es open <route>` and
+`--es launch '<system>/<file>'` for scripting. Release signing, versions and the debug/release signature mismatch are
+covered in [docs/RELEASE.md](docs/RELEASE.md); never uninstall a daily install to get a differently signed build onto it.
+
+**Magazines are opt-in.** A normal build contains no magazine issues and never downloads any. The Field Notes issues
+live in a separate content repository (`sortie-zines`); to bundle them, clone it yourself and pass its `issues/` folder:
+
+```
+tools/build.sh -PsortieMagazinesDir=../sortie-zines/issues
+```
+
+The build verifies the content against the catalog digest pinned in `app/magazines.lock` and stages it under `app/build/`
+only. Details, publishing and update behaviour: [docs/RELEASE.md](docs/RELEASE.md#magazine-content-separate-repository).
 
 ## Docs
 
-- [docs/SPEC.md](docs/SPEC.md) — behaviour and controller grammar
-- [docs/HANDOFF.md](docs/HANDOFF.md) — architecture, tooling, open items (for contributors)
-- [docs/RELEASE.md](docs/RELEASE.md) — signing key custody, versions, signed APKs and updates
-- [docs/BETA.md](docs/BETA.md) — beta goal, acceptance scenarios and evidence
+- [Manual](app/src/main/assets/MANUAL.md) — the user manual bundled in the app
+- [docs/SPEC.md](docs/SPEC.md) — behaviour, controller grammar and implementation notes for contributors
+- [docs/formats/](docs/formats/) — on-card file formats, including magazine packs
+- [docs/LAUNCHERS.md](docs/LAUNCHERS.md) — emulator launch intents and what was verified
+- [docs/RELEASE.md](docs/RELEASE.md) — signing key custody, versions, signed APKs, beta status and magazine content
+- [docs/NOW_PLAYING.md](docs/NOW_PLAYING.md) — scope note for RetroArch companion controls (not built)
 - [CHANGELOG.md](CHANGELOG.md)
 
 ## Licence
@@ -107,13 +125,10 @@ get a differently signed build onto it.
 Sortie's source code is MIT-licensed; see [LICENSE](LICENSE). The MIT licence covers the code and original text written
 for this project. It does **not** cover third-party material:
 
-- **Bundled magazines** (`app/src/main/assets/magazines/`, ship inside the APK): the original prose and layouts are
-  written for Sortie Field Notes, but screenshots, manual scans, box art and quotations belong to their respective rights
-  holders. Each issue's `sources.json` credits every picture and its source. Credit is attribution, not a licence: these
-  files are included for commentary and criticism and have not been cleared for redistribution. In particular
-  `field-notes-009/media/windjammers-disc-duel-beach.webp` comes from a scraper-cache import whose upstream source is
-  unknown. **Review asset redistribution before any public upload of the APK or repository**; until then, treat the
-  bundled media as not covered by any grant from this project.
-- **System logos** rendered by `gen_logos.py` come from the [slate-es-de](https://gitlab.com/es-de/themes/slate-es-de)
-  theme (CC-BY-NC-SA) and are not part of this repository; they live only on a user's card.
+- **Magazines** are not in this repository. The separate `sortie-zines` content repository holds the Field Notes issues,
+  which an APK includes only when built with `-PsortieMagazinesDir`. Their screenshots, manual scans, box art and quotations
+  belong to their respective rights holders and are not licensed under MIT; each issue carries a compact rights notice and
+  credits every picture in `sources.json`.
+- **System logos** (for example rendered from the [slate-es-de](https://gitlab.com/es-de/themes/slate-es-de) theme,
+  CC-BY-NC-SA) are not part of this repository; they live only on a user's card.
 - Covers, screenshots and gamelists a user scrapes with ES-DE stay on their card and are not part of this repository.

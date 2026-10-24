@@ -1,8 +1,8 @@
-# Signed APK releases
+# Releases: signing, versions, beta status and magazine content
 
 Sortie is distributed as a signed APK sent directly to a tester or attached to a GitHub release. There is no Google Play
-listing, app store account, update server, automatic updater, telemetry or download service. The goal, acceptance scenarios
-and current evidence for the first beta are in [BETA.md](BETA.md); this file is the maintainer's procedure.
+listing, app store account, update server, automatic updater, telemetry or download service. This file is the maintainer's
+procedure plus the current beta's goal, acceptance criteria, evidence and known limitations.
 
 ## One permanent release key
 
@@ -17,21 +17,22 @@ again; leaking it means anyone can sign an "update" that Android accepts.
 - **Back up both files together**, offline and encrypted (for example an encrypted USB drive kept away from the build
   machine). The keystore without its password file is useless, and so is the password without the keystore.
   Test the backup by reading it back (`keytool -list` against the copy) before relying on it.
-- Never commit, upload, paste or send either file. `.gitignore` excludes `*.p12`, `*.jks`, `*.keystore` and `dist/`,
-  but the real protection is keeping the files outside the repository.
+- Never commit, upload, paste or send either file. `.gitignore` excludes `*.p12`, `*.jks`, `*.keystore`, `store-password`
+  and `dist/`, but the real protection is keeping the files outside the repository.
 - Do not rotate the key during the beta. A new key means a different app as far as installed copies are concerned.
 - The certificate SHA-256 fingerprint is public information. Record it with the first release so later builds can be
   compared against it.
 
-**Custody status (2026-10-24):** the release key has been created at the default location on the maintainer's build machine.
-**No off-machine backup has been made yet.** Make and verify the backup before the first APK leaves the machine.
+**Custody status (2026-10-24):** the release key exists on the maintainer's build machine, outside the repository. Its
+certificate SHA-256 is `c4fc71bdee0987939c7af166465241c9c1bd3fc6c0a486d9dd76546975414cf4`. Re-running key creation refuses to
+overwrite it. **No off-machine backup has been made yet.** Make and verify the backup before the first APK leaves the machine.
 
 ## Versions
 
 - `versionCode` must increase for every APK that leaves the machine and is never reused. Android refuses to install an
   update with a lower `versionCode` than the installed one.
 - `versionName` is the human version, `X.Y.Z` or `X.Y.Z-pre` (for example `0.1.0-beta.2`).
-- The defaults live in `app/build.gradle.kts` (currently code `5`, name `0.1.0-beta.4`). Override per build with
+- The defaults live in `app/build.gradle.kts` (currently code `7`, name `0.1.0-beta.6`). Override per build with
   `-PsortieVersionCode=N -PsortieVersionName=X.Y.Z-beta.N`; Gradle rejects malformed values. Bump the defaults when a
   version is released so an ordinary build cannot accidentally reuse a released number.
 - Add a `CHANGELOG.md` section for each distributed version.
@@ -40,8 +41,12 @@ again; leaking it means anyone can sign an "update" that Android accepts.
 
 ```
 tools/build.sh                 # style check, debug + release unit tests, debug APK and an UNSIGNED release APK
-tools/release.sh -PsortieVersionCode=6 -PsortieVersionName=0.1.0-beta.5
+tools/release.sh -PsortieVersionCode=8 -PsortieVersionName=0.1.0-beta.7
 ```
+
+Both helpers forward extra arguments to Gradle, so a release that bundles magazines adds
+`-PsortieMagazinesDir=/path/to/sortie-zines/issues` (see [Magazine content](#magazine-content-separate-repository)).
+Without it, the APK contains no magazine issues.
 
 `tools/release.sh` reads the key from the default signing directory (or `SORTIE_SIGNING_DIR`, or all three of
 `SORTIE_RELEASE_KEYSTORE`, `SORTIE_RELEASE_KEYSTORE_PASSWORD_FILE`, `SORTIE_RELEASE_KEY_ALIAS`). It:
@@ -90,35 +95,97 @@ permissions and the Home role. Instead:
   it only with the owner's agreement, after a verified backup export and a copy of the card's `sortie/` folder, and only
   once the release update path has been proven on the test device.
 
-## Release gates for the beta
+## Beta 0.1
 
-Implemented in source on `beta/0.1` (acceptance evidence is tracked in [BETA.md](BETA.md), not here):
+### Goal
 
-- On-device library setup and maintenance (Home → Library setup, Settings → Library and emulators): multiple systems and folders, built-in emulator
-  presets with plain prerequisites, BIOS/save folders, re-index, safe removal, existing desktop configurations preserved.
-- Missing or unreadable storage keeps the previous index and the remembered settings location; failed launches show a message.
+A nontechnical Android-handheld user can use Sortie as their regular launcher: configure and maintain multiple systems and
+folders, choose installed emulators, browse/search/save personal state, launch games and return, understand failures,
+recover from missing storage/permissions, and install updates without data loss. Rough edges may remain if documented;
+blank setup, silent errors, destructive recovery and a broken update path are not acceptable beta limitations.
+No accounts, server, app store, automatic updater, ROM/BIOS downloads or telemetry are required.
+
+### Acceptance scenarios
+
+1. Fresh installation: grant storage through Android UI, add at least two systems from different directories, select usable
+   emulator profiles and launch/return. No JSON editing or ADB configuration. Explain emulator/core/BIOS prerequisites.
+2. Daily maintenance: add a root, edit a system without losing custom fields, change emulator, rescan, remove a library entry
+   without deleting ROMs or personal notes, and continue using favourites/Want to play/Finished/Shelved/search.
+3. Existing library: opening setup never resets a desktop-generated configuration. Invalid/concurrently edited files cannot
+   be overwritten as if empty. Interrupted setup leaves a recoverable complete configuration, not a mixed set.
+4. Recovery: missing/unreadable volumes preserve useful library state; restored or moved roots resolve the correct paths;
+   failed launches and unavailable Android settings screens explain the problem instead of silently doing nothing/crashing.
+5. Usability: touch and controller paths are usable on small and large surfaces, dialogs/drafts behave predictably on Back,
+   optional features do not demand Shizuku/overlay/IME/Home permissions, and a newcomer can find library management.
+6. Upgrade: two APK versions signed with the same beta key update in place on an isolated install, preserving representative
+   preferences, notes and session data. Release build is not debuggable. Signature mismatch must never be solved by uninstalling
+   the user's existing daily installation.
+7. Integrated regression: magazine reading/navigation and the journal/reference/shelf features remain functional.
+
+### Implemented
+
+- On-device library setup and maintenance (Home → Library setup, Settings → Library and emulators): multiple systems and
+  folders, built-in emulator presets with plain prerequisites, BIOS/save folders, re-index, safe removal, existing desktop
+  configurations preserved (unknown fields kept, unreadable or concurrently changed files refused, atomic commit with
+  interrupted-write recovery, remembered configuration location).
+- Missing or unreadable storage keeps the previous index and the remembered settings location; moved roots refresh paths;
+  failed game/app/shortcut launches show a message.
 - Plain-language All files access screen with fallbacks; overlay/Shizuku/Home role/radial keyboard stay optional.
 - Persistent release key tooling, versioning and verified signed APK packaging.
 
-Acceptance and remaining distribution gates:
+### Evidence (2026-10-24)
+
+Signed candidates were built locally with `tools/release.sh`; none has been published. The checks below were run on
+beta.1–beta.4 (version codes 2–5). The latest local candidate, `sortie-0.1.0-beta.6-code7.apk` (SHA-256
+`727c6e4dbd6f616458a146ebc72d6bad98497cd02259ac8af00d5f1b0ea067e0`), verifies with `apksigner` as a single v2 signer
+with the certificate above.
+
+- `tools/release.sh ktlintCheck test --continue`: style, 204 JVM tests per variant with no failures or skips, one expected
+  v2 signer and a non-debuggable APK. Partial signing configuration is rejected.
+- Disposable Android 13 (API 33, x86_64, 1280×800) emulator: file-access permission, folder browsing, two-system setup,
+  index results and controller selection through the UI, without writing configuration from ADB. PPSSPP 1.20.4 ran its
+  public cube demo packaged as a homebrew ISO; RetroArch 1.22.2/Gambatte ran the GB Assembly Tutorial's Hello World ROM.
+  Fixtures and launcher details are in [LAUNCHERS.md](LAUNCHERS.md).
+- A newcomer given only the app and user goals (no source or configuration walkthrough) configured PSP and Game Boy, added
+  another root, launched both games, saved favourites/queue/a note and resumed a magazine article after process restart.
+  Their usability findings were fixed.
+- Signed code 2 → code 3 upgrade in place: all durable files (settings, user data, Room database/WAL, play log, reading
+  preferences) byte-identical before reopening; only SQLite's shared-memory lock file changed. File permission and running
+  emulator processes survived. Code 4 → code 5 also installed in place. The signed beta survived a reboot with preferences
+  unchanged, and ignored the debug launch extra.
+- Recovery: a missing pinned settings folder is not recreated by preference writes; stale empty state cannot overwrite a
+  restored `user.json`; retry reloads every store once. Malformed `user.json`/`systems.json` are reported and never
+  overwritten; a concurrent external edit rejects a stale draft and Reload preserves the external unknown field. Missing
+  game roots keep indexed games and give launch errors; revoking and re-granting file access restores the library.
+- Removing the last system leaves no stale indexed game and returns to the setup welcome; ROM files stay on disk.
+- Shortcut pin requests show the requesting app and shortcut; Cancel/Back add nothing, Add pins exactly one shortcut.
+- Daily-use pass: 98 navigation checkpoints across 1280×800, 800×480 and 480×800 with a virtual gamepad, no Sortie crash or
+  ANR; Finished/Shelved verdicts, reference cards, journal notes and reading positions survived restart. Compact-layout and
+  controller-focus findings were fixed in later candidates.
+- Backup export, replace preview, safety copy, repeat restore and cross-device session deduplication behaved as documented.
+
+### Known limitations
+
+- RetroArch 1.22.2 exits on the first attempt to open *different* content and boots it on the second; same-game resume
+  works. Sortie does not force-stop it. Old custom profiles keep `CLEAR_TASK` until edited (see LAUNCHERS.md); one long run
+  hit an external RetroArch ANR with that legacy flag, and a separate background RetroArch native crash was seen on the
+  x86_64 emulator with unestablished cause.
+- Loose PSP ELF homebrew does not start from Sortie; homebrew ISOs do.
+- Only the emulator versions and devices named here and in LAUNCHERS.md were exercised. Other presets carry their stated
+  untested/source-checked status; an installed package does not prove its core, BIOS or game is ready.
+
+### Remaining gates
 
 - [ ] Off-machine, tested backup of the release keystore **and** password file.
-- [x] Signed beta.1/code2 updated in place to beta.2/code3 on isolated devices. Eleven durable files were byte-identical
-  before reopening (settings, notes, Room database/WAL, completed history and magazine positions); file permission and
-  running emulator processes were retained. SQLite's ephemeral shared-memory lock file changed normally.
-- [x] A source-blind newcomer configured PSP and Game Boy, added another root, visibly launched both games, saved personal
-  state and resumed reading after process restart. Reported usability findings were incorporated.
-- [ ] Broader launch-and-return coverage. PPSSPP 1.20.4 ISO and RetroArch 1.22.2/Gambatte are exercised on the API33 AVD;
-  see [LAUNCHERS.md](LAUNCHERS.md) for warm-launch behavior and limitations. Other presets retain their explicit untested
-  status; a present package does not prove its core, BIOS or game is ready.
-- [ ] A rights review of bundled third-party media before any public upload (see the README's *Licence*), including
-  `field-notes-009/media/windjammers-disc-duel-beach.webp`, whose upstream source is unknown.
+- [ ] Automated edge-case coverage for setup/cancel/edit/remove, malformed external changes, missing storage, unavailable
+  emulators, permission denial, process restart and update preservation.
+- [ ] Broader launch-and-return coverage beyond PPSSPP 1.20.4 and RetroArch 1.22.2/Gambatte on API 33.
 - [ ] Hardware coverage beyond the devices actually tested: Android versions, single/dual screen, touch/controller,
-  storage layouts and OEM settings screens. Existing Thor/DMG/emulator evidence is not a general compatibility claim.
+  storage layouts and OEM settings screens.
+- [ ] Run the CI workflow on GitHub once the repository is published; local builds are not a claim that hosted CI has run.
 
 Later, for a wider public release:
 
-- Review the published tree and history for personal paths, device identifiers and private content.
 - Audit dependency licences and provide notices.
 - Test exported components, URI grants, malformed manifests/packs and path containment; release builds must not expose
   debug launch hooks.
@@ -128,43 +195,69 @@ Later, for a wider public release:
 
 Keep minification disabled until release-variant device tests cover serialization, Room, reflection and the Shizuku service.
 
-## Publishing bundled magazine issues
+## Magazine content (separate repository)
 
-This is content publication, separate from release signing or the setup work above. Public zines are taste-led but written
-for a general audience; they do not assume the reader owns a particular library or handheld. Include games outside the
-local collection. Keep operational audits and personal data outside published packs.
+The Field Notes zines are not part of this repository. Their issue packs live in a separate content repository,
+`sortie-zines`, whose `issues/` directory holds `catalog.json` plus one `<issue-id>/` folder per issue. Clone it next to
+this repository (or anywhere else) yourself; the build never downloads it. Keeping the two apart means the MIT-licensed
+code can be cloned, built and distributed without third-party magazine media.
 
-From the repository root, validate and publish an explicitly chosen authoring directory:
+- **Default build: no zines.** Without `sortieMagazinesDir`, `tools/build.sh`, `tools/release.sh`, CI and plain Gradle
+  builds bundle no issues and never fetch anything. The generated asset folder is emptied on every such build, so content
+  staged by an earlier build cannot leak into a later one. The Magazines shelf starts empty and still reads card packs.
+- **Opt-in bundle:** pass the content directory explicitly. Relative paths resolve against this repository's root; Gradle's
+  standard `ORG_GRADLE_PROJECT_sortieMagazinesDir` environment variable works too. An empty value is an error.
+
+  ```sh
+  tools/build.sh -PsortieMagazinesDir=../sortie-zines/issues
+  tools/release.sh -PsortieVersionCode=8 -PsortieVersionName=0.1.0-beta.7 -PsortieMagazinesDir=../sortie-zines/issues
+  ```
+
+  `:app:stageMagazineAssets` verifies the directory and copies it into
+  `app/build/generated/assets/stageMagazineAssets/magazines/`, which the APK packages as `assets/magazines/`. The build
+  fails, rather than shipping different content, when the path is missing, not a folder or inside `app/`; contains a
+  symlink or a visible file absent from the catalog; when any size, SHA-256, issue digest or the catalog digest does not
+  match; when an `issue.json` has an invalid id, revision or schema; or when the catalog digest differs from the pin.
+  Dot-files are ignored and never copied. There is no fallback content.
+- **No in-tree zines:** the build also refuses any `app/src/{main,debug,release}/assets/magazines/` folder; those paths are
+  git-ignored. Issues reach an APK only through `sortieMagazinesDir`.
+- **Pinning:** `app/magazines.lock` holds `#` comment lines and exactly one 64-hex catalog digest (currently
+  `aacc00fc7f6bc8bcf44f9f68475fbd7f24e4de2e6c5ec61ecedb94c3c382975c`). Change it only deliberately, together with the
+  content-repository commit it should ship (see `--pin` below).
+- **Update preservation:** bundled issues are extracted into app-private storage once per catalog digest. On the shelf,
+  issues merge by stable issue ID: the higher revision wins and a card copy wins a tie. Card packs in `sortie/magazines/`
+  are never overwritten or deleted. Reading positions and clippings are keyed by issue/article IDs; clipped text and notes
+  stay readable even when an issue is no longer present, for example after installing a build without zines.
+
+### Publishing issue packs
+
+Public zines are taste-led but written for a general audience; they do not assume the reader owns a particular library or
+handheld. Keep operational audits and personal data out of published packs. Validate and publish authored issues into the
+content repository with:
 
 ```sh
 python3 tools/publish-magazines.py /path/to/issue-sources --check
-python3 tools/publish-magazines.py /path/to/issue-sources
+python3 tools/publish-magazines.py /path/to/issue-sources --out ../sortie-zines/issues --pin
 ```
 
-The directory contains one `<issue-id>/` folder per issue. In the author's workspace it is `../guide/magazines`, but ordinary
-builds never read that location. Publication stages a complete snapshot into `app/src/main/assets/magazines/`, including a
-reproducible size/SHA-256 catalog. A failed final swap restores the prior output. Review the asset changes with the source
-changes; do not hand-edit only the packaged copy.
+The source directory contains one `<issue-id>/` folder per issue. `--out` is required to publish and must be outside this
+repository; the tool never writes into `app/src/main/assets`. Publication stages a complete snapshot including a
+reproducible size/SHA-256 `catalog.json`; a failed final swap restores the prior output. `--pin` then writes the new catalog
+digest into `app/magazines.lock`. Review and commit both repositories together; do not hand-edit only the published copy.
 
 - Use schema 2, positive `revision`, stable issue/article/reference IDs and portable `games` references. Increment revision
   for a correction; retain the original publication date. Check cross-issue identity and meaningful edition aliases.
-- Run the publisher's schema/path/privacy checks. Also review prose and source claims, decode every image, inspect cover
-  pixels for private wording, and verify provenance. The publisher does not replace editorial review or pixel inspection.
-- Keep a compact rights notice and source credits. Third-party images/manual extracts are not MIT; attribution and
-  non-commercial distribution are not grants of permission. The earlier zine pass did not perform separate clearance; review the distribution position before public upload.
-- `verifyMagazineAssets` runs before builds and rejects files differing from the catalog. Build from the committed assets
-  without network fetching or private paths. `BundledMagazineAssetsTest` also opens every bundled article with the app parser.
-- Smoke the installed APK: merged shelf, public text/images/sources, all/local game lists, library links and Featured in,
-  B hierarchy, page/shoulder navigation, Continue reading after restart, and dual-screen X/section navigation where available.
-- Upgrade existing installations with `install -r`, never uninstall a daily handheld. Verify user data and card packs stay
-  untouched. Higher revision wins, card wins a tie, and malformed card copies cannot hide valid bundled editions.
+- Run the publisher's schema/path/privacy checks. Also review prose and source claims, decode every image and inspect cover
+  pixels for private wording. The publisher does not replace editorial review.
+- Keep each issue's compact rights notice and `sources.json` credits. Third-party screenshots, box art, manual extracts and
+  quotations belong to their rights holders and are not covered by this repository's MIT licence.
+- `BundledMagazineAssetsTest` opens every staged article with the app parser when built with `-PsortieMagazinesDir`
+  (for example `tools/build.sh -PsortieMagazinesDir=../sortie-zines/issues`); without staged content it is skipped.
+- Smoke an installed APK built with the content directory: merged shelf, text/images/sources, all/local game lists, library
+  links and Featured in, B hierarchy, page/shoulder navigation, Continue reading after restart, and dual-screen section
+  navigation where available. Upgrade with `install -r`; verify user data and card packs stay untouched.
 
-The initial public bundle is Field Notes 001–009, revision 2: 41 articles, 131 images, about 12 MB. The release-signing and
-friend-readiness gates above remain separate; a tested debug APK is not a signed public release.
-
-Evidence recorded by the separate magazine integration session on 2026-10-24 (not re-run by the beta integrator on the Thor): `tools/build.sh --no-daemon --max-workers=2` passed style checks,
-152 JVM tests per variant, and both APK builds. Both APKs contain the same verified nine-issue catalog. On the AYN Thor,
-the debug APK was installed with `-r`; all 41 articles' lead images, prose and offline Sources were opened. Local filtering,
-reciprocal links/back focus, paging, article boundaries, section jumps, X swaps and restart/resume were exercised.
-Original reading preferences were restored after testing; `user.json` and all nine original card manifests remained
-byte-identical. This did not test game emulation or install the unsigned release APK.
+The current content set is Field Notes 001–009, revision 2: 41 articles, 131 images, about 12 MB. A debug APK built with
+it was installed in place on an AYN Thor and every article's lead image, prose and offline sources were opened; local
+filtering, reciprocal links, paging, section jumps, screen swaps and restart/resume were exercised, and the existing user
+data and card packs were unchanged. That pass did not test emulation or install a release APK.

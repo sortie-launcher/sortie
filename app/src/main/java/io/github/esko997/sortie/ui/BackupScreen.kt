@@ -174,16 +174,16 @@ private fun InfoBlock(title: String, modifier: Modifier = Modifier, content: @Co
 }
 
 private fun summary(u: UserData): String = listOf(
-    "${u.favourites.size} favourites",
-    "${u.wantToPlay.size} Want to play games",
-    "${u.layout.size} custom home tiles",
-    "${u.dock.count { it.isNotBlank() }} dock slots",
-    "${u.gameAnnotations.size} game notes",
-    "${u.gameProgress.size} shelf verdicts",
-    "${u.magazineClippings.size} magazine clippings",
-    "${u.referenceCards.values.sumOf { it.size }} reference cards",
-    "${u.journalEntries.size} journal entries",
-    "${u.shortcuts.size} opted-in shortcuts"
+    plural(u.favourites.size, "favourite"),
+    plural(u.wantToPlay.size, "Want to play game"),
+    plural(u.layout.size, "custom home tile"),
+    plural(u.dock.count { it.isNotBlank() }, "dock slot"),
+    plural(u.gameAnnotations.size, "game note"),
+    plural(u.gameProgress.size, "Finished/Shelved game"),
+    plural(u.magazineClippings.size, "magazine clipping"),
+    plural(u.referenceCards.values.sumOf { it.size }, "reference card"),
+    "${u.journalEntries.size} journal ${if (u.journalEntries.size == 1) "entry" else "entries"}",
+    plural(u.shortcuts.size, "opted-in shortcut")
 ).joinToString(" · ")
 
 @Composable

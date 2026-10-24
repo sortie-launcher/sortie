@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
-"""Validate offline magazine packs and publish them into the APK's assets.
+"""Validate offline magazine packs and publish them into the separate magazine content repository.
 
-    tools/publish-magazines.py SOURCE_ROOT [--out DIR] [--check]
+    tools/publish-magazines.py SOURCE_ROOT --check
+    tools/publish-magazines.py SOURCE_ROOT --out DIR [--pin]
 
 SOURCE_ROOT holds one folder per issue (<issue-id>/issue.json, articles/, media/). Every issue must be schema version 2
 with a revision and a rights notice; game references must be well formed and every reference id must have the same title,
 platform and edition in every article and issue (match names may differ; the app unions them). Paths must stay inside
 their issue, referenced files must exist and no private machine details may appear in published text.
 
-Without --check, the validated packs are staged next to DIR (default app/src/main/assets/magazines) and swapped in only
-when complete, together with catalog.json:
+With --out, the validated packs are staged next to DIR and swapped in only when complete, together with catalog.json:
     {"format": 1, "digest": ..., "issues": [{"id", "revision", "digest", "files": [{"path", "size", "sha256"}]}]}
 An issue digest is SHA-256 over its "path<TAB>size<TAB>sha256" lines (sorted by path, joined by newlines); the catalog
 digest is SHA-256 over "id<TAB>revision<TAB>digest" lines (sorted by id). The same packs always give the same catalog.
-Hidden files (dot-names) are never published. Nothing here uses the network.
+DIR is the issues folder of the content repository (sortie-zines/issues); it must lie outside the Sortie repository, which
+never holds magazine content. Builds include DIR only when given -PsortieMagazinesDir=DIR, and only if its catalog digest is
+the one pinned in app/magazines.lock. --pin is the explicit author action that writes the newly published digest there;
+review and commit the content and the pin together. Hidden files (dot-names) are never published. Nothing here uses the
+network.
 """
 
 import argparse
@@ -26,6 +30,8 @@ import sys
 from pathlib import Path
 
 SCHEMA = 2
+REPO = Path(__file__).resolve().parent.parent
+LOCK = REPO / "app" / "magazines.lock"
 SLUG = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,79}\Z")
 REF_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,119}\Z")
 MD_IMAGE = re.compile(r"^\s*!\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)\s*$")
@@ -288,15 +294,39 @@ def publish(source, out, issues):
     return catalog
 
 
+def inside(path, folder):
+    return path == folder or folder in path.parents
+
+
+def pin(digest):
+    lines = LOCK.read_text(encoding="utf-8").splitlines() if LOCK.is_file() else []
+    old = [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
+    tmp = LOCK.with_name(f".{LOCK.name}.tmp-{os.getpid()}")
+    tmp.write_text("\n".join([line for line in lines if line.lstrip().startswith("#")] + [digest]) + "\n", encoding="utf-8")
+    tmp.replace(LOCK)
+    print(f"pinned catalog {digest} in {LOCK.relative_to(REPO)} (was {', '.join(old) or 'unset'})")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("source", type=Path, help="folder holding one sub-folder per issue")
-    ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parent.parent / "app/src/main/assets/magazines")
+    ap.add_argument("--out", type=Path, help="the content repository's issues folder, outside the Sortie repository")
     ap.add_argument("--check", action="store_true", help="validate only; write nothing")
+    ap.add_argument("--pin", action="store_true", help=f"after publishing, pin the new catalog digest in {LOCK.relative_to(REPO)}")
     args = ap.parse_args()
+    if args.check == (args.out is not None):
+        ap.error("give either --check or --out DIR")
+    if args.check and args.pin:
+        ap.error("--pin needs a publication (--out DIR)")
     source = args.source.resolve()
     if not source.is_dir():
         sys.exit(f"{source} is not a folder")
+    if args.out is not None:
+        out = args.out.resolve()
+        if inside(out, REPO):
+            sys.exit(f"{out} is inside the Sortie repository; publish into the separate content repository (sortie-zines/issues)")
+        if inside(out, source) or inside(source, out):
+            sys.exit(f"{out} overlaps the source folder {source}; publish into a separate folder")
     probs = Problems()
     refs_seen = {}
     issues = []
@@ -319,8 +349,12 @@ def main():
     if args.check:
         print(f"ok: {len(issues)} issue(s), {len(refs_seen)} game reference(s)")
         return
-    catalog = publish(source, args.out, issues)
-    print(f"published {len(issues)} issue(s) to {args.out} (catalog {catalog['digest'][:12]})")
+    catalog = publish(source, out, issues)
+    print(f"published {len(issues)} issue(s) to {out} (catalog {catalog['digest']})")
+    if args.pin:
+        pin(catalog["digest"])
+    elif not LOCK.is_file() or catalog["digest"] not in LOCK.read_text(encoding="utf-8").split():
+        print(f"note: builds refuse this catalog until it is pinned in {LOCK.relative_to(REPO)} (rerun with --pin after review)")
 
 
 if __name__ == "__main__":

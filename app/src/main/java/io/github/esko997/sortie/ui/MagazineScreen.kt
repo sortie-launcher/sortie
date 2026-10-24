@@ -2021,7 +2021,14 @@ private fun ClipEditor(
                     )
                 }
                 Text("My note", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                NoteField(note, { note = it }, "Why it caught your eye, what to try (optional)", enabled = !saving)
+                // Down reaches Save, never Cancel/Remove by accident; an over-long note keeps the focus (A to shorten it)
+                NoteField(
+                    note,
+                    { note = it },
+                    "Why it caught your eye, what to try (optional)",
+                    enabled = !saving,
+                    down = if (tooLong) FocusRequester.Cancel else saveFocus
+                )
                 Text(
                     if (tooLong) {
                         "$noteLength / $MAX_CLIP_NOTE characters — shorten the note by ${noteLength - MAX_CLIP_NOTE} to save it"

@@ -164,6 +164,7 @@ internal fun JournalEditor(
     }
 
     val first = remember { FocusRequester() }
+    val chooseGame = remember { FocusRequester() }
     LaunchedEffect(seed.id) { runCatching { first.requestFocus() } }
     val enabled = busy == null
     Column(Modifier.fillMaxSize()) {
@@ -181,12 +182,14 @@ internal fun JournalEditor(
             }
 
             Label("Note")
+            // Down goes to the game chooser, not whichever game button (Remove game, Unlink session) sits nearest its centre
             NoteField(
                 draft.text,
                 { draft = draft.copy(text = it) },
                 "What you played, what happened, what to try next",
                 Modifier.focusRequester(first),
-                enabled = enabled
+                enabled = enabled,
+                down = chooseGame
             )
 
             Label("Game")
@@ -206,7 +209,7 @@ internal fun JournalEditor(
                 )
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                EditorButton(if (draft.gameId == null) "Choose game…" else "Change game…", enabled) { picking = true }
+                EditorButton(if (draft.gameId == null) "Choose game…" else "Change game…", enabled, Modifier.focusRequester(chooseGame)) { picking = true }
                 if (draft.gameId != null) EditorButton("Remove game", enabled) { draft = draft.copy(gameId = null, sessionStartedAt = null) }
                 if (draft.sessionStartedAt != null) EditorButton("Unlink session", enabled) { draft = draft.copy(sessionStartedAt = null) }
             }
@@ -264,7 +267,7 @@ internal fun JournalEditor(
                     colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = Ink),
                     interactionSource = saveInteraction
                 ) { Text("Save") }
-                EditorButton("Cancel", enabled, cancel)
+                EditorButton("Cancel", enabled, onClick = cancel)
                 if (!isNew && !confirmDelete) EditorButton("Delete note…", enabled) { confirmDelete = true }
             }
             if (draft.isBlank()) {
@@ -380,12 +383,12 @@ private fun Label(text: String) {
 }
 
 @Composable
-private fun EditorButton(text: String, enabled: Boolean, onClick: () -> Unit) {
+private fun EditorButton(text: String, enabled: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.focusGlow(interaction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape),
+        modifier = modifier.focusGlow(interaction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape),
         interactionSource = interaction
     ) { Text(text, maxLines = 1) }
 }

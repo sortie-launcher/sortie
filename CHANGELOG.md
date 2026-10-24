@@ -19,8 +19,8 @@
 - Release tooling: `tools/init-release-key.sh` creates one persistent release key outside the repository;
   `tools/release.sh` builds, verifies and checksums a signed, non-debuggable APK with no debug-key fallback. Validated
   `versionCode`/`versionName` overrides. `tools/build.sh` checks style, runs debug and release unit tests and builds both
-  variants without formatting. Signed upgrade and source-blind newcomer exercises passed; tested compatibility and remaining
-  key-custody/public-distribution gates are recorded in docs/BETA.md and docs/RELEASE.md.
+  variants without formatting. Signed upgrade and source-blind newcomer exercises passed; tested compatibility, beta
+  evidence and remaining key-custody/public-distribution gates are recorded in docs/RELEASE.md.
 - Shortcut pin requests from other apps (`requestPinShortcut`) now ask first: a dialog names the shortcut and the requesting
   app/package with Add or Cancel (Cancel focused). Cancel, Back or leaving adds nothing; expired or invalid requests explain why.
 - Newcomer refinements: Play action, Library setup label, built-in Favourites shelf, favourite/platform list labels, Fit 4+
@@ -33,8 +33,12 @@
   Newly installed emulators become selectable from an already-open game page without restarting Sortie.
 - RetroArch presets keep its single-instance intent path instead of clearing its native activity. Background games are not
   killed on focus loss; the emulator's different-content restart limitation is explained before the first game.
-- Public-audience Field Notes zines now ship in the APK: nine revised issues, 41 articles and 131 bundled images, with
-  portable game references, public source provenance and compact rights notices rather than personal library assumptions.
+- Public-audience Field Notes zines: nine revised issues, 41 articles and 131 images, with portable game references, public
+  source provenance and compact rights notices rather than personal library assumptions. The issues now live in a separate
+  `sortie-zines` content repository and are bundled only with `-PsortieMagazinesDir=…/sortie-zines/issues`; Gradle verifies
+  them against the digest pinned in `app/magazines.lock` and stages them under `app/build/`. Default builds contain no
+  issues, in-tree `assets/magazines/` folders are refused, and `tools/publish-magazines.py --out DIR [--pin]` publishes
+  into the content repository instead of the app sources.
 - Magazine contents list Games mentioned with All/On this device filtering; game pages link back through Featured in.
   Matching respects platforms and editions, offers multiple local copies, and excludes placeholders/missing/arriving files
   from availability. Opening a magazine link never launches a game.
@@ -94,20 +98,20 @@
 - Home adapts to smaller displays when screens are swapped: header actions reflow, sorts scroll sideways, and controller
   hints wrap without splitting words. Home/game grids cap density by available space and text scale without changing saved
   preferences or scroll direction; custom-layout D-pad moves follow the actual grid. Icon tiles reserve room for their labels.
-- System tiles show the console's logo when `<card>/sortie/logos/<systemId>.png` exists (desktop-rendered from the slate-es-de
-  theme by `sortie-card/gen_logos.py`, black strokes turned white for dark tiles); the cover stays as a faint backdrop.
+- System tiles show the console's logo when `<card>/sortie/logos/<systemId>.png` exists (rendered on a desktop, e.g. from the
+  slate-es-de theme, black strokes turned white for dark tiles); the cover stays as a faint backdrop.
 - First run with the card on an SD card: once the all-files grant arrives and `device.json` becomes readable, Sortie restarts
   itself (`RestartActivity` in a `:restart` process kills and relaunches the main one — no alarms) so every store binds to the
   card instead of primary storage.
 - Apps screen tile density is its own setting (`user.appColumns`, default 8, Settings → "App tiles per row").
-- Repo tidy for publishing: personal device identifiers out of `docs/HANDOFF.md`, `examples/card/` minimal card, README rewrite.
+- Repo tidy for publishing: personal device identifiers out of the docs, `examples/card/` minimal card, README rewrite.
 - Home header shows a 24-hour clock (one recomposition a minute). The companion hero follows the focused game while browsing
   grids and lists (`Modifier.heroOnFocus`), not only the game page. Manual scrolls with the D-pad (focusable list, Up/Down/Page).
 - Home: a **Continue** tile (last game played) leads Custom unless moved. Hold R1 on a system or folder tile opens a random
   playable game in it.
 - Lists: **💾 started** chip — games with a save or state on the card (`DeviceState.saveStems`).
 - Game page: "Played N min · S sessions · last <when>" (`PlayStat.sessions`), plus hand-written control notes.
-- Guide: new `controls` field per game (`guide/blurbs.jsonl` → `build_guide.py` → `guide.json`); DB v4 adds `games.controls`.
+- Guide: new `controls` field per game in `guide.json` (written by the desktop guide builder); DB v4 adds `games.controls`.
 - Companion: while a game is selected, the panel mirrors its play stats, control notes, description and tags under the art
   (scrollable); while playing, the control notes sit under the timer. A bottom-left dot unfurls a 5-slot **dock** up the left
   edge (`user.dock`): A/tap an empty slot to pin an app/shortcut, A/tap to start it on that screen, hold A/long-press to unpin,
@@ -149,8 +153,8 @@
   static otherwise; hero rotation slowed to 20 s. `UserStore` keeps a pending save in a conflated channel (an edit before the
   writer coroutine ran was dropped); deterministic test with a gated dispatcher.
 - "Play next" smart folder (offline recommendation): new rule field `recentTags {minShared, window}` (tags shared with the last
-  K played games, computed once per evaluation from the subjects' last-played times) and `sort: random`; `gen_manifests.py`
-  ships `play-next` (unplayed · fit ≥ 4 · recentTags 1/3), `validate_folders.py` mirrors both from the pulled play log.
+  K played games, computed once per evaluation from the subjects' last-played times) and `sort: random`; a desktop-generated
+  `play-next` folder (unplayed · fit ≥ 4 · recentTags 1/3) uses both.
 - user.json writes are serialised (one collector writes the newest state); concurrent per-update writers could leave an older
   state on disk after a burst of layout moves or favourites. Regression test `UserStoreTest`.
 - Small fixes (feedback round 4): hold-A works on the controller (`Modifier.keyLongPress`: the first key repeat is the long
@@ -158,8 +162,8 @@
   is lifted (a permanently focusable grid had swallowed the tile outline and D-pad up/down); hero and Now-playing titles drop
   file-name noise (`displayTitle`: regions, `[tags]`, versions, revisions) and tapping the card opens the game on the other
   screen; the switcher has a "Sortie" entry (raise Sortie's navigation where it runs, controller follows); Diagnostics has a
-  Wireless debugging button (Developer options scrolled to the toggle). docs/RECOMMENDATIONS.md files the offline Play-next idea
-  as a smart-folder rule, not an engine.
+  Wireless debugging button (Developer options scrolled to the toggle). The offline Play-next idea is filed as a smart-folder
+  rule, not an engine.
 - Home and browse layout (feedback round 3): home Sort chips — Alphabetical, Game count, Generation (generated) and Custom
   (`user.layout`: systems, folders, Apps, games, apps, shortcuts, exactly as placed); hold A → Move (lifted tile, D-pad one slot,
   A drop, B cancel) · Remove on Custom tiles; "Add to / Remove from home" in a hold-A context sheet on every openable item
@@ -206,7 +210,7 @@
   and shortcuts next to games (rule fields `kind`, `package`, `source`); apps and shortcuts launch with the game display rule.
 - Feedback round 1: Apps folder (launch installed apps, favourite them), controller hints on every screen, home grid layout
   with 1:1 tiles washed with a representative cover (Select toggles list/grid, columns in user.json), hero cards on the idle
-  companion screen, debug `--es open <route>`. Design note for recommendation snapshots (docs/RECOMMENDATIONS.md).
+  companion screen, debug `--es open <route>`. Design note for recommendation snapshots.
 - Vita launches through EmuCoreV using `<file>.titleid` sidecars written by the desktop; indexer ignores sidecar files.
 - Shizuku-backed screen mover (capability-gated) with Diagnostics controls; debug `--es open <route>` hook; lower Gradle and
   Kotlin daemon memory limits.
@@ -216,7 +220,7 @@
 - M3 (in progress): companion panel on the other screen, X swaps screens, launches target the top screen when navigating
   from the bottom, HOME role, single-instance guard, disc grouping and duplicate-format hiding (schema v3).
 - M2: smart folders from folders.json (rule engine with tests, repository, home counts, folder screen, Pick one, Select
-  context, hide); desktop validator sortie-card/validate_folders.py; first-seen time from file mtime.
+  context, hide); a desktop validator mirrors the rules; first-seen time from file mtime.
 - Project skeleton, spec, plan and on-card data formats.
 - M0 probe: Compose app with a Presentation on the secondary display; verified on the AYN Thor (Android 13).
 - tools/dev.sh: build, install, run, screenshot.

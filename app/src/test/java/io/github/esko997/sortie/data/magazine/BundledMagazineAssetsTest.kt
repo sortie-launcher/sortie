@@ -7,14 +7,23 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 
-/** The issues published into the APK (tools/publish-magazines.py) read cleanly with the app's own parser and reader. */
+/**
+ * The magazines a build staged from -PsortieMagazinesDir (app/build.gradle.kts stageMagazineAssets, which hands the folder over
+ * as the system property sortie.stagedMagazines) read cleanly with the app's own parser and reader and are the pinned catalog.
+ * A build without magazines stages nothing, and this test is skipped.
+ */
 class BundledMagazineAssetsTest {
-    private val dir = File("src/main/assets/magazines")
+    private val staged = System.getProperty("sortie.stagedMagazines")?.let(::File)?.takeIf { File(it, CATALOG).isFile }
 
     @Test
     fun everyBundledIssueIsCompleteAndConsistent() {
-        assumeTrue("no bundled magazines published", File(dir, CATALOG).isFile)
+        assumeTrue("no magazines staged (build without -PsortieMagazinesDir)", staged != null)
+        val dir = staged!!
         val catalog = checkNotNull(parseCatalog(File(dir, CATALOG).readText())) { "catalog.json is malformed" }
+        val pinned = File("magazines.lock").readLines().map { it.trim() }.single { it.isNotEmpty() && !it.startsWith("#") }
+        assertEquals("staged catalog vs app/magazines.lock", pinned, catalog.digest)
+        val files = dir.walkTopDown().filter { it.isFile }.map { it.relativeTo(dir).invariantSeparatorsPath }.toSet()
+        assertEquals(setOf(CATALOG) + catalog.issues.flatMap { i -> i.files.map { "${i.id}/${it.path}" } }, files)
         val shelf = readShelf(dir, IssueSource.BUNDLED)
         assertEquals(emptyList<BrokenIssue>(), shelf.broken)
         assertEquals(catalog.issues.map { it.id }.sorted(), shelf.issues.map { it.issue.id }.sorted())

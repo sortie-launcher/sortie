@@ -14,7 +14,8 @@ import kotlinx.serialization.json.longOrNull
 
 /*
  * Issues bundled in the APK under assets/magazines/: one folder per issue plus catalog.json, written by
- * tools/publish-magazines.py:
+ * tools/publish-magazines.py into the separate content repository and staged only by builds given -PsortieMagazinesDir
+ * (app/build.gradle.kts; without it there is no catalog and no bundled issue):
  *   {"format": 1, "digest": "<sha256>", "issues": [{"id": "...", "revision": 2, "digest": "<sha256>",
  *     "files": [{"path": "issue.json", "size": 123, "sha256": "<hex>"}, ...]}]}
  * Assets cannot be read as files, so the packs are copied once per catalog digest into app storage: into a staging folder,

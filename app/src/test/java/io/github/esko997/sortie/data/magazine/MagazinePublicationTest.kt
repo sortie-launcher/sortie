@@ -210,6 +210,20 @@ class MagazinePublicationTest {
         assertEquals(opens + 1, assets.opens) // the new process reads catalog.json only; the first instance reads nothing
     }
 
+    /** A build without -PsortieMagazinesDir packages no catalog: no built-in issues, no problem, nothing written. */
+    @Test
+    fun buildWithoutMagazinesShowsOnlyCardIssues() = runBlocking {
+        val private = File(tmp.root, "files/magazines-bundled")
+        val sortie = tmp.newFolder("sortie")
+        writePack(File(sortie, "magazines"), "my-own-zine", v2("my-own-zine", revision = 1))
+        val shelf = MagazineRepository(sortie, BundledMagazines(Assets(tmp.newFolder("no-assets")), private)).shelf()
+        assertNull(shelf.problem)
+        assertEquals(listOf("my-own-zine"), shelf.issues.map { it.issue.id })
+        assertEquals(listOf(IssueSource.CARD), shelf.issues.map { it.source })
+        assertTrue(shelf.broken.isEmpty())
+        assertFalse(private.exists())
+    }
+
     @Test
     fun appUpdateReplacesTheSnapshotAndADamagedIssueIsReportedNotHidden() = runBlocking {
         val assetDir = tmp.newFolder("assets")

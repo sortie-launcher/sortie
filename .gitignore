@@ -22,5 +22,15 @@ captures/
 /screenshots/
 *.p12
 *.pfx
+# tools/init-release-key.sh password file (the key lives outside the repository; this guards accidental copies)
+store-password
 # tools/release.sh output (signed APKs and checksums)
 /dist/
+# Private maintainer notes, evidence and session handoffs (never published)
+/.local/
+# Python caches (tools/*.py)
+__pycache__/
+*.py[cod]
+# Magazine issues live in the separate sortie-zines repository and are staged under app/build/ only with
+# -PsortieMagazinesDir; the build refuses in-tree copies.
+/app/src/*/assets/magazines/

@@ -2,14 +2,18 @@ package io.github.esko997.sortie.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -22,8 +26,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -37,6 +45,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -47,17 +56,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -67,10 +78,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.SearchFilters
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Results loaded per step; scrolling near the end of the loaded ones loads the next step (the count is always complete). */
 private const val SEARCH_PAGE = 200
@@ -153,8 +167,9 @@ private fun SearchFilters.moreCount(): Int = listOf(favourites, wantToPlay, unpl
 /**
  * Text search plus System, Tags, Genre and More filters over the games table. Text may be empty: any filter alone lists its
  * matches. Values within a filter match either; the filters all have to match. The count is of every match; results load in
- * steps as the grid nears the end. D-pad Down from the search box goes to the results (Up from them reaches the filters);
- * without results it goes to the filters. A picker is a dialog: A toggles a value, B closes it.
+ * steps as the grid nears the end. Opening Search focuses the search box with the keyboard up. D-pad Down from the box closes
+ * the keyboard and goes to the results (Up from them reaches the filters); without results it goes to the filters. A picker is
+ * a dialog: A toggles a value, B closes it.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -222,7 +237,43 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
     val clearChip = remember { FocusRequester() }
     val systemChip = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    val focus = LocalFocusManager.current
+    val field = remember { FocusRequester() }
+    var fieldFocused by remember { mutableStateOf(false) }
+    var systemChipShown by remember { mutableStateOf(false) }
+    val imeVisible by rememberUpdatedState(WindowInsets.isImeVisible)
+    val currentGames by rememberUpdatedState(games)
+    var leaving by remember { mutableStateOf<Job?>(null) }
+    // Down from the search box closes the keyboard first: on a short screen it squeezes the filters and results out of the
+    // layout, and a control measured away cannot take the focus. Then retry until the focus has left the box: to the results,
+    // or to the filter buttons when there are none on screen.
+    val leaveField = {
+        leaving?.cancel()
+        leaving = scope.launch {
+            keyboard?.hide()
+            withTimeoutOrNull(1_000) { snapshotFlow { imeVisible }.first { !it } }
+            repeat(25) {
+                if (!fieldFocused) return@launch
+                val toResults = currentGames.isNotEmpty() && focusResults()
+                if (!toResults && systemChipShown) runCatching { systemChip.requestFocus() }
+                delay(40)
+            }
+        }
+    }
+    // Opening Search (Y, Start, the Home button) focuses the box with the keyboard up. Coming back from a game, a picker or
+    // across the X screen swap keeps where the user was instead.
+    var opened by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (opened) return@LaunchedEffect
+        opened = true
+        repeat(25) {
+            if (fieldFocused) {
+                keyboard?.show()
+                return@LaunchedEffect
+            }
+            runCatching { field.requestFocus() }
+            delay(40)
+        }
+    }
     val clearText = {
         input = ""
         update(filters.copy(text = ""))
@@ -240,12 +291,9 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
             { input = it },
             // Down must leave the editor instead of being consumed as caret movement. With results it skips the filter
             // controls so a new chip never stands between the text and the games.
-            modifier = Modifier.fillMaxWidth().onPreviewKeyEvent { e ->
+            modifier = Modifier.fillMaxWidth().focusRequester(field).onFocusChanged { fieldFocused = it.hasFocus }.onPreviewKeyEvent { e ->
                 if (e.key != Key.DirectionDown || !isPhysicalPad(e)) return@onPreviewKeyEvent false
-                if (e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) {
-                    val moved = if (games.isNotEmpty()) focusResults() else focus.moveFocus(FocusDirection.Down)
-                    if (moved) keyboard?.hide()
-                }
+                if (e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) leaveField()
                 true
             },
             singleLine = true,
@@ -261,7 +309,11 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            PickerChip("System", filters.systems.size, Modifier.focusRequester(systemChip)) { picker = Picker.SYSTEM }
+            PickerChip(
+                "System",
+                filters.systems.size,
+                Modifier.focusRequester(systemChip).onGloballyPositioned { systemChipShown = it.fullyShown() }
+            ) { picker = Picker.SYSTEM }
             PickerChip("Tags", filters.tags.size) { picker = Picker.TAGS }
             PickerChip("Genre", filters.genres.size) { picker = Picker.GENRE }
             PickerChip("More", filters.moreCount()) { picker = Picker.MORE }
@@ -286,15 +338,20 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val clearInteraction = remember { MutableInteractionSource() }
                 AssistChip(
                     onClick = {
                         update(filters.clearedFilters())
                         refocus(systemChip)
                     },
                     label = { Text("Clear filters", maxLines = 1) },
-                    modifier = Modifier.focusRequester(clearChip)
+                    modifier = Modifier
+                        .focusRequester(clearChip)
+                        .focusGlow(clearInteraction.collectIsFocusedAsState().value, AssistChipDefaults.shape),
+                    interactionSource = clearInteraction
                 )
                 activeFilters(filters, systemLabel).forEach { chip ->
+                    val interaction = remember(chip.label) { MutableInteractionSource() }
                     InputChip(
                         selected = true,
                         onClick = {
@@ -303,7 +360,9 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
                             refocus(if (next.hasFilters) clearChip else systemChip)
                         },
                         label = { Text(chip.label, maxLines = 1) },
-                        trailingIcon = { Text("✕") }
+                        trailingIcon = { Text("✕") },
+                        modifier = Modifier.focusGlow(interaction.collectIsFocusedAsState().value, InputChipDefaults.shape),
+                        interactionSource = interaction
                     )
                 }
             }
@@ -415,16 +474,35 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
     sheet?.let { ItemSheet(it, vm) { sheet = null } }
 }
 
-/** A filter button: its name, how many values are picked, and ▾ for the picker it opens. */
+/** Fully inside the window and every clipping parent: measured, not squeezed out of a short layout. */
+private fun LayoutCoordinates.fullyShown(): Boolean {
+    val bounds: Rect = boundsInWindow()
+    return size.height > 0 && size.width > 0 && bounds.height >= size.height - 1f && bounds.width >= size.width - 1f
+}
+
+/** A filter button: its name, how many values are picked, and ▾ for the picker it opens; [focusGlow] for the controller. */
 @Composable
 private fun PickerChip(label: String, picked: Int, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
     FilterChip(
         selected = picked > 0,
         onClick = onClick,
         label = { Text(if (picked > 0) "$label · $picked" else label, maxLines = 1) },
         trailingIcon = { Text("▾") },
-        modifier = modifier
+        modifier = modifier.focusGlow(interaction.collectIsFocusedAsState().value, FilterChipDefaults.shape),
+        interactionSource = interaction
     )
+}
+
+/** A way out of an empty result; [focusGlow] for the controller. */
+@Composable
+private fun GlowButton(text: String, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.focusGlow(interaction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape),
+        interactionSource = interaction
+    ) { Text(text, maxLines = 1) }
 }
 
 /** Nothing matches: say why and offer the ways out that apply. */
@@ -441,9 +519,9 @@ private fun NoResults(filters: SearchFilters, onClearFilters: () -> Unit, onIncl
             )
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (filters.hasFilters) OutlinedButton(onClick = onClearFilters) { Text("Clear filters", maxLines = 1) }
-            if (filters.onDeviceOnly) OutlinedButton(onClick = onIncludeAll) { Text("Include games not on device", maxLines = 1) }
-            if (filters.query.isNotEmpty()) OutlinedButton(onClick = onClearText) { Text("Clear text", maxLines = 1) }
+            if (filters.hasFilters) GlowButton("Clear filters", onClearFilters)
+            if (filters.onDeviceOnly) GlowButton("Include games not on device", onIncludeAll)
+            if (filters.query.isNotEmpty()) GlowButton("Clear text", onClearText)
         }
     }
 }

@@ -42,6 +42,12 @@ class GridMemory internal constructor(focused: String?, internal var anchor: Str
 
     /** Set until [RememberGridPosition] has acted on the saved keys; once per composition of the destination. */
     internal var pending = focused != null || anchor != null
+
+    /**
+     * [keyboard] as saved when the destination was left: only then does [RememberGridPosition] focus [focused] again. Kept
+     * apart because [keyboard] follows the live input mode from the first frame, which may differ on the way back.
+     */
+    internal val restoreFocus = keyboard
     internal val requester = FocusRequester()
 
     companion object {
@@ -76,19 +82,40 @@ fun RememberedItem(memory: GridMemory, key: String, content: @Composable () -> U
 }
 
 /**
- * Tracks the first visible item of [state] and, once per composition, brings [memory] back when the grid has its items:
- * scrolls to the remembered first item unless the lazy state already restored it (same screen), and with the controller in
- * use makes sure the focused item is on screen and focuses it again. A key that no longer resolves (item removed, filtered
- * out) is skipped, leaving the lazy state's own clamped position. [keys] lists every item of the grid in order (headers too).
+ * Brings [GridMemory.focused] on screen and focuses it again, retrying while it composes (the item composes on the next layout
+ * pass); focusing it also brings a partly visible tile fully into view. Stops once it holds the focus. [keys] lists every
+ * item of the grid in order (headers too); a key that no longer resolves is skipped.
+ */
+internal suspend fun GridMemory.focusRemembered(state: LazyGridState, keys: List<Any>) {
+    val key = focused ?: return
+    val index = keys.indexOf(key)
+    if (index < 0) return
+    if (state.layoutInfo.visibleItemsInfo.none { it.key == key }) state.scrollToItem(index)
+    repeat(25) {
+        runCatching { requester.requestFocus() }
+        delay(40)
+        if (holding) return
+    }
+}
+
+/**
+ * Tracks the first visible item of [state] and the input mode and, once per composition, brings [memory] back when the grid
+ * has its items: scrolls to the remembered first item unless the lazy state already restored it (same screen), and when the
+ * controller was in use on leaving makes sure the focused item is on screen and focuses it again. A key that no longer
+ * resolves (item removed, filtered out) is skipped, leaving the lazy state's own clamped position. [keys] lists every item of
+ * the grid in order (headers too).
+ *
+ * The focus has to be back before the screen we return from leaves the composition: when its focused item is removed while
+ * nothing else holds the focus, Compose clears the view's focus and, outside touch mode, Android hands it straight back to
+ * the first focusable item on screen (Home's Apps button).
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun RememberGridPosition(memory: GridMemory, state: LazyGridState, keys: List<Any>) {
     val inputModes = LocalInputModeManager.current
+    // always the live mode: a restored screen entered with the controller already in use sees no further change to record
     LaunchedEffect(memory, inputModes) {
-        snapshotFlow { inputModes.inputMode == InputMode.Keyboard }.collect {
-            if (!memory.pending) memory.keyboard = it
-        }
+        snapshotFlow { inputModes.inputMode == InputMode.Keyboard }.collect { memory.keyboard = it }
     }
     LaunchedEffect(memory, state) {
         snapshotFlow { state.layoutInfo.visibleItemsInfo.firstOrNull()?.key }.collect { key ->
@@ -103,17 +130,8 @@ fun RememberGridPosition(memory: GridMemory, state: LazyGridState, keys: List<An
         val anchorIndex = anchor?.let { keys.indexOf(it) } ?: -1
         if (anchorIndex >= 0 && state.layoutInfo.visibleItemsInfo.firstOrNull()?.key != anchor) state.scrollToItem(anchorIndex)
         // Touch: the anchor is the position. A focus remembered from earlier D-pad use may be far from where the user tapped.
-        if (!memory.keyboard) return@LaunchedEffect
+        if (!memory.restoreFocus) return@LaunchedEffect
         inputModes.requestInputMode(InputMode.Keyboard)
-        val focused = memory.focused ?: return@LaunchedEffect
-        val index = keys.indexOf(focused)
-        if (index < 0) return@LaunchedEffect
-        if (state.layoutInfo.visibleItemsInfo.none { it.key == focused }) state.scrollToItem(index)
-        // the item composes on the next layout pass; focusing it also brings a partly visible tile fully into view
-        repeat(25) {
-            if (memory.holding) return@LaunchedEffect
-            runCatching { memory.requester.requestFocus() }
-            delay(40)
-        }
+        memory.focusRemembered(state, keys)
     }
 }

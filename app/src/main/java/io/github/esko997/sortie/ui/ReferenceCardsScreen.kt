@@ -500,7 +500,7 @@ private fun ReferenceViewer(
  * New or existing card as a draft: nothing is written until Save; Cancel or B drops the draft. The draft survives activity
  * recreation. [save] returns null once user.json holds the card, else the reason it does not (the editor then stays open).
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalComposeUiApi::class)
 @Composable
 private fun ReferenceCardEditor(
     key: String,
@@ -515,12 +515,15 @@ private fun ReferenceCardEditor(
     var saving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val first = remember { FocusRequester() }
+    val saveFocus = remember { FocusRequester() }
+    val cancelFocus = remember { FocusRequester() }
     InitialFocus(key, first)
     BackHandler { if (!saving) onClose() }
     val isImage = original?.image != null
     val changed = title != original?.title.orEmpty() || body != original?.body.orEmpty()
     val tooLong = title.length > ReferenceLimits.MAX_TITLE || body.length > ReferenceLimits.MAX_BODY
     val hasContent = title.isNotBlank() || body.isNotBlank() || isImage
+    val canSave = !saving && !tooLong && hasContent && (changed || original == null || error != null)
     Column(Modifier.fillMaxSize()) {
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
@@ -545,7 +548,20 @@ private fun ReferenceCardEditor(
             } else {
                 Label("Text (Markdown: # heading, - bullet, **bold**, *italic*)")
             }
-            ReferenceTextField(body, { body = it }, if (isImage) "What to look for on this image" else "Write the reference here", enabled = !saving)
+            // Down reaches Save, never Cancel by accident: an over-long draft keeps the focus (A to shorten it); with Save
+            // otherwise disabled the draft is empty or unchanged, so Cancel loses nothing
+            ReferenceTextField(
+                body,
+                { body = it },
+                if (isImage) "What to look for on this image" else "Write the reference here",
+                enabled = !saving,
+                up = first,
+                down = when {
+                    canSave -> saveFocus
+                    tooLong -> FocusRequester.Cancel
+                    else -> cancelFocus
+                }
+            )
             Text(
                 "${body.length} / ${ReferenceLimits.MAX_BODY} characters" +
                     if (title.length > ReferenceLimits.MAX_TITLE) " · title over ${ReferenceLimits.MAX_TITLE}" else "",
@@ -564,10 +580,11 @@ private fun ReferenceCardEditor(
                             error = failure
                         }
                     },
-                    enabled = !saving && !tooLong && hasContent && (changed || original == null || error != null),
+                    Modifier.focusRequester(saveFocus),
+                    enabled = canSave,
                     primary = true
                 )
-                ActionButton("Cancel", onClose, enabled = !saving)
+                ActionButton("Cancel", onClose, Modifier.focusRequester(cancelFocus), enabled = !saving)
             }
         }
         HintBar("↕" to "move", "A" to "select / type", "B" to "cancel")
@@ -580,8 +597,9 @@ private fun Label(text: String) {
 }
 
 /**
- * A text field a controller can leave: D-pad up/down from a physical pad moves the focus, A raises the keyboard (the editing
- * keys of the soft keyboard and touch keep their usual meaning). The body field is taller than the annotation notes'.
+ * A text field a controller can leave: D-pad up/down from a physical pad moves the focus to [up]/[down] (as for [NoteField]),
+ * A raises the keyboard (the editing keys of the soft keyboard and touch keep their usual meaning). The body field is taller
+ * than the annotation notes'.
  */
 @Composable
 private fun ReferenceTextField(
@@ -590,7 +608,9 @@ private fun ReferenceTextField(
     placeholder: String,
     modifier: Modifier = Modifier,
     singleLine: Boolean = false,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    up: FocusRequester = FocusRequester.Default,
+    down: FocusRequester = FocusRequester.Default
 ) {
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -602,7 +622,7 @@ private fun ReferenceTextField(
         placeholder = { Text(placeholder) },
         minLines = if (singleLine) 1 else 8,
         maxLines = if (singleLine) 1 else 16,
-        modifier = modifier.fillMaxWidth().onPreviewKeyEvent { e ->
+        modifier = modifier.fillMaxWidth().padFocusExits(up, down).onPreviewKeyEvent { e ->
             when {
                 !isPhysicalPad(e) -> false
                 e.key == Key.DirectionUp || e.key == Key.DirectionDown -> {

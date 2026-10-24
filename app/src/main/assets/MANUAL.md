@@ -117,8 +117,9 @@ Small app and shortcut tiles automatically show only their icons instead of cram
 keep their names; icon-only tiles still expose names to accessibility services. Adjust **Settings → App tiles per row**
 to change the Apps grid density. The label cutoff adapts to tile width and your text size.
 
-On a narrow Home screen, header actions move below the clock, sort choices scroll sideways (touch or D-pad), and controller
-hints wrap as whole button/action pairs.
+On narrow portrait screens, Home puts its actions on a sideways-scrolling row below the clock. Short landscape screens put
+that row beside the title, leaving room for tiles. Larger screens keep the wrapping header. Sort choices scroll sideways
+(touch or D-pad), and controller hints wrap as whole button/action pairs. Switching list/grid retains the selected tile.
 
 System and folder filter chips: **Fit 4+** (guide rating 4 or 5), **✍ notes** (guide or personal notes), **💾 started** (a save or state exists
 on the card), **on device** (hide placeholders for games not copied yet). **🎲 Pick one** opens a random game from what is shown.
@@ -135,15 +136,21 @@ Search accepts a title, tag, genre, developer or description fragment. Text is o
 - **A / tap** toggles a picker value; **Done / B** closes the picker. Its counts describe the library, not the other active filters.
 - Active filters appear below the buttons. Tap one to remove it; **Clear filters** keeps your search text.
 - The game count includes all matches. More results load as you scroll; the initial page is not a search limit.
+- Opening Search focuses the text box and opens the keyboard; returning from a game keeps your browsing focus instead.
 - **D-pad Down** from the search box focuses results and closes the keyboard, including after you close it yourself.
   With no results it goes to the filter buttons. **Up** from results reaches those buttons.
 - Open a game and return with **B**: your text, filters and browsing position remain.
 
+In multiline note, verdict and reference-card editors, controller Up/Down moves between fields and controls rather than moving
+the text caret. Down from the last field goes to **Save** when there are changes; Cancel and Clear remain deliberate choices.
+Touch and keyboard arrows still position the caret, and **A** on a text field brings up the keyboard.
+
 ## Offline magazines
 
 **Home → Magazines** opens illustrated offline zines: editorials, contents, gameplay and mechanics, history, reception and
-sources. APK updates can include new issues; you can also add your own packs on the card. Nothing is downloaded while reading.
-Pictures belong to their rights holders and are credited in each issue’s sources.
+sources. Some Sortie builds include a set of issues; a build without them starts with an empty shelf. Either way you can add
+issue packs on the card yourself. Nothing is downloaded while reading.
+Pictures in issues belong to their rights holders and are credited in each issue’s sources.
 
 - **A / tap** opens an issue or article. **B** goes article → contents → shelf → Home.
 - In an article, **D-pad Up/Down** scrolls; **Left/Right** pages; **L1/R1** changes article.

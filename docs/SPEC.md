@@ -2,10 +2,10 @@
 
 ## Purpose
 
-Sortie is the on-device half of a two-part system. The desktop pipeline (library-tools) owns naming,
-metadata, artwork, deduplication, backups and taste scoring; Sortie owns browsing and launching.
-Sortie therefore reads files and writes very little: a play log and the user's on-device edits
-(favourites, overrides), both as plain files that Syncthing can carry back to the desktop.
+Sortie browses and launches a handheld's game library. The library can be set up entirely on the device (Library setup), or
+curated on a desktop by the user's own tooling, which then owns naming, metadata, artwork, deduplication, backups and taste
+scoring. Either way Sortie reads files and writes very little: its configuration (when set up on the device), a play log and
+the user's on-device edits (favourites, overrides), all as plain files that any sync tool can carry back to a desktop.
 
 ## Principles
 
@@ -13,7 +13,7 @@ Sortie therefore reads files and writes very little: a play log and the user's o
    an incremental index keyed on file path and modification time. Pre-sized thumbnails. Lists
    over carousels on small screens.
 2. **Data lives on the card, as text.** Everything Sortie needs is in plain files under one root,
-   authored on the desktop, delivered by Syncthing, hot-reloaded on change. The app is a renderer.
+   written by the Library screen or delivered from a desktop, hot-reloaded on change. The app is a renderer.
 3. **No gatekeeping of launchers.** Any installed app can be a launcher for any system. Launch
    profiles are user data, not a database the app ships. Unknown emulators work through the
    generic "open with" path on day one.
@@ -24,19 +24,20 @@ Sortie therefore reads files and writes very little: a play log and the user's o
 
 ## Data model
 
-Canonical inputs (read-only for Sortie):
+Canonical inputs (read-only for Sortie; the folder names below are examples, each system's paths come from `systems.json`):
 
-- `roms/<system>/`, `big-roms/<system>/` : game files (as synced; 0-byte placeholders are ignored,
-  `.syncthing.*.tmp` are shown as "arriving").
+- `roms/<system>/` and similar per-system folders: game files (0-byte placeholders are ignored, in-progress sync temp
+  files such as `.syncthing.*.tmp` are shown as "arriving").
 - `scraped-esde/gamelists/<system>/gamelist.xml` : ES-DE gamelist (name, desc, rating, releasedate,
   developer, publisher, genre, players). Only `<path>`, `<name>` and the listed fields are used.
 - `scraped-esde/downloaded_media/<system>/{covers,screenshots,marquees,...}/<stem>.png|jpg`.
-- `sortie/guide.json` : taste layer exported by the desktop guide builder (fit 1-5, hook, flags,
+- `sortie/guide.json` : optional taste layer from a desktop guide builder (fit 1-5, hook, flags,
   tags) keyed by system + filename.
 - `sortie/systems.json`, `sortie/launchers.json`, `sortie/folders.json`, `sortie/device.json` :
   see docs/formats.
-- APK assets at `magazines/<issue-id>/` and optional card packs at `sortie/magazines/<issue-id>/`: offline zines with
-  `issue.json`, Markdown and local images (format v2; v1 external packs are imported). See formats/README.md.
+- APK assets at `magazines/<issue-id>/` (only in builds made with a magazine content directory; see RELEASE.md) and
+  optional card packs at `sortie/magazines/<issue-id>/`: offline zines with `issue.json`, Markdown and local images
+  (format v2; v1 external packs are imported). See formats/README.md.
   Reading positions are app-private preferences, separate from card data and exported backups.
 
 Outputs (owned by Sortie, append-only or small):
@@ -117,7 +118,7 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Procedural theme engine: derive a palette from the selected game's cover (dominant and accent
   colours, contrast-checked) and apply it to the folder or detail screen. Cached per image.
 - Optional HOME-intent mode so Sortie can be the default launcher.
-- Per-device manifest for DMG, Vert, Nova (subsets, emulators, screen count).
+- Per-device manifests (subsets, emulators, screen count) for several handhelds sharing one desktop library.
 
 ## Non-goals (for now)
 Scraping, cloud sync, RetroAchievements UI, themes marketplace, video previews, any network use.
@@ -129,3 +130,41 @@ search (on Home) / other screen (switcher) · Start search (not available while 
 Select launch-profile sheet (detail) / list↔grid (Home, system and folder lists, search, Apps) / close app (switcher) · L1/R1
 previous/next system · Home (physical) app switcher when something is running. Moving a Custom home tile: D-pad one slot per
 press, A drop, B cancel. Long press = hold A for touch.
+
+## Implementation notes for contributors
+
+Code map (`app/src/main/java/io/github/esko997/sortie/`):
+
+- `SortieApp.kt` service locator (`graph`): manifest/user/play-log stores, Room database, indexer, launcher, folders, apps,
+  device state and the Shizuku screen mover. The StrictMode file-URI check is relaxed here because emulators need `file://`.
+- `MainActivity.kt` navigation, HOME role, debug-only intent hooks and X screen swap (the saved state is handed to the new
+  instance in process memory). `SecondaryHomeActivity.kt` / `CompanionActivity.kt` host the other-screen companion;
+  `AnchorActivity.kt` moves controller focus to a display; `ShortcutPinActivity.kt` confirms `requestPinShortcut`;
+  `RestartActivity.kt` restarts the main process once storage access arrives.
+- `data/manifest/` JSON models and the hot-reloading `ManifestStore`; `data/setup/` on-device Library setup (presets,
+  merge-preserving transactional manifest commits); `data/index/` incremental indexer, disc/duplicate variants and BIOS/save
+  state; `data/db/` Room; `data/folders/` smart-folder rule engine; `data/user/` `user.json` and `playlog.jsonl`;
+  `data/backup/` export/restore; `data/magazine/`, `data/reference/`, `data/journal/` the reading, reference-card and
+  journal features; `data/apps/` installed apps and launcher shortcuts.
+- `launch/` intent building and launching with fallbacks; `shell/` the Shizuku user service, screen mover and app switcher;
+  `ui/` Compose screens (`ManualScreen` renders `assets/MANUAL.md`).
+- `app/src/test/` JVM unit tests. Device paths, serials and emulator package names belong in the on-card manifests or
+  environment variables (`tools/dev.sh` reads `SORTIE_SERIAL`, `SORTIE_TOP_DISPLAY`, `SORTIE_BOTTOM_DISPLAY`), never in code.
+
+Android behaviour that shaped the design (observed on Android 13 dual-screen hardware):
+
+- A Presentation cannot target the default display, an app cannot move its task between displays, and a HOME task ignores
+  `moveTaskToBack`. Hence the companion activity, relaunch-to-swap and finishing on launch from the second screen.
+  Compose does not save focus across that relaunch or a different row count, hence `GridMemory`.
+- Controller focus follows the display that last started an activity or was last touched. `am task focus` raises a task
+  without moving display focus; starting an activity on a display does (`AnchorActivity`). Guard against two companions
+  anchoring back at each other.
+- `am stack remove` accepts leaf task ids; `cmd activity display move-stack` needs the root task id. Removing a root HOME
+  task removes Sortie too. Never remove the system launcher's own tasks.
+- Leaving the default display empty makes the system start HOME again; cover it with the companion first.
+- Android 13 rejects singleTask/singleInstance activities for SECONDARY_HOME.
+- Full-table Room reads concurrent with indexer writes can fail with "Couldn't read row N from CursorWindow": read inside
+  a transaction, debounce and catch.
+- Reinstalling an APK drops the default-home choice (`SORTIE_HOME=1 tools/dev.sh install` restores it).
+- Idle cost is checked with `dumpsys gfxinfo` (no new frames while idle), `dumpsys meminfo` and `top`; covers go through
+  `CoverImage` (constraint-sized, hardware bitmaps) with a fixed 96 MB memory cache and no disk cache.

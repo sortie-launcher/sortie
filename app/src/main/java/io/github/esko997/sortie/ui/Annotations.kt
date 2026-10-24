@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -147,12 +148,24 @@ fun GameAnnotationEditor(
     val changed = draft.normalised() != current.normalised()
     val scope = rememberCoroutineScope()
     val first = remember { FocusRequester() }
+    val chosenSupport = remember { FocusRequester() }
+    val saveFocus = remember { FocusRequester() }
+    val cancelFocus = remember { FocusRequester() }
+    // A failed write leaves the saved annotation unchanged; keep the draft retryable.
+    val canSave = !saving && (changed || error != null)
     LaunchedEffect(gameId) { runCatching { first.requestFocus() } }
     BackHandler { if (!saving) onClose() }
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Notes & controls", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         FieldLabel("Where was I?")
-        NoteField(returnNote, { returnNote = it }, "Level, boss, save slot, what to do next", Modifier.focusRequester(first), enabled = !saving)
+        NoteField(
+            returnNote,
+            { returnNote = it },
+            "Level, boss, save slot, what to do next",
+            Modifier.focusRequester(first),
+            enabled = !saving,
+            down = chosenSupport
+        )
         FieldLabel("What it needs")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             ControllerSupport.entries.forEach { option ->
@@ -162,7 +175,8 @@ fun GameAnnotationEditor(
                     enabled = !saving,
                     onClick = { controllerKey = option.key },
                     label = { Text(if (option == ControllerSupport.UNKNOWN) "Not set" else option.badge) },
-                    modifier = Modifier.focusGlow(interaction.collectIsFocusedAsState().value, FilterChipDefaults.shape, accent),
+                    modifier = (if (draft.controller == option) Modifier.focusRequester(chosenSupport) else Modifier)
+                        .focusGlow(interaction.collectIsFocusedAsState().value, FilterChipDefaults.shape, accent),
                     colors = FilterChipDefaults.filterChipColors(selectedContainerColor = accent.copy(alpha = 0.25f), selectedLabelColor = accent),
                     interactionSource = interaction
                 )
@@ -170,7 +184,15 @@ fun GameAnnotationEditor(
         }
         Text(draft.controller.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         FieldLabel("My mapping notes")
-        NoteField(mapping, { mapping = it }, "Buttons you remapped, hotkeys, emulator settings", enabled = !saving)
+        // Down from the last note reaches Save, never Cancel/Clear all by accident; with Save disabled nothing is unsaved
+        NoteField(
+            mapping,
+            { mapping = it },
+            "Buttons you remapped, hotkeys, emulator settings",
+            enabled = !saving,
+            up = chosenSupport,
+            down = if (canSave) saveFocus else cancelFocus
+        )
         guideControls?.let {
             Text("Guide controls: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -195,16 +217,16 @@ fun GameAnnotationEditor(
                         if (failure == null) onClose()
                     }
                 },
-                // A failed write leaves the saved annotation unchanged; keep the draft retryable.
-                enabled = !saving && (changed || error != null),
-                modifier = Modifier.focusGlow(saveInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape, accent),
+                enabled = canSave,
+                modifier = Modifier.focusRequester(saveFocus).focusGlow(saveInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape, accent),
                 colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Ink),
                 interactionSource = saveInteraction
             ) { Text(if (saving) "Saving…" else "Save") }
             OutlinedButton(
                 onClick = onClose,
                 enabled = !saving,
-                modifier = Modifier.focusGlow(cancelInteraction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape, accent),
+                modifier = Modifier.focusRequester(cancelFocus)
+                    .focusGlow(cancelInteraction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape, accent),
                 interactionSource = cancelInteraction
             ) { Text("Cancel") }
             OutlinedButton(
@@ -228,12 +250,22 @@ private fun FieldLabel(text: String) {
 
 /**
  * Multi-line note field that a controller can leave: D-pad up/down from a physical gamepad/D-pad moves the focus instead of
- * the caret (the caret stays on the soft keyboard's own arrows and touch), and A brings up the keyboard. The caret starts
- * after existing text (so typing appends) and goes there again whenever the caller replaces [value]; the user's own caret
- * moves and IME composition are kept while the text is theirs.
+ * the caret (the caret stays on the soft keyboard's own arrows and touch), and A brings up the keyboard. [up] and [down] name
+ * where those moves land: [FocusRequester.Default] searches spatially, [FocusRequester.Cancel] keeps the focus here. Callers
+ * whose field sits above Save/Cancel name Save explicitly, because a spatial search from a wide field picks whichever button
+ * is nearest its centre, often Cancel. The caret starts after existing text (so typing appends) and goes there again whenever
+ * the caller replaces [value]; the user's own caret moves and IME composition are kept while the text is theirs.
  */
 @Composable
-internal fun NoteField(value: String, onChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier, enabled: Boolean = true) {
+internal fun NoteField(
+    value: String,
+    onChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    up: FocusRequester = FocusRequester.Default,
+    down: FocusRequester = FocusRequester.Default
+) {
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     var edited by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
@@ -248,7 +280,7 @@ internal fun NoteField(value: String, onChange: (String) -> Unit, placeholder: S
         placeholder = { Text(placeholder) },
         minLines = 2,
         maxLines = 6,
-        modifier = modifier.fillMaxWidth().onPreviewKeyEvent { e ->
+        modifier = modifier.fillMaxWidth().padFocusExits(up, down).onPreviewKeyEvent { e ->
             when {
                 !isPhysicalPad(e) -> false
                 e.key == Key.DirectionUp || e.key == Key.DirectionDown -> {
@@ -263,4 +295,10 @@ internal fun NoteField(value: String, onChange: (String) -> Unit, placeholder: S
             }
         }
     )
+}
+
+/** Explicit up/down focus destinations for a text field (see [NoteField]); must precede the field's own focus target. */
+internal fun Modifier.padFocusExits(up: FocusRequester, down: FocusRequester): Modifier = focusProperties {
+    this.up = up
+    this.down = down
 }

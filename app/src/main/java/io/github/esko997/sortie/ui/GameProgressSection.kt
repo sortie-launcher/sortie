@@ -167,6 +167,11 @@ private fun ShelfEditor(gameId: String, current: GameProgress?, accent: Color, s
     val tooLong = draft != null && verdict.trim().length > VERDICT_MAX_CHARS
     val removing = draft == null && current != null
     val first = remember { FocusRequester() }
+    val chosenShelf = remember { FocusRequester() }
+    val saveFocus = remember { FocusRequester() }
+    val cancelFocus = remember { FocusRequester() }
+    // a failed write left the saved shelf unchanged; keep the draft retryable
+    val canSave = !saving && !tooLong && (changed || error != null)
     var focusedOnce by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = { if (!saving) onClose() }, properties = DialogProperties(dismissOnClickOutside = false)) {
         Column(
@@ -184,6 +189,7 @@ private fun ShelfEditor(gameId: String, current: GameProgress?, accent: Color, s
                         onClick = { shelfKey = option?.key.orEmpty() },
                         label = { Text(option?.label ?: "Neither") },
                         modifier = (if (i == 0) Modifier.focusRequester(first).onFocusChanged { if (it.isFocused) focusedOnce = true } else Modifier)
+                            .then(if (draft == option) Modifier.focusRequester(chosenShelf) else Modifier)
                             .focusGlow(interaction.collectIsFocusedAsState().value, FilterChipDefaults.shape, accent),
                         colors = FilterChipDefaults.filterChipColors(selectedContainerColor = accent.copy(alpha = 0.25f), selectedLabelColor = accent),
                         interactionSource = interaction
@@ -203,7 +209,20 @@ private fun ShelfEditor(gameId: String, current: GameProgress?, accent: Color, s
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text("Verdict (optional)", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            NoteField(verdict, { verdict = it }, "Your verdict in a line or two", enabled = !saving && draft != null)
+            // Down reaches Save, never Cancel by accident: an over-long verdict keeps the focus (A to shorten it); with Save
+            // otherwise disabled nothing is unsaved
+            NoteField(
+                verdict,
+                { verdict = it },
+                "Your verdict in a line or two",
+                enabled = !saving && draft != null,
+                up = chosenShelf,
+                down = when {
+                    canSave -> saveFocus
+                    tooLong -> FocusRequester.Cancel
+                    else -> cancelFocus
+                }
+            )
             Text(
                 if (tooLong) {
                     "${verdict.trim().length} / $VERDICT_MAX_CHARS characters: shorten it to save."
@@ -233,16 +252,16 @@ private fun ShelfEditor(gameId: String, current: GameProgress?, accent: Color, s
                             if (failure == null) onClose()
                         }
                     },
-                    // a failed write left the saved shelf unchanged; keep the draft retryable
-                    enabled = !saving && !tooLong && (changed || error != null),
-                    modifier = Modifier.focusGlow(saveInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape, accent),
+                    enabled = canSave,
+                    modifier = Modifier.focusRequester(saveFocus).focusGlow(saveInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape, accent),
                     colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Ink),
                     interactionSource = saveInteraction
                 ) { Text(if (saving) "Saving…" else if (removing) "Take off shelf" else "Save") }
                 OutlinedButton(
                     onClick = onClose,
                     enabled = !saving,
-                    modifier = Modifier.focusGlow(cancelInteraction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape, accent),
+                    modifier = Modifier.focusRequester(cancelFocus)
+                        .focusGlow(cancelInteraction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape, accent),
                     interactionSource = cancelInteraction
                 ) { Text("Cancel") }
             }
