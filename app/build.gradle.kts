@@ -194,7 +194,9 @@ abstract class StageMagazineAssets : DefaultTask() {
         if (!given.isDirectory) fail("not a folder; point it at the issues folder of a sortie-zines checkout (catalog.json and one folder per issue)")
         val dir = given.toPath().toRealPath().toFile()
         val app = appDir.get().asFile.toPath().toRealPath().toFile()
-        if (dir.startsWith(app)) fail("lies inside the app module ($app); keep magazine content in its own repository")
+        // Bind-mount aliases can have different real paths but still name the same app directory.
+        val insideApp = generateSequence(dir.toPath()) { it.parent }.any { Files.isSameFile(it, app.toPath()) }
+        if (insideApp) fail("lies inside the app module ($app); keep magazine content in its own repository")
 
         val root = dir.toPath()
         val visible = Files.walk(root).use { entries -> entries.iterator().asSequence().filter { it != root }.map(root::relativize).toList() }
