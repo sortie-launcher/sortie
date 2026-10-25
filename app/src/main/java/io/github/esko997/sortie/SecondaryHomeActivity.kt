@@ -49,7 +49,7 @@ abstract class CompanionHost : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         graph().switcher.homeResumed(this)
-        if (!graph().switcher.anchoredRecently()) scheduleHandOff()
+        if (graph().switcher.companionShouldHandOff(myDisplayId())) scheduleHandOff()
     }
 
     /**

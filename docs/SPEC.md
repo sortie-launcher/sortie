@@ -284,7 +284,8 @@ Android behaviour that shaped the design (observed on Android 13 dual-screen har
   Compose does not save focus across that relaunch or a different row count, hence `GridMemory`.
 - Controller focus follows the display that last started an activity or was last touched. `am task focus` raises a task
   without moving display focus; starting an activity on a display does (`AnchorActivity`). Guard against two companions
-  anchoring back at each other.
+  anchoring back at each other, but only for the one resume an anchor causes on its target (`AnchorGuard`): a blanket
+  "anchored recently" timer also swallowed the hand-off after a quick second X swap, leaving the controller on the companion.
 - `am stack remove` accepts leaf task ids; `cmd activity display move-stack` needs the root task id. Removing a root HOME
   task removes Sortie too. Never remove the system launcher's own tasks.
 - Leaving the default display empty makes the system start HOME again; cover it with the companion first.

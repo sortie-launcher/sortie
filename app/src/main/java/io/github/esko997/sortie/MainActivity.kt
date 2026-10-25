@@ -183,7 +183,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        (application as SortieApp).graph.switcher.homeResumed(this)
+        (application as SortieApp).graph.switcher.run {
+            homeResumed(this@MainActivity)
+            navigationResumed(myDisplayId())
+        }
         vm.onForeground() // closes an open play session when we come back from an emulator
         showCompanion()
     }
