@@ -169,3 +169,56 @@ fails here rather than on the device.
 They are plain JVM unit tests and run with the others (`tools/build.sh`, or
 `./gradlew :app:testDebugUnitTest --tests 'io.github.esko997.sortie.shell.*'`); they need a POSIX `sh`, `grep` and `awk`.
 To add a capture (and keep it free of private data), follow the README in the captures folder.
+
+### Tier 4: emulator smoke (CI)
+
+`smoke/` is a separate, self-instrumenting test APK (UiAutomator, `DualScreenSmokeTest`) that drives the debug build on an
+Android 13 x86_64 emulator with a second screen, the way a player would: keys go to whichever display has input focus, and
+every check reads the task list (`cmd activity stack list`), the focused display (`dumpsys input`) or the accessibility
+tree of one display. `tools/emulator/smoke.sh` prepares the emulator and runs it; `.github/workflows/emulator.yml` runs that
+script on demand (Actions > emulator > Run workflow, or `gh workflow run emulator.yml --ref BRANCH`), on pull requests
+labelled `emulator`, and on pull requests that touch `shell/`, `MainActivity`, `CompanionActivity`,
+`SecondaryHomeActivity`, `AnchorActivity`, the app manifest, `smoke/` or `tools/emulator/`.
+
+Covered:
+
+- Home: one navigation task on the primary display, Home drawn there and the controller on that display.
+- Companion: Android starts Sortie's SECONDARY_HOME on the second display by itself (the display is added after Sortie
+  becomes HOME), and the companion, not Home, is drawn there.
+- X and X again: navigation moves to the second display and back, a single MainActivity task each time; CompanionActivity
+  covers the primary display, then closes; the companion returns below; the controller follows navigation; no
+  AnchorActivity lingers.
+- Home from another app (Settings) returns to the same navigation task.
+- Back on Home leaves Sortie in front, both as HOME and in an ordinary task (started from the launcher intent while another
+  app is HOME), the case behind "Back on Home sent Sortie away" above.
+- The magazine reader, with the pinned magazines: shelf, issue contents, first article, controller only.
+- Any Sortie crash or ANR in the log fails the run, even one the tests recovered from.
+
+Not covered: everything that needs Shizuku (the switcher overlay, moving, swapping and closing apps, the AYN panel guard).
+Shizuku is a third-party APK whose server must be started and Sortie authorised in Shizuku's own dialog for the current
+installation (an Android permission grant is not enough); there is no headless path, so those stay hardware checks
+(`ui-stress.py`). Also not covered: launching games, the Hangar, touch on the companion, vendor firmware.
+
+The second screen is the emulator's own virtual display (`adb emu multidisplay add 1 1240 1080 369 1739`: the emulator's
+default flags plus FLAG_PRESENTATION, which Sortie looks for). An overlay display (`settings put global
+overlay_display_devices 1240x1080/369,own_content_only,should_show_system_decorations`) does get a SECONDARY_HOME when it
+has `should_show_system_decorations`, but Android leaves overlay displays out of accessibility, so no test can read them.
+The tests run in their own process because instrumenting Sortie itself makes it an instrumented HOME, which Android never
+starts on a secondary display by itself (`RootWindowContainer.canStartHomeOnDisplayArea`).
+
+Run it locally on an API 33 x86_64 emulator (it refuses real devices: it replaces `/sdcard/sortie`, `/sdcard/roms`, HOME and
+the display size):
+
+```
+./gradlew assembleDebug :smoke:assembleDebug -PsortieMagazinesDir=/path/to/sortie-zines/issues
+ANDROID_SERIAL=emulator-5554 tools/emulator/smoke.sh
+```
+
+Results land in `smoke/build/emulator-smoke/` (test output, logcat, task, display and input dumps, a screenshot of the
+primary display); CI uploads them as the `emulator-smoke` artifact. The fixture card is `tools/emulator/card/`: two
+systems and three placeholder files that are not ROMs. Home is recognised by its "3 games" header, so adding a file means
+changing `GAME_COUNT` in the test. `ZINES_COMMIT` in emulator.yml follows build.yml.
+
+Found while building it: pressing X again within 1.5 s of a swap leaves the controller on the companion's screen. The
+returning companion skips its hand-off because `TaskSwitcher.anchoredRecently()` still counts the previous swap's anchor,
+and the new navigation instance's `showCompanion` has just moved focus to that display. The test paces its swaps (2 s).
