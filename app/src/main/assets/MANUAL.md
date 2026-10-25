@@ -145,6 +145,27 @@ In multiline note, verdict and reference-card editors, controller Up/Down moves 
 the text caret. Down from the last field goes to **Save** when there are changes; Cancel and Clear remain deliberate choices.
 Touch and keyboard arrows still position the caret, and **A** on a text field brings up the keyboard.
 
+## Hangar companion (experimental)
+
+The little mech below Home, your library and magazines is an optional, experimental companion. It has its own space below
+the controls and dozes while you read.
+
+- Tap the mech or **Hangar** to visit. In an article, **Select → Visit the hangar** also works with the controller.
+  **B** returns from Gallery to Workshop, then closes the Hangar without losing your article.
+- **Workshop** lets you name your companion, tune it, charge it, or put it to sleep. Charge and condition never run down
+  while you are away, and neither can stop you playing or using the companion.
+- Choose a part slot and **Equip** an owned part, or wear a complete family set. Mixing families is encouraged.
+- You start with twelve parts and three salvage credits. Each credit finds one new part, optionally in a chosen slot.
+  New completed game sessions earn a credit per five accumulated whole minutes (up to 120 minutes from one session).
+  Earlier play, abandoned sessions, apps and launcher shortcuts do not count. Recorded time is not a measure of active input.
+- **Gallery** compares all three families and idle, walking, sleeping and cheering animations. Parts labelled **preview**
+  are not unlocked; a preview build can only be worn when you own every part.
+- At the bottom of Workshop, turn **Animate companion** off for a still sprite, or **Hide companion**.
+  **Show companion** at the bottom of Home brings it back without losing parts.
+
+Your companion survives app restarts and in-place updates. Its save is app-private and is **not included in the existing
+preference/history backup** yet. Do not uninstall the app if you want to keep it.
+
 ## Offline magazines
 
 **Home → Magazines** opens illustrated offline zines: editorials, contents, gameplay and mechanics, history, reception and

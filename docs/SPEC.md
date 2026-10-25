@@ -119,6 +119,37 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   switcher page instead. Video playback/DRM was not exercised. Shizuku authorization had to be renewed after an earlier
   uninstall/reinstall: Android's package-permission listing alone did not establish Shizuku authorization.
 
+### Hangar companion (experimental)
+
+- A measured footer on Home, systems, folders, Apps, Search and magazines; never drawn over article text or launch controls.
+  Hidden while typing, absent from settings/editors/switcher. The Hangar dialog stays mounted while its rename field uses
+  the keyboard. Reader Select → Visit the hangar gives controller access without taking over reading's D-pad grammar.
+- One named companion, cosmetic Bond/Charge/Condition, tune/charge/rest interactions, motion toggle and hide/show.
+  No time-away decay, death, streaks, notifications, network calls or requirement to care before playing.
+- Three original pixel-art families (yard, survey, courier), two variants for each head/body/arms/legs slot: 24 authored
+  parts and 1,296 possible loadouts. Eight 64×64 frames per transparent 512×64 atlas, shared attachment points, four poses.
+  Grounded sole fill y61, outline y62, y63 clear. Nearest-neighbour integer display scaling; sheets decoded once off-main.
+  Family-local Pillow generators in `tools/mecha/` reproduce the assets and review boards.
+- Twelve starter parts and three clearly labelled starter salvage credits. A deterministic salvage choice finds an unowned
+  part for one credit; completed collections cost nothing. Gallery previews all parts but cannot equip unowned ones.
+- Room's completed, non-abandoned game sessions after initialization earn one credit per five accumulated whole minutes,
+  capped at 120 counted minutes per session. App/shortcut sessions and prior history do not count. Game ID plus start time
+  prevents double credit after reopening or re-importing history. This measures recorded session duration, not active input.
+  Charge drain uses accumulated-minute boundaries, independent of how Room batches session notifications.
+- State, inventory and credited-session identities are atomically saved together in app-private `files/mecha/state.json`.
+  Failed writes leave the prior state intact; unreadable saves require explicit recovery and are preserved before starting
+  fresh. No writes to Cocoon, library manifests, user preferences or play log come from the companion.
+- Limits: a finite authored collection, not arbitrary generated artwork or statistical part affixes; no combat or
+  test-course simulation. The existing preference/history backup does **not** include the companion save yet.
+  Preserve app data; do not uninstall to change builds.
+- DMG acceptance for `0.1.0-mecha-lab.2`: rename/care/salvage/equipment, unowned-part preview restrictions, four animated
+  poses, hide/show persistence, and Home/system/folder/Apps placement exercised on device. Controller-only Home → Hangar
+  and reader Select → Hangar → Gallery → B → B preserve the article position and resume D-pad scrolling.
+  A real 310-second game session earned exactly one credit; process restart and in-place upgrade preserved inventory and
+  did not repeat the reward. Background frame count stayed fixed with motion enabled. Motion-off sprites stayed still.
+  Both JVM variants passed 308 tests. Original card configuration/preferences, all 10,154 game/path rows and 130 history
+  rows were preserved; the three smoke sessions were the only appended history.
+
 ### Library hygiene (M3)
 - Multi-disc grouping (.m3u or disc tags), duplicate-format hiding (PBP next to CHD), hacks
   grouped under base game, badges for missing BIOS, present save, arriving file, placeholder.

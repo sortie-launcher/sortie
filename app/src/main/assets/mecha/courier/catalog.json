@@ -1,0 +1,58 @@
+[
+  {
+    "id": "courier_head_1",
+    "slot": "HEAD",
+    "family": "courier",
+    "name": "Pillar slot",
+    "asset": "mecha/courier/courier_head_1.png"
+  },
+  {
+    "id": "courier_head_2",
+    "slot": "HEAD",
+    "family": "courier",
+    "name": "Route cap",
+    "asset": "mecha/courier/courier_head_2.png"
+  },
+  {
+    "id": "courier_body_1",
+    "slot": "BODY",
+    "family": "courier",
+    "name": "Satchel drum",
+    "asset": "mecha/courier/courier_body_1.png"
+  },
+  {
+    "id": "courier_body_2",
+    "slot": "BODY",
+    "family": "courier",
+    "name": "Locker vest",
+    "asset": "mecha/courier/courier_body_2.png"
+  },
+  {
+    "id": "courier_arms_1",
+    "slot": "ARMS",
+    "family": "courier",
+    "name": "Letter pincers",
+    "asset": "mecha/courier/courier_arms_1.png"
+  },
+  {
+    "id": "courier_arms_2",
+    "slot": "ARMS",
+    "family": "courier",
+    "name": "Parcel tongs",
+    "asset": "mecha/courier/courier_arms_2.png"
+  },
+  {
+    "id": "courier_legs_1",
+    "slot": "LEGS",
+    "family": "courier",
+    "name": "Roller boots",
+    "asset": "mecha/courier/courier_legs_1.png"
+  },
+  {
+    "id": "courier_legs_2",
+    "slot": "LEGS",
+    "family": "courier",
+    "name": "Mini treads",
+    "asset": "mecha/courier/courier_legs_2.png"
+  }
+]

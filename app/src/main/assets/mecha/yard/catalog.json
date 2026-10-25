@@ -1,0 +1,58 @@
+[
+  {
+    "id": "yard_head_1",
+    "slot": "HEAD",
+    "family": "yard",
+    "name": "Lantern helm",
+    "asset": "mecha/yard/yard_head_1.png"
+  },
+  {
+    "id": "yard_head_2",
+    "slot": "HEAD",
+    "family": "yard",
+    "name": "Jib cab",
+    "asset": "mecha/yard/yard_head_2.png"
+  },
+  {
+    "id": "yard_body_1",
+    "slot": "BODY",
+    "family": "yard",
+    "name": "Boiler drum",
+    "asset": "mecha/yard/yard_body_1.png"
+  },
+  {
+    "id": "yard_body_2",
+    "slot": "BODY",
+    "family": "yard",
+    "name": "Charge crate",
+    "asset": "mecha/yard/yard_body_2.png"
+  },
+  {
+    "id": "yard_arms_1",
+    "slot": "ARMS",
+    "family": "yard",
+    "name": "Vise claws",
+    "asset": "mecha/yard/yard_arms_1.png"
+  },
+  {
+    "id": "yard_arms_2",
+    "slot": "ARMS",
+    "family": "yard",
+    "name": "Spanner & auger",
+    "asset": "mecha/yard/yard_arms_2.png"
+  },
+  {
+    "id": "yard_legs_1",
+    "slot": "LEGS",
+    "family": "yard",
+    "name": "Crawler boots",
+    "asset": "mecha/yard/yard_legs_1.png"
+  },
+  {
+    "id": "yard_legs_2",
+    "slot": "LEGS",
+    "family": "yard",
+    "name": "Jack struts",
+    "asset": "mecha/yard/yard_legs_2.png"
+  }
+]
