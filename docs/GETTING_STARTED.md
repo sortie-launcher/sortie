@@ -346,9 +346,17 @@ Sortie never downloads artwork, but it reads what these leave behind:
 - **Coming from Cocoon:** [Import from Cocoon](#coming-from-cocoon) copies the art Cocoon downloaded. Nothing else needed.
 - **On the device, without a computer:** [ES-DE](https://es-de.org/) (a paid Android frontend) has a built-in scraper
   that writes gamelists and media in the exact layout Sortie reads. Run its scraper once, then link each system's
-  `gamelist` and `media` folders in `systems.json` ([systems.md](formats/systems.md)); by default they are under the
-  `ES-DE` folder on internal storage (`ES-DE/gamelists/<system>/gamelist.xml`, `ES-DE/downloaded_media/<system>/`). Sortie
-  has no on-device setting for these folders yet, so this step is a one-off JSON edit, for example in a text editor app.
+  `gamelist` and `media` folders in `systems.json` ([systems.md](formats/systems.md)). ES-DE keeps them in its `ES-DE`
+  folder on internal storage by default. Paths in `systems.json` are relative to Sortie's library location, so if your
+  `sortie` folder is on a memory card, write the full path instead, for example for PlayStation 2:
+
+  ```json
+  "gamelist": "/storage/emulated/0/ES-DE/gamelists/ps2/gamelist.xml",
+  "media": "/storage/emulated/0/ES-DE/downloaded_media/ps2"
+  ```
+
+  Full paths work wherever your library lives. Sortie has no on-device setting for these folders yet, so this step is a
+  one-off JSON edit, for example in a text editor app.
 - **On a computer:** [Skyscraper](https://gemba.github.io/skyscraper/) or ES-DE's desktop version produce the same files;
   copy them to the card and link them the same way. Everything else under [Going further](#going-further) (guides, smart
   folders, logos) is also made this way.
