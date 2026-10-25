@@ -140,7 +140,8 @@ release unit tests stay plain JUnit).
   articles, and the Hangar's sprites hold still. `SortieCardRule` writes it, pins the card folder, fixes the displayed clock
   (09:41 UTC, `uiNow`) and hides the bundled Field Notes issues of `-PsortieMagazinesDir` builds, so every build shows the
   same shelf. Pictures load through the app's Coil loader on the main thread with BitmapFactory (Robolectric has no
-  ImageDecoder), so a screenshot never races a background load.
+  ImageDecoder) and at their files' full size, so a screenshot never races a background load and a picture's pixels never
+  depend on where its tile was when it was first measured (Home's tiles shift while the library loads).
 - **Controller** (`testing/Controller.kt`): keys go to the focused window the way the input dispatcher sends them, including
   the generic controller fallbacks (A → DPAD_CENTER, B → BACK, Select → MENU) and the first D-pad press leaving touch mode.
 - **Interaction tests**: Home, Home, B keeps Sortie on Home; D-pad order through the header, sort chips and custom grid;
