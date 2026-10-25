@@ -23,6 +23,13 @@ Gallery, X while open). Reader and Hangar steps return Sortie to its Home route,
 carousel below, so the harness first taps Home's top-left corner on the top display. `--no-kill` drops the force-stop
 scenarios for single-process leak runs.
 
+Where `uiautomator dump` cannot work, the run logs one `skip` event with reason `uiautomator unavailable` and leaves out
+the reader and Hangar scenarios; the rest run as usual. It is declared on "null root node" or after three dumps in a row
+that produce no hierarchy; a single failed dump is logged as `uiautomator dump failed` and retried later. The Retroid
+Pocket Nova is such a device: every dump, for every app, fails with "null root node returned by UiTestAutomationBridge",
+most likely because Retroid's Game Assistant accessibility service (`com.rp.gameassistant`) is bound. Check the Nova
+with screenshots and key input instead.
+
 Safety: the card's `user.json`, `systems.json`, `launchers.json`, `folders.json` and `device.json` are copied first and
 restored if changed (L1/R1 on Home legitimately changes the saved sort). The harness never presses A in Sortie outside the
 overlay or the reader, never launches games through Sortie (no play-log entries), never edits clippings, never uses care,
