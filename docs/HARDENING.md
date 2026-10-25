@@ -123,7 +123,7 @@ removed them and the next Home created new ones. Any app's window churn can stil
 
 `app/src/testDebug/` runs the real `MainActivity`, `SortieApp` graph, view model, Room database (Robolectric's native
 SQLite), indexer and stores under Robolectric with native graphics, against a fixture card. They are part of
-`testDebugUnitTest`, so `tools/build.sh` and CI run them on every build (27 tests, about 30 s of added test time locally;
+`testDebugUnitTest`, so `tools/build.sh` and CI run them on every build (33 tests, about 30 s of added test time locally;
 release unit tests stay plain JUnit).
 
 - **Fixture** (`testing/FixtureCard.kt`, `resources/fixtures/`): a card with `device.json`, `systems.json` (three systems),
@@ -140,7 +140,9 @@ release unit tests stay plain JUnit).
   A/B return to the same tile; reader position survives activity recreation; R2 opens the picture in view and B closes it
   with the article unmoved; Home's Hangar button opens the Hangar and B puts the focus back on it; reader Select → Visit
   the hangar, B returns to the article.
-- **Screenshots** (Roborazzi): Home, magazine shelf, article at each figure and the Hangar Workshop (from Home's header) on the Thor's top
+- **Screenshots** (Roborazzi): Home, magazine shelf, article at each figure and the Hangar Workshop (from Home's header), and
+  the Perf page with fixed stats (`PerfScreenshotTest`: the overlay page everywhere, plus the companion's Perf mode and the
+  scrolled-down details on the Thor's bottom screen) on the Thor's top
   (`w833dp-h421dp`) and bottom (`w538dp-h444dp`) screens, the DMG (`w480dp-h551dp`) and the Retroid Pocket Nova
   (`w640dp-h480dp`), recorded at half size with no tolerance into `app/src/testDebug/screenshots/<device>/`. A build run
   with `-Proborazzi.test.verify=true` (`tools/build.sh`, CI) fails on any pixel change; CI uploads the diffs as

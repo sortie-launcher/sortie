@@ -5,6 +5,7 @@ import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.UserData
+import io.github.esko997.sortie.stats.perfInterval
 import io.github.esko997.sortie.stats.statsInterval
 import java.io.File
 import java.io.FileOutputStream
@@ -238,6 +239,10 @@ class UserStore(
     fun setDeviceStats(mode: String) = update { it.copy(deviceStats = mode) }
 
     fun setDeviceStatsInterval(seconds: Int) = update { it.copy(deviceStatsInterval = statsInterval(seconds)) }
+
+    fun setPerfInterval(seconds: Int) = update { it.copy(perfInterval = perfInterval(seconds)) }
+
+    fun setCompanionView(view: String) = update { it.copy(companionView = view) }
 
     fun showShortcut(id: String, shown: Boolean) = update { it.copy(shortcuts = if (shown) it.shortcuts + id else it.shortcuts - id) }
 }

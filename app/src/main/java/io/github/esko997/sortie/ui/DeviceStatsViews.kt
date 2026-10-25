@@ -36,8 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.esko997.sortie.SortieApp
+import io.github.esko997.sortie.stats.CompanionView
 import io.github.esko997.sortie.stats.DeviceStats
 import io.github.esko997.sortie.stats.DeviceStatsMode
+import io.github.esko997.sortie.stats.PerfFrame
 import io.github.esko997.sortie.stats.StatCell
 import io.github.esko997.sortie.stats.StatsText
 import io.github.esko997.sortie.stats.displayLit
@@ -57,7 +59,8 @@ import kotlinx.coroutines.flow.map
 @Composable
 fun DeviceStatsSides(content: @Composable () -> Unit) {
     val graph = (LocalContext.current.applicationContext as SortieApp).graph
-    val on = rememberStatsMode(graph).companion
+    // the Perf companion shows all of it, larger: no strips beside it
+    val on = rememberStatsMode(graph).companion && rememberCompanionView(graph) != CompanionView.PERF
     Row(Modifier.fillMaxSize().background(Ink)) {
         val stats = if (on) liveDeviceStats(graph) else null
         if (on) StatsStrip(stats?.let(StatsText::usageCells).orEmpty(), dividerAtEnd = true)
@@ -90,6 +93,13 @@ private fun rememberStatsMode(graph: SortieApp.Graph): DeviceStatsMode {
     return flow.collectAsState(DeviceStatsMode.of(graph.user.data.value.deviceStats)).value
 }
 
+/** What the companion screen shows (`user.companionView`), live. */
+@Composable
+fun rememberCompanionView(graph: SortieApp.Graph): CompanionView {
+    val flow = remember(graph) { graph.user.data.map { CompanionView.of(it.companionView) }.distinctUntilChanged() }
+    return flow.collectAsState(CompanionView.of(graph.user.data.value.companionView)).value
+}
+
 /**
  * The monitor's readings while this surface is resumed on a lit display, else null. The collecting coroutine follows the
  * lifecycle's state flow and the display's callbacks itself ([io.github.esko997.sortie.stats.DeviceStatsMonitor.whileShown]):
@@ -104,6 +114,21 @@ private fun liveDeviceStats(graph: SortieApp.Graph): DeviceStats? {
         graph.deviceStats.whileShown(lifecycle, displayLitFlow(view)).collect { stats = it }
     }
     return stats
+}
+
+/**
+ * The monitor's Perf frames while this surface is resumed on a lit display, else null: like [liveDeviceStats], gated by the
+ * lifecycle and display events, and while collected it makes the monitor poll at the Perf interval with details.
+ */
+@Composable
+fun livePerfFrame(graph: SortieApp.Graph): PerfFrame? {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val view = LocalView.current
+    var frame by remember { mutableStateOf<PerfFrame?>(null) }
+    LaunchedEffect(lifecycle, view) {
+        graph.deviceStats.perfWhileShown(lifecycle, displayLitFlow(view)).collect { frame = it }
+    }
+    return frame
 }
 
 /** Whether [view]'s display is on, from display-change callbacks; on (unknown) while the view has no display yet. */

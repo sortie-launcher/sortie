@@ -97,6 +97,7 @@ import io.github.esko997.sortie.mecha.ui.mechaSpot
 import io.github.esko997.sortie.mecha.ui.rememberMechaStage
 import io.github.esko997.sortie.shell.ScreenMover
 import io.github.esko997.sortie.shell.TaskSwitcher
+import io.github.esko997.sortie.stats.CompanionView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -174,7 +175,12 @@ fun CompanionScreen(displayId: Int) {
                     // game is in front again) or nothing else is selected, Now playing returns.
                     val s = session
                     val browsingOther = navigationVisible && selected != null && selected?.id != s?.gameId
-                    if (s != null && !browsingOther) NowPlaying(graph, s) else HeroPanel(graph)
+                    when {
+                        // Perf mode (Settings → Companion screen shows): live device stats in place of the game panel
+                        rememberCompanionView(graph) == CompanionView.PERF -> CompanionPerf()
+                        s != null && !browsingOther -> NowPlaying(graph, s)
+                        else -> HeroPanel(graph)
+                    }
                     // the companion's way in and out of this screen: the screen edges just above the bottom inset
                     Spacer(
                         Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(16.dp)

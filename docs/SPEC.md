@@ -104,6 +104,24 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   callbacks; the overlay window's owner stays resumed while the screen sleeps). The collecting coroutine switches on those
   events itself, never on recomposition: a stopped window or a dark screen draws no frames, so a gate read in composition
   would keep polling. Interval 2/5/10 s; the poll after the first comes 1 s later so CPU load shows at once.
+- Perf view (`ui/PerfViews.kt`, `stats/PerfHistory.kt`): the same readings large, each with a two-minute sparkline (CPU
+  load and clock, GPU load and clock, RAM, CPU/GPU/battery °C, fan), then every core's clock and every thermal zone grouped
+  by type (`cpuss-0…3` → `cpuss`; single zones under Other; Qualcomm's `*bcl*`/`*ibat*`/`vbat`/`socd` limit and gauge
+  zones and sensors reading -40 °C left out). A metric with no reading in the window gets no tile; FPS and power are not
+  shown. Two places: (1) a page in each switcher overlay window: the "Perf" chip (touch, both windows) or L1/R1 (controller
+  window, hint bar "R1 perf") open it; B, L1/R1 or the "Apps" chip return to the app list, and the card that last had the
+  focus takes it again (`SwitcherPages`: per-display page and last focused card, reset on every summons; the overlay's B
+  goes back a page before it closes the switcher). The controller window's page holds the focus and scrolls with the
+  D-pad. (2) Dual-screen devices: Settings → Companion screen shows Companion/Perf (`user.companionView`); Perf replaces
+  the hero/now-playing panel inside `CompanionScreen`'s corner layout (battery, bell, dock, '+' stay; the switcher,
+  launcher, dock picker and magazine contents still take the panel while open) and drops the side strips.
+  Polling: `DeviceStatsMonitor.perfWhileShown` has the same lifecycle and display gate as `whileShown` and while
+  collected counts as a Perf view: polls every `user.perfInterval` (1 or 2 s, default 2) with the detail probe
+  (`DeviceStatsProbe.DETAIL_SCRIPT`, every zone: 0.12 s of system time on the Thor against 0.10 s for the plain probe); a
+  Perf view opening during a slow wait ends it at once. Every poll goes into a 128-entry ring (`StatsHistory`, one float per
+  metric) owned by the polling coroutine, so it exists only while some stats surface is shown and starts empty after; Perf
+  polls carry an immutable 120 s snapshot. Sparkline ranges: loads 0–100 %, RAM 0–total, clocks and fan 0–highest seen (fan
+  at least 1,000 rpm), temperatures the values seen ± 2 °C and at least 10 °C tall.
 
 ### Home and browse layout (feedback round 3)
 - Home sorts: Alphabetical, Game count and Generation are generated, fixed and systems-only. Custom retains the user's pin
