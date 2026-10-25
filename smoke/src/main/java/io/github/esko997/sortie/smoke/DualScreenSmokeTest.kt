@@ -10,8 +10,10 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.Configurator
+import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
+import java.util.regex.Pattern
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -200,7 +202,7 @@ class DualScreenSmokeTest {
             assertTrue("no article after $presses presses; it shows ${texts(PRIMARY)}", presses++ < 40)
             val before = contentsState()
             shell("input keyevent KEYCODE_DPAD_DOWN")
-            await("Down $presses to move the focus or scroll", timeoutMs = 5_000, detail = { "it shows ${texts(PRIMARY)}" }) {
+            await("Down $presses to move the focus or scroll from $before", timeoutMs = 5_000, detail = { "now ${contentsState()}" }) {
                 contentsState().let { it != null && it != before }
             }
         }
@@ -215,13 +217,15 @@ class DualScreenSmokeTest {
 
     /**
      * What a Down on the contents can change: the focused entry, and where every text is (a scroll inside a passage taller
-     * than the screen moves its lines but not its clipped bounds). Null while no entry is focused or a node went stale.
+     * than the screen moves its lines but not its clipped bounds). Null only when a node went stale while being read.
      */
-    private fun contentsState(): String? = runCatching {
-        val focused = device.findObject(By.pkg(PKG).displayId(PRIMARY).focused(true)) ?: return@runCatching null
-        val lines = device.findObjects(By.pkg(PKG).displayId(PRIMARY).textContains("")).map { "${it.text.take(12)}@${it.visibleBounds.top}" }
-        "${focused.visibleBounds.toShortString()} $lines"
-    }.getOrNull()
+    private fun contentsState(): String? = try {
+        val focused = device.findObject(By.pkg(PKG).displayId(PRIMARY).focused(true))?.visibleBounds?.toShortString() ?: "none"
+        val lines = device.findObjects(By.pkg(PKG).displayId(PRIMARY).text(ANY_TEXT)).map { "${it.text.orEmpty().take(12)}@${it.visibleBounds.top}" }
+        "focus=$focused $lines"
+    } catch (e: StaleObjectException) {
+        null
+    }
 
     private fun firstArticleFocused(): Boolean = device.hasObject(By.pkg(PKG).displayId(PRIMARY).focused(true).clickable(true).hasDescendant(By.text("01")))
 
@@ -346,5 +350,6 @@ class DualScreenSmokeTest {
         val ROOT_LINE = Regex("""^\s*RootTask id=(\d+)\b.*\bdisplayId=(\d+)""")
         val TASK_LINE = Regex("""taskId=(\d+): ([\w.]+/[\w.$]+).*visible=(true|false)""")
         val COMPONENT = Regex("""[\w.]+/[\w.$]+""")
+        val ANY_TEXT: Pattern = Pattern.compile(".+", Pattern.DOTALL)
     }
 }
