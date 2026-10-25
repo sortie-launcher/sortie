@@ -49,6 +49,7 @@ data class GameEntity(
 data class IndexMetaEntity(
     @PrimaryKey val systemId: String,
     val gamelistMtime: Long,
+    /** guide.json's stamp plus the hack classification rules (see Indexer.metaStamp); either changing rebuilds the system's rows. */
     val guideStamp: String,
     val mediaStamp: Long
 )

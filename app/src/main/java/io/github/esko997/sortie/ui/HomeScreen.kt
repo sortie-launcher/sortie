@@ -756,6 +756,7 @@ private fun HomeTileView(
                 paletteGlow = true,
                 favourite = favourite,
                 annotation = annotation,
+                hack = item.game.hack,
                 lifted = lifted,
                 onLongClick = onLongClick,
                 onFavourite = onFavourite

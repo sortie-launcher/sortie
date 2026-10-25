@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -74,9 +76,10 @@ val LiftColour = Color(0xFF38BDF8)
  * shortcuts) show the icon centred on Slate, with a label only when the tile has enough room for readable text.
  * The focus glow uses the cover's palette accent when
  * [paletteGlow] is set (decoded only once the tile is focused, then cached), else [colour], else Amber. [lifted] marks the tile
- * being moved in the home edit mode: [LiftColour] glow and a larger scale.
+ * being moved in the home edit mode: [LiftColour] glow and a larger scale. [hack] and a recorded [annotation] draw the list
+ * row's badges top left, wrapping onto a second line on narrow tiles and never under the favourite star.
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun SquareTile(
     title: String,
@@ -92,7 +95,8 @@ fun SquareTile(
     icon: (() -> Drawable?)? = null,
     onLongClick: (() -> Unit)? = null,
     onFavourite: (() -> Unit)? = null,
-    annotation: GameAnnotation? = null
+    annotation: GameAnnotation? = null,
+    hack: Boolean = false
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -166,8 +170,11 @@ fun SquareTile(
                 }
             }
         }
-        annotation?.let {
-            ControllerBadge(it, Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 8.dp, end = if (favourite) 32.dp else 8.dp))
+        if (hack || annotation != null) {
+            FlowRow(Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 6.dp, end = if (favourite) 32.dp else 8.dp)) {
+                if (hack) Badge("hack")
+                annotation?.let { ControllerBadge(it, Modifier.padding(top = 2.dp)) }
+            }
         }
         if (favourite) Text("★", color = Amber, style = MaterialTheme.typography.titleMedium, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp))
     }

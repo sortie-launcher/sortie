@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * Builds the games table from the card. Incremental: a file whose (path, size, mtime) signature is unchanged keeps its row
- * unless the system's metadata (gamelist mtime, guide stamp, media folder mtime) or its folder changed; rows for files that
+ * unless the system's metadata (gamelist mtime, guide and hack-rules stamp, media folder mtime) or its folder changed; rows for files that
  * disappeared are deleted. Never runs when the card cannot be read, so an unmounted card or a missing permission cannot empty
  * the index. The same holds per system: a configured folder that is missing or unreadable is not an empty folder, so while any
  * of a system's folders is unavailable none of its rows are deleted (files found elsewhere are still added and updated), and
@@ -79,12 +79,12 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
     ): SystemResult {
         val gamelistFile = sys.gamelist?.let { resolve(root, it) }?.takeIf { it.isFile }
         val mediaDir = sys.media?.let { resolve(root, it) }?.takeIf { it.isDirectory }
-        val meta = IndexMetaEntity(sys.id, gamelistFile?.lastModified() ?: 0L, guideStamp, mediaDir?.lastModified() ?: 0L)
+        val meta = IndexMetaEntity(sys.id, gamelistFile?.lastModified() ?: 0L, metaStamp(guideStamp, rules), mediaDir?.lastModified() ?: 0L)
         val metaChanged = force || dao.meta(sys.id) != meta
         val existing = dao.signatures(sys.id).associateBy { it.id }
         val scan = scan(root, sys, rules)
         val plan = plan(existing, scan, metaChanged, sys.folder)
-        val hackRx = rules.hackRegex?.let { runCatching { Regex(it) }.getOrNull() }
+        val hackRx = HackMarks.compile(rules)
         val gamelist = if (plan.build.isNotEmpty()) gamelistFile?.let { GamelistParser.parse(it) } ?: emptyMap() else emptyMap()
         val media = MediaIndex(mediaDir)
         val rows = ArrayList<GameEntity>(plan.build.size)
@@ -102,7 +102,7 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
                 fit = g?.fit ?: 0, hook = g?.hook?.takeIf { it.isNotBlank() }, flags = g?.flags?.joinToString(",")?.lowercase(Locale.ROOT) ?: "",
                 tags = g?.tags?.joinToString(",")?.lowercase(Locale.ROOT) ?: "", handWritten = g?.auto == false,
                 cover = media.find("covers", stem), screenshot = media.find("screenshots", stem), marquee = media.find("marquees", stem),
-                placeholder = fd.size == 0L, arriving = fd.file.name in scan.arriving, hack = hackRx?.containsMatchIn(fd.file.name) ?: false,
+                placeholder = fd.size == 0L, arriving = fd.file.name in scan.arriving, hack = HackMarks.isHack(fd.file.name, hackRx, g),
                 // first seen = the file's own mtime (adb and Syncthing preserve it)
                 addedAt = sig?.addedAt ?: fd.mtime, controls = g?.controls?.takeIf { it.isNotBlank() }
             )
@@ -174,6 +174,12 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
 
         /** A manifest path: absolute (a root may live on another volume) or relative to the card root. */
         internal fun resolve(cardRoot: File, path: String): File = if (path.startsWith("/")) File(path) else File(cardRoot, path)
+
+        /**
+         * The stored guide stamp: guide.json's own stamp plus the hack rules ([HackMarks.stamp]), so an app upgrade that changes
+         * the rules or a new `hackRegex` reclassifies cached rows on the next ordinary pass, not only after a forced rescan.
+         */
+        internal fun metaStamp(guideStamp: String, rules: LibraryRules): String = "$guideStamp|${HackMarks.stamp(rules)}"
 
         /** Lists every root of [sys] once (immediate files only). Missing and unreadable roots are recorded, never read as empty. */
         internal fun scan(cardRoot: File, sys: SystemDef, rules: LibraryRules): Scan {

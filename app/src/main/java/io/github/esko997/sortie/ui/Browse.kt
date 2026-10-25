@@ -100,6 +100,7 @@ fun ItemCell(
                     paletteGlow = true,
                     favourite = favourite,
                     annotation = annotation,
+                    hack = g.hack,
                     onLongClick = onLongClick,
                     onFavourite = fav
                 )
