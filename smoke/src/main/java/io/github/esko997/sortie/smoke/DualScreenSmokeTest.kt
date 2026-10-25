@@ -271,7 +271,9 @@ class DualScreenSmokeTest {
 
     /** Debug builds' adb route to a built-in app (MainActivity.handleIntent), opened as the app's entry points do. */
     private fun openBuiltin(name: String, display: Int) {
-        shell("am start -n $MAIN --es builtin $name --ei display $display")
+        // adb otherwise starts the debug entry activity on the currently focused display, moving navigation itself.
+        // The host stays on PRIMARY; only the built-in target is chosen by the extra.
+        shell("am start --display $PRIMARY -n $MAIN --es builtin $name --ei display $display")
     }
 
     private fun removeTasks(component: String) {
