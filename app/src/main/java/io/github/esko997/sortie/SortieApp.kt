@@ -33,6 +33,7 @@ import io.github.esko997.sortie.mecha.MechaStore
 import io.github.esko997.sortie.mecha.PlaySession
 import io.github.esko997.sortie.shell.ScreenMover
 import io.github.esko997.sortie.shell.TaskSwitcher
+import io.github.esko997.sortie.stats.DeviceStatsMonitor
 import io.github.esko997.sortie.ui.SwitcherHost
 import java.io.File
 import java.io.IOException
@@ -66,6 +67,7 @@ class SortieApp :
         val deviceState = DeviceState(manifests)
         val screenMover = ScreenMover(app)
         val switcher = TaskSwitcher(app, screenMover) { manifests.snapshot.value.device.screens.presentationIndex }
+        val deviceStats = DeviceStatsMonitor(app, screenMover) { user.data.value.deviceStatsInterval }
         val apps = AppsRepository(app)
         val shortcuts = ShortcutsRepository(app)
         val folders = FolderRepository(db, manifests, user.data, apps.apps, shortcuts.shortcuts)

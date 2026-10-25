@@ -24,6 +24,7 @@ import io.github.esko997.sortie.data.manifest.LaunchProfile
 import io.github.esko997.sortie.data.manifest.SystemDef
 import io.github.esko997.sortie.launch.IntentBuilder
 import io.github.esko997.sortie.mecha.ui.MechaPresence
+import io.github.esko997.sortie.stats.DeviceStatsMode
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -110,6 +111,10 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     fun setHeroRotation(on: Boolean) = graph.user.setHeroRotation(on)
 
     fun setOverlaySwitcher(on: Boolean) = graph.user.setOverlaySwitcher(on)
+
+    fun setDeviceStats(mode: DeviceStatsMode) = graph.user.setDeviceStats(mode.id)
+
+    fun setDeviceStatsInterval(seconds: Int) = graph.user.setDeviceStatsInterval(seconds)
 
     /** Launch profiles a system lists in the manifest, with whether each is installed (for Settings). */
     fun profilesForSystem(systemId: String): List<Pair<LaunchProfile, Boolean>> {

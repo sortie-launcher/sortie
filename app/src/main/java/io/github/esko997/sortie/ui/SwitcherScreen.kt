@@ -56,7 +56,13 @@ import kotlinx.coroutines.launch
  * while something is running, or from the home screen. The companion screen mirrors its own carousel for touch.
  */
 @Composable
-fun SwitcherScreen(keys: Flow<Hotkeys.Key> = Hotkeys.events, claimHotkeys: Boolean = true, owner: Boolean = true) {
+fun SwitcherScreen(
+    keys: Flow<Hotkeys.Key> = Hotkeys.events,
+    claimHotkeys: Boolean = true,
+    owner: Boolean = true,
+    /** Shown at the end of the "Running" title line (the overlay's device stats). */
+    header: @Composable () -> Unit = {}
+) {
     val switcher = (LocalContext.current.applicationContext as SortieApp).graph.switcher
     val state by switcher.state.collectAsState()
     var focused by remember { mutableStateOf<TaskSwitcher.Entry?>(null) }
@@ -99,7 +105,10 @@ fun SwitcherScreen(keys: Flow<Hotkeys.Key> = Hotkeys.events, claimHotkeys: Boole
     }
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)) {
-            Text("Running", style = MaterialTheme.typography.titleLarge)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Running", style = MaterialTheme.typography.titleLarge)
+                header()
+            }
             Text(
                 when {
                     !state.ready -> "The switcher needs Shizuku running and granted (Diagnostics)."

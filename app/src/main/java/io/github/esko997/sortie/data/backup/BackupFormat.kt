@@ -2,6 +2,7 @@ package io.github.esko997.sortie.data.backup
 
 import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.manifest.UserData
+import io.github.esko997.sortie.stats.statsInterval
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -126,6 +127,7 @@ private fun UserData.clamped() = copy(
     gridColumns = gridColumns.coerceIn(2, 10),
     gridRows = gridRows.coerceIn(2, 6),
     appColumns = appColumns.coerceIn(4, 14),
+    deviceStatsInterval = statsInterval(deviceStatsInterval),
     layout = layout.distinct()
 )
 

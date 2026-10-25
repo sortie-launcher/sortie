@@ -40,7 +40,7 @@ class SwitcherHost(private val graph: SortieApp.Graph) {
             SortieTheme {
                 Surface(Modifier.fillMaxSize().safeDrawingPadding(), color = Color(0xDD0B0D10), contentColor = MaterialTheme.colorScheme.onSurface) {
                     if (controller) {
-                        SwitcherScreen(keys = keys, claimHotkeys = false, owner = false)
+                        SwitcherScreen(keys = keys, claimHotkeys = false, owner = false, header = { DeviceStatsHeader() })
                     } else {
                         val state by switcher.state.collectAsState()
                         TouchSwitcher(switcher, state, displayId)

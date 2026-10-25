@@ -1,0 +1,113 @@
+package io.github.esko997.sortie.stats
+
+import android.view.Display
+import java.util.Locale
+
+/**
+ * One poll's readings; every field is optional and a surface shows only what is there. RAM and the battery temperature are
+ * readable by any app; the rest needs the shell user (Shizuku) and nodes that only some devices have (see DeviceStatsProbe).
+ */
+data class DeviceStats(
+    val cpuPercent: Int? = null,
+    val cpuMaxKhz: Long? = null,
+    val gpuPercent: Int? = null,
+    val gpuHz: Long? = null,
+    val ramUsedBytes: Long? = null,
+    val ramTotalBytes: Long? = null,
+    val cpuTempC: Int? = null,
+    val gpuTempC: Int? = null,
+    val batteryTempC: Int? = null,
+    /** The fan's tachometer (AYN Thor); read as RPM, which the device does not label. */
+    val fanRpm: Int? = null
+)
+
+/** Where device stats are shown (`user.deviceStats`). Off by default: the strips narrow the companion panel. */
+enum class DeviceStatsMode(val id: String, val label: String, val companion: Boolean, val overlay: Boolean) {
+    OFF("off", "Off", false, false),
+    COMPANION("companion", "Companion screen", true, false),
+    OVERLAY("overlay", "Switcher overlay", false, true),
+    BOTH("both", "Both", true, true);
+
+    fun next(): DeviceStatsMode = entries[(ordinal + 1) % entries.size]
+
+    companion object {
+        fun of(id: String): DeviceStatsMode = entries.firstOrNull { it.id == id } ?: OFF
+    }
+}
+
+/** Seconds between polls the setting offers (`user.deviceStatsInterval`); anything else reads as the default. */
+val STATS_INTERVALS = listOf(2, 5, 10)
+const val DEFAULT_STATS_INTERVAL = 5
+
+fun statsInterval(raw: Int): Int = if (raw in STATS_INTERVALS) raw else DEFAULT_STATS_INTERVAL
+
+fun nextStatsInterval(raw: Int): Int = STATS_INTERVALS[(STATS_INTERVALS.indexOf(statsInterval(raw)) + 1) % STATS_INTERVALS.size]
+
+/** CPU load needs two samples: right after the first one the next poll comes after [CPU_WARMUP_MS] instead of a full interval. */
+const val CPU_WARMUP_MS = 1_000L
+
+fun nextPollDelayMs(intervalSeconds: Int, cpuPending: Boolean): Long = if (cpuPending) CPU_WARMUP_MS else statsInterval(intervalSeconds) * 1_000L
+
+/**
+ * A stats surface polls only while it is resumed and its display is lit: a paused activity, a display that is off or dozing
+ * (the whole device asleep, or the Thor's bottom screen switched off) and an overlay over a dark screen cost nothing.
+ */
+fun statsPolling(resumed: Boolean, displayState: Int): Boolean = resumed && displayLit(displayState)
+
+/** On, VR and on-suspend draw; unknown (not reported yet) is treated as on so a surface never stays blank by mistake. */
+fun displayLit(state: Int): Boolean = when (state) {
+    Display.STATE_OFF, Display.STATE_DOZE, Display.STATE_DOZE_SUSPEND -> false
+    else -> true
+}
+
+/** One reading in a side strip: a small label, the value and an optional second line. */
+data class StatCell(val label: String, val value: String, val sub: String? = null)
+
+/** Short texts for the strips and the overlay row; null where the reading is missing. */
+object StatsText {
+    fun percent(p: Int?): String? = p?.let { "$it%" }
+
+    fun ghz(khz: Long?): String? = khz?.let { String.format(Locale.US, "%.1f GHz", it / 1_000_000.0) }
+
+    fun mhz(hz: Long?): String? = hz?.let { "${Math.round(it / 1_000_000.0)} MHz" }
+
+    /** Decimal gigabytes, as Android's settings count RAM: one decimal below 10, whole above. */
+    fun gb(bytes: Long?): String? = bytes?.let {
+        val g = it / 1_000_000_000.0
+        if (g < 10) String.format(Locale.US, "%.1f", g) else Math.round(g).toString()
+    }
+
+    fun celsius(c: Int?): String? = c?.let { "$it°C" }
+
+    /** The companion's left strip: load. CPU and GPU with their clocks, then RAM used of total (`6.2G`, `of 16G`). */
+    fun usageCells(s: DeviceStats): List<StatCell> = listOfNotNull(
+        percent(s.cpuPercent)?.let { StatCell("CPU", it, ghz(s.cpuMaxKhz)) },
+        percent(s.gpuPercent)?.let { StatCell("GPU", it, mhz(s.gpuHz)) },
+        if (s.ramUsedBytes != null && s.ramTotalBytes != null) StatCell("RAM", "${gb(s.ramUsedBytes)}G", "of ${gb(s.ramTotalBytes)}G") else null
+    )
+
+    /** The right strip: heat. CPU, GPU and battery temperatures, then the fan. */
+    fun heatCells(s: DeviceStats): List<StatCell> = listOfNotNull(
+        celsius(s.cpuTempC)?.let { StatCell("CPU", it) },
+        celsius(s.gpuTempC)?.let { StatCell("GPU", it) },
+        celsius(s.batteryTempC)?.let { StatCell("BAT", it) },
+        s.fanRpm?.let { StatCell("FAN", "$it", "rpm") }
+    )
+
+    /**
+     * The overlay's single line, e.g. `CPU 12% 1.8 GHz 37°C · GPU 1% 401 MHz 36°C · RAM 6.2/16 GB · Battery 24°C · Fan 3900 rpm`;
+     * a group without any reading is left out, empty when there is nothing at all.
+     */
+    fun line(s: DeviceStats): String {
+        val ram = if (s.ramUsedBytes != null && s.ramTotalBytes != null) "RAM ${gb(s.ramUsedBytes)}/${gb(s.ramTotalBytes)} GB" else null
+        return listOfNotNull(
+            group("CPU", percent(s.cpuPercent), ghz(s.cpuMaxKhz), celsius(s.cpuTempC)),
+            group("GPU", percent(s.gpuPercent), mhz(s.gpuHz), celsius(s.gpuTempC)),
+            ram,
+            group("Battery", celsius(s.batteryTempC)),
+            group("Fan", s.fanRpm?.let { "$it rpm" })
+        ).joinToString(" · ")
+    }
+
+    private fun group(label: String, vararg parts: String?): String? = parts.filterNotNull().takeIf { it.isNotEmpty() }?.joinToString(" ", prefix = "$label ")
+}

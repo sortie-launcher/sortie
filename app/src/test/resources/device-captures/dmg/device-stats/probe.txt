@@ -1,0 +1,38 @@
+stat cpu  1944522 213390 2220853 138862388 12199 819495 332204 19804 0 0
+freq 441600
+freq 441600
+freq 441600
+freq 499200
+freq 499200
+freq 499200
+freq 499200
+freq 595200
+gpu_busy 0 %
+gpu_clk 220000000
+temp cpuss-0 30800
+temp cpuss-1 30000
+temp cpuss-2 30000
+temp cpuss-3 30000
+temp cpu-1-0 29600
+temp cpu-1-1 30400
+temp cpu-1-2 30000
+temp cpu-1-3 30000
+temp cpu-1-4 30800
+temp cpu-1-5 30800
+temp cpu-1-6 30400
+temp cpu-1-7 30400
+temp cpu-1-8 29600
+temp cpu-1-9 30000
+temp cpu-1-10 30000
+temp cpu-0-0 31700
+temp cpu-0-1 30900
+temp cpu-0-2 30500
+temp gpuss-0 29200
+temp gpuss-1 28800
+temp gpuss-2 29200
+temp gpuss-3 29200
+temp gpuss-4 29200
+temp gpuss-5 28400
+temp gpuss-6 29200
+temp gpuss-7 29600
+end

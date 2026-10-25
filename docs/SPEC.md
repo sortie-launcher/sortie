@@ -91,6 +91,17 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   when the shell connects and when Sortie returns (at most once a minute), `ScreenMover.guardVendorPanel` restarts it with
   `am crash` at 150 requests while no panel window has a surface, or after seeing its focused, surfaceless window twice.
   See docs/HARDENING.md.
+- Device stats (Settings, off by default; companion, switcher overlay or both): the readings players opened the Thor-button
+  panel for. Companion: a 52 dp strip down each side of the panel (left CPU/GPU load with clocks and RAM, right CPU, GPU
+  and battery °C and the fan), wrapped around `CompanionScreen` by the companion host so the panel and its corner controls
+  narrow instead of being covered. Overlay: one line beside the controller window's "Running" title. FPS and power draw
+  are not shown. Sources: one `sh` per poll through the Shizuku shell (`DeviceStatsProbe`, builtins only, every read
+  optional): `/proc/stat` deltas (apps may not read it), the fastest core's `scaling_cur_freq`, kgsl `gpu_busy_percentage`
+  and `gpuclk`, the hottest `cpu*`/`gpu*` thermal zone, and the Thor fan tachometer `/sys/class/gpio5_pwm2/speed`
+  (unlabelled; 0 when stopped, a few hundred to 3,900 seen; shown as rpm). RAM (ActivityManager) and the battery
+  temperature (sticky battery broadcast) need no shell. `DeviceStatsMonitor` polls only while a surface collects it, and
+  surfaces collect only while resumed on a lit display (lifecycle + display-state callback; the overlay window's owner stays
+  resumed while the screen sleeps). Interval 2/5/10 s; the poll after the first comes 1 s later so CPU load shows at once.
 
 ### Home and browse layout (feedback round 3)
 - Home sorts: Alphabetical, Game count and Generation are generated, fixed and systems-only. Custom retains the user's pin
@@ -250,8 +261,9 @@ Code map (`app/src/main/java/io/github/esko997/sortie/`):
   state; `data/db/` Room; `data/folders/` smart-folder rule engine; `data/user/` `user.json` and `playlog.jsonl`;
   `data/backup/` export/restore; `data/magazine/`, `data/reference/`, `data/journal/` the reading, reference-card and
   journal features; `data/apps/` installed apps and launcher shortcuts.
-- `launch/` intent building and launching with fallbacks; `shell/` the Shizuku user service, screen mover and app switcher;
-  `ui/` Compose screens (`ManualScreen` renders `assets/MANUAL.md`).
+- `launch/` intent building and launching with fallbacks; `shell/` the Shizuku user service, screen mover, app switcher and
+  device-stats probe; `stats/` device-stats model, formatting and the poller; `ui/` Compose screens (`ManualScreen` renders
+  `assets/MANUAL.md`; `DeviceStatsViews.kt` the stats strips and overlay line).
 - `design/` library module (`:design`, still package `io.github.esko997.sortie.ui`): theme colours, `SortieTheme` and the
   controller-focus building blocks (`focusGlow`, `keyLongPress`, `FocusRow`) shared by the app and feature modules.
 - `mecha/` library module (`:mecha`, package `io.github.esko997.sortie.mecha`): the Hangar companion's rules, save,

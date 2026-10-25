@@ -191,6 +191,10 @@ data class UserData(
     val heroRotation: Boolean = true,
     /** Home-key switcher as overlay windows over the running games (needs the draw-over-apps grant) rather than Sortie's screens. */
     val overlaySwitcher: Boolean = true,
+    /** Device stats (CPU, GPU, RAM, temperatures, fan): "off", "companion", "overlay" or "both" (see DeviceStatsMode). */
+    val deviceStats: String = "off",
+    /** Seconds between device-stats polls while a stats surface is shown: 2, 5 or 10. */
+    val deviceStatsInterval: Int = 5,
     /** Per-game controller requirement, mapping notes and "where was I?" notes (game id → annotation); empty entries are absent. */
     val gameAnnotations: Map<String, GameAnnotation> = emptyMap(),
     /** Independent of favourites and Want to play; a game has at most one personal shelf status. */

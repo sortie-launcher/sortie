@@ -5,6 +5,7 @@ import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.UserData
+import io.github.esko997.sortie.stats.statsInterval
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -233,6 +234,10 @@ class UserStore(
     fun setHeroRotation(on: Boolean) = update { it.copy(heroRotation = on) }
 
     fun setOverlaySwitcher(on: Boolean) = update { it.copy(overlaySwitcher = on) }
+
+    fun setDeviceStats(mode: String) = update { it.copy(deviceStats = mode) }
+
+    fun setDeviceStatsInterval(seconds: Int) = update { it.copy(deviceStatsInterval = statsInterval(seconds)) }
 
     fun showShortcut(id: String, shown: Boolean) = update { it.copy(shortcuts = if (shown) it.shortcuts + id else it.shortcuts - id) }
 }
