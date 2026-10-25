@@ -85,6 +85,12 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   switcher request); framework fallback launches do not. A temporary primary HOME focuses the existing own task with
   `ActivityManager.AppTask.moveToFront()` or starts its companion before finishing. If neither succeeds, it remains a usable
   Home instead of leaving an empty focused Home task that the framework would continually relaunch.
+- AYN panel guard (Thor): the vendor's Thor-button panel leaks one network callback per opening (system uid cap 250, shared
+  with system_server). At the cap its next opening crashes inside `onAttachedToWindow`, its crash handler keeps the process,
+  and the undrawn window keeps input focus on its display, so Sortie there gets "no focused window" ANRs. With Shizuku,
+  when the shell connects and when Sortie returns (at most once a minute), `ScreenMover.guardVendorPanel` restarts it with
+  `am crash` at 150 requests while no panel window has a surface, or after seeing its focused, surfaceless window twice.
+  See docs/HARDENING.md.
 
 ### Home and browse layout (feedback round 3)
 - Home sorts: Alphabetical, Game count and Generation are generated, fixed and systems-only. Custom retains the user's pin

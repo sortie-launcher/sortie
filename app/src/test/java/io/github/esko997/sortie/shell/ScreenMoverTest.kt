@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.shell
 
+import io.github.esko997.sortie.shell.ScreenMover.PanelAction
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -29,5 +30,32 @@ class ScreenMoverTest {
             ),
             tasks
         )
+    }
+
+    /** Decision for a probe reply: pid, leaked request count, whether a panel window has focus, each window's surface. */
+    private fun action(requests: Int = 0, focused: Int = 0, vararg surfaces: Boolean, pid: String = "2841") =
+        ScreenMover.vendorPanelAction("0\npid=$pid\nrequests=$requests\nfocused=$focused\n" + surfaces.joinToString("") { "mHasSurface=$it\n" })
+
+    @Test
+    fun vendorPanelIsRestartedBeforeTheCapOnlyWhileClosed() {
+        assertEquals(PanelAction.NONE, action(requests = ScreenMover.PANEL_REQUEST_LIMIT - 1))
+        assertEquals(PanelAction.RESTART_LEAK, action(requests = ScreenMover.PANEL_REQUEST_LIMIT))
+        // the user is looking at the open panel: wait for it to close
+        assertEquals(PanelAction.NONE, action(213, 1, true))
+    }
+
+    @Test
+    fun focusedPanelWindowThatNeverDrewIsAZombieToConfirm() {
+        // the state left on the Thor after TooManyRequestsException: 213 leaked requests, undrawn window holding focus
+        assertEquals(PanelAction.CONFIRM_ZOMBIE, action(213, 1, false))
+        // a panel window that has drawn is not a zombie, nor is an unfocused undrawn one below the cap
+        assertEquals(PanelAction.NONE, action(3, 1, false, true))
+        assertEquals(PanelAction.NONE, action(3, 0, false))
+    }
+
+    @Test
+    fun devicesWithoutThePanelOrAFailedProbeDoNothing() {
+        assertEquals(PanelAction.NONE, action(requests = 400, pid = ""))
+        assertEquals(PanelAction.NONE, ScreenMover.vendorPanelAction("-1\nshell service not bound"))
     }
 }

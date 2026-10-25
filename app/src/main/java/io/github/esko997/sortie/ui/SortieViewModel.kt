@@ -400,6 +400,7 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
             if (!stillRunning) graph.playLog.end()
         }
         graph.screenMover.sweepStaleLaunchers()
+        graph.screenMover.guardVendorPanel()
     }
 
     private companion object {

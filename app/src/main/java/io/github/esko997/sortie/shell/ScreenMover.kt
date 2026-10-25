@@ -6,10 +6,12 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -43,7 +45,10 @@ class ScreenMover(private val context: Context) {
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
             service = IShellService.Stub.asInterface(binder)
-            scope.launch { sweepStaleLaunchers() }
+            scope.launch {
+                sweepStaleLaunchers()
+                guardVendorPanel()
+            }
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
@@ -137,8 +142,43 @@ class ScreenMover(private val context: Context) {
     }
 
     fun sweepAsync() {
-        scope.launch { sweepStaleLaunchers() }
+        scope.launch {
+            sweepStaleLaunchers()
+            guardVendorPanel()
+        }
     }
+
+    /**
+     * AYN Thor's dual-screen assistant ([VENDOR_PANEL], the panel behind the Thor button) registers a network callback each
+     * time its panel opens and never releases it. Android caps network requests per system uid at 250, shared with
+     * system_server, so after a few hundred openings the next one throws TooManyRequestsException inside
+     * onAttachedToWindow. The panel's crash handler keeps the process alive with a window that never draws yet keeps input
+     * focus on its display: the Thor button stops responding and whatever is on that screen (Sortie) gets "no focused
+     * window" ANRs. `am crash` restarts the persistent panel at once, which frees every callback it held.
+     *
+     * Done ahead of the cap only while the panel is closed, or when its undrawn window holds focus on two checks. A no-op
+     * on devices without the panel; at most once a minute. Runs when the shell service connects and when Sortie returns.
+     */
+    suspend fun guardVendorPanel() {
+        if (!ready) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastPanelCheck < PANEL_CHECK_INTERVAL_MS) return
+        lastPanelCheck = now
+        val first = vendorPanelAction(exec(PANEL_PROBE))
+        val action = if (first == PanelAction.CONFIRM_ZOMBIE) {
+            delay(1_500)
+            vendorPanelAction(exec(PANEL_PROBE)).takeIf { it == PanelAction.CONFIRM_ZOMBIE }?.let { PanelAction.RESTART_ZOMBIE }
+        } else {
+            first
+        }
+        if (action == PanelAction.RESTART_LEAK || action == PanelAction.RESTART_ZOMBIE) {
+            ok(exec("am crash $VENDOR_PANEL"), "restart $VENDOR_PANEL ($action)")
+        }
+    }
+
+    @Volatile private var lastPanelCheck = Long.MIN_VALUE / 2
+
+    internal enum class PanelAction { NONE, RESTART_LEAK, CONFIRM_ZOMBIE, RESTART_ZOMBIE }
 
     /** Moves the top visible non-launcher app on [fromDisplay] to [toDisplay]. Returns a human-readable result. */
     suspend fun moveTopApp(fromDisplay: Int, toDisplay: Int): String {
@@ -177,6 +217,35 @@ class ScreenMover(private val context: Context) {
         private const val SYSTEM_LAUNCHER = "com.android.launcher3"
         private const val TAG = "ScreenMover"
         private const val REQUEST_CODE = 7001
+        internal const val VENDOR_PANEL = "com.odin.dualscreen.assistant"
+        private const val PANEL_CHECK_INTERVAL_MS = 60_000L
+
+        /** Requests held at which the panel is restarted: well under the 250 shared with system_server (~40). */
+        internal const val PANEL_REQUEST_LIMIT = 150
+
+        /** pid, network requests held by it, whether its window holds display focus, and each panel window's surface state. */
+        private const val PANEL_PROBE = "p=\$(pidof $VENDOR_PANEL) || { echo pid=; exit 0; }; echo pid=\$p; " +
+            "echo requests=\$(dumpsys connectivity | grep -oE 'uid/pid:1000/[0-9]+' | grep -cx \"uid/pid:1000/\$p\"); " +
+            "echo focused=\$(dumpsys window displays | grep -c 'mCurrentFocus=Window{[0-9a-f]* u0 $VENDOR_PANEL}'); " +
+            "dumpsys window windows | awk '/Window #[0-9]+ Window[{]/ { w = index(\$0, \"u0 $VENDOR_PANEL}\") > 0 } w' | " +
+            "grep -oE 'mHasSurface=(true|false)'"
+
+        /**
+         * Decides from [PANEL_PROBE]'s reply (`<exit>\n` then `pid=`, `requests=`, `focused=`, `mHasSurface=` lines).
+         * Leak: restart only while no panel window has a surface (the user is not looking at it). Zombie: a panel window
+         * holds focus without ever having drawn; the caller confirms it once more before restarting.
+         */
+        internal fun vendorPanelAction(reply: String): PanelAction {
+            val lines = reply.lineSequence().map { it.trim() }.toList()
+            fun value(key: String) = lines.firstOrNull { it.startsWith("$key=") }?.substringAfter('=')
+            if (value("pid").isNullOrEmpty()) return PanelAction.NONE
+            val surfaces = lines.filter { it.startsWith("mHasSurface=") }.map { it.endsWith("true") }
+            val focused = (value("focused")?.toIntOrNull() ?: 0) > 0
+            if (focused && surfaces.isNotEmpty() && surfaces.none { it }) return PanelAction.CONFIRM_ZOMBIE
+            val requests = value("requests")?.toIntOrNull() ?: return PanelAction.NONE
+            return if (requests >= PANEL_REQUEST_LIMIT && surfaces.none { it }) PanelAction.RESTART_LEAK else PanelAction.NONE
+        }
+
         private val ROOT_RX = Regex("""^\s*(?:RootTask|Stack) id=(\d+)\b.*\bdisplayId=(\d+)""")
         private val TASK_RX = Regex("""taskId=(\d+): ([\w.]+/[\w.$]+).*visible=(true|false)""")
 
