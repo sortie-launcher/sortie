@@ -18,5 +18,7 @@
 }
 ```
 
-`roots`, `gamelist` and `media` are relative to the device root declared in `device.json`.
+`roots`, `gamelist` and `media` are either absolute paths (starting with `/`, for a folder on another volume, such as
+`/storage/emulated/0/ES-DE/downloaded_media/ps2` when the device root is a memory card) or relative to the device root
+declared in `device.json`.
 `profiles` is the fallback order for this system. `colour` seeds generated tiles and the theme engine.
