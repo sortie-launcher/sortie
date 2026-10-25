@@ -1,7 +1,12 @@
 package io.github.esko997.sortie.stats
 
 import android.view.Display
+import androidx.lifecycle.Lifecycle
 import java.util.Locale
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * One poll's readings; every field is optional and a surface shows only what is there. RAM and the battery temperature are
@@ -92,6 +97,15 @@ fun displayLit(state: Int): Boolean = when (state) {
     Display.STATE_OFF, Display.STATE_DOZE, Display.STATE_DOZE_SUSPEND -> false
     else -> true
 }
+
+/**
+ * Whether a surface is shown: its [lifecycle] resumed and its display lit. Work a surface does by itself (stats polls, the
+ * hero rotation) runs only while this is true; it switches on lifecycle and display events, never on recomposition, because a
+ * stopped window or a dark screen draws no frames while timers and flows keep running.
+ */
+fun shownFlow(lifecycle: Lifecycle, displayLit: Flow<Boolean>): Flow<Boolean> =
+    combine(lifecycle.currentStateFlow.map { it.isAtLeast(Lifecycle.State.RESUMED) }, displayLit) { resumed, lit -> resumed && lit }
+        .distinctUntilChanged()
 
 /** One reading in a side strip: a small label, the value and an optional second line. */
 data class StatCell(val label: String, val value: String, val sub: String? = null)

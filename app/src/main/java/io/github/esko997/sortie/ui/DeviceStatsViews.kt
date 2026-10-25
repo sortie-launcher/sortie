@@ -43,6 +43,7 @@ import io.github.esko997.sortie.stats.PerfFrame
 import io.github.esko997.sortie.stats.StatCell
 import io.github.esko997.sortie.stats.StatsText
 import io.github.esko997.sortie.stats.displayLit
+import io.github.esko997.sortie.stats.shownFlow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -129,6 +130,17 @@ fun livePerfFrame(graph: SortieApp.Graph): PerfFrame? {
         graph.deviceStats.perfWhileShown(lifecycle, displayLitFlow(view)).collect { frame = it }
     }
     return frame
+}
+
+/**
+ * Whether this surface is shown: resumed on a lit display ([shownFlow]), driven by lifecycle and display events rather than
+ * by recomposition. For work a surface does on its own (a ticker, a poll) that must stop while nothing of it is in front.
+ */
+@Composable
+fun rememberShown(): Flow<Boolean> {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val view = LocalView.current
+    return remember(lifecycle, view) { shownFlow(lifecycle, displayLitFlow(view)) }
 }
 
 /** Whether [view]'s display is on, from display-change callbacks; on (unknown) while the view has no display yet. */

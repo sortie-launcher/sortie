@@ -220,7 +220,9 @@ fun CompanionScreen(displayId: Int) {
  */
 @Composable
 private fun HeroPanel(graph: SortieApp.Graph) {
-    val panel = remember { Selection.panel() }
+    // the hero rotates only while this companion is in front on a lit screen (each change loads a picture and a palette)
+    val shown = rememberShown()
+    val panel = remember(shown) { Selection.panel(shown) }
     val game by panel.collectAsState(null)
     val selected by Selection.current.collectAsState()
     val g = game

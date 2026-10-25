@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Screens off or Sortie out of sight: the companion screen's rotating hero now pauses instead of loading a new picture
+  and palette every 20 seconds (and re-tinting the other screen's background) where no one can see it. On the AYN Thor
+  with both screens off Sortie's CPU use drops from about 2 % of a core to about 0.2 %; the rotation resumes on wake.
 - Perf page: in the switcher overlay, **R1** (or L1, or the new **Perf** chip on either screen) swaps the app list for live
   performance numbers: CPU load and clock, GPU load and clock, RAM, CPU, GPU and battery temperatures and the fan, each
   large with a two-minute line, then every core's clock and every thermal zone, grouped. B, R1 or **Apps** go back with
