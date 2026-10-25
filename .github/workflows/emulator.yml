@@ -1,5 +1,5 @@
 name: emulator
-# Tier 4 smoke tests (docs/HARDENING.md, Testing): app/src/androidTest on an Android 13 emulator with a simulated second screen.
+# Tier 4 smoke tests (docs/HARDENING.md, Testing): the smoke/ test APK against Sortie on an Android 13 emulator with a second screen.
 # Runs on demand (Actions > emulator > Run workflow, or gh workflow run emulator.yml --ref BRANCH), on pull requests labelled
 # `emulator`, and on pull requests touching the display and task code these tests guard. Never publishes anything.
 on:
@@ -36,7 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           watched='^app/src/main/java/.*/shell/|/(MainActivity|CompanionActivity|SecondaryHomeActivity|AnchorActivity)\.kt$'
-          watched+='|^app/src/main/AndroidManifest\.xml$|^app/src/androidTest/|^tools/emulator/|^\.github/workflows/emulator\.yml$'
+          watched+='|^app/src/main/AndroidManifest\.xml$|^smoke/|^tools/emulator/|^\.github/workflows/emulator\.yml$'
           run=false
           if [[ $EVENT != pull_request ]]; then
             run=true
@@ -73,7 +73,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
       - name: Build the debug app and its instrumented tests
         run: >-
-          ./gradlew --no-daemon --console=plain assembleDebug assembleDebugAndroidTest
+          ./gradlew --no-daemon --console=plain assembleDebug :smoke:assembleDebug
           -PsortieMagazinesDir=release-content/issues
       - name: Enable KVM
         run: |
@@ -118,5 +118,5 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: emulator-smoke
-          path: app/build/outputs/emulator-smoke
+          path: smoke/build/emulator-smoke
           if-no-files-found: ignore

@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "sortie"
-include(":app", ":design", ":mecha")
+include(":app", ":design", ":mecha", ":smoke")
