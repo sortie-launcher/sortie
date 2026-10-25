@@ -44,7 +44,7 @@ Outputs (owned by Sortie, append-only or small):
 
 - `sortie/playlog.jsonl` : one line per session (see formats).
 - `sortie/user.json` : favourites, per-game overrides, hidden entries, home sort and custom layout, list/grid choices,
-  header/hint density, opted-in launcher shortcuts (see formats/user.md).
+  header/hint density, switcher, companion and device-stats preferences, opted-in launcher shortcuts (see formats/user.md).
 
 Entities: System, Game (a launchable file with metadata), App (an installed Android app treated as
 a launchable), Folder (a system folder, a smart folder, or a manual folder), LaunchProfile.
@@ -53,13 +53,17 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 
 ### Core (M1)
 - System folders, one per configured system, ordered and named by `systems.json`.
-- Game list per folder with cover thumbnail, title, fit stars, players, year, hack/translation badge.
+- Game list per folder with cover thumbnail, title, fit stars, players, year, hack mark (explicit evidence only:
+  formats/README.md, Modified-game marks).
 - Search across games with optional text; OR within systems/tags/genres, AND between dimensions. Tags include game-page flags.
   More filters: favourites, Want to play, never launched, fit ≥ 4, on-device-only (default). Filter before paging; show full count.
 - Detail view: hero art, description, hook, tags, play time, last played, launch button, overrides.
 - Launch through profiles with ordered fallbacks; per-game override; "open with" fallback.
 - Favourites folder holding games and apps alike.
 - Play log and "Continue" row.
+- Quick exit: an emulator gone within 3 s of the start, with no Home press since, ends the session uncounted (no Room
+  row; `playlog.jsonl` end has `quickExit: true`) and says so beside Play for 12 s (a toast off the page), naming a
+  RetroArch core or game switch (`launch/QuickExit.kt`, LAUNCHERS.md). No automatic retry.
 - Diagnostics: launch log with the exact intent and its adb equivalent; "why did this fail".
 
 ### Smart folders (M2)
@@ -103,7 +107,7 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   surfaces collect through `whileShown`: only while resumed (the lifecycle's state flow) on a lit display (display-change
   callbacks; the overlay window's owner stays resumed while the screen sleeps). The collecting coroutine switches on those
   events itself, never on recomposition: a stopped window or a dark screen draws no frames, so a gate read in composition
-  would keep polling. Interval 2/5/10 s; the poll after the first comes 1 s later so CPU load shows at once.
+  would keep polling. Interval 2/5/10 s (default 5); the poll after the first comes 1 s later so CPU load shows at once.
 - Perf view (`ui/PerfViews.kt`, `stats/PerfHistory.kt`): the same readings large, each with a two-minute sparkline (CPU
   load and clock, GPU load and clock, RAM, CPU/GPU/battery °C, fan), then every core's clock and every thermal zone grouped
   by type (`cpuss-0…3` → `cpuss`; single zones under Other; Qualcomm's `*bcl*`/`*ibat*`/`vbat`/`socd` limit and gauge
@@ -137,9 +141,11 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   icon on slate with the label below. Columns = `gridColumns`.
 - Header and hints (`user.browseChrome`, `BrowseChromeMode`: Auto/Expanded/Compact, Settings cycles, unknown reads Auto)
   apply to Home and every browse screen alike. Auto decides from the window's actual constraints (compact under 600 dp
-  height or width, font scale accounted for), never from whether the device is dual-screen. Compact folds the header to a
-  strip while browsing (tap, pull down, or Up from the first row reveals it) and uses one row of light hints with a
-  Controls dialog listing every command; the hint bar stays in the measured layout, never over the last row of tiles.
+  height or width, divided by a font scale above 1), never from whether the device is dual-screen. Compact folds the
+  header to a strip when focus enters the grid or a drag scrolls it; tap, pull down, the ▾ chevron or Up from the first
+  row reveals it (▴ folds it), it stays open with nothing to browse, and the folded state is saved per destination.
+  Compact hints are one light row: up to three of A/B/Y/Select by width, then a Controls dialog listing every command.
+  The hint bar stays in the measured layout, never over the last row of tiles.
 - Launcher shortcuts are opt-in: Apps lists only `user.shortcuts` (pinned to Sortie or added with "Add shortcut from…" are
   opted in automatically; "Browse all shortcuts…" toggles the rest). Smart folders see a shortcut only if it is opted in,
   favourited or placed on home.
@@ -312,8 +318,10 @@ A select/launch · hold A context sheet (Favourite · Add to / Remove from home 
 Home's systems and folders; Move · Remove on Custom home tiles) · B back · X swap screen roles · Y favourite toggle (detail) /
 search (on Home) / other screen (switcher) · Start search (not available while Sortie is the home app: Android intercepts it) ·
 Select launch-profile sheet (detail) / list↔grid (Home, system and folder lists, search, Apps) / close app (switcher) · L1/R1
-previous/next system · Home (physical) app switcher when Shizuku is available, including while reading. Moving a Custom home tile: D-pad one slot per
-press, A drop, B cancel. Long press = hold A for touch.
+previous/next system (lists) / sort (Home) / console (By Console) / Perf page (overlay switcher) · R2 Want to play toggle
+(games, detail) · hold R1 favourite (games, apps, shortcuts) / random game (system and folder tiles) · Home (physical) app
+switcher when Shizuku is available, including while reading. Moving a Custom home tile: D-pad one slot per press, A drop,
+B cancel. Long press = hold A for touch. Compact hint bars keep the main buttons and list the rest under Controls.
 
 ## Implementation notes for contributors
 

@@ -16,9 +16,9 @@ ignored so files can evolve. For the normal on-device path, start with the [begi
 | `launchers.json` | Library screen or desktop | launch profiles: how to start a file with an app |
 | `folders.json` | desktop | smart and manual folders |
 | `guide.json` | desktop (optional) | taste layer: fit, hook, flags, tags per game |
-| `user.json` | device | favourites, overrides, hidden entries, home sort and custom layout, list/grid choices, opted-in shortcuts ([user.md](user.md)) |
+| `user.json` | device | favourites, overrides, hidden entries, home sort and custom layout, list/grid and header/hint choices, switcher, companion and device-stats preferences, opted-in shortcuts ([user.md](user.md)) |
 | `playlog.jsonl` | device | one JSON object per play session, append-only |
-| `backups/pre-restore-<time>.json` | device | safety copy taken before each restore; same format as an exported backup ([format](user.md#backup-export-and-restore)) |
+| `backups/pre-restore-<time>.json`, `backups/pre-cocoon-import-<time>.json` | device | safety copy taken before each restore or Cocoon import; same format as an exported backup ([format](user.md#backup-export-and-restore)) |
 | `logos/<systemId>.png` | desktop (optional) | system logos for the home tiles; transparent PNG, ~512 px wide |
 | `magazines/<issue-id>/issue.json` | user/desktop | offline magazine issue, with local `articles/` and `media/` |
 
@@ -114,6 +114,11 @@ fail only that article; missing optional pictures leave text readable.
 Markdown supports headings `#`–`###`, paragraphs, `-` bullets, `>` quotes, `---` rules, bold/italic and links rendered with their
 URLs as text. Images must occupy their own line: `![Caption and credit](media/picture.webp)`. HTML is plain text, not executed.
 Bundle all pictures; there is no WebView, JavaScript or network loading.
+
+Pictures are laid out from their pixel size: 1.6:1 or wider may use the full reading width, narrower ones the text
+measure; height stops at 70% of the view (lead `image` 55%). A picture enlarged two or more screen pixels per image pixel
+snaps to a whole multiple and is drawn unsmoothed, so supply pixel art at its native size rather than pre-enlarged. The
+caption (alt text, or `imageCaption` for the lead) sits under the picture and in the full-screen viewer.
 
 APK packs come from a separate content directory with a reproducible `catalog.json`, bundled only when a build is given
 `-PsortieMagazinesDir`; the default build has none. The build checks the catalog against the digest pinned in

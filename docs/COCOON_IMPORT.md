@@ -99,9 +99,10 @@ entry only repeated the built-in folder.
 ## Safety copy and undo
 
 Before writing, Sortie saves `<card>/sortie/backups/pre-cocoon-import-<yyyyMMdd-HHmmss>.json`. It holds **your preferences
-(`user.json`) and play sessions only**, in the Backup and restore format; if it cannot be written, the import does not start.
-Restoring it (Settings → Backup and restore) brings back the preferences from before the import: favourites, hidden games,
-emulator choices and per-game overrides. It is not a full rollback:
+(`user.json`), play sessions and, when one exists, the Hangar companion's save only**, in the Backup and restore format; if
+it cannot be written, the import does not start. Restoring it (Settings → Backup and restore) brings back the preferences
+from before the import: favourites, hidden games, emulator choices and per-game overrides. It also puts the companion back
+as it was then, losing parts and salvage gained since; sessions already credited stay credited. It is not a full rollback:
 
 - systems and launch profiles added to `systems.json`/`launchers.json`, media folders set on existing systems, and
   `cocoon-<n>` folders in `folders.json` stay; remove them in Library setup or by editing those files. A removed old
@@ -131,7 +132,9 @@ Sortie derives "last played", play counts and the journal's per-day play time fr
 gamelists only hold lifetime totals (`playcount`, `lastplayed`, `cocoon:playtime`); a session made up from them would move
 "last played", put all historic minutes on one day and collapse the play count to 1. So the totals are shown in the preview
 and never imported. Real sessions come only from a backup's play history, deduplicated by game and start time, with the
-launch profile matched by emulator package where Sortie has one.
+launch profile matched by emulator package where Sortie has one. Imported sessions earn the Hangar companion salvage only
+if they started after the companion was set up on this device, and never twice (`MechaState.credited`, keyed by game and
+start time).
 
 ## How it works (developers)
 

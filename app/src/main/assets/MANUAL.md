@@ -72,9 +72,11 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 - A folder that is missing or unreadable is reported after indexing, and its games are kept until it is back.
 - When a game can't start, Sortie says why: file not present, emulator not installed, no emulator set up, or the emulator
   refused the request. **Settings → Diagnostics** keeps the exact launch attempts.
-- Only All files access is required. Shizuku (moving apps between screens), *Display over other apps* (the overlay
-  switcher), the default Home role and the radial keyboard are optional and requested only where you turn those features
-  on. If Android can't open the right settings page, Sortie tells you where to find it.
+- Only All files access is required. Everything else is optional and requested only where you turn that feature on:
+  Shizuku (the switcher and moving apps between screens, the companion's bell, device stats beyond RAM and battery
+  temperature, and a few automatic fixes such as timing play while Home only shows the switcher), *Display over other
+  apps* (the overlay switcher), the default Home role and the radial keyboard. If Android can't open the right settings
+  page, Sortie tells you where to find it.
 
 ## Controls
 
@@ -89,6 +91,8 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 - **Select**: list ↔ grid; on a game's page: "launch with…" (pick the launcher once)
 - **Home key**: the switcher (see below)
 - **Swipe down from the top edge**: the status bar
+- **Controls**: the hint bar shows the current screen's buttons. When it is compact (see Settings → Header and hints) it
+  keeps only the main ones; tap or select **Controls** at its end for the full list
 
 ## Home
 
@@ -188,9 +192,7 @@ only one of him.
 - At the bottom of Workshop, turn **Animate companion** off and he stays put at one spot, or **Hide companion** and he
   goes away entirely. **Show companion** in the Hangar brings him back without losing parts.
 
-Your companion survives app restarts and in-place updates. Its save is app-private and is included in **Backup and
-restore**: restoring a backup brings back his name, parts, salvage and bond, and play he was already credited for never
-pays twice.
+Your companion survives app restarts and in-place updates, and **Backup and restore** carries him too (see there).
 
 ## Built-in apps
 
@@ -271,7 +273,7 @@ emulator is Open with… keeps asking. Only a normal system launch falling throu
 chooser can remember its first selection; **Default launcher per system → Manifest default** clears that choice.
 Cancelling Android's app chooser does not start a play session. If nothing starts, a message says why.
 If the emulator closes within about three seconds of starting and you did not press Home, the page says so next to
-**Play** for about ten seconds (a short message elsewhere if you have left the page); Sortie does not retry by itself.
+**Play** for about twelve seconds (a short message elsewhere if you have left the page); Sortie does not retry by itself.
 
 **Add notes / Edit notes** opens your own notes and controls:
 - **Where was I?**: save slot, next objective or anything useful when returning.
@@ -365,9 +367,10 @@ do not ask the player to enter PiP again. If you do not want an app to use PiP a
 permission in Android's app settings.
 With **Device stats** set to *Switcher overlay* or *Both*, the overlay's title line also shows the same readings in one row.
 
-**Perf page.** **R1** (or **L1**, or the **Perf** chip on either screen) shows live performance numbers instead of the app
-list: CPU load and clock, GPU load and clock, RAM, CPU, GPU and battery temperatures and the fan, each large with a line of
-the last two minutes, then every core's clock and every thermal zone, grouped. **Up/Down** scrolls; **B**, **R1** or the
+**Perf page.** In the overlay switcher, **R1** (or **L1**, or the **Perf** chip on either screen) shows live performance
+numbers instead of the app list: CPU load and clock, GPU load and clock, RAM, CPU, GPU and battery temperatures and the
+fan, each large with a line of the last two minutes, then every core's clock and every thermal zone, grouped. It needs no
+Device stats setting; the normal-screen switcher has no Perf page. **Up/Down** scrolls; **B**, **L1/R1** or the
 **Apps** chip return to the app list with the same app selected. While a Perf page is shown Sortie reads every 2 seconds
 (or every second, Settings → *Perf view refresh*); readings a device does not offer get no tile, and without Shizuku only
 RAM and the battery temperature show. FPS and power draw are not shown.
@@ -382,18 +385,20 @@ come from a computer-prepared card if you use one.
 
 **Header and hints (Home and browse)** sets how much room Home, system lists, folders, search and Apps give their header
 and button hints: *Auto* (the default), *Expanded* or *Compact*; **A** cycles. *Auto* is compact when the window is short or
-narrow, on any device, and returns to the full header when there is room again. *Expanded* always shows the full header
-and hints. In compact mode the header folds into a thin strip while you browse: tap it, pull it down, or press **Up** on
-the first row to bring it back. The hints shrink to one light row with the main buttons, and **Controls** lists every
-command.
+narrow (larger text counts), on any device, and returns to the full header when there is room again. *Expanded* always
+shows the full header and hints. In compact mode the header folds into a thin strip once you move into the games or scroll
+them: tap or pull down the strip, press **Up** on the first row, or use its **▾** button to bring it back (**▴** folds it
+again). It stays open while there is nothing to browse. The hints shrink to one light row with up to three main buttons,
+and **Controls** lists every command.
 
 **Device stats → Show device stats** puts CPU, GPU, RAM, temperatures and the fan on the companion screen, the switcher
-overlay, both, or nowhere (*Off*, the default); **A** cycles. **Device stats refresh** reads them every 2, 5 or 10
-seconds, only while they are on a screen that is on: hidden, paused or asleep, Sortie reads nothing. **Perf view refresh**
-(1 or 2 seconds) is the pace while a Perf page is shown, and on two-screen handhelds **Companion screen shows** switches the
-other screen between its usual panel and the Perf page. CPU and GPU load, clocks, temperatures and the fan need Shizuku
-(Sortie reads them as the shell user, read-only); without it only RAM and the battery temperature show. Readings a device
-does not offer are left out: the AYANEO Pocket DMG, for one, has no fan reading.
+overlay, both, or nowhere (*Off*, the default); **A** cycles. **Device stats refresh** reads them every 2, 5 (the
+default) or 10 seconds, only while they are on a screen that is on: hidden, paused or asleep, Sortie reads nothing.
+**Perf view refresh** (1 or 2 seconds, default 2) is the pace while a Perf page is shown, and on two-screen handhelds
+**Companion screen shows** switches the other screen between its usual panel and the Perf page. CPU and GPU load,
+clocks, temperatures and the fan need Shizuku (Sortie reads them as the shell user, read-only); without it only RAM and
+the battery temperature show. Readings a device does not offer are left out: the AYANEO Pocket DMG, for one, has no fan
+reading.
 
 **Which emulator starts a game.** A per-game **Launch with…** choice first; then the system's **Default launcher per
 system** choice made here; otherwise the system's Emulators list from Library setup, in order, skipping emulators that
@@ -449,7 +454,8 @@ Restoring replaces preferences and the companion, but merges history: newer sess
 not duplicate them. No play session earns the companion salvage twice, whichever device it was credited on. A backup made by an
 older Sortie has no companion in it and leaves yours as it is.
 A safety copy is saved first under **sortie/backups/** on the card. Restoring that copy recovers your previous preferences and
-companion; it cannot remove history merged by a restore.
+companion (his parts and salvage roll back, but sessions already credited never pay again); it cannot remove history merged
+by a restore.
 
 Reference images and journal screenshots are **not embedded in the JSON backup**. Copy **sortie/reference/** and
 **sortie/journal/media/** alongside it to preserve those attachments. Restoring the JSON alone keeps the text and metadata,

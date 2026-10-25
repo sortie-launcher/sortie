@@ -122,17 +122,18 @@ Without signing variables `assembleRelease` (including `tools/build.sh` and the 
 `.github/workflows/build.yml` has two jobs:
 
 - **`build-apks`** runs for pull requests, pushes to `main` and manual runs. Pull requests and pushes changing only `site/`
-  or `.github/workflows/pages.yml` are excluded. It checks out the commit and the pinned `sortie-zines` commit, assigns the
-  run's version, runs `ktlintCheck` plus debug and release unit tests, builds both variants with the magazines bundled, and
-  uploads the debug-signed and unsigned-release APKs as artifacts. Its token is read-only and it receives no secrets.
+  or `.github/workflows/pages.yml` are excluded. It checks out the app, resolves `sortie-zines` main once and pins that
+  snapshot for the run, assigns the run's version, runs style checks, debug and release unit tests and screenshot
+  verification, then builds both variants with those magazines. It uploads debug-signed and unsigned-release APKs;
+  neither is the signed daily-use download. Its token is read-only and it receives no secrets.
 - **`release`** runs only after `build-apks` succeeds, only in `sortie-launcher/sortie`, and only for a push to `main` or
   a manual run on `main`; never for pull requests. It uses the `release` environment and a `contents: write` token, and:
   1. lists existing releases. This tag already published for this commit: nothing to do (a re-run). This tag as a draft or
      for another commit: fail for [inspection](#recovering-a-failed-release). Any `vX.Y.Z-beta.N` release with `N` above
      this run's code: skip, this run is older.
-  2. checks out the same commit and content pin again, decodes the key into an owner-only directory under the runner's
-     temporary directory (outside the checkout) and runs `tools/release.sh` with the run's version and the pinned
-     magazines. No Gradle cache is restored or saved in this job.
+  2. checks out the app commit and the build job's exact content SHA, verifies its catalog digest, decodes the key into an
+     owner-only directory under the runner's temporary directory (outside the checkout) and runs `tools/release.sh`
+     with the run's version and that magazine snapshot. No Gradle cache is restored or saved in this job.
   3. requires the APK's signer certificate SHA-256 to be the permanent one above and its `.sha256` to verify.
   4. creates a draft with the APK, its `.sha256`, generated notes and a fixed header (commit, version code, "update, do not
      uninstall", content commit, magazine media rights, certificate fingerprint, not hardware-tested per build), then
