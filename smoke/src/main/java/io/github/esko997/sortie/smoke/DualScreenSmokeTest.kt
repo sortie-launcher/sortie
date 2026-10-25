@@ -74,6 +74,9 @@ class DualScreenSmokeTest {
             tasks().any { it.component == COMPANION && it.display == PRIMARY && it.visible } && device.hasObject(By.pkg(PKG).displayId(PRIMARY))
         }
         await("the controller following navigation to display $second") { focusedDisplay() == second }
+        // Paced like a person: a second X within 1.5 s of the companion's hand-off leaves the controller on the companion's
+        // screen (TaskSwitcher.anchoredRecently suppresses the returning companion's hand-off; see docs/HARDENING.md, Testing).
+        SystemClock.sleep(SETTLE_MS)
 
         shell("input keyevent KEYCODE_BUTTON_X")
         awaitNavigationOn(PRIMARY)
@@ -137,7 +140,7 @@ class DualScreenSmokeTest {
         }
     }
 
-    /** Shelf → the issue it focuses → that issue's first article, with the controller only (A). */
+    /** Shelf → the issue it focuses → that issue's first article, with the controller only (D-pad and A). */
     @Test
     fun magazineReaderOpensAnArticle() {
         val bundled = instrumentation.context.createPackageContext(PKG, 0).assets.list("magazines").orEmpty()
@@ -146,8 +149,15 @@ class DualScreenSmokeTest {
         awaitText("scrapbook", "the magazine shelf") // shelf hints: A open · Select scrapbook · B back
         shell("input keyevent KEYCODE_BUTTON_A")
         awaitText("shelf", "an issue's contents") // contents hints: A open · B shelf
-        shell("input keyevent KEYCODE_BUTTON_A")
-        awaitText("reader menu", "an article") // article hints: … Select reader menu · B contents
+        // Contents open on the masthead, then the editor's note (neither opens anything), then the articles.
+        val article = By.pkg(PKG).text("reader menu").displayId(PRIMARY) // article hints: … Select reader menu · B contents
+        var downs = 0
+        while (downs++ < 4 && !device.hasObject(article)) {
+            shell("input keyevent KEYCODE_DPAD_DOWN")
+            shell("input keyevent KEYCODE_BUTTON_A")
+            SystemClock.sleep(1_500)
+        }
+        awaitText("reader menu", "an article")
         assertEquals(PRIMARY, mainTasks().single().display)
     }
 

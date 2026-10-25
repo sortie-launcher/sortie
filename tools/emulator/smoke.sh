@@ -22,6 +22,7 @@ adb wait-for-device
   { echo "Refusing: $(sh_ getprop ro.product.model | tr -d '\r') is not an emulator; this script overwrites the card and HOME" >&2; exit 2; }
 for _ in $(seq 120); do [ "$(sh_ getprop sys.boot_completed | tr -d '\r')" = 1 ] && break; sleep 1; done
 mkdir -p "$OUT"
+adb logcat -b all -c # Sortie crashes and ANRs below are counted from here
 
 collect() {
   sh_ cmd activity stack list >"$OUT/stack.txt" 2>&1 || true
@@ -80,3 +81,8 @@ start=$(date +%s)
 sh_ am instrument -w "$PKG.smoke/androidx.test.runner.AndroidJUnitRunner" | tr -d '\r' | tee "$OUT/instrument.txt"
 echo "tests took $(($(date +%s) - start)) s"
 grep -q '^OK (' "$OUT/instrument.txt"
+# Any Sortie crash or ANR fails the run, even one the tests recovered from (its tasks are restarted as HOME).
+if adb logcat -d -b crash,system,main | grep -E "Process: $PKG, PID|ANR in $PKG( |$)"; then
+  echo "Sortie crashed or stopped responding during the run" >&2
+  exit 1
+fi
