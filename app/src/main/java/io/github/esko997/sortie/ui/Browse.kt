@@ -25,7 +25,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
@@ -139,10 +142,18 @@ fun ItemCell(
     }
 }
 
+/** A system's games; [chrome] is the header of a screen this list is part of (Home's By Console), which then folds both. */
 @Composable
-fun GameListScreen(title: String, games: List<GameEntity>, vm: SortieViewModel, onGame: (String) -> Unit, subtitle: String? = null) {
+fun GameListScreen(
+    title: String,
+    games: List<GameEntity>,
+    vm: SortieViewModel,
+    onGame: (String) -> Unit,
+    subtitle: String? = null,
+    chrome: BrowseChrome? = null
+) {
     val items = remember(games) { games.map { LibraryItem.Game(it) } }
-    ItemListScreen(title, items, vm, onGame, subtitle)
+    ItemListScreen(title, items, vm, onGame, subtitle, chrome)
 }
 
 /** A smart folder: games open their detail screen, apps and shortcuts launch directly; hold A for favourite / add to home, R2 Want to play. */
@@ -151,9 +162,21 @@ fun FolderScreen(view: FolderView, vm: SortieViewModel, onGame: (String) -> Unit
     ItemListScreen(view.def.label, view.items, vm, onGame, view.problems.takeIf { it.isNotEmpty() }?.joinToString("; "))
 }
 
+/**
+ * A system's or folder's games, apps and shortcuts with Pick one and the filter chips above them. The header folds while
+ * browsing (see [BrowseChrome]) to one line with the count and the filters that are on; a problem [subtitle] stays shown
+ * either way. A [parent] header (Home's) folds this one with it, and its strip has the chevron.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ItemListScreen(title: String, items: List<LibraryItem>, vm: SortieViewModel, onGame: (String) -> Unit, subtitle: String?) {
+private fun ItemListScreen(
+    title: String,
+    items: List<LibraryItem>,
+    vm: SortieViewModel,
+    onGame: (String) -> Unit,
+    subtitle: String?,
+    parent: BrowseChrome? = null
+) {
     val stats by vm.playStats.collectAsState()
     val saves by vm.saveStems.collectAsState()
     val user by vm.user.collectAsState()
@@ -184,23 +207,69 @@ private fun ItemListScreen(title: String, items: List<LibraryItem>, vm: SortieVi
     val memory = rememberGridMemory()
     RememberGridPosition(memory, gridState, remember(shown) { shown.map { it.id } })
     val open: (LibraryItem) -> Unit = { if (!vm.launchItem(it)) onGame(it.id) }
+    // filters that hide everything keep the header open, so they can be turned off again
+    val chrome = parent ?: rememberBrowseChrome(user.browseChrome, pinned = items.isNotEmpty() && shown.isEmpty())
+    val pickFocus = remember { FocusRequester() }
+    val activeFilters = listOfNotNull(
+        "Fit 4+".takeIf { minFit >= 4 },
+        "✍ notes".takeIf { notesOnly },
+        "💾 started".takeIf { startedOnly },
+        "incl. not on device".takeIf { !onDeviceOnly }
+    )
     Column(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp)) {
-            Text("$title · ${shown.size}", style = MaterialTheme.typography.titleLarge)
-            subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                OutlinedButton(onClick = { shown.randomOrNull()?.let(open) }, enabled = shown.isNotEmpty()) { Text("🎲 Pick one", maxLines = 1) }
-                FilterChip(selected = minFit >= 4, onClick = { minFit = if (minFit >= 4) 0 else 4 }, label = { Text("Fit 4+", maxLines = 1) })
-                FilterChip(selected = notesOnly, onClick = { notesOnly = !notesOnly }, label = { Text("✍ notes", maxLines = 1) })
-                FilterChip(selected = startedOnly, onClick = { startedOnly = !startedOnly }, label = { Text("💾 started", maxLines = 1) })
-                FilterChip(selected = onDeviceOnly, onClick = { onDeviceOnly = !onDeviceOnly }, label = { Text("on device", maxLines = 1) })
+        Column(Modifier.fillMaxWidth().foldingHeader()) {
+            if (!chrome.expanded) {
+                FoldedHeader(chrome, toggle = parent == null) {
+                    Text(
+                        "$title · ${shown.size}",
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (activeFilters.isNotEmpty()) {
+                        Text(
+                            activeFilters.joinToString(" · "),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Amber,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                    }
+                }
+                subtitle?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                }
+                return@Column
+            }
+            Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp)) {
+                Text("$title · ${shown.size}", style = MaterialTheme.typography.titleLarge)
+                subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    OutlinedButton(onClick = { shown.randomOrNull()?.let(open) }, enabled = shown.isNotEmpty(), modifier = Modifier.focusRequester(pickFocus)) {
+                        Text("🎲 Pick one", maxLines = 1)
+                    }
+                    FilterChip(selected = minFit >= 4, onClick = { minFit = if (minFit >= 4) 0 else 4 }, label = { Text("Fit 4+", maxLines = 1) })
+                    FilterChip(selected = notesOnly, onClick = { notesOnly = !notesOnly }, label = { Text("✍ notes", maxLines = 1) })
+                    FilterChip(selected = startedOnly, onClick = { startedOnly = !startedOnly }, label = { Text("💾 started", maxLines = 1) })
+                    FilterChip(selected = onDeviceOnly, onClick = { onDeviceOnly = !onDeviceOnly }, label = { Text("on device", maxLines = 1) })
+                    if (parent == null) HideHeaderButton(chrome)
+                }
             }
         }
-        ItemGrid(grid, user, Modifier.weight(1f), state = gridState) {
+        ItemGrid(grid, user, Modifier.weight(1f).foldsBrowseChrome(chrome, gridState, pickFocus), state = gridState) {
             items(shown, key = { it.id }) { item ->
                 RememberedItem(memory, item.id) {
                     ItemCell(
@@ -219,13 +288,14 @@ private fun ItemListScreen(title: String, items: List<LibraryItem>, vm: SortieVi
                 }
             }
         }
-        HintBar(
+        BrowseHintBar(
             "A" to "open",
             "hold A" to "favourite / add to home",
             "R2" to "want to play",
             "Select" to if (grid) "list view" else "grid view",
             "L1/R1" to "systems",
-            "B" to "back"
+            "B" to "back",
+            compact = chrome.foldable
         )
     }
     sheet?.let { ItemSheet(it, vm) { sheet = null } }

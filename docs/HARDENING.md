@@ -130,8 +130,7 @@ removed them and the next Home created new ones. Any app's window churn can stil
 
 `app/src/testDebug/` runs the real `MainActivity`, `SortieApp` graph, view model, Room database (Robolectric's native
 SQLite), indexer and stores under Robolectric with native graphics, against a fixture card. They are part of
-`testDebugUnitTest`, so `tools/build.sh` and CI run them on every build (33 tests, about 30 s of added test time locally;
-release unit tests stay plain JUnit).
+`testDebugUnitTest`, so `tools/build.sh` and CI run them on every build; release unit tests stay plain JUnit.
 
 - **Fixture** (`testing/FixtureCard.kt`, `resources/fixtures/`): a card with `device.json`, `systems.json` (three systems),
   `launchers.json`, `folders.json` (one folder), `user.json` (custom sort, five-column grid), six ROM stubs with generated PNG
@@ -144,11 +143,13 @@ release unit tests stay plain JUnit).
   depend on where its tile was when it was first measured (Home's tiles shift while the library loads).
 - **Controller** (`testing/Controller.kt`): keys go to the focused window the way the input dispatcher sends them, including
   the generic controller fallbacks (A → DPAD_CENTER, B → BACK, Select → MENU) and the first D-pad press leaving touch mode.
-- **Interaction tests**: Home, Home, B keeps Sortie on Home; D-pad order through the header, sort chips and custom grid;
-  A/B return to the same tile; reader position survives activity recreation; R2 opens the picture in view and B closes it
-  with the article unmoved; Home's Hangar button opens the Hangar and B puts the focus back on it; reader Select → Visit
-  the hangar, B returns to the article.
-- **Screenshots** (Roborazzi): Home, magazine shelf, article at each figure and the Hangar Workshop (from Home's header), and
+- **Interaction tests**: Home, Home, B keeps Sortie on Home; A/B return to the same tile; entering the grid folds the
+  compact header, Up from its first row reveals the sort controls, and touch/pull/chevron reveal keeps controls reachable;
+  Expanded never folds. Controls retains secondary commands and restores controller focus after dismissal. Reader position
+  survives activity recreation; R2 opens the picture in view and B closes it with the article unmoved; Home's Hangar button
+  opens the Hangar and B puts the focus back on it; reader Select → Visit the hangar, B returns to the article.
+- **Screenshots** (Roborazzi): Home with Auto's header open, always Expanded, and folded; a folded system list; the magazine
+  shelf, article at each figure and the Hangar Workshop (from Home's header); and
   the Perf page with fixed stats (`PerfScreenshotTest`: the overlay page everywhere, plus the companion's Perf mode and the
   scrolled-down details on the Thor's bottom screen) on the Thor's top
   (`w833dp-h421dp`) and bottom (`w538dp-h444dp`) screens, the DMG (`w480dp-h551dp`) and the Retroid Pocket Nova
@@ -161,6 +162,10 @@ release unit tests stay plain JUnit).
   (never a control, a focused element or one under a finger), the lifecycle gate (`MechaLifeTest`: a ticker under
   `whileShown(mechaShown(...))` on virtual time does nothing while paused, stopped or on a dark display, without any Compose
   frame) and the backup round trip of the save without double credit (`MechaStoreTest`).
+- **Compact browsing device smoke (DMG)**: tap and pull-to-reveal; controller grid entry and first-row Up on Home and a
+  system list; Back to the remembered system tile; Controls dismissal back to its opener; a focused last row clear of the
+  footer; the Search query still visible with filters folded; and persisted Auto / Expanded / Compact cycling. The four
+  window-size screenshot sets above cover layout differences without installing preview builds on the other devices.
 
 Re-record after an intended visual change, look at every changed image, and commit them with the change:
 

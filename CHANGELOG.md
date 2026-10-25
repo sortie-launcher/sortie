@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Roomier Home and browsing: Settings → *Header and hints (Home and browse)* cycles Auto, Expanded and Compact
+  (`user.browseChrome`, default Auto). Auto goes compact when the window is short or narrow, whatever the device.
+  Compact folds Home's and the browse screens' header into a strip while you browse (tap or pull it down, or press Up on
+  the first row, to bring it back) and turns the hint bar into one light row with a **Controls** button that lists every
+  command. Backups carry the setting; a missing or unknown value is read as Auto. docs/formats/user.md.
 - Hosted release codes are now `2000 + build run number` (were `1000 +`), so releases install over the test candidates
   up to 1110 already on the AYN Thor; pre-merge candidates for everyday devices take their pull request's run number.
   See docs/RELEASE.md, Versions.

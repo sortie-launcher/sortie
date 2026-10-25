@@ -66,6 +66,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.apps.LibraryItem
@@ -151,7 +152,8 @@ private class HomeTile(
  * Home: systems in one of three generated, fixed orders (alphabetical, game count, generation) or the custom layout, which
  * also holds Continue, every smart folder and Apps ([HomeIds.custom]) plus the systems, games, apps and shortcuts the user placed.
  * Custom tiles have an edit mode: hold A → Move lifts the tile, the D-pad moves it one slot per press, A drops (persisted via
- * `setLayout`), B cancels; touch drops it on the tapped tile.
+ * `setLayout`), B cancels; touch drops it on the tapped tile. The header and sort row fold to one strip (title, clock, count,
+ * sort, Search, chevron) while browsing the tiles ([BrowseChrome]); Up from the first row opens them on the chosen sort.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -381,7 +383,12 @@ fun HomeScreen(
         }
     }
     val stage = LocalMechaStage.current
-    // A controller user lands back on the Hangar button once the Hangar's window is gone; touch keeps touch mode.
+    // an empty library has nothing to browse: the header (Library setup, Apps, Magazines …) stays open
+    val chrome = rememberBrowseChrome(user.browseChrome, pinned = total == 0)
+    // Up from the grid's first row while the header is folded opens it on the chosen sort, the row just above the grid
+    val sortFocus = remember { FocusRequester() }
+    // A controller user lands back on the Hangar button once the Hangar's window is gone (on the strip's chevron when the
+    // header has folded meanwhile, e.g. the Hangar was opened by tapping him); touch keeps touch mode.
     val hangarButton = remember { FocusRequester() }
     val hangarOpen = stage?.hangarOpen == true
     var hangarWasOpen by remember { mutableStateOf(false) }
@@ -393,7 +400,7 @@ fun HomeScreen(
         if (!hangarWasOpen) return@LaunchedEffect
         hangarWasOpen = false
         delay(60)
-        if (inputModes.inputMode == InputMode.Keyboard) runCatching { hangarButton.requestFocus() }
+        if (inputModes.inputMode == InputMode.Keyboard) runCatching { (if (chrome.expanded) hangarButton else chrome.showFocus).requestFocus() }
     }
     val identity: @Composable () -> Unit = {
         // the companion may stand just after the clock and game count when the header leaves room there, and poke them
@@ -419,42 +426,97 @@ fun HomeScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             HeaderButton("📖", onManual, Modifier.semantics { contentDescription = "Manual" })
             HeaderButton("Settings", onDiagnostics)
+            HideHeaderButton(chrome)
         }
     }
     val configuration = LocalConfiguration.current
     val short = configuration.screenHeightDp < SHORT_HEIGHT_DP
     val narrow = configuration.screenWidthDp < NARROW_WIDTH_DP
 
+    val empty = total == 0 && !index.running
+    val sortLabel = SORTS.firstOrNull { it.first == sort }?.second ?: sort
+
     Column(Modifier.fillMaxSize()) {
-        val header = Modifier.fillMaxWidth()
-        // the actions block is a control the companion keeps clear of; when it wraps below the title he may stand on it
-        val actionSpot = Modifier.mechaSpot("home:actions", MechaSpotKind.LEDGE, interactive = true)
-        when {
-            narrow -> Column(header.padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                identity()
-                Row(
-                    actionSpot.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) { actions() }
+        Column(Modifier.fillMaxWidth().foldingHeader()) {
+            if (!chrome.expanded) {
+                // folded: who and when, the sort, Search, and the chevron; tap or pull the strip down for the rest
+                FoldedHeader(
+                    chrome,
+                    Modifier.mechaObstacle("home:strip", interactive = true, solid = false),
+                    actions = { HeaderButton("Search", onSearch) }
+                ) {
+                    Text("Sortie", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Clock()
+                    Text(
+                        "$total games · $sortLabel",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (index.running) CircularProgressIndicator(Modifier.height(18.dp).width(18.dp), strokeWidth = 2.dp)
+                }
+                return@Column
             }
-            short -> Row(header.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                identity()
-                Row(
-                    actionSpot.padding(start = 12.dp).weight(1f).horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
-                ) { actions() }
+            val header = Modifier.fillMaxWidth()
+            // the actions block is a control the companion keeps clear of; when it wraps below the title he may stand on it
+            val actionSpot = Modifier.mechaSpot("home:actions", MechaSpotKind.LEDGE, interactive = true)
+            when {
+                narrow -> Column(header.padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    identity()
+                    Row(
+                        actionSpot.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) { actions() }
+                }
+                short -> Row(header.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    identity()
+                    Row(
+                        actionSpot.padding(start = 12.dp).weight(1f).horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+                    ) { actions() }
+                }
+                else -> FlowRow(
+                    modifier = header.padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    identity()
+                    FlowRow(actionSpot, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { actions() }
+                }
             }
-            else -> FlowRow(
-                modifier = header.padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            if (empty) return@Column
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(horizontal = 12.dp)
+                    .mechaSpot("home:sorts", MechaSpotKind.BESIDE_END, interactive = true)
+                    .horizontalScroll(rememberScrollState())
             ) {
-                identity()
-                FlowRow(actionSpot, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { actions() }
+                Text("Sort", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                SORTS.forEach { (id, label) ->
+                    SortChip(label, selected = sort == id, modifier = if (sort == id) Modifier.focusRequester(sortFocus) else Modifier) { vm.setHomeSort(id) }
+                }
+            }
+            if (console) {
+                // By Console: a strip of consoles (L1/R1 page it, B leaves the sort) and the chosen console's games below
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    state = rememberLazyListState().also { st ->
+                        val i = systems.indexOfFirst { it.def.id == homeConsole }
+                        LaunchedEffect(i) { if (i >= 0) st.animateScrollToItem(i) }
+                    }
+                ) {
+                    items(systems, key = { it.def.id }) { row ->
+                        SortChip(row.def.label, selected = row.def.id == homeConsole) { vm.homeConsole.value = row.def.id }
+                    }
+                }
             }
         }
 
-        if (total == 0 && !index.running) {
+        if (empty) {
             Column(Modifier.weight(1f).fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     if (manifest.systems.isEmpty()) "Set up your library" else "No games found",
@@ -477,34 +539,12 @@ fun HomeScreen(
             }
             return@Column
         }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(horizontal = 12.dp)
-                .mechaSpot("home:sorts", MechaSpotKind.BESIDE_END, interactive = true)
-                .horizontalScroll(rememberScrollState())
-        ) {
-            Text("Sort", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            SORTS.forEach { (id, label) -> SortChip(label, selected = sort == id) { vm.setHomeSort(id) } }
-        }
         if (console) {
-            // By Console: a strip of consoles (L1/R1 page it, B leaves the sort) and the chosen console's games below
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                state = rememberLazyListState().also { st ->
-                    val i = systems.indexOfFirst { it.def.id == homeConsole }
-                    LaunchedEffect(i) { if (i >= 0) st.animateScrollToItem(i) }
-                }
-            ) {
-                items(systems, key = { it.def.id }) { row ->
-                    SortChip(row.def.label, selected = row.def.id == homeConsole) { vm.homeConsole.value = row.def.id }
-                }
-            }
             val chosen = systems.firstOrNull { it.def.id == homeConsole }
             if (chosen != null) {
                 val games by remember(chosen.def.id) { vm.gamesOf(chosen.def.id) }.collectAsState(emptyList())
-                Box(Modifier.weight(1f)) { key(chosen.def.id) { GameListScreen(chosen.def.label, games, vm, onGame) } } // filters/focus per console
+                // filters/focus per console; the list folds with Home's header (one strip each, Home's has the chevron)
+                Box(Modifier.weight(1f)) { key(chosen.def.id) { GameListScreen(chosen.def.label, games, vm, onGame, chrome = chrome) } }
             } else {
                 Spacer(Modifier.weight(1f))
             }
@@ -526,7 +566,7 @@ fun HomeScreen(
         // up/down between tiles).
         val liftFocus = if (lifted != null) Modifier.focusRequester(gridFocus).onFocusChanged { gridFocused = it.isFocused }.focusable() else Modifier
         RememberGridPosition(memory, gridState, gridKeys)
-        ItemGrid(grid, user, Modifier.weight(1f).then(liftFocus).then(liftKeys), state = gridState) {
+        ItemGrid(grid, user, Modifier.weight(1f).foldsBrowseChrome(chrome, gridState, sortFocus).then(liftFocus).then(liftKeys), state = gridState) {
             var section: String? = null
             tiles.forEach { t ->
                 if (headers && t.section != section) {
@@ -599,8 +639,8 @@ fun HomeScreen(
                 .mechaSpot("home:edge-start", MechaSpotKind.EDGE_START)
                 .mechaSpot("home:edge-end", MechaSpotKind.EDGE_END)
             when {
-                lifted != null -> HintBar("D-pad" to "move", "A" to "drop here", "B" to "cancel", modifier = hintSpots)
-                custom -> HintBar(
+                lifted != null -> BrowseHintBar("D-pad" to "move", "A" to "drop here", "B" to "cancel", modifier = hintSpots, compact = chrome.foldable)
+                custom -> BrowseHintBar(
                     *listOfNotNull(
                         "A" to "open",
                         "hold A" to "move / remove",
@@ -610,9 +650,10 @@ fun HomeScreen(
                         "L1/R1" to "systems",
                         swapHint
                     ).toTypedArray(),
-                    modifier = hintSpots
+                    modifier = hintSpots,
+                    compact = chrome.foldable
                 )
-                else -> HintBar(
+                else -> BrowseHintBar(
                     *listOfNotNull(
                         "A" to "open",
                         "hold A" to "add to home",
@@ -622,7 +663,8 @@ fun HomeScreen(
                         "L1/R1" to "systems",
                         swapHint
                     ).toTypedArray(),
-                    modifier = hintSpots
+                    modifier = hintSpots,
+                    compact = chrome.foldable
                 )
             }
             Spacer(Modifier.size(mechaBaseSize()).mechaHomeBase("home:base"))
@@ -650,14 +692,14 @@ fun HomeScreen(
 
 /** A home sort choice; [focusGlow] so the controller can see where it is. */
 @Composable
-private fun SortChip(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun SortChip(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     FilterChip(
         selected = selected,
         onClick = onClick,
         label = { Text(label, maxLines = 1) },
-        modifier = Modifier.focusGlow(focused, FilterChipDefaults.shape),
+        modifier = modifier.focusGlow(focused, FilterChipDefaults.shape),
         interactionSource = interaction
     )
 }

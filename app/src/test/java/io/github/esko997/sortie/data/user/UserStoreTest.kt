@@ -54,6 +54,20 @@ class UserStoreTest {
         assertEquals("custom", UserStore(file).data.value.homeSort)
     }
 
+    /** The browse header mode survives a reload; a value no build knows is stored as "auto", never as-is. */
+    @Test
+    fun browseChromePersistsAndUnknownValuesBecomeAuto() = runBlocking {
+        val file = fresh()
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        store.setBrowseChrome("compact")
+        withTimeout(5_000) { store.written.first { it.browseChrome == "compact" } }
+        assertEquals("compact", UserStore(file).data.value.browseChrome)
+        store.setBrowseChrome("sideways")
+        assertEquals("auto", store.data.value.browseChrome)
+        withTimeout(5_000) { store.written.first { it.browseChrome == "auto" } }
+        assertEquals("auto", UserStore(file).data.value.browseChrome)
+    }
+
     /** A durable save is on disk when it returns and published only then. */
     @Test
     fun commitWritesBeforePublishing() = runBlocking {
