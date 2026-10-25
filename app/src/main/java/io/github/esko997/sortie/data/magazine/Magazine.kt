@@ -82,9 +82,14 @@ data class MagazineIssue(
     /** Positive; a higher revision of the same issue id replaces a lower one on the shelf. Version 1 packs are revision 1. */
     val revision: Int = 1,
     /** Third-party rights statement shown with the contents; empty when the pack has none. */
-    val rightsNotice: String = ""
+    val rightsNotice: String = "",
+    /** The pack's own issue number (positive), if it gives one; see [issueNumber]. */
+    val number: Int? = null
 ) {
     val publishedDate: LocalDate? get() = runCatching { LocalDate.parse(published) }.getOrNull()
+
+    /** The number shown on the shelf: the pack's [number], else the id's trailing digits (`field-notes-010` → 10), else none. */
+    val issueNumber: Int? get() = number ?: issueNumberFromId(id)
 
     /** Every game reference of the issue once, in article order. */
     val games: List<MagazineGameReference> by lazy { articles.flatMap { it.games }.distinctBy { it.id } }
@@ -93,6 +98,11 @@ data class MagazineIssue(
 
     fun articlesMentioning(refId: String): List<MagazineArticle> = articles.filter { a -> a.games.any { it.id == refId } }
 }
+
+private val TRAILING_DIGITS = Regex("[0-9]+$")
+
+/** The positive number an issue id ends with (`field-notes-010` → 10); null for ids without trailing digits (or only zeros). */
+internal fun issueNumberFromId(id: String): Int? = TRAILING_DIGITS.find(id)?.value?.toIntOrNull()?.takeIf { it > 0 }
 
 sealed interface IssueParse {
     data class Valid(val issue: MagazineIssue) : IssueParse
@@ -155,6 +165,7 @@ private fun readIssue(text: String, folderName: String): MagazineIssue {
     val editorial = root.text("editorial", "issue", required = false)
     val revision = if (legacy) 1 else positiveInt(root["revision"], "issue: \"revision\"", required = true)!!
     val rightsNotice = if (legacy) "" else root.text("rightsNotice", "issue", required = false)
+    val number = if (legacy) null else positiveInt(root["number"], "issue: \"number\"", required = false)
     val list = when (val a = root["articles"]) {
         null, is JsonNull -> fail("issue: \"articles\" is required")
         is JsonArray -> a
@@ -163,7 +174,7 @@ private fun readIssue(text: String, folderName: String): MagazineIssue {
     if (list.isEmpty()) fail("issue: \"articles\" must list at least one article")
     val seen = HashSet<String>()
     val articles = list.mapIndexed { i, element -> readArticleEntry(element, i, seen, legacy) }
-    return MagazineIssue(id, title, subtitle, published, cover, editorial, unifyRefs(articles, strict = !legacy), revision, rightsNotice)
+    return MagazineIssue(id, title, subtitle, published, cover, editorial, unifyRefs(articles, strict = !legacy), revision, rightsNotice, number)
 }
 
 private fun readArticleEntry(element: JsonElement, index: Int, seen: MutableSet<String>, legacy: Boolean): MagazineArticle {
@@ -384,7 +395,10 @@ internal fun mergeShelves(card: MagazineShelf, bundled: MagazineShelf): Magazine
     return MagazineShelf(card.dir, byId.values.sortedWith(NEWEST_FIRST), broken.sortedBy { it.folder }, problem)
 }
 
-private val NEWEST_FIRST = compareByDescending<ShelfIssue> { it.issue.publishedDate ?: LocalDate.MIN }.thenByDescending { it.issue.id }
+/** Newest publication date first; on the same date the higher issue number (see [MagazineIssue.issueNumber]), then the id. */
+private val NEWEST_FIRST = compareByDescending<ShelfIssue> { it.issue.publishedDate ?: LocalDate.MIN }
+    .thenByDescending { it.issue.issueNumber }
+    .thenByDescending { it.issue.id }
 
 /** Blocking; see [MagazineRepository.shelf]. Folders starting with `.` (e.g. a deploy in progress) are skipped. */
 internal fun readShelf(dir: File, source: IssueSource = IssueSource.CARD): MagazineShelf {

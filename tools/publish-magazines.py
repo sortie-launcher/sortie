@@ -6,8 +6,9 @@
 
 SOURCE_ROOT holds one folder per issue (<issue-id>/issue.json, articles/, media/). Every issue must be schema version 2
 with a revision and a rights notice; game references must be well formed and every reference id must have the same title,
-platform and edition in every article and issue (match names may differ; the app unions them). Paths must stay inside
-their issue, referenced files must exist and no private machine details may appear in published text.
+platform and edition in every article and issue (match names may differ; the app unions them). An optional "number" is a
+positive whole number; the number each issue shows (that one, else the id's trailing digits) must be unique. Paths must
+stay inside their issue, referenced files must exist and no private machine details may appear in published text.
 
 With --out, the validated packs are staged next to DIR and swapped in only when complete, together with catalog.json:
     {"format": 1, "digest": ..., "issues": [{"id", "revision", "digest", "files": [{"path", "size", "sha256"}]}]}
@@ -34,6 +35,8 @@ REPO = Path(__file__).resolve().parent.parent
 LOCK = REPO / "app" / "magazines.lock"
 SLUG = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,79}\Z")
 REF_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,119}\Z")
+TRAILING_DIGITS = re.compile(r"[0-9]+\Z")
+INT_MAX = 2**31 - 1
 MD_IMAGE = re.compile(r"^\s*!\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)\s*$")
 MAX_ISSUE_JSON = 256 * 1024
 MAX_ARTICLE = 1024 * 1024
@@ -162,7 +165,21 @@ def published_files(issue_dir, probs):
     return sorted(files)
 
 
-def validate_issue(issue_dir, probs, refs_seen):
+def issue_number(issue, name, probs):
+    """The number the reader shows: "number" when given, else the folder id's trailing digits (none for 0 or no digits).
+    The app reads 32-bit numbers, so a larger "number" is an error and a longer digit run shows no number."""
+    n = issue.get("number")
+    if n is not None:
+        if not isinstance(n, int) or isinstance(n, bool) or not 1 <= n <= INT_MAX:
+            probs.error(name, '"number" must be a positive whole number')
+            return None
+        return n
+    m = TRAILING_DIGITS.search(name)
+    derived = int(m.group(0)) if m else 0
+    return derived if 1 <= derived <= INT_MAX else None
+
+
+def validate_issue(issue_dir, probs, refs_seen, numbers_seen):
     name = issue_dir.name
     if not SLUG.match(name):
         probs.error(name, "folder name must be a slug (letters, digits, - or _)")
@@ -186,6 +203,11 @@ def validate_issue(issue_dir, probs, refs_seen):
     if not isinstance(rev, int) or isinstance(rev, bool) or rev < 1:
         probs.error(name, '"revision" must be a positive whole number')
         rev = None
+    number = issue_number(issue, name, probs)
+    if number is not None:
+        other = numbers_seen.setdefault(number, name)
+        if other != name:
+            probs.error(name, f"issue number {number} is already shown by {other}; give one of them a distinct \"number\"")
     if issue.get("id") != name:
         probs.error(name, f"id {issue.get('id')!r} does not match the folder name")
     for key in ("title", "published", "rightsNotice"):
@@ -329,6 +351,7 @@ def main():
             sys.exit(f"{out} overlaps the source folder {source}; publish into a separate folder")
     probs = Problems()
     refs_seen = {}
+    numbers_seen = {}
     issues = []
     for d in sorted(source.iterdir()):
         if d.name.startswith(".") or not d.is_dir():
@@ -336,7 +359,7 @@ def main():
         if d.is_symlink():
             probs.error(d.name, "the issue folder is a symlink")
             continue
-        rev = validate_issue(d, probs, refs_seen)
+        rev = validate_issue(d, probs, refs_seen, numbers_seen)
         issues.append((d.name, rev))
     if not issues:
         probs.error(str(source), "no issue folders found")

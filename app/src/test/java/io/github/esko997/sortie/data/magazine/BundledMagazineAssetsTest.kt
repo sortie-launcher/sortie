@@ -27,6 +27,9 @@ class BundledMagazineAssetsTest {
         val shelf = readShelf(dir, IssueSource.BUNDLED)
         assertEquals(emptyList<BrokenIssue>(), shelf.broken)
         assertEquals(catalog.issues.map { it.id }.sorted(), shelf.issues.map { it.issue.id }.sorted())
+        // the publisher's rule: no two issues show the same "No." on the shelf
+        val numbers = shelf.issues.mapNotNull { it.issue.issueNumber }
+        assertEquals("issue numbers $numbers", numbers.distinct(), numbers)
 
         val identity = HashMap<String, Pair<String, Triple<String, String, String>>>()
         for (s in shelf.issues) {

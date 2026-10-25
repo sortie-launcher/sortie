@@ -34,6 +34,7 @@ user-supplied packs in `sortie/magazines/`. Public issues address a general audi
   "schemaVersion": 2,
   "id": "field-notes-001",
   "revision": 2,
+  "number": 1,
   "title": "Field Notes",
   "subtitle": "Short sorties, deep systems",
   "published": "2026-10-24",
@@ -66,6 +67,12 @@ Required: numeric `schemaVersion: 2`, positive integer `revision`, nonempty issu
 `[A-Za-z0-9][A-Za-z0-9_-]{0,79}`. Use ISO publication dates; retain the original date when correcting an existing issue.
 `readingMinutes`, when supplied, is a positive integer. Other fields are optional to the reader; the publication tool
 requires a nonempty `rightsNotice` for bundled issues.
+
+`number`, when supplied, is a positive integer shown on the shelf and contents as the issue number ("No. 001"). Without it
+the reader uses the trailing digits of `id` (`field-notes-010` → 10), and an id without trailing digits shows no number;
+published issues rely on this fallback and are not edited to add the field. The publication tool rejects a malformed
+`number` and two issues that would show the same number. The shelf lists the newest `published` date first, then the higher
+number on the same date, then the id, so an old issue with a high number never displaces a newer issue as the latest.
 
 ### Portable game references
 

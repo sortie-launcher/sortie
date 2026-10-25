@@ -174,7 +174,15 @@ issue packs on the card yourself. Nothing is downloaded while reading.
 Pictures in issues belong to their rights holders and are credited in each issue’s sources.
 
 - **A / tap** opens an issue or article. **B** goes article → contents → shelf → Home.
+- The shelf and an issue's contents show each issue's number large (No. 010). The newest issue comes first; issues
+  published the same day are ordered by number.
 - In an article, **D-pad Up/Down** scrolls; **Left/Right** pages; **L1/R1** changes article.
+- Pictures keep their shape: wide diagrams can use the full reading width, tall pictures stop at about two thirds of the
+  screen, and small pixel art is enlarged without blurring. **Tap a picture**, or press **R2** when the hint bar shows
+  **view picture**, to see it full screen on black. Pinch, double-tap, **A** or **L2/R2** zoom; **D-pad** or the stick pans
+  a zoomed picture; **Left/Right** (when not zoomed), **L1/R1** or **Previous/Next** step through the article's pictures;
+  **Y** shows or hides the caption. **B**, Back, a single tap or **Close** returns to the article exactly where you were.
+  On two-screen devices the picture opens on the screen you are reading on; the companion screen shows no pictures.
 - **Games mentioned** in an issue lists games regardless of ownership. **All / On this device** toggles the local filter.
   A file still copying, a placeholder or an unreadable file is not counted as available; availability is not a compatibility promise.
 - **A** in an article opens its game references or a matching library page, never launches the game. Multiple local copies

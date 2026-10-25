@@ -108,6 +108,14 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   APK packs extract atomically into private storage once per catalog digest. The shelf merges by stable issue ID: higher
   revision wins, card wins ties; no card pack is overwritten. A malformed card copy cannot hide a valid bundled issue.
   Bad issues are isolated, missing optional images do not block text, and paths cannot escape an issue. No WebView or remote fetching.
+  Shelf entries and the contents masthead show the issue number large ("No. 010": the pack's `number`, else the id's trailing
+  digits, else none); the shelf is newest date first, then number, then id.
+  Figures are sized from their pixel dimensions (read before the article is shown, so placeholders already have the final
+  size and restored positions never shift): text-measure width, full reading width for wide pictures, at most 70% of the
+  viewport tall (lead image 55%), whole-number enlargement and no smoothing for small pixel art, caption at the picture's
+  width. A tap, or R2 on the picture most in view (hinted), opens a full-screen viewer over the unmoved article: pinch,
+  double tap, A and L2/R2 zoom, D-pad pans when zoomed, Left/Right and L1/R1 step pictures, Y toggles the caption, B/Back/tap
+  closes. It is a dialog of the reader's window, so it opens on the reader's display; the companion shows no pictures.
   While an issue is open, the other display shows section jumps/current heading, article selection and previous/next controls.
   The panel follows navigation across X; session-owned actions reject stale taps, and leaving the issue clears the panel.
   Its bottom-left + opens an app picker for that display; launching returns controller focus to the reader. B or Close
