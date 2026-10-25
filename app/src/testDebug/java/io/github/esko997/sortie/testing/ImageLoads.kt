@@ -4,9 +4,11 @@ import coil3.EventListener
 import coil3.SingletonImageLoader
 import coil3.annotation.DelicateCoilApi
 import coil3.decode.BitmapFactoryDecoder
+import coil3.intercept.Interceptor
 import coil3.request.ErrorResult
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import coil3.size.Size
 import io.github.esko997.sortie.SortieApp
 import java.util.Collections
 import java.util.IdentityHashMap
@@ -15,7 +17,7 @@ import kotlinx.coroutines.Dispatchers
 /**
  * Covers and figures load on Coil's background dispatchers, which Compose's idling does not see. This installs the app's own
  * image loader ([SortieApp.newImageLoader]) with a listener that counts requests in flight, so a test can wait until every
- * picture on screen has arrived before it compares pixels.
+ * picture on screen has arrived before it compares pixels. Pictures decode at their full size (see [install]).
  */
 object ImageLoads {
     private val inFlight: MutableSet<ImageRequest> = Collections.synchronizedSet(Collections.newSetFromMap(IdentityHashMap()))
@@ -31,7 +33,14 @@ object ImageLoads {
         SingletonImageLoader.setUnsafe { context ->
             app.newImageLoader(context).newBuilder()
                 // Robolectric has no ImageDecoder, which Coil prefers on API 29+; BitmapFactory decodes the same files
-                .components { add(BitmapFactoryDecoder.Factory()) }
+                .components {
+                    add(BitmapFactoryDecoder.Factory())
+                    // Decode every picture at its file's own size. The app decodes at the size of the tile as it was first
+                    // measured, and Home's tiles move while the library loads (a game or folder tile resolving ahead of a
+                    // system shifts it to a column one pixel wider or narrower), so the decoded bitmap, and every pixel drawn
+                    // from it, depended on which load finished first. Drawing is then scaled to the final layout only.
+                    add(Interceptor { chain -> chain.withSize(Size.ORIGINAL).proceed() })
+                }
                 // load on the thread that asks (the main thread, inside Compose's frame), not on background workers whose
                 // results race the test's idling
                 .coroutineContext(Dispatchers.Unconfined)
