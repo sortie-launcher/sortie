@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.mecha.ui
 
 import android.os.SystemClock
+import android.util.Log
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.unit.IntSize
 import io.github.esko997.sortie.mecha.MechaBody
@@ -25,6 +26,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+
+private const val TAG = "MechaDirector"
 
 /** A stroll (or, now and then, a vignette) every so often while the stage is up. */
 private const val STROLL_MIN_MS = 45_000L
@@ -401,7 +404,9 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         rescale(b)
         val other = MechaPresence.otherWithRoom(stage)
         val places = options(stage.scale, b, spread = false)
-        when (val d = MechaPlay.drop(fx, fy, stage.x, stage.floor, places, b, stage.toward, stage.edgeZone, other != null)) {
+        val d = MechaPlay.drop(fx, fy, stage.x, stage.floor, places, b, stage.toward, stage.edgeZone, other != null)
+        Log.i(TAG, "display ${stage.displayId}: dropped at ${fx.roundToInt()},${fy.roundToInt()} -> $d")
+        when (d) {
             is MechaDrop.Across -> {
                 if (motion) {
                     // out through the edge that faces the other screen
@@ -485,6 +490,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
             MechaPlay.vignettes(cur, options(stage.scale, b, spread = false), stage.elements, stage.scale, b, stage.focused, stage.touches.values),
             random
         ) ?: return false
+        Log.i(TAG, "display ${stage.displayId}: ${v.kind} ${v.prop ?: v.spot.spotId}")
         stage.interrupted = false
         stage.busy = true
         try {

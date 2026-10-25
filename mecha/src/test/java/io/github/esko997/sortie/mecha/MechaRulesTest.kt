@@ -220,7 +220,55 @@ class MechaRulesTest {
         assertNotNull(mechaStateProblem(s.copy(charge = 0), parts))
         assertNotNull(mechaStateProblem(s.copy(pendingMinutes = MECHA_MINUTES_PER_CREDIT), parts))
         assertNotNull(mechaStateProblem(s.copy(salvage = -1), parts))
-        assertNotEquals(s, s.copy(version = 2))
-        assertNotNull(mechaStateProblem(s.copy(version = 2), parts))
+        assertNotEquals(s, s.copy(version = MECHA_SAVE_VERSION + 1))
+        assertNotNull(mechaStateProblem(s.copy(version = MECHA_SAVE_VERSION + 1), parts))
+        assertNotNull(mechaStateProblem(s.copy(version = 0), parts))
+        assertNull(mechaStateProblem(s.copy(version = 1), parts)) // an older save still opens
+        assertNotNull(mechaStateProblem(s.copy(lastPetAt = -1), parts))
+    }
+
+    @Test
+    fun aPetCountsTowardBondAtMostOncePerWindow() {
+        val s = starter()
+        val first = s.petted(INIT + 10 * MINUTE).state
+        assertEquals(s.bond + 1, first.bond)
+        assertEquals(INIT + 10 * MINUTE, first.lastPetAt)
+        // tapping him again and again inside the window earns nothing and changes nothing (nothing to save)
+        for (t in listOf(1L, 30_000L, MECHA_PET_BOND_MS - 1)) assertSame(first, first.petted(INIT + 10 * MINUTE + t).state)
+        val later = first.petted(INIT + 10 * MINUTE + MECHA_PET_BOND_MS).state
+        assertEquals(s.bond + 2, later.bond)
+        // a clock that went backwards does not lock pets out
+        assertEquals(later.bond + 1, later.petted(INIT).state.bond)
+        // bond stays capped
+        assertEquals(MECHA_STAT_MAX, s.copy(bond = MECHA_STAT_MAX).petted(INIT).state.bond)
+        assertNull(s.petted(INIT).message)
+    }
+
+    @Test
+    fun aRestoredHangarKeepsEverySessionEitherSideCreditedAndPaysNothingTwice() {
+        val device = starter().credited(listOf(session("dev", INIT + MINUTE, 10))).state
+        val backup = starter().copy(name = "Rivet").credited(listOf(session("old", INIT + 2 * MINUTE, 15))).state
+        val restored = backup.restoredOver(device)
+        assertEquals("Rivet", restored.name)
+        assertEquals(backup.salvage, restored.salvage)
+        assertEquals(setOf("dev@${INIT + MINUTE}", "old@${INIT + 2 * MINUTE}"), restored.processedSessions)
+        // the merged history and the device's own history read again: nothing new is credited
+        val again = restored.credited(listOf(session("dev", INIT + MINUTE, 10), session("old", INIT + 2 * MINUTE, 15)))
+        assertSame(restored, again.state)
+        // play neither side credited yet still counts, once
+        val fresh = restored.credited(listOf(session("new", INIT + 3 * MINUTE, 5))).state
+        assertEquals(restored.salvage + 1, fresh.salvage)
+        assertSame(fresh, fresh.credited(listOf(session("new", INIT + 3 * MINUTE, 5))).state)
+        assertEquals(MECHA_SAVE_VERSION, starter().copy(version = 1).restoredOver(null).version)
+    }
+
+    @Test
+    fun historyMergedFromABackupWithoutAHangarEarnsNothing() {
+        val s = starter()
+        val merged = listOf(session("elsewhere", INIT + MINUTE, 30))
+        val marked = s.creditedElsewhere(merged).state
+        assertEquals(s.salvage, marked.salvage)
+        assertSame(marked, marked.credited(merged).state)
+        assertSame(marked, marked.creditedElsewhere(merged).state)
     }
 }

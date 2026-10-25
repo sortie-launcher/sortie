@@ -168,30 +168,60 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   hint bar, both edges along the hint bar. Other display: after the battery, before the bell, on and after **Want to
   play**, over the hero picture (sized to the picture's real aspect ratio), before the **+**, both edges just above the
   bottom. Text, the dock and the detail block are obstacles.
-- One mech per process (`MechaPresence`): he is on one display; the latest resumed, allowed stage there draws him. He
+- One mech per process (`MechaPresence`): he is on one display; the latest shown, allowed stage there draws him. He
   stays on that display while its window is paused, adopts the latest active window when his display has none left, and
   changes display only by walking off one screen's edge into the other's (one stroll in three after two strolls on a
-  screen, when the other screen is up and has room; or at once when nothing fits here and the other has room).
-  Single-screen devices keep him on Home. The other display's stage is inactive while a game is in front.
-- Movement: a stroll every 45–90 s while the stage is resumed: walking (3 frame pixels per 120 ms walk frame) along a
+  screen, when the other screen is up and has room; or at once when nothing fits here and the other has room), or by
+  being carried there. Single-screen devices keep him on Home. The other display's panel stays active while a game runs on
+  the first: he lives there during play (players can hide him).
+- Shown means resumed on a lit display: `mechaShown` combines the lifecycle's state flow with the display listener
+  (`displayLitFlow` in `:design`, shared with device stats), never composition or the frame clock, and the director
+  (`whileShown`) exists only while its stage owns the mech. Stopped, backgrounded behind a game, screen off, hidden
+  companion: no coroutine, no timer, no frame of his.
+- Idle life (`MechaIdle`) while he stands still with motion on: a breath every 1.4 s (body, arms and head rise one sprite
+  pixel), a 140 ms blink about one beat in four, a one-pixel head glance to either side for two or three beats now and then;
+  asleep (dozing or resting) a slower breath on the sleep frame every 2.2 s. Only steps that change the picture are
+  scheduled: about one layer redraw a second.
+- Movement: a stroll every 45–90 s while the stage is shown: walking (3 frame pixels per 120 ms walk frame) along a
   shared floor up to half the screen, a seven-step hop for a small nearby step, otherwise sinking out of sight through
   his floor line and rising into the next spot. With nothing qualifying he stands at the home base, or stays out of
   sight. A spot that loses its room (scrolling, rewrapping) makes him sink away; he comes back to a qualifying place once
   the layout has been still for 1.2 s. He follows his element while it moves. Motion off: always the first qualifying
-  place in declaration order (deterministic for screenshots).
+  place in declaration order (deterministic for screenshots), no idle life, vignettes or hops.
+- Vignettes (`MechaPlay.vignettes`): one due stroll in three is a short vignette instead, when one fits: a nap where he
+  stands (8–12 breaths, a rising Z), a sit on a LEDGE or PEEK anchor's top edge (hips on the edge, drawn over the
+  interface with the legs dangling over that anchor's face only, kicking, 7–11 s), a poke of a `MechaProp.POKE` element from
+  its BESIDE spot (three jabs, the element jiggles a sprite pixel away), a lift of a `MechaProp.LIFT` element (he stands
+  under it with his raised hands at its bottom edge, squats, pushes it up to 3 sprite pixels and strains, about 2.5 s).
+  Props are host-declared (`mechaSpot`/`mechaObstacle` `props`): the other screen's battery (poke, lift) and Home's
+  clock/game count (poke). A control is never poked or lifted whatever it is marked, nor a focused element
+  (`FocusEventModifierNode` on the spot node) or one a finger is on; nothing is sat on while focused. Any key or touch ends
+  a vignette: the nudged element is back in place inside the input handler (`MechaStage.poke`), before the input is
+  handled, and he returns to a spot.
+- Poses are per-part transforms (`MechaRig`: whole-sprite-pixel offsets of the legs, body, arms and head layers over the
+  authored frames, nearest-neighbour): breathing, glance, pet bounce, dangle (arms-up frame, legs stretched and swinging),
+  strain (arms-up, hunched, wobbling), sit (legs tucked and kicking), poke (arms and head reaching). No new frames.
 - Reactions: the first look after a play session closes (any session, games or apps) greets the player with a cheer and
-  "Welcome back!" plus the store's credit message; other store messages (care, salvage, rename, equipment) show in a
-  5 s bubble after the Hangar closes. A bubble only appears beside him on empty space; he moves to a spot with room or
-  skips it. Three minutes without key or touch input: he dozes (still SLEEP frame) until the next input. Resting shows
-  SLEEP and never strolls; motion off places him still at a spot with no walking or cheering; hidden: nothing roams.
-- Cost: positions and frames are snapshot state read only while drawing the layer; movement and cheers are the only
-  frame bursts. Idle, dozing, off screen, paused or behind a game: no frames, no timers but the next stroll.
-- Access: **Hangar** in Home's header (controller; focus returns to it on close), a tap on the visible mech (watched at the
-  host in the Initial pass: a short low-movement tap whose down landed on his target opens the Hangar and consumes only
-  its release; drags pass through untouched). The tap target is the exposed art widened to the frame where that touches
-  no control (at least 40 dp each way, which every place he stands guarantees). The Hangar holds Animate and Hide/Show companion. Reader
-  Select → Visit the hangar keeps its controller access. The Hangar dialog stays mounted while its rename field uses the
-  keyboard.
+  "Welcome back!" plus the store's credit message; other store messages (care, salvage, rename, equipment, restore) show in
+  a 5 s bubble after the Hangar closes. A bubble only appears beside him on empty space; he moves to a spot with room or
+  skips it. Three minutes without key or touch input: he dozes (sleep frame, slow breath) until the next input or a pet.
+  Resting shows the sleep frame and never strolls; motion off places him still at a spot; hidden: nothing roams.
+- Cost: positions and rigs are snapshot state read only while drawing the layer (one layer behind the interface, one over
+  it for a carried or seated mech, the pet heart and the nap Z); a lifted or poked element redraws only itself. Idle life
+  about 1 redraw/s, strolls, hops and vignettes are short bursts; not shown: nothing at all.
+- Touch (`MechaGesture`, watched at the host in the Initial pass on a finger that went down on his tap target): released
+  before 500 ms without moving past touch slop = **pet** (bounce and heart; wakes a doze; `MechaStore.pet` adds 1 bond at most
+  once per 5 minutes, persisted as `lastPetAt`, repeated pets inside the window write nothing); still for 500 ms = picked
+  up (haptic, arms up), released still = **Hangar**; a move after the hold = **carry** (drawn over the interface,
+  dangling from the grip point, following the finger), released = **drop** to the nearest qualifying place with a little
+  hop, or, on a stacked dual-screen device, across to the other display when released within 48 dp of the edge facing it
+  (the default display is the upper screen: its bottom edge, every other display's top edge) and that screen is up with
+  room; he drops in there through the facing edge at the same fraction of the width. A move before the hold is a swipe and
+  is never consumed, so a scroll that starts on him still scrolls; after the hold every change of that finger is consumed.
+  The tap target is the exposed art widened to the frame where that touches no control (at least 40 dp each way, which
+  every place he stands guarantees). **Hangar** in Home's header stays the controller route (focus returns to it on close).
+  The Hangar holds Animate and Hide/Show companion. Reader Select → Visit the hangar keeps its controller access. The
+  Hangar dialog stays mounted while its rename field uses the keyboard.
 - Roaming acceptance (`0.1.0-mecha-roam` debug on the DMG, `0.1.0-beta.1044-roam.1` on the Thor): DMG Home at the clock,
   on the wrapped header buttons, on the hint bar (list view) and peeking over first-row tiles (grid view); peek-to-peek
   strolls; 0 frames in 10 s windows between strolls, while dozing (only the clock's minute tick) and with motion off; a
@@ -217,8 +247,12 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   Failed writes leave the prior state intact; unreadable saves require explicit recovery and are preserved before starting
   fresh. No writes to Cocoon, library manifests, user preferences or play log come from the companion.
 - Limits: a finite authored collection, not arbitrary generated artwork or statistical part affixes; no combat or
-  test-course simulation. The existing preference/history backup does **not** include the companion save yet.
-  Preserve app data; do not uninstall to change builds.
+  test-course simulation. Preserve app data; do not uninstall to change builds.
+- Backup (format version 2, docs/formats/user.md): export includes the whole save; restore validates it against the parts
+  catalog in the preview, writes it before the history is merged and puts it back if a later step fails. The restored save
+  keeps every session either side already credited (`restoredOver`); a backup without a save keeps the device's companion
+  and marks the merged sessions credited (`creditedElsewhere`). No session earns salvage twice. Save format version 2 adds
+  `lastPetAt`; version 1 saves still open.
 - DMG acceptance for `0.1.0-mecha-lab.2` (dock era): rename/care/salvage/equipment, unowned-part preview restrictions,
   four animated poses and hide/show persistence exercised on device; reader Select → Hangar → Gallery → B → B preserves the
   article position and resumes D-pad scrolling.
@@ -266,13 +300,16 @@ Code map (`app/src/main/java/io/github/esko997/sortie/`):
 - `launch/` intent building and launching with fallbacks; `shell/` the Shizuku user service, screen mover, app switcher and
   device-stats probe; `stats/` device-stats model, formatting and the poller; `ui/` Compose screens (`ManualScreen` renders
   `assets/MANUAL.md`; `DeviceStatsViews.kt` the stats strips and overlay line).
-- `design/` library module (`:design`, still package `io.github.esko997.sortie.ui`): theme colours, `SortieTheme` and the
-  controller-focus building blocks (`focusGlow`, `keyLongPress`, `FocusRow`) shared by the app and feature modules.
+- `design/` library module (`:design`, still package `io.github.esko997.sortie.ui`): theme colours, `SortieTheme`, the
+  controller-focus building blocks (`focusGlow`, `keyLongPress`, `FocusRow`) and `displayLit`/`displayLitFlow` (is this
+  window's screen on, from display callbacks) shared by the app and feature modules.
 - `mecha/` library module (`:mecha`, package `io.github.esko997.sortie.mecha`): the Hangar companion's rules, save,
-  parts catalog and art (`mecha/src/main/assets/mecha/`), roaming (`MechaRoam` geometry/choices, `ui/MechaStage` host
-  and spot modifiers, `ui/MechaDirector` behaviour, `ui/MechaPresence` one mech across displays) and Hangar UI. It knows
-  no Room, app or navigation types: `SortieApp` maps sessions to `PlaySession` for `MechaStore`, `SortieNav` and
-  `CompanionScreen` host stages and declare spots, and the view model reports returns from play.
+  parts catalog and art (`mecha/src/main/assets/mecha/`), roaming (`MechaRoam` geometry/choices), play (`MechaPlay`:
+  touch classification, drops, vignette geometry, `MechaProp`), `ui/MechaStage` host, touch watcher and spot modifiers,
+  `ui/MechaDirector` behaviour, `ui/MechaLife` the shown gate, rigs and idle life, `ui/MechaPresence` one mech across
+  displays, and Hangar UI. It knows no Room, app or navigation types: `SortieApp` maps sessions to `PlaySession` for
+  `MechaStore`, `SortieNav` and `CompanionScreen` host stages and declare spots and props, the view model reports returns
+  from play, and `BackupManager` carries the save through `backupSave`/`restore`/`undoRestore`.
 - `app/src/test/`, `mecha/src/test/` JVM unit tests; `smoke/` emulator smoke tests (`tools/emulator/smoke.sh`,
   docs/HARDENING.md). Device paths, serials and emulator package names belong in the on-card manifests or environment
   variables (`tools/dev.sh` reads `SORTIE_SERIAL`, `SORTIE_TOP_DISPLAY`, `SORTIE_BOTTOM_DISPLAY`), never in code.
