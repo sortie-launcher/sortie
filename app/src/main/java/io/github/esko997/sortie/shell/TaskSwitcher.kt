@@ -85,8 +85,15 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
     fun homeTask(displayId: Int): Int? = visibleHomes[displayId]?.taskId
 
     fun open(overlay: Boolean = false, focusDisplay: Int? = null) {
+        // Home while an overlay picker is open abandons it: undo what startPicking did, as stopPicking would. The overlay
+        // windows are kept on a repeated Home, so a picker-era focusable window would otherwise stay focusable.
+        val abandonedPicker = _state.value.overlay && _state.value.picking != null
         overlayDisplay = if (overlay) focusDisplay else null
         _state.update { it.copy(open = true, overlay = overlay, freed = null, picking = null) }
+        if (abandonedPicker) {
+            textInput?.invoke(null)
+            overlayDisplay?.let { anchor(it) }
+        }
         refresh()
     }
 

@@ -64,7 +64,11 @@ class SwitcherOverlay(private val context: Context) {
     ) {
         val same = windows.keys == displayIds.toSet() &&
             windows.values.all { it.view.isAttachedToWindow && it.controller == (it.displayId == focusDisplay) }
-        if (same) return
+        if (same) {
+            // a kept window must come back as a new one would: only the controller window focusable (no picker-era IME focus)
+            allowTextInput(null)
+            return
+        }
         hide()
         val dm = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
         for (id in displayIds) {
