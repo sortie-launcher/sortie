@@ -63,7 +63,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SwitcherScreen(
-    keys: Flow<Hotkeys.Key> = Hotkeys.events,
+    keys: Flow<Hotkeys.Key> = LocalHotkeys.current.events,
     claimHotkeys: Boolean = true,
     owner: Boolean = true,
     /** Shown at the end of the "Running" title line (the overlay's Perf chip and device stats). */
@@ -90,8 +90,11 @@ fun SwitcherScreen(
     // The focused card's entry is a snapshot from when it took focus; a move may have changed its display since, so act on
     // the entry with the same task id in the current state.
     val current = { focused?.let { f -> state.entries.firstOrNull { it.task.id == f.task.id } } }
+    // a navigation route claims Y / Select in its own window; the overlay passes its own key flow and claims nothing
+    val hotkeys = if (claimHotkeys) LocalHotkeys.current else null
     LaunchedEffect(Unit) {
-        if (claimHotkeys) Hotkeys.handle(setOf(Hotkeys.Key.FAVOURITE, Hotkeys.Key.CONTEXT))
+        val claimed = setOf(Hotkeys.Key.FAVOURITE, Hotkeys.Key.CONTEXT)
+        hotkeys?.handle(claimed)
         try {
             keys.collect { key ->
                 val e = current() ?: return@collect
@@ -102,7 +105,7 @@ fun SwitcherScreen(
                 }
             }
         } finally {
-            if (claimHotkeys) Hotkeys.release(setOf(Hotkeys.Key.FAVOURITE, Hotkeys.Key.CONTEXT))
+            hotkeys?.release(claimed)
         }
     }
     val picking = state.picking
@@ -110,7 +113,13 @@ fun SwitcherScreen(
         val context = LocalContext.current
         val graph = (context.applicationContext as SortieApp).graph
         val scope = rememberCoroutineScope()
-        AppPicker(graph, "Open on the ${if (picking == TaskSwitcher.TOP) "top" else "bottom"} screen", columns = 6, onClose = switcher::stopPicking) { item ->
+        AppPicker(
+            graph,
+            "Open on the ${if (picking == TaskSwitcher.TOP) "top" else "bottom"} screen",
+            columns = 6,
+            onClose = switcher::stopPicking,
+            onBuiltin = { app -> if (openBuiltin(context, app, picking)) switcher.picked(picking) else switcher.stopPicking() }
+        ) { item ->
             scope.launch { if (launchOn(context, graph, item, picking)) switcher.picked(picking) else switcher.stopPicking() }
         }
         return

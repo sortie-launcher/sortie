@@ -101,8 +101,8 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 - **Continue** shows the last game you played and starts first on Custom; it can be moved like any other tile.
 - Hold A on a system, game, app or shortcut and choose *Add to home*. On Custom, hold A → *Move* lifts a tile; the D-pad moves
   it, A drops it, B cancels. Existing pins keep their order. Smart folders, Apps and Continue can be moved but not removed.
-- **Apps** lists installed apps and the shortcuts you have opted in to ("Browse all shortcuts…"). When another app offers to
-  add a shortcut to Sortie, Sortie names the shortcut and the app and asks first: **Add** or **Cancel**.
+- **Apps** includes Sortie's built-in **Magazines** and **Performance**, installed apps and the shortcuts you have opted
+  in to ("Browse all shortcuts…"). When another app offers to add a shortcut, Sortie names it and asks first: **Add** or **Cancel**.
 - **📖**, beside Settings, opens this manual directly. **Library setup** manages systems, folders and emulators; **Magazines**
   opens the offline reading shelf; **Journal** opens your week in games.
 - With no games yet, Home shows **Set up library** (or **Manage library** when systems are set up but no games were found).
@@ -192,6 +192,22 @@ Your companion survives app restarts and in-place updates. Its save is app-priva
 restore**: restoring a backup brings back his name, parts, salvage and bond, and play he was already credited for never
 pays twice.
 
+## Built-in apps
+
+**Apps → Magazines** and **Apps → Performance** open as separate app windows, not pages inside the switcher.
+Home's **Magazines** button opens the same reader. With two screens, choose **Open here** or **Open on the other screen**;
+on one screen it opens directly. The companion's **+** and the switcher's **Open app…** also list both built-ins and already
+know which screen you chose.
+
+- Reopening a built-in brings back its existing window. **X / Other screen** moves only that built-in, keeping the reader's
+  page and position; it does not swap the launcher or move the app on the other screen.
+- **Close** closes only that built-in. **B** closes Performance immediately; in Magazines it first goes back through the
+  article, contents and shelf. An article opened from a game page's **Featured in** returns to that game page with B.
+- The switcher lists **Magazines** and **Performance** separately, so each can be brought forward, moved or closed.
+  Opening a built-in needs no Shizuku; the switcher's task-management features still do.
+- Performance uses the same live readings as the switcher's Perf page and the optional companion Perf mode.
+  Its polling pauses when the window is hidden or its display is asleep. It does not add an always-on overlay.
+
 ## Offline magazines
 
 **Home → Magazines** opens illustrated offline zines: editorials, contents, gameplay and mechanics, history, reception and
@@ -199,7 +215,7 @@ sources. Some Sortie builds include a set of issues; a build without them starts
 issue packs on the card yourself. Nothing is downloaded while reading.
 Pictures in issues belong to their rights holders and are credited in each issue’s sources.
 
-- **A / tap** opens an issue or article. **B** goes article → contents → shelf → Home.
+- **A / tap** opens an issue or article. **B** goes article → contents → shelf → closes the reader.
 - The shelf and an issue's contents show each issue's number large (No. 010). The newest issue comes first; issues
   published the same day are ordered by number.
 - In an article, **D-pad Up/Down** scrolls; **Left/Right** pages; **L1/R1** changes article.
@@ -214,12 +230,12 @@ Pictures in issues belong to their rights holders and are credited in each issue
 - **A** in an article opens its game references or a matching library page, never launches the game. Multiple local copies
   are offered separately; games not found here remain listed.
 - **Featured in** on a game page opens the articles that discuss it. **B** returns to the game page.
-- **Continue reading** and per-article positions survive leaving the reader and restarting Sortie. An X screen swap keeps
-  the open page. Reading memory is app-private, not included in the current preference/history backup.
-- On two-screen devices, the other screen becomes a reading companion while an issue is open. **Sections** jumps to a
-  heading in the current article and highlights your place; **Articles** opens another article in that issue. **Previous**
-  and the folded **Next article** corner turn articles without losing their reading positions. The controls follow an
-  **X** swap and return the controller to the reading screen after a touch. The bottom-left **+** opens an app on the
+- **Continue reading** and per-article positions survive leaving the reader and restarting Sortie. **X / Other screen**
+  keeps the open page while moving just the reader. Reading memory is app-private, not included in the current preference/history backup.
+- On two-screen devices, if the other screen is showing Sortie's companion, it becomes a reading companion while an issue
+  is visible. Opening the reader never replaces another app on that screen. **Sections** jumps to a heading in the current
+  article and highlights your place; **Articles** opens another article in that issue. **Previous** and the folded
+  **Next article** corner turn articles without losing their reading positions. The bottom-left **+** opens an app on the
   companion's screen, so a video can share the device with your article. Closing the picker returns to the same contents
   tab and position. Backing out to the shelf restores the normal companion; single-screen devices keep the controls above.
 - Copy a complete extra issue into **sortie/magazines/**, in a folder named after the issue's id, with **issue.json**, **articles/** and **media/** inside.

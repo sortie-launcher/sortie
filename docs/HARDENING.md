@@ -223,9 +223,12 @@ Covered:
   until the focus or the list has visibly moved: presses sent blind piled up while a slow runner was busy and were then
   handled in one burst past every article, so A toggled the games filter instead. Once the first article is focused,
   one A must open it; the smoke does not retry activation.
+- Built-in apps: Magazines is its own task; X keeps the article while moving only that reader, then Back climbs contents
+  and shelf before closing it. Performance opens cold on the second display, reopens the same task, moves to the primary
+  display and closes with Back; navigation's task survives. These own-window moves need no Shizuku.
 - Any Sortie crash or ANR in the log fails the run, even one the tests recovered from.
 
-Not covered: everything that needs Shizuku (the switcher overlay, moving, swapping and closing apps, the AYN panel guard).
+Not covered: everything that needs Shizuku (the switcher overlay, moving, swapping and closing tasks through it, the AYN panel guard).
 Shizuku is a third-party APK whose server must be started and Sortie authorised in Shizuku's own dialog for the current
 installation (an Android permission grant is not enough); there is no headless path, so those stay hardware checks
 (`ui-stress.py`). Also not covered: launching games, the Hangar, touch on the companion, vendor firmware.

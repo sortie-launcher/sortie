@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Magazines and Performance are now independent Sortie built-in apps, available from Apps and the app pickers.
+  On two screens choose where to open them; X / Other screen moves only that window, preserving the reader's place.
+  Each has its own switcher entry and Close action. Controller keys stay with the receiving window; opening a built-in
+  does not end the running game's session or raise the companion over it. Hidden Performance windows stop sampling.
 - Hosted builds now bundle zines `main` as resolved once per build, rather than a manually advanced content commit.
   Tests, APK assembly and signing use the same commit and catalog digest, recorded in release notes. New issues reach
   the next app build automatically; local builds remain offline and opt-in. The local baseline now includes issue 010.

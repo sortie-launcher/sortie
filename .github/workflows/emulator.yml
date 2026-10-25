@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          watched='^app/src/main/java/.*/(shell|ui|launch|stats)/|/(MainActivity|CompanionActivity|SecondaryHomeActivity|AnchorActivity)\.kt$'
+          watched='^app/src/main/java/.*/(shell|ui|launch|stats)/|/(MainActivity|CompanionActivity|SecondaryHomeActivity|AnchorActivity|BuiltinActivity|BuiltinApps|StateHandoff)\.kt$'
           watched+='|^app/src/main/AndroidManifest\.xml$|^mecha/src/main/|^design/src/main/|^app/build\.gradle\.kts$'
           watched+='|^gradle/libs\.versions\.toml$|^smoke/|^tools/emulator/|^\.github/workflows/emulator\.yml$'
           run=false

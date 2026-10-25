@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sortie's Magazines: an open issue, a picture on the left page and a column of text on the right. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:strokeColor="#F2B134" android:strokeWidth="2.5" android:strokeLineJoin="round"
+        android:pathData="M5,10 L22,13 L22,40 L5,37 Z M26,13 L43,10 L43,37 L26,40 Z" />
+    <path android:fillColor="#F2B134" android:fillAlpha="0.55"
+        android:pathData="M9,16 L18,17.6 L18,26 L9,24.4 Z" />
+    <path android:strokeColor="#F2B134" android:strokeWidth="2" android:strokeLineCap="round"
+        android:pathData="M30,19 L39,17.4 M30,25 L39,23.4 M30,31 L36,29.9 M9,30 L18,31.6" />
+</vector>

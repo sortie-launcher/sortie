@@ -2,6 +2,9 @@ package io.github.esko997.sortie.ui
 
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import io.github.esko997.sortie.BuiltinApp
+import io.github.esko997.sortie.data.magazine.ReaderLocation
+import io.github.esko997.sortie.testing.BuiltinActivityRule
 import io.github.esko997.sortie.testing.Controller
 import io.github.esko997.sortie.testing.Controller.Companion.A
 import io.github.esko997.sortie.testing.Controller.Companion.B
@@ -12,7 +15,9 @@ import io.github.esko997.sortie.testing.SortieActivityRule
 import io.github.esko997.sortie.testing.SortieCardRule
 import io.github.esko997.sortie.testing.THOR_TOP
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -22,9 +27,10 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The magazine reader on the Thor's top screen, read with the controller: the fixture's long article ("Pictures of Every
- * Shape": a lead image, sixteen numbered paragraphs, a portrait and a wide figure). Where the reader is is measured as which
- * numbered paragraph is the first one fully on screen, and at what height.
+ * The Magazines app on the Thor's top screen, read with the controller: the fixture's long article ("Pictures of Every
+ * Shape": a lead image, sixteen numbered paragraphs, a portrait and a wide figure), opened the way a game page's "Featured
+ * in" opens it, with the navigation running underneath. Where the reader is is measured as which numbered paragraph is the
+ * first one fully on screen, and at what height.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -39,23 +45,26 @@ class MagazineReaderTest {
     @get:Rule(order = 2)
     val sortie = SortieActivityRule()
 
+    @get:Rule(order = 3)
+    val reader = BuiltinActivityRule(BuiltinApp.MAGAZINES)
+
     private val pad = Controller()
 
     private fun shown(text: String) = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
 
     private fun await(text: String) = compose.waitUntil(10_000) { shown(text) }
 
-    /** Opens the article the way a game page's "Featured in" does, and waits for its text. */
+    /** Opens the article the way a game page's "Featured in" does, once the navigation has indexed the card, and waits for it. */
     private fun openArticle() {
         await("6 games")
-        Selection.openRoute.tryEmit("magazines/fixture-special/long-read")
+        reader.open(ReaderLocation("fixture-special", "long-read"))
         await("Pictures of Every Shape")
     }
 
     /** The first numbered paragraph whose top is on screen and its top edge in px; paragraph 0 while none is. */
     private fun position(): Pair<Int, Float> {
         compose.waitForIdle()
-        val height = sortie.activity.window.decorView.height
+        val height = reader.activity.window.decorView.height
         return (1..16).firstNotNullOfOrNull { n ->
             compose.onAllNodesWithText("Paragraph $n.", substring = true).fetchSemanticsNodes()
                 .firstOrNull()?.positionInRoot?.y?.takeIf { it >= 0f && it < height }?.let { n to it }
@@ -77,7 +86,7 @@ class MagazineReaderTest {
         openArticle()
         scrollTo(6)
         val before = position()
-        sortie.recreate()
+        reader.recreate()
         await("Paragraph ${before.first}.")
         assertEquals("first paragraph on screen and its top (px) after recreation", before, position())
     }
@@ -114,5 +123,25 @@ class MagazineReaderTest {
         assertEquals("article position after the Hangar", before, position())
         pad.press(DOWN)
         assertNotEquals("the D-pad scrolls the article again", before, position())
+    }
+
+    @Test
+    fun bFromAnArticleOpenedFromAGamePageClosesOnlyTheReader() {
+        openArticle()
+        pad.press(DOWN) // the controller in use, as on the device
+        pad.press(B)
+        assertTrue("B from the requested article closes the reader", reader.activity.isFinishing)
+        assertFalse("the navigation underneath stays", sortie.activity.isFinishing)
+    }
+
+    @Test
+    fun aStoppedReaderLeavesTheOtherScreenAndTakesItBackWhenItReturns() {
+        openArticle()
+        compose.waitUntil(5_000) { Selection.magazine.value?.articleId == "long-read" }
+        // a game (or another app) comes to the front over the reader
+        reader.controller.pause().stop()
+        assertNull("a stopped reader's contents never stay on the companion", Selection.magazine.value)
+        reader.controller.restart().resume()
+        compose.waitUntil(5_000) { Selection.magazine.value?.articleId == "long-read" }
     }
 }

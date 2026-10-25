@@ -97,6 +97,29 @@ fun OverlayPerfPage(frame: PerfFrame?, controller: Boolean, onApps: () -> Unit) 
         PerfPage(frame, Modifier.fillMaxSize(), PaddingValues(16.dp), list, title)
         return
     }
+    ControllerPerfPage(frame, list, title, "↑↓" to "scroll", "B" to "apps", "R1" to "apps")
+}
+
+/**
+ * The Performance app (Apps, the pickers): the same page in its own window on either screen, polled only while that window
+ * is in front on a lit display ([livePerfFrame]). The D-pad scrolls it and B closes it; the window's hint bar offers moving it
+ * to the other screen and closing it by touch ([LocalWindowActions]).
+ */
+@Composable
+fun PerformanceApp() {
+    val graph = (LocalContext.current.applicationContext as SortieApp).graph
+    ControllerPerfPage(
+        livePerfFrame(graph),
+        rememberLazyListState(),
+        { Text("Performance", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp)) },
+        "↑↓" to "scroll",
+        "B" to "close"
+    )
+}
+
+/** [PerfPage] holding the controller focus, scrolled by the D-pad, over a hint bar of [hints]. */
+@Composable
+private fun ControllerPerfPage(frame: PerfFrame?, list: LazyListState, title: @Composable () -> Unit, vararg hints: Pair<String, String>) {
     val requester = remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -133,7 +156,7 @@ fun OverlayPerfPage(frame: PerfFrame?, controller: Boolean, onApps: () -> Unit) 
             list,
             title
         )
-        HintBar("↑↓" to "scroll", "B" to "apps", "R1" to "apps")
+        HintBar(*hints)
     }
 }
 

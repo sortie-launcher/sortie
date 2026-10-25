@@ -186,47 +186,142 @@ class DualScreenSmokeTest {
         }
     }
 
-    /** Shelf → the issue it focuses → that issue's first article, with the controller only (D-pad and A). */
+    /** Shelf → the issue it focuses → that issue's first article, with the controller only (D-pad and A), in the Magazines app. */
     @Test
     fun magazineReaderOpensAnArticle() {
+        assumeMagazines()
+        try {
+            openBuiltin("magazines", PRIMARY)
+            openFirstArticle(PRIMARY)
+            assertEquals("the reader is its own task on the primary display", PRIMARY, tasks().single { it.component == MAGAZINES }.display)
+            assertEquals("navigation is still one task", 1, mainTasks().size)
+        } finally {
+            removeTasks(MAGAZINES)
+        }
+    }
+
+    /**
+     * X in the reader moves the Magazines app, not Sortie's navigation: the same article shows on the other screen, the
+     * navigation stays where it was, and B then walks article → contents → shelf → closes the reader's task only.
+     */
+    @Test
+    fun magazinesMoveToTheOtherScreenKeepingTheArticle() {
+        assumeMagazines()
+        try {
+            openBuiltin("magazines", PRIMARY)
+            val title = openFirstArticle(PRIMARY)
+            pressX()
+            await("the Magazines task alone, in front on display $second") {
+                tasks().filter { it.component == MAGAZINES }.let { it.size == 1 && it[0].display == second && it[0].visible }
+            }
+            awaitText("reader menu", "the article, still open after the move", second)
+            title?.let { t -> await("the same article (\"$t\") on display $second") { device.hasObject(By.pkg(PKG).textContains(t).displayId(second)) } }
+            awaitNavigationOn(PRIMARY)
+            await("the controller following the reader to display $second") { focusedDisplay() == second }
+
+            shell("input -d $second keyevent KEYCODE_BACK")
+            awaitText("shelf", "the issue's contents", second)
+            shell("input -d $second keyevent KEYCODE_BACK")
+            awaitText("scrapbook", "the magazine shelf", second)
+            shell("input -d $second keyevent KEYCODE_BACK")
+            await("the reader's task closed") { tasks().none { it.component == MAGAZINES } }
+            await("the companion back on display $second") { tasks().any { it.component == SECONDARY_HOME && it.display == second && it.visible } }
+            awaitNavigationOn(PRIMARY)
+        } finally {
+            removeTasks(MAGAZINES)
+        }
+    }
+
+    /**
+     * The Performance app opens cold on the second screen as an app task of its own, a second open resumes that task, an
+     * open on the primary display moves it there, and B closes it: the navigation task is the same one throughout.
+     */
+    @Test
+    fun performanceOpensOnEitherScreenAsItsOwnTask() {
+        val navigation = mainTasks().single()
+        try {
+            openBuiltin("performance", second)
+            await("Performance in front on display $second") { tasks().any { it.component == PERFORMANCE && it.display == second && it.visible } }
+            await("the controller on display $second") { focusedDisplay() == second }
+            val task = tasks().single { it.component == PERFORMANCE }.id
+
+            openBuiltin("performance", second)
+            awaitSteady("one Performance task, the same one", 1_000) { tasks().filter { it.component == PERFORMANCE }.map { it.id } == listOf(task) }
+
+            openBuiltin("performance", PRIMARY)
+            await("Performance alone, in front on the primary display") {
+                tasks().filter { it.component == PERFORMANCE }.let { it.size == 1 && it[0].display == PRIMARY && it[0].visible }
+            }
+            await("the companion back on display $second") { tasks().any { it.component == SECONDARY_HOME && it.display == second && it.visible } }
+            await("the controller on the primary display") { focusedDisplay() == PRIMARY }
+
+            shell("input -d $PRIMARY keyevent KEYCODE_BACK")
+            await("the Performance task closed") { tasks().none { it.component == PERFORMANCE } }
+            awaitNavigationOn(PRIMARY)
+            assertEquals("the navigation task must survive every step: ${describe()}", navigation.id, mainTasks().single().id)
+        } finally {
+            removeTasks(PERFORMANCE)
+        }
+    }
+
+    private fun assumeMagazines() {
         val bundled = instrumentation.context.createPackageContext(PKG, 0).assets.list("magazines").orEmpty()
         assumeTrue("built without -PsortieMagazinesDir: no magazines to read", "catalog.json" in bundled)
-        shell("am start -n $MAIN --es open magazines") // debug builds' route extra (MainActivity.handleIntent)
-        awaitText("scrapbook", "the magazine shelf") // shelf hints: A open · Select scrapbook · B back
+    }
+
+    /** Debug builds' adb route to a built-in app (MainActivity.handleIntent), opened as the app's entry points do. */
+    private fun openBuiltin(name: String, display: Int) {
+        shell("am start -n $MAIN --es builtin $name --ei display $display")
+    }
+
+    private fun removeTasks(component: String) {
+        tasks().filter { it.component == component }.forEach { shell("am stack remove ${it.id}") }
+    }
+
+    /** Walks the reader on [display] from its shelf to the first article of the issue the shelf focuses; returns its title if found. */
+    private fun openFirstArticle(display: Int): String? {
+        awaitText("scrapbook", "the magazine shelf", display) // shelf hints: A open · Select scrapbook · B close
         shell("input keyevent KEYCODE_BUTTON_A")
-        awaitText("shelf", "an issue's contents") // contents hints: A open · B shelf
+        awaitText("shelf", "an issue's contents", display) // contents hints: A open · B shelf
         // Contents open on the masthead, then the editor's note: passages the D-pad scrolls through 72 dp at a time and that
         // open nothing. Down walks to the first article (numbered "01"), one press at a time: each press must visibly move the
         // focus or scroll before the next is sent. Blind presses queue up while the app is busy (a slow runner) and are then
         // handled in one burst that runs straight past the articles, so A landed on the games filter.
         var presses = 0
-        while (!firstArticleFocused()) {
-            assertTrue("no article after $presses presses; it shows ${texts(PRIMARY)}", presses++ < 40)
-            val before = contentsState()
+        while (!firstArticleFocused(display)) {
+            assertTrue("no article after $presses presses; it shows ${texts(display)}", presses++ < 40)
+            val before = contentsState(display)
             shell("input keyevent KEYCODE_DPAD_DOWN")
-            await("Down $presses to move the focus or scroll from $before", timeoutMs = 5_000, detail = { "now ${contentsState()}" }) {
-                contentsState().let { it != null && it != before }
+            await("Down $presses to move the focus or scroll from $before", timeoutMs = 5_000, detail = { "now ${contentsState(display)}" }) {
+                contentsState(display).let { it != null && it != before }
             }
+        }
+        val title = try {
+            device.findObject(firstArticle(display))?.findObjects(By.text(ANY_TEXT))?.mapNotNull { it.text }?.firstOrNull { it != "01" && it.length > 3 }
+        } catch (e: StaleObjectException) {
+            null
         }
         // One A must open the focused article; retrying would hide a real activation regression.
         shell("input keyevent KEYCODE_BUTTON_A")
-        awaitText("reader menu", "an article")
-        assertEquals(PRIMARY, mainTasks().single().display)
+        awaitText("reader menu", "an article", display)
+        return title
     }
 
     /**
      * What a Down on the contents can change: the focused entry, and where every text is (a scroll inside a passage taller
      * than the screen moves its lines but not its clipped bounds). Null only when a node went stale while being read.
      */
-    private fun contentsState(): String? = try {
-        val focused = device.findObject(By.pkg(PKG).displayId(PRIMARY).focused(true))?.visibleBounds?.toShortString() ?: "none"
-        val lines = device.findObjects(By.pkg(PKG).displayId(PRIMARY).text(ANY_TEXT)).map { "${it.text.orEmpty().take(12)}@${it.visibleBounds.top}" }
+    private fun contentsState(display: Int): String? = try {
+        val focused = device.findObject(By.pkg(PKG).displayId(display).focused(true))?.visibleBounds?.toShortString() ?: "none"
+        val lines = device.findObjects(By.pkg(PKG).displayId(display).text(ANY_TEXT)).map { "${it.text.orEmpty().take(12)}@${it.visibleBounds.top}" }
         "focus=$focused $lines"
     } catch (e: StaleObjectException) {
         null
     }
 
-    private fun firstArticleFocused(): Boolean = device.hasObject(By.pkg(PKG).displayId(PRIMARY).focused(true).clickable(true).hasDescendant(By.text("01")))
+    private fun firstArticle(display: Int): BySelector = By.pkg(PKG).displayId(display).focused(true).clickable(true).hasDescendant(By.text("01"))
+
+    private fun firstArticleFocused(display: Int): Boolean = device.hasObject(firstArticle(display))
 
     // ---------- helpers ----------
 
@@ -250,9 +345,9 @@ class DualScreenSmokeTest {
 
     private fun homeHeader(display: Int): BySelector = By.pkg(PKG).text(GAME_COUNT).displayId(display)
 
-    private fun awaitText(text: String, what: String) =
-        await("$what (\"$text\") on the primary display", detail = { "it shows ${texts(PRIMARY)}; ${describe()}" }) {
-            device.hasObject(By.pkg(PKG).text(text).displayId(PRIMARY))
+    private fun awaitText(text: String, what: String, display: Int = PRIMARY) =
+        await("$what (\"$text\") on display $display", detail = { "it shows ${texts(display)}; ${describe()}" }) {
+            device.hasObject(By.pkg(PKG).text(text).displayId(display))
         }
 
     /** Sortie's texts on [display], for failure messages. */
@@ -343,6 +438,8 @@ class DualScreenSmokeTest {
         const val SECONDARY_HOME = "$PKG/.SecondaryHomeActivity"
         const val COMPANION = "$PKG/.CompanionActivity"
         const val ANCHOR = "$PKG/.AnchorActivity"
+        const val MAGAZINES = "$PKG/.MagazinesActivity"
+        const val PERFORMANCE = "$PKG/.PerformanceActivity"
         const val SETTINGS = "com.android.settings"
         const val GAME_COUNT = "3 games"
         const val SETTLE_MS = 2_000L

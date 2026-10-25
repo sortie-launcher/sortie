@@ -51,7 +51,8 @@ tools/release.sh      # signed release APK + SHA-256 in dist/, using the key fro
 Plain `./gradlew ktlintCheck testDebugUnitTest assembleDebug` works too. The helpers use `java` from `PATH`, falling
 back to a distrobox container named `ubuntu` only when there is none. `tools/build.sh` and `tools/release.sh` pass extra
 arguments to Gradle; `tools/dev.sh` reads `SORTIE_SERIAL`, `SORTIE_TOP_DISPLAY` and `SORTIE_BOTTOM_DISPLAY`. Debug
-builds accept `am start … --es open <route>` and `--es launch '<system>/<file>'`. Releases, signing and versions:
+builds accept `am start … --es open <route>`, `--es launch '<system>/<file>'`, and `--es builtin magazines|performance --ei display N`.
+These debug hooks are disabled in release builds. Releases, signing and versions:
 [docs/RELEASE.md](docs/RELEASE.md).
 
 **Magazines are opt-in locally.** Local builds contain no issues and never download any; hosted CI resolves

@@ -39,14 +39,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import io.github.esko997.sortie.BuiltinApp
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.apps.ShortcutCreator
 
 /**
- * Installed apps plus the launcher shortcuts the user opted in to (`user.shortcuts`): ones pinned via ShortcutPinActivity or
- * pulled here with "Add shortcut from…" (an app's `ACTION_CREATE_SHORTCUT` activity) are opted in automatically; "Browse all
- * shortcuts…" lists every pinned, dynamic and manifest shortcut with a toggle. Select switches list↔grid (`user.browseLayout`),
- * hold A opens Favourite · Add to home.
+ * Sortie's own apps (Magazines, Performance: opened here, or on either screen of a two-screen device), then installed apps plus
+ * the launcher shortcuts the user opted in to (`user.shortcuts`): ones pinned via ShortcutPinActivity or pulled here with "Add
+ * shortcut from…" (an app's `ACTION_CREATE_SHORTCUT` activity) are opted in automatically; "Browse all shortcuts…" lists every
+ * pinned, dynamic and manifest shortcut with a toggle. Select switches list↔grid (`user.browseLayout`), hold A opens
+ * Favourite · Add to home.
  */
 @Composable
 fun AppsScreen(vm: SortieViewModel) {
@@ -63,6 +65,7 @@ fun AppsScreen(vm: SortieViewModel) {
     var sheet by remember { mutableStateOf<LibraryItem?>(null) }
     val grid = user.browseLayout == "grid"
     BrowseLayoutHotkey(vm, grid)
+    val openBuiltinApp = rememberBuiltinOpener()
     val creators by produceState(emptyList<ShortcutCreator>(), showCreators) { if (showCreators) value = vm.shortcutCreators() }
     val createShortcut = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
         if (r.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
@@ -76,6 +79,8 @@ fun AppsScreen(vm: SortieViewModel) {
     // every grid item's key, in order, for restoring the focus and position by key
     val gridKeys = buildList<Any> {
         add("title")
+        add("h-sortie")
+        BuiltinApp.entries.forEach { add(builtinKey(it)) }
         add("add-shortcut")
         if (showCreators) creators.forEach { add("create:" + it.component.flattenToShortString()) }
         add("browse-shortcuts")
@@ -101,6 +106,16 @@ fun AppsScreen(vm: SortieViewModel) {
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             fullItem("title") { Text("Apps · ${apps.size}", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp)) }
+            fullItem("h-sortie") { SectionTitle("Sortie") }
+            items(BuiltinApp.entries, key = ::builtinKey) { app ->
+                RememberedItem(memory, builtinKey(app)) {
+                    if (grid) {
+                        SquareTile(app.label, onClick = { openBuiltinApp(app) }, icon = { app.icon(context) })
+                    } else {
+                        LauncherRow(app.label, app.summary, favourite = false, onClick = { openBuiltinApp(app) }, tall = true) { app.icon(context) }
+                    }
+                }
+            }
             fullItem("add-shortcut") {
                 RememberedItem(memory, "add-shortcut") { Expander("Add shortcut from…", showCreators) { showCreators = !showCreators } }
             }
@@ -181,6 +196,8 @@ fun AppsScreen(vm: SortieViewModel) {
     }
     sheet?.let { ItemSheet(it, vm) { sheet = null } }
 }
+
+private fun builtinKey(app: BuiltinApp) = "builtin:${app.name}"
 
 @Composable
 private fun Expander(label: String, open: Boolean, onClick: () -> Unit) {

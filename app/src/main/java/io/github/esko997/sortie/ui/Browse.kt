@@ -37,11 +37,12 @@ import io.github.esko997.sortie.data.manifest.GameAnnotation
 @Composable
 fun BrowseLayoutHotkey(vm: SortieViewModel, grid: Boolean) {
     val current by rememberUpdatedState(grid)
-    DisposableEffect(Unit) {
-        Hotkeys.handle(setOf(Hotkeys.Key.CONTEXT))
-        onDispose { Hotkeys.release(setOf(Hotkeys.Key.CONTEXT)) }
+    val hotkeys = LocalHotkeys.current
+    DisposableEffect(hotkeys) {
+        hotkeys.handle(setOf(Hotkeys.Key.CONTEXT))
+        onDispose { hotkeys.release(setOf(Hotkeys.Key.CONTEXT)) }
     }
-    LaunchedEffect(Unit) { Hotkeys.events.collect { if (it == Hotkeys.Key.CONTEXT) vm.setBrowseLayout(if (current) "list" else "grid") } }
+    LaunchedEffect(hotkeys) { hotkeys.events.collect { if (it == Hotkeys.Key.CONTEXT) vm.setBrowseLayout(if (current) "list" else "grid") } }
 }
 
 /**

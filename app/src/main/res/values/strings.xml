@@ -1,5 +1,8 @@
 <resources>
     <string name="app_name">Sortie</string>
+    <!-- Built-in app task names: keep equal to BuiltinApp.label (BuiltinActivityTest checks). -->
+    <string name="builtin_magazines">Magazines</string>
+    <string name="builtin_performance">Performance</string>
     <string name="radial_keyboard_name">Sortie radial keyboard</string>
     <string name="radial_keyboard_subtype">English (radial)</string>
 </resources>

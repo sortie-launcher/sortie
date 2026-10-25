@@ -17,12 +17,14 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,6 +40,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.esko997.sortie.data.magazine.MagazineIssue
 import io.github.esko997.sortie.data.magazine.ReaderSection
 
@@ -59,6 +64,11 @@ internal sealed interface MagazineAction {
     data class Jump(override val owner: Any, override val issueId: String, val articleId: String, val itemIndex: Int) : MagazineAction
 }
 
+/**
+ * Shows [owner]'s reader beside it on the other screen while its window is started ([Selection.publishMagazine]). Lifecycle
+ * events, not recomposition, publish and withdraw: a stopped window draws no frames, so a composition-only side effect would
+ * leave a hidden reader on the companion. The owning MagazineScreen withdraws when it leaves composition.
+ */
 @Composable
 internal fun PublishMagazineCompanion(
     owner: Any,
@@ -70,7 +80,21 @@ internal fun PublishMagazineCompanion(
     val panel = remember(owner, issue, articleId, sections, activeSection) {
         MagazineCompanionState(owner, issue, articleId, sections, activeSection)
     }
-    SideEffect { Selection.magazine.value = panel }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val latest by rememberUpdatedState(panel)
+    DisposableEffect(owner, lifecycle) {
+        // added while started, the observer receives ON_START at once
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> Selection.publishMagazine(latest)
+                Lifecycle.Event.ON_STOP -> Selection.withdrawMagazine(owner)
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    SideEffect { if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) Selection.publishMagazine(panel) }
 }
 
 /**

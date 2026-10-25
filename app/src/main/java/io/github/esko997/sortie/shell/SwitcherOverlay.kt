@@ -11,6 +11,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -21,6 +22,7 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import io.github.esko997.sortie.ui.Hotkeys
+import io.github.esko997.sortie.ui.LocalHotkeys
 
 /**
  * The app switcher as overlay windows (`TYPE_APPLICATION_OVERLAY`, one per display) instead of activities, so the running
@@ -96,7 +98,12 @@ class SwitcherOverlay(private val context: Context) {
                 }
                 root.setViewTreeLifecycleOwner(owner)
                 root.setViewTreeSavedStateRegistryOwner(owner)
-                val compose = ComposeView(wc).apply { setContent { content(id, controller) } }
+                // Keys reach the content only through onHotkey; a window-own dispatcher nobody feeds keeps any screen composed
+                // here from claiming or hearing the hotkeys of an activity underneath.
+                val hotkeys = Hotkeys()
+                val compose = ComposeView(wc).apply {
+                    setContent { CompositionLocalProvider(LocalHotkeys provides hotkeys) { content(id, controller) } }
+                }
                 root.addView(compose, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
                 val params = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT,

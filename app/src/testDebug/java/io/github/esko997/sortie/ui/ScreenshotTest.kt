@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.ui
 
+import android.view.View
 import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -10,8 +11,12 @@ import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RoborazziOptions
+import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.esko997.sortie.BuiltinApp
 import io.github.esko997.sortie.SortieApp
+import io.github.esko997.sortie.data.magazine.ReaderLocation
+import io.github.esko997.sortie.testing.BuiltinActivityRule
 import io.github.esko997.sortie.testing.Controller
 import io.github.esko997.sortie.testing.Controller.Companion.DOWN
 import io.github.esko997.sortie.testing.DMG
@@ -29,10 +34,10 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Golden screenshots of the screens whose layout depends most on the display: Home's custom-sorted grid, the magazine shelf,
- * an article at its portrait and at its wide figure, and the Hangar's Workshop. Each runs on the Thor's two screens, the DMG
- * and the Retroid Pocket Nova (subclasses below). Goldens live in app/src/testDebug/screenshots/<device>/; docs/HARDENING.md
- * says how to re-record them. The whole screen is captured (every window, so dialogs too) once data and pictures have arrived.
+ * Golden screenshots of the screens whose layout depends most on the display: Home's custom-sorted grid, the Magazines app's
+ * shelf, an article at its portrait and at its wide figure, and the Hangar's Workshop. Each runs on the Thor's two screens, the
+ * DMG and the Retroid Pocket Nova (subclasses below). Goldens live in app/src/testDebug/screenshots/<device>/; docs/HARDENING.md
+ * Launcher captures include dialogs. Reader captures target its separate activity window, not the launcher behind it.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -46,6 +51,9 @@ abstract class ScreenshotTest(private val device: String) {
     @get:Rule(order = 2)
     val sortie = SortieActivityRule()
 
+    @get:Rule(order = 3)
+    val magazines = BuiltinActivityRule(BuiltinApp.MAGAZINES)
+
     private val pad = Controller()
 
     private fun shown(text: String) = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
@@ -54,16 +62,17 @@ abstract class ScreenshotTest(private val device: String) {
 
     private fun awaitHome() = await("6 games", "Shooters")
 
+    /** The article in the Magazines app, opened as a game page's "Featured in" opens it, over the indexed navigation. */
     private fun openArticle() {
         awaitHome()
-        Selection.openRoute.tryEmit("magazines/fixture-special/long-read")
+        magazines.open(ReaderLocation("fixture-special", "long-read"))
         await("Pictures of Every Shape")
     }
 
     /** Scrolls the article with the D-pad until [text] (a figure caption) is fully on screen. */
     private fun scrollToCaption(text: String) {
         pad.press(DOWN) // leaves touch mode; the reader holds the focus
-        val height = sortie.activity.window.decorView.height
+        val height = magazines.activity.window.decorView.height
         repeat(80) {
             compose.waitForIdle()
             val node = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().firstOrNull()
@@ -74,7 +83,7 @@ abstract class ScreenshotTest(private val device: String) {
     }
 
     @OptIn(ExperimentalRoborazziApi::class)
-    private fun capture(name: String) {
+    private fun capture(name: String, window: View? = null) {
         val mechLoading = { compose.onAllNodesWithContentDescription("Loading mech").fetchSemanticsNodes().isNotEmpty() }
         try {
             compose.waitUntil(10_000) { ImageLoads.idle && !mechLoading() }
@@ -84,7 +93,7 @@ abstract class ScreenshotTest(private val device: String) {
         // let time-bound effects settle: the focus glow's pulse (3 s) and the background's colour blend (2.5 s)
         compose.mainClock.advanceTimeBy(3_500)
         compose.waitForIdle()
-        captureScreenRoboImage("$device/$name.png", OPTIONS)
+        if (window == null) captureScreenRoboImage("$device/$name.png", OPTIONS) else window.captureRoboImage("$device/$name.png", OPTIONS)
     }
 
     @Test
@@ -120,23 +129,23 @@ abstract class ScreenshotTest(private val device: String) {
     @Test
     fun magazineShelf() {
         awaitHome()
-        Selection.openRoute.tryEmit("magazines")
+        magazines.open()
         await("The Long Read")
-        capture("magazine-shelf")
+        capture("magazine-shelf", magazines.activity.window.decorView)
     }
 
     @Test
     fun articlePortraitFigure() {
         openArticle()
         scrollToCaption("A tall portrait plate")
-        capture("article-portrait-figure")
+        capture("article-portrait-figure", magazines.activity.window.decorView)
     }
 
     @Test
     fun articleWideFigure() {
         openArticle()
         scrollToCaption("A wide panorama")
-        capture("article-wide-figure")
+        capture("article-wide-figure", magazines.activity.window.decorView)
     }
 
     @Test

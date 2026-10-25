@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.ui
 
 import android.content.Context
+import android.graphics.drawable.Drawable
 import android.widget.ImageView
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,20 +27,31 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import io.github.esko997.sortie.BuiltinApp
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.launch.IntentBuilder
 
 /**
  * Installed apps and opted-in shortcuts as a filterable icon grid, for opening something on a chosen display: the companion
- * '+' launcher (touch), and the switcher on both screens. The filter field is touch/IME; the grid takes the D-pad.
+ * '+' launcher (touch), and the switcher on both screens. With [onBuiltin] Sortie's own apps (Magazines, Performance) lead
+ * the grid. The filter field is touch/IME; the grid takes the D-pad.
  */
 @Composable
-fun AppPicker(graph: SortieApp.Graph, title: String, columns: Int = 4, onClose: () -> Unit, onPick: (LibraryItem) -> Unit) {
+fun AppPicker(
+    graph: SortieApp.Graph,
+    title: String,
+    columns: Int = 4,
+    onClose: () -> Unit,
+    onBuiltin: ((BuiltinApp) -> Unit)? = null,
+    onPick: (LibraryItem) -> Unit
+) {
+    val context = LocalContext.current
     val apps by graph.apps.apps.collectAsState()
     val allShortcuts by graph.shortcuts.shortcuts.collectAsState()
     val user by graph.user.data.collectAsState()
@@ -49,6 +61,10 @@ fun AppPicker(graph: SortieApp.Graph, title: String, columns: Int = 4, onClose: 
         val all = allShortcuts.filter { it.id in user.shortcuts }.map { LibraryItem.Shortcut(it) } + apps.map { LibraryItem.App(it) }
         val q = query.trim()
         if (q.isEmpty()) all else all.filter { it.label.contains(q, ignoreCase = true) }
+    }
+    val offersBuiltins = onBuiltin != null
+    val builtins = remember(offersBuiltins, query) {
+        if (offersBuiltins) BuiltinApp.entries.filter { it.label.contains(query.trim(), ignoreCase = true) } else emptyList()
     }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -62,7 +78,7 @@ fun AppPicker(graph: SortieApp.Graph, title: String, columns: Int = 4, onClose: 
             placeholder = { Text("Search apps") },
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
         )
-        if (entries.isEmpty()) Text("No apps", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (entries.isEmpty() && builtins.isEmpty()) Text("No apps", color = MaterialTheme.colorScheme.onSurfaceVariant)
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -70,21 +86,29 @@ fun AppPicker(graph: SortieApp.Graph, title: String, columns: Int = 4, onClose: 
             contentPadding = PaddingValues(vertical = 4.dp),
             modifier = Modifier.weight(1f)
         ) {
-            items(entries, key = { it.id }) { item ->
-                FocusRow(onClick = { onPick(item) }) {
-                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(56.dp)) { it.setImageDrawable(iconOf(graph, item)) }
-                        Text(
-                            item.label,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 6.dp)
-                        )
-                    }
-                }
+            items(builtins, key = { "builtin:${it.name}" }) { app ->
+                PickerCell(app.label, { app.icon(context) }) { onBuiltin?.invoke(app) }
             }
+            items(entries, key = { it.id }) { item ->
+                PickerCell(item.label, { iconOf(graph, item) }) { onPick(item) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PickerCell(label: String, icon: () -> Drawable?, onClick: () -> Unit) {
+    FocusRow(onClick = onClick) {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(56.dp)) { it.setImageDrawable(icon()) }
+            Text(
+                label,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 6.dp)
+            )
         }
     }
 }

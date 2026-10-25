@@ -140,8 +140,9 @@ fun JournalScreen(graph: SortieApp.Graph, onGame: (String) -> Unit) {
     }
 
     // weeks are unbounded both ways, like the editor's dates, so a note dated ahead stays reachable
-    LaunchedEffect(Unit) {
-        Hotkeys.events.collect { key ->
+    val hotkeys = LocalHotkeys.current
+    LaunchedEffect(hotkeys) {
+        hotkeys.events.collect { key ->
             if (editing != null || viewing != null) return@collect
             when (key) {
                 Hotkeys.Key.PREV_FOLDER -> weekEpochDay -= 7

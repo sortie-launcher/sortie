@@ -6,7 +6,6 @@ import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.os.Environment
-import android.os.SystemClock
 import android.view.Display
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -17,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,6 +29,7 @@ import androidx.navigation.compose.rememberNavController
 import io.github.esko997.sortie.shell.TaskSwitcher
 import io.github.esko997.sortie.ui.AmbientBackground
 import io.github.esko997.sortie.ui.Hotkeys
+import io.github.esko997.sortie.ui.LocalHotkeys
 import io.github.esko997.sortie.ui.Selection
 import io.github.esko997.sortie.ui.SortieNav
 import io.github.esko997.sortie.ui.SortieTheme
@@ -40,10 +41,13 @@ class MainActivity : ComponentActivity() {
     private var companionShown = false
     private var nav: NavHostController? = null
 
+    /** This window's hotkeys: a built-in app visible on the other screen has its own (see [Hotkeys]). */
+    private val hotkeys = Hotkeys()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Started by an X swap: carry on with the state the instance on the other screen saved (back stack, screen state,
         // view-model state) as if this were a recreation.
-        val state = savedInstanceState ?: takeHandoff(intent)
+        val state = savedInstanceState ?: handoff.take(intent)
         super.onCreate(state)
         if (state == null && isHomeKey(intent)) (application as SortieApp).graph.launcher.homeKeyPressed()
         val existing = instances.firstOrNull { it !== this && !it.isFinishing }
@@ -92,8 +96,8 @@ class MainActivity : ComponentActivity() {
                 finishAndRemoveTask() // a home-role task cannot be moved to the back
             }
         }
-        Hotkeys.handle(setOf(Hotkeys.Key.SWAP_SCREENS))
-        lifecycleScope.launch { Hotkeys.events.collect { if (it == Hotkeys.Key.SWAP_SCREENS) swapScreens() } }
+        hotkeys.handle(setOf(Hotkeys.Key.SWAP_SCREENS))
+        lifecycleScope.launch { hotkeys.events.collect { if (it == Hotkeys.Key.SWAP_SCREENS) swapScreens() } }
         setContent {
             SortieTheme {
                 AmbientBackground {
@@ -107,7 +111,7 @@ class MainActivity : ComponentActivity() {
                             nav = controller
                             onDispose { nav = null }
                         }
-                        SortieNav(vm, controller)
+                        CompositionLocalProvider(LocalHotkeys provides hotkeys) { SortieNav(vm, controller) }
                     }
                 }
             }
@@ -126,7 +130,8 @@ class MainActivity : ComponentActivity() {
      * The Home button lands on the switcher whenever Shizuku is ready (see [TaskSwitcher.summonable]): Sortie is HOME, so the
      * system delivers the HOME intent here when the top screen had the controller; the secondary home summons us with
      * [TaskSwitcher.EXTRA_SWITCHER] when the bottom screen had it and there is no overlay. Debug builds also accept
-     * `--es launch <id> [--es profile <id>]` / `--es open <route>` from adb.
+     * `--es launch <id> [--es profile <id>]` / `--es open <route>` / `--es builtin magazines|performance [--ei display <id>]`
+     * from adb.
      */
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
@@ -153,6 +158,12 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra("open")?.let { route ->
             intent.removeExtra("open")
             Selection.openRoute.tryEmit(route)
+        }
+        intent.getStringExtra("builtin")?.let { name ->
+            intent.removeExtra("builtin")
+            val display = intent.getIntExtra("display", myDisplayId())
+            intent.removeExtra("display")
+            BuiltinApp.entries.firstOrNull { it.name.equals(name, ignoreCase = true) }?.let { BuiltinApps.open(this, it, display) }
         }
         val id = intent.getStringExtra("launch") ?: return
         intent.removeExtra("launch")
@@ -193,29 +204,10 @@ class MainActivity : ComponentActivity() {
         showCompanion()
     }
 
-    /**
-     * Hotkeys fire on the first key-down, except L1/R1 which fire on key-up: a held R1 is "favourite" on the focused tile
-     * (`Modifier.keyLongPress` swallows the hold and its release), and must not also page sorts/systems.
-     */
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BUTTON_L1 || keyCode == KeyEvent.KEYCODE_BUTTON_R1) {
-            // a repeat means the button is being held: whatever is focused may act on it, and the release must not page
-            if ((event?.repeatCount ?: 0) > 0) shoulderHeld = true
-            return true
-        }
-        return (event?.repeatCount == 0 && Hotkeys.onKeyDown(keyCode)) || super.onKeyDown(keyCode, event)
-    }
+    /** Keys nothing on screen consumed: this window's hotkeys (see [Hotkeys.keyDown] for the L1/R1 hold rule). */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean = hotkeys.keyDown(keyCode, event) || super.onKeyDown(keyCode, event)
 
-    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BUTTON_L1 || keyCode == KeyEvent.KEYCODE_BUTTON_R1) {
-            val held = shoulderHeld
-            shoulderHeld = false
-            return held || Hotkeys.onKeyDown(keyCode) || super.onKeyUp(keyCode, event)
-        }
-        return super.onKeyUp(keyCode, event)
-    }
-
-    private var shoulderHeld = false
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean = hotkeys.keyUp(keyCode) || super.onKeyUp(keyCode, event)
 
     private fun myDisplayId(): Int = display?.displayId ?: Display.DEFAULT_DISPLAY
 
@@ -251,7 +243,7 @@ class MainActivity : ComponentActivity() {
 
     /**
      * X: move Sortie to the other screen. Apps cannot move a task between displays, so finish here and relaunch there, handing
-     * this instance's saved state to the new one in process memory (no Binder size limit; see [takeHandoff]).
+     * this instance's saved state to the new one in process memory (see [StateHandoff]).
      * Leaving the default display: cover it with the companion first. An empty default display makes the system start HOME,
      * and HOME is this singleTask activity, which would be pulled straight back to the default display.
      */
@@ -262,9 +254,7 @@ class MainActivity : ComponentActivity() {
         nav?.let { if (it.currentDestination?.route == "switcher") it.popBackStack() }
         val saved = Bundle()
         onSaveInstanceState(saved)
-        val token = SystemClock.elapsedRealtime()
-        handoff = Handoff(token, saved)
-        val intent = Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra(EXTRA_HANDOFF, token)
+        val intent = handoff.offer(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), saved)
         val options = ActivityOptions.makeBasic().setLaunchDisplayId(target.displayId)
         if (target.displayId == Display.DEFAULT_DISPLAY) {
             Selection.closeCompanion.tryEmit(Unit)
@@ -282,16 +272,11 @@ class MainActivity : ComponentActivity() {
 
     private fun displayManager() = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
 
-    private class Handoff(val token: Long, val state: Bundle)
-
     private companion object {
         val instances = mutableListOf<MainActivity>()
 
-        const val EXTRA_HANDOFF = "handoff"
-        const val HANDOFF_TTL_MS = 10_000L
-
-        /** One slot: the latest swap's saved state, until the instance it started takes it. */
-        private var handoff: Handoff? = null
+        /** The latest swap's saved state, until the instance it started takes it. */
+        val handoff = StateHandoff()
 
         /**
          * The player pressed Home (here, or on the other screen whose secondary home summoned us): told apart from the HOME
@@ -301,16 +286,6 @@ class MainActivity : ComponentActivity() {
             if (intent == null) return false
             return intent.hasExtra(TaskSwitcher.EXTRA_SWITCHER) ||
                 (intent.hasCategory(Intent.CATEGORY_HOME) && intent.getBooleanExtra(TaskSwitcher.EXTRA_FROM_HOME_KEY, false))
-        }
-
-        /** The state [swapScreens] left for the instance it started: only for that intent's token, and only briefly. */
-        fun takeHandoff(intent: Intent?): Bundle? {
-            val token = intent?.getLongExtra(EXTRA_HANDOFF, 0L) ?: 0L
-            intent?.removeExtra(EXTRA_HANDOFF)
-            val h = handoff ?: return null
-            val expired = SystemClock.elapsedRealtime() - h.token > HANDOFF_TTL_MS
-            if (h.token == token || expired) handoff = null
-            return h.state.takeIf { h.token == token && !expired }
         }
     }
 }

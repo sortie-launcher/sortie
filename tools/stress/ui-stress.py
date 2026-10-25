@@ -507,8 +507,13 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
 
     def sc_reader(self, s):
         """Shelf → latest issue → an article, then read, swap screens and turn articles mid-read; never edits clippings."""
-        # the shelf's hint bar says "Select · scrapbook" at every width (the wide shelf has no scrapbook header)
-        if self.ui_unavailable or not self.sortie_home_on_top() or not self.tap_text("Magazines", "tap-magazines", 2.0) or not self.showing("scrapbook"):
+        if self.ui_unavailable or not self.sortie_home_on_top() or not self.tap_text("Magazines", "tap-magazines", 2.0):
+            return
+        # Dual-screen entry chooses a display; the single-screen path opens the reader directly.
+        if self.showing("Open here") and not self.tap_text("Open here", "reader-open-here", 2.0):
+            return
+        # The shelf's hint bar says "Select · scrapbook" at every width.
+        if not self.showing("scrapbook"):
             return
         self.act("open-issue", self.key("KEYCODE_BUTTON_A"), 2.0)  # the shelf restores its last focused issue
         # contents restore their scroll position, so their header may be off screen; only contents say "B · shelf"

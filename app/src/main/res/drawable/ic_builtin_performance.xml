@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sortie's Performance: the Perf page's own mark, a sparkline over its baseline ending in the newest reading. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:strokeColor="#4A525C" android:strokeWidth="2" android:strokeLineCap="round"
+        android:pathData="M6,38 L42,38" />
+    <path android:strokeColor="#F2B134" android:strokeWidth="3" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M6,31 L13,25 L19,29 L26,15 L32,23 L38,13" />
+    <path android:fillColor="#F2B134"
+        android:pathData="M38,13 m-3.5,0 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0" />
+</vector>
