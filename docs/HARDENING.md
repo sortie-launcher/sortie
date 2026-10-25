@@ -90,8 +90,9 @@ millisecond), and the vendor code read one whose surface had just been released.
 reboot), which switched wireless debugging off.
 
 The race is in the firmware, but Sortie made it likely: `SwitcherOverlay.show()` removed and re-added both windows on
-every Home press, even while the same overlay was already up. It now keeps them when displays and controller screen are
-unchanged (their content follows the switcher's state). Any app's window churn can still trigger the vendor bug.
+every Home press, even while the same overlay was already up. A pending change (draft PR "Switcher overlay: reuse
+windows on repeated Home") keeps them when displays and controller screen are unchanged; it needs a Thor run before
+release. Any app's window churn can still trigger the vendor bug.
 
 ### Seen under stress but not Sortie's
 
