@@ -22,6 +22,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import queue
 import random
 import re
 import shlex
@@ -65,17 +66,30 @@ def now() -> str:
 
 
 class Shell:
-    """One persistent `adb shell` so actions cost a round trip, not a process spawn."""
+    """One persistent `adb shell` so actions cost a round trip, not a process spawn.
+
+    Output is read by a thread into a queue so every command really times out: a blocking readline would wait forever if
+    a command printed no final newline (the end marker then shares the last line, e.g. after `cat` of a JSON file).
+    """
 
     def __init__(self, base: list[str]):
         self.base = base
         self.proc: subprocess.Popen | None = None
+        self.lines: queue.Queue[str | None] = queue.Queue()
         self.n = 0
         self.lock = threading.Lock()
 
     def _start(self):
         self.proc = subprocess.Popen(self.base + ["shell"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                      stderr=subprocess.STDOUT, text=True, bufsize=1, errors="replace")
+        self.lines = queue.Queue()
+        threading.Thread(target=self._pump, args=(self.proc, self.lines), daemon=True).start()
+
+    @staticmethod
+    def _pump(proc: subprocess.Popen, lines: "queue.Queue[str | None]"):
+        for line in proc.stdout:
+            lines.put(line)
+        lines.put(None)  # the shell exited
 
     def run(self, cmd: str, timeout: float = 90) -> str:
         with self.lock:
@@ -88,15 +102,16 @@ class Shell:
                     self.proc.stdin.write(f"{cmd}\necho {marker}\n")
                     self.proc.stdin.flush()
                     out, deadline = [], time.time() + timeout
-                    while time.time() < deadline:
-                        line = self.proc.stdout.readline()
-                        if line == "":
+                    while True:
+                        line = self.lines.get(timeout=max(0.1, deadline - time.time()))
+                        if line is None:
                             raise BrokenPipeError("adb shell exited")
-                        if line.rstrip("\r\n") == marker:
+                        text = line.rstrip("\r\n")
+                        if text.endswith(marker):
+                            out.append(text[: -len(marker)])
                             return "".join(out)
                         out.append(line)
-                    raise TimeoutError(cmd)
-                except (BrokenPipeError, OSError, TimeoutError):
+                except (BrokenPipeError, OSError, queue.Empty):
                     self.kill()
                     time.sleep(2 + attempt * 3)
             raise RuntimeError(f"adb shell unavailable for: {cmd}")
@@ -162,6 +177,7 @@ class Harness:
             with open(path, "a", buffering=1, errors="replace") as fh:
                 proc = subprocess.Popen(self.adb + ["logcat", "-T", "1", "-v", "threadtime", "-b", "main,system,crash,events"],
                                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
+                self.logcat_proc = proc
                 for line in proc.stdout:
                     fh.write(line)
                     if self.stop.is_set():
@@ -429,18 +445,40 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
         level = self.rng.choice(["RUNNING_LOW", "RUNNING_CRITICAL", "MODERATE", "COMPLETE"])
         self.act("trim-memory", f"am send-trim-memory {PKG} {level} 2>/dev/null", 0.5)
 
-    # ---- Sortie surfaces: located by `uiautomator dump`, which only sees the default (top) display ----
+    # ---- Sortie surfaces, found with `uiautomator dump` ----
+    # uiautomator dumps the *active* accessibility window, which on two screens can be the companion's carousel below even
+    # while the top screen has focus. sortie_home_on_top() taps the top-left corner of display 0 on Home (the title, never
+    # a control) so the top window is active; later taps on display 0 keep it so. Never tap blind elsewhere: outside a
+    # dialog it would close it.
     def ui_texts(self) -> list[tuple[str, int, int]]:
         raw = self.sh.run("uiautomator dump /data/local/tmp/stress-ui.xml >/dev/null 2>&1; cat /data/local/tmp/stress-ui.xml", timeout=60)
         return [(t, (int(a) + int(c)) // 2, (int(b) + int(d)) // 2)
                 for t, a, b, c, d in re.findall(r'<node [^>]*?text="([^"]*)"[^>]*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', raw)]
 
     def tap_text(self, pattern: str, name: str, settle: float = 1.5) -> bool:
-        for text, x, y in self.ui_texts():
+        texts = self.ui_texts()
+        for text, x, y in texts:
             if re.fullmatch(pattern, text):
                 self.act(name, f"input -d 0 tap {x} {y}", settle)
                 return True
-        self.log("skip", scenario=name, reason=f"no '{pattern}' on the top display")
+        self.log("skip", scenario=name, reason=f"no '{pattern}' on the top display", seen=[t for t, _, _ in texts if t][:12])
+        return False
+
+    def sortie_home_on_top(self) -> bool:
+        """Sortie navigation on the Home route, on display 0 (X swaps it up when it is below). False if it is not there."""
+        # Home summons Sortie (or its overlay, which B closes); B then walks back to the Home route, where B does nothing.
+        # Presses arriving while the overlay window is still closing are lost, so this one is paced like a person.
+        self.act("to-sortie-home", "input keyevent KEYCODE_HOME; sleep 1.2; input keyevent KEYCODE_BUTTON_B; sleep 1.2; "
+                 + "; ".join(["input keyevent KEYCODE_BUTTON_B; sleep 0.7"] * 4), 0.5)
+        for attempt in range(2):
+            focus = self.snapshot()["focus"].get(0, {}).get("mCurrentFocus", "")
+            if f"{PKG}/{PKG}.MainActivity" in focus:
+                self.act("activate-top", "input -d 0 tap 2 2", 0.4)
+                return True
+            if attempt or len(self.profile["displays"]) < 2:
+                break
+            self.act("swap-navigation-up", self.key("KEYCODE_BUTTON_X"), 2.5)
+        self.log("skip", scenario="sortie-home", reason="Sortie navigation not on the top display")
         return False
 
     def showing(self, pattern: str) -> bool:
@@ -448,11 +486,12 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
 
     def sc_reader(self, s):
         """Shelf → latest issue → an article, then read, swap screens and turn articles mid-read; never edits clippings."""
-        self.act("reader-home", "input keyevent KEYCODE_HOME; sleep 0.8; input keyevent KEYCODE_BUTTON_B", 1.0)
-        if not self.tap_text("Magazines", "tap-magazines", 2.0) or not self.showing("YOUR SCRAPBOOK"):
+        # the shelf's hint bar says "Select · scrapbook" at every width (the wide shelf has no scrapbook header)
+        if not self.sortie_home_on_top() or not self.tap_text("Magazines", "tap-magazines", 2.0) or not self.showing("scrapbook"):
             return
-        self.act("open-issue", self.key("KEYCODE_BUTTON_A"), 2.0)  # shelf focus starts on the latest issue
-        if not self.showing(r"(?s).*(Contents|Articles|Sections).*") and not self.showing(r"\d+ min read.*"):
+        self.act("open-issue", self.key("KEYCODE_BUTTON_A"), 2.0)  # the shelf restores its last focused issue
+        # contents restore their scroll position, so their header may be off screen; only contents say "B · shelf"
+        if not self.showing("shelf"):
             return self.act("reader-exit", "; ".join(["input keyevent KEYCODE_BUTTON_B; sleep 0.3"] * 3), 1.0)
         self.act("open-article", self.key("KEYCODE_BUTTON_A"), 2.0)
         steps = [self.rng.choice(["KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_UP",
@@ -467,8 +506,7 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
 
     def sc_hangar(self, s):
         """Open the Hangar, flip to Gallery and back, close: no care, rename, salvage or equip."""
-        self.act("hangar-home", "input keyevent KEYCODE_HOME; sleep 0.8; input keyevent KEYCODE_BUTTON_B", 1.0)
-        if not self.tap_text("Hangar", "tap-hangar", 1.5) or not self.showing("Workshop"):
+        if not self.sortie_home_on_top() or not self.tap_text("Hangar", "tap-hangar", 1.5) or not self.showing("Workshop"):
             return
         if self.rng.random() < 0.6:
             self.tap_text("Gallery", "tap-gallery", 1.0)
@@ -526,11 +564,17 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
         self.log("guard", files=[f for f in GUARDED if (guard / f).exists()])
 
     def teardown(self):
+        """Restores volume, screen-on and the guarded card files. If the device is gone (a system crash can drop wireless
+        debugging), says so and leaves the copies in guard/ for `--restore-only` later."""
         orig = (self.out / "restore.txt").read_text().split("\n")
         m = re.search(r"volume is (\d+)", orig[0] if orig else "")
         stay = orig[1].strip() if len(orig) > 1 else "0"
-        self.sh.run(f"cmd media_session volume --stream 3 --set {m.group(1) if m else 1} >/dev/null 2>&1; "
-                    f"settings put global stay_on_while_plugged_in {stay or 0}")
+        try:
+            self.sh.run(f"cmd media_session volume --stream 3 --set {m.group(1) if m else 1} >/dev/null 2>&1; "
+                        f"settings put global stay_on_while_plugged_in {stay or 0}", timeout=30)
+        except RuntimeError:
+            self.log("teardown", device="unreachable", restore=f"{sys.argv[0]} --serial {self.serial} --restore-only --out {self.out}")
+            return
         changed = []
         guard = self.out / "guard"
         after = self.out / "guard-after"
@@ -538,8 +582,8 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
         for f in GUARDED:
             if not (guard / f).exists():
                 continue
-            self.host_adb("pull", f"{self.profile['card']}/{f}", str(after / f))
-            if (after / f).read_bytes() != (guard / f).read_bytes():
+            pulled = self.host_adb("pull", f"{self.profile['card']}/{f}", str(after / f))
+            if pulled.returncode != 0 or (after / f).read_bytes() != (guard / f).read_bytes():
                 changed.append(f)
         if changed:
             self.sh.run(f"am force-stop {PKG}")
@@ -611,6 +655,12 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
             self.stop.set()
             self.teardown()
             self.sh.kill()
+            if getattr(self, "logcat_proc", None) and self.logcat_proc.poll() is None:
+                self.logcat_proc.kill()  # the watcher thread is blocked reading it
+            # Killing the distrobox wrapper leaves the containerized adb client running (host pid namespace): stop the
+            # streams this run started by their command line.
+            for pattern in (f"adb -s {self.serial} logcat -T 1", f"adb -s {self.serial} shell$"):
+                subprocess.run(["pkill", "-f", pattern], capture_output=True)
 
 
 def main():
@@ -622,8 +672,18 @@ def main():
     ap.add_argument("--deep-every", type=float, default=120, help="seconds between memory/network metric samples")
     ap.add_argument("--no-assistant-restart", action="store_true", help="do not `am crash` a wedged AYN panel during recovery")
     ap.add_argument("--no-kill", action="store_true", help="skip scenarios that force-stop Sortie (long single-process runs for leak checks)")
+    ap.add_argument("--restore-only", action="store_true", help="only restore an earlier run's settings and card files (--out of that run)")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
+    if args.restore_only:
+        if not args.out:
+            ap.error("--restore-only needs --out of the run to restore")
+        h = Harness(args)
+        h.ensure_connected()
+        h.discover()
+        h.teardown()
+        h.sh.kill()
+        return
     args.out = args.out or str(pathlib.Path.home() / ".cache/sortie-hardening" / f"{args.serial.replace(':', '_')}-{dt.datetime.now():%Y%m%d-%H%M%S}-s{args.seed}")
     print(f"seed={args.seed} out={args.out}", flush=True)
     Harness(args).run()
