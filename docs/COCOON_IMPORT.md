@@ -5,14 +5,22 @@ in Cocoon 3.07) into Sortie: systems and their ROM folders, emulators, favourite
 your own folders, real play sessions and per-game emulator choices from a Cocoon backup if you pick one. It needs only the
 all-files access Sortie already uses; Cocoon does not have to be installed or running, and no root is needed.
 
+Step-by-step pictures for first-time users: [Getting started → Coming from Cocoon](GETTING_STARTED.md#coming-from-cocoon).
+
+**Tested:** on an Android 13 emulator with an invented Cocoon library (fresh install, import with a backup, a second run,
+Cancel, and a refused overlapping folder; Cocoon's files were byte-identical throughout). Physical-device results are not
+claimed here. Capture details: [screenshots/cocoon/PROVENANCE.md](screenshots/cocoon/PROVENANCE.md).
+
 Code: `app/src/main/java/io/github/esko997/sortie/data/cocoon/` and `ui/CocoonImportScreen.kt`; tests and fixtures under
 `app/src/test/.../data/cocoon/` and `app/src/test/resources/cocoon/`.
 
 ## Using it
 
-1. **Choose Cocoon's folder.** Sortie lists every folder it finds that holds Cocoon's `gamelists/` (the one used last time
-   first). You can also type a path (absolute, or relative to the card root) or pick one with the file browser; Sortie reads
-   the picked folder directly and keeps no access grant. A folder without a Cocoon library is refused with nothing changed.
+1. **Choose Cocoon's folder.** Sortie lists every folder it finds that holds Cocoon's `gamelists/` and selects the one used
+   last time, or the one it found; when a folder is selected the screen opens at the backup step, with the **Cocoon folder**
+   section below it. You can also type a path (absolute, or relative to the card root) or pick one with the file browser;
+   Sortie reads the picked folder directly and keeps no access grant. A folder without a Cocoon library is refused with
+   nothing changed.
 2. **Optionally choose a backup** (make one in Cocoon → Settings), or continue without. Sortie offers the backups in the
    Cocoon folder (newest first) and any you type or pick under **Another backup…**: one `cocoon_backup_…` folder, a folder
    holding backups, or another Cocoon folder, on any storage (for example a copy in Download or on a memory card). A
@@ -27,7 +35,8 @@ Code: `app/src/main/java/io/github/esko997/sortie/data/cocoon/` and `ui/CocoonIm
 4. **Import.** Sortie saves a safety copy, then adds systems and re-indexes, saves favourites, hidden games and emulator
    choices (and, with Favourites on, removes the old default Favourites entry), adds sessions and folders, and copies
    artwork last. Only the artwork copy can be stopped; files already copied stay, and running the import again copies the
-   rest. Leaving the screen does not interrupt the import.
+   rest. Leaving the screen does not interrupt the import while Sortie keeps running; if Android closes Sortie, run the
+   import again and it continues where it stopped.
 5. **Read the result.** It says what was added and what was skipped, what stays only in Cocoon, and, on its own line, how
    many old Favourites entries were removed. Running the import again adds nothing twice and finds no entry left to remove.
 
@@ -36,8 +45,8 @@ Code: `app/src/main/java/io/github/esko997/sortie/data/cocoon/` and `ui/CocoonIm
 | From Cocoon | Becomes in Sortie | Needs a backup |
 |---|---|---|
 | Platforms with ROMs on this device | systems in `systems.json` (from Sortie's preset where one exists, otherwise a custom system), with the ROM folders found | no |
-| Platform emulator (`<cocoon:defaultplayerid>`) | the system's launch profile choice in `user.json`, only where you have not chosen one | no |
-| Favourite / hidden flags | `favourites` / `hidden` in `user.json` (added, never removed) | no |
+| Platform emulator (`<cocoon:defaultplayerid>`) | the system's launch profile choice (`systemProfiles`) in `user.json` wherever that system has no entry yet. This includes existing systems, so it can override the emulator order set in Library setup (see "Your existing setup wins") | no |
+| Favourite / hidden flags | `favourites` / `hidden` in `user.json` (added, never removed). Hidden games stay in their system's game list; `hidden` keeps them out of folders and shelves, and Sortie has no unhide button yet | no |
 | Downloaded box art, logos, gameplay screenshots | copies in the system's media folder as `covers/`, `marquees/`, `screenshots/` | no |
 | User-made folders | `folders.json` entries `cocoon-<n>` with the matched games (a folder named "Favourites" too: it stays a user folder and does not favourite its games) | yes |
 | Play sessions | sessions in Sortie's play database, with their real start and end times | yes |
@@ -62,10 +71,18 @@ home app.
   The check assumes other processes do not replace destination paths during the import; it is not a filesystem lock.
 - **Cocoon itself is left alone.** No intents are sent to it; it is not started, stopped or reconfigured, and its home or
   notification-listener roles are untouched. Its private app data is never read.
-- **Your existing setup wins.** Existing systems are not renamed, extended or re-rooted (one only gains a media folder when
-  it has none and artwork is copied for it). Existing launch profiles keep their definitions, emulator choices you made stay,
-  existing artwork is never replaced, and existing sessions and folders are kept. The only exception is the old default
-  Favourites entry below, removed only with the Favourites switch on.
+- **Your existing setup wins, with specific exceptions.** Existing systems are not renamed, extended or re-rooted (one only
+  gains a media folder when it has none and artwork is copied for it). Existing launch profiles keep their definitions,
+  existing artwork is never replaced, and existing sessions and folders are kept. **Exception:** the preview's "Emulators
+  for systems you already have" switch (on by default) writes Cocoon's emulator as the chosen default of every existing
+  system without a Settings → Default launcher per system entry. That choice takes precedence over the order in
+  Library setup, so a system can change emulator (for example DuckStation → SwanStation for PlayStation), and systems whose
+  default was unchanged are pinned to it. Turn the switch off if you set up emulators in Sortie; to undo it, choose
+  **Manifest default** for the system under Settings → Default launcher per system.
+  With Favourites on, the old default Favourites entry is also removed as described below; actual favourite flags and
+  customised folder definitions are preserved.
+- **Artwork goes to each system's media folder**, which on a card prepared for ES-DE is that system's
+  `scraped-esde/downloaded_media/<system>/` tree rather than `sortie/`. Tools that own that tree will see the copies.
 - **No cross-device rewriting.** Cocoon records artwork as storage URIs tied to a device's volumes. A reference to a volume
   that is not mounted, or to a file that no longer exists, is counted as unavailable and skipped; paths are never rewritten
   to guess where another device kept a file.
@@ -168,7 +185,9 @@ least one of its file names, and other directories holding at least 10 % of them
 
 `CocoonPlanner` then:
 
-1. maps a found directory already in a configured system to that system, unchanged;
+1. maps a found directory already in a configured system to that system, unchanged, but only when that system's `id` or
+   `folder` is in the platform's alias group (a system `md` rooted at `roms/megadrive` is not recognised for `genesis`, and
+   that platform's entries are then reported as not found);
 2. lets an unowned directory be claimed by the platform with most games there, only when the directory is named for the
    platform's alias group, or at least half its files are that platform's games and its name is not another ES-DE system
    name (the list in ES-DE's Android `es_systems.xml`). Shared romset names (ZX Spectrum ports of arcade games, Game Gear
@@ -178,8 +197,9 @@ least one of its file names, and other directories holding at least 10 % of them
    extensions and Cocoon's emulator, or Open with… when there is none. `media` is an existing ES-DE
    `scraped-esde/downloaded_media/<name>` under the card root when present, else `sortie/media/<systemId>`; `gamelist` is
    set only when an ES-DE gamelist exists there (Cocoon's own gamelists are not used as Sortie gamelists);
-4. matches each entry only within its platform's alias group, preferring the platform's own folders, then exact case. Several
-   equal candidates make an entry ambiguous; ambiguous and missing entries are listed and their flags dropped, never guessed.
+4. matches each entry only within its platform's alias group, then by exact case. The platform's own folders and those of
+   its preset alias are equal candidates (a file in both `tg16/` and `pcengine/` is ambiguous). Several equal candidates
+   make an entry ambiguous; ambiguous and missing entries are listed and their flags dropped, never guessed.
 
 Android apps from a backup become `app:<package>` ids. Ids are checked against Sortie's index after the systems step, so
 Sortie's extension and skip rules apply.

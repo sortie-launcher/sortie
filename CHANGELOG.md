@@ -4,6 +4,13 @@
 - Cocoon import previews cleanup of redundant legacy default Favourites rules, including imports with no new favourites.
   Cleanup runs only with Favourites enabled, preserves the actual favourites and other configuration, and leaves customized
   reserved-folder definitions untouched. A Cocoon user folder named Favourites remains a separate imported folder.
+- Documentation site at https://sortie-launcher.github.io/sortie/ (Astro Starlight in `site/`, deployed by `pages.yml`),
+  generated at build time from `docs/`, the in-app manual and this changelog; broken links or anchors fail the build, and
+  site-only changes skip the Android build and release. The README is trimmed to a front door linking to it.
+- Getting started gains an illustrated "Coming from Cocoon" path (captured on an Android 13 emulator with an invented
+  library). The import, launcher and manual docs now state current behaviour: the import can set Cocoon's emulator as the
+  default of existing systems, hidden games stay in system lists, imported folders show in the Custom sort, and an Open
+  with… pick from a game page changes the whole system's default.
 - Automatic signed beta releases: after the hosted build passes on a push to `main` (or a manual run on `main`), the
   workflow signs the APK with the permanent release key held as secrets in the `main`-only `release` environment, checks
   its certificate and checksum, and publishes a GitHub release marked Latest, `v0.1.0-beta.<code>` (code = 1000 + build run number),

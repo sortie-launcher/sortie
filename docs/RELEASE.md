@@ -1,8 +1,8 @@
 # Releases: signing, versions, beta status and magazine content
 
-Sortie is distributed as signed APKs on [GitHub releases](https://github.com/sortie-launcher/sortie/releases): every
-successful push to `main` publishes an automated beta release marked Latest. A signed APK can also be built locally for isolated
-testing. There is no Google Play listing, app store account, update server, in-app updater, telemetry or download service.
+Sortie is distributed as signed APKs on [GitHub releases](https://github.com/sortie-launcher/sortie/releases): successful
+Android builds on `main` publish automated beta releases marked Latest. Site-only changes skip the Android build and release.
+A signed APK can also be built locally for isolated testing. There is no Google Play listing, app store account, update server, in-app updater, telemetry or download service.
 This file is the maintainer's procedure plus the current beta's goal, acceptance criteria, evidence and known limitations.
 
 ## Publishing the repositories
@@ -17,9 +17,9 @@ Private maintainer notes belong under ignored `.local/`, not `docs/`. Keep signi
 only hosted copy is the pair of encrypted environment secrets described in [Automatic beta releases](#automatic-beta-releases).
 The repositories are [sortie-launcher/sortie](https://github.com/sortie-launcher/sortie) and
 [sortie-launcher/sortie-zines](https://github.com/sortie-launcher/sortie-zines). Their SSH origins are configured on the
-sanitized checkouts. Changes reach `main` through reviewed pull requests; never force-push it. **A push to `main` is a
-release:** once the hosted build passes, the workflow signs and publishes a release of that commit. Local verification
-is not a hosted CI result.
+sanitized checkouts. Changes reach `main` through reviewed pull requests; never force-push it. **A push to `main` that
+runs the Android build is a release:** once the hosted build passes, the workflow signs and publishes a release of that
+commit. Local verification is not a hosted CI result.
 
 ## One permanent release key
 
@@ -112,10 +112,10 @@ Without signing variables `assembleRelease` (including `tools/build.sh` and the 
 
 `.github/workflows/build.yml` has two jobs:
 
-- **`build-apks`** runs for every pull request, every push to `main` and every manual run. It checks out the commit and the
-  pinned `sortie-zines` commit, assigns the run's version, runs `ktlintCheck` plus debug and release unit tests, builds both
-  variants with the magazines bundled, and uploads the debug-signed and unsigned-release APKs as artifacts. Its token is
-  read-only and it receives no secrets.
+- **`build-apks`** runs for pull requests, pushes to `main` and manual runs. Pull requests and pushes changing only `site/`
+  or `.github/workflows/pages.yml` are excluded. It checks out the commit and the pinned `sortie-zines` commit, assigns the
+  run's version, runs `ktlintCheck` plus debug and release unit tests, builds both variants with the magazines bundled, and
+  uploads the debug-signed and unsigned-release APKs as artifacts. Its token is read-only and it receives no secrets.
 - **`release`** runs only after `build-apks` succeeds, only in `sortie-launcher/sortie`, and only for a push to `main` or
   a manual run on `main`; never for pull requests. It uses the `release` environment and a `contents: write` token, and:
   1. lists existing releases. This tag already published for this commit: nothing to do (a re-run). This tag as a draft or

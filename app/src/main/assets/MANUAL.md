@@ -289,6 +289,9 @@ card if you use one.
 favourites, hidden games, emulator choices, artwork, folders and play sessions it would add; nothing changes until you choose
 **Import**, and Cocoon's own files are never modified. Your preferences and play history are saved as a safety copy first;
 restoring it brings the preferences back but does not remove added systems, folders, copied artwork or imported sessions.
+Check two switches first: **Choose emulators** also sets Cocoon's emulator as the default of systems you already have (turn
+it off if you set up emulators in Sortie; undo under **Default launcher per system → Manifest default**), and **Hide** keeps
+games out of folders and shelves with no unhide button yet. Imported folders appear in Home's **Custom** sort.
 
 ## Radial keyboard
 

@@ -1,7 +1,8 @@
 name: build
 on:
-  push: { branches: [main] }
-  pull_request:
+  # Site-only changes are built by pages.yml and neither need an Android build nor publish a release.
+  push: { branches: [main], paths-ignore: ['site/**', '.github/workflows/pages.yml'] }
+  pull_request: { paths-ignore: ['site/**', '.github/workflows/pages.yml'] }
   workflow_dispatch:
 permissions:
   contents: read

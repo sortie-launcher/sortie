@@ -1,0 +1,44 @@
+---
+// Starlight's ThemeProvider, except that a first visit starts dark instead of following the system. The visit is
+// recorded so a later explicit "Auto" choice (stored by Starlight as an empty string) is respected.
+import { Icon } from '@astrojs/starlight/components';
+---
+
+{/* This is intentionally inlined to avoid FOUC. */}
+<script is:inline>
+	window.StarlightThemeProvider = (() => {
+		const hasStorage = typeof localStorage !== 'undefined';
+		if (hasStorage && !localStorage.getItem('sortie-theme-initialised')) {
+			localStorage.setItem('sortie-theme-initialised', '1');
+			if (!localStorage.getItem('starlight-theme')) localStorage.setItem('starlight-theme', 'dark');
+		}
+		const storedTheme = hasStorage && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script>
+
+<template id="theme-icons">
+	<Icon name="sun" class="light" />
+	<Icon name="moon" class="dark" />
+	<Icon name="laptop" class="auto" />
+</template>
