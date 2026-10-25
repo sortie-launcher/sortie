@@ -42,6 +42,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -327,7 +328,8 @@ private fun MarkdownBlock(b: MdBlock) {
  * A local image fitted to the box, pinch-zoomed and dragged by touch, double tap toggling zoom. The decode keeps up to
  * [io.github.esko997.sortie.data.reference.ReferenceLimits.DISPLAY_MAX_PIXELS] (see [ReferenceCards.displaySize]) so a map
  * stays legible when zoomed, and zoom reaches at least 3 screen pixels per image pixel; magnified pixel art is drawn unsmoothed.
- * With [controller]: D-pad pans while zoomed (left/right at rest call [onStep]), A toggles zoom, R2/L2 zoom in/out.
+ * With [controller]: D-pad pans while zoomed (left/right at rest call [onStep]), A toggles zoom, R2/L2 zoom in/out. [onTap]: a
+ * single tap (not a double tap or a drag).
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -337,7 +339,8 @@ fun ZoomableImage(
     modifier: Modifier = Modifier,
     controller: Boolean = false,
     focusRequester: FocusRequester? = null,
-    onStep: ((Int) -> Unit)? = null
+    onStep: ((Int) -> Unit)? = null,
+    onTap: (() -> Unit)? = null
 ) {
     val bounds by produceState<IntSize?>(null, file) {
         value = withContext(Dispatchers.IO) {
@@ -360,6 +363,8 @@ fun ZoomableImage(
     var box by remember { mutableStateOf(IntSize.Zero) }
     var scale by remember(file) { mutableFloatStateOf(1f) }
     var offset by remember(file) { mutableStateOf(Offset.Zero) }
+    val currentTap by rememberUpdatedState(onTap)
+    val tap = { currentTap?.invoke() }
     val aspect = dw.toFloat() / dh
     val fw = if (box.width == 0) 0f else min(box.width.toFloat(), box.height * aspect)
     val fh = fw / aspect
@@ -465,15 +470,18 @@ fun ZoomableImage(
                     offset = clamp(offset + pan, scale)
                 }
             }
-            .pointerInput(file, fw, fh, maxScale) {
-                detectTapGestures(onDoubleTap = { p ->
-                    if (scale > 1.01f) {
-                        scale = 1f
-                        offset = Offset.Zero
-                    } else {
-                        zoomTo(3f, p - Offset(box.width / 2f, box.height / 2f))
+            .pointerInput(file, fw, fh, maxScale, onTap != null) {
+                detectTapGestures(
+                    onTap = if (onTap == null) null else { _ -> tap() },
+                    onDoubleTap = { p ->
+                        if (scale > 1.01f) {
+                            scale = 1f
+                            offset = Offset.Zero
+                        } else {
+                            zoomTo(3f, p - Offset(box.width / 2f, box.height / 2f))
+                        }
                     }
-                })
+                )
             }
     ) {
         // past 1.5 screen pixels per image pixel, smoothing only blurs pixel-art maps

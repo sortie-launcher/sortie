@@ -65,12 +65,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
@@ -86,6 +90,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -96,6 +101,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -130,11 +136,13 @@ import io.github.esko997.sortie.data.magazine.source
 import io.github.esko997.sortie.data.markdown.MdBlock
 import io.github.esko997.sortie.data.user.UserStore
 import io.github.esko997.sortie.ui.mecha.Hangar
+import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.max
 import kotlin.math.min
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -149,6 +157,15 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /** Comfortable reading measure: lines stay this narrow on the wide top screen. */
 private val Measure = 680.dp
+
+/** The full reading width: lead images and wide pictures (diagrams, 16:9 shots) may use it beyond the text measure. */
+private val WideMeasure = 920.dp
+
+/** A caption under a narrow portrait picture still gets this much width (less on a screen narrower than that). */
+private val MinCaptionWidth = 360.dp
+
+/** The article list's (and [ArticleFigure]'s) key for the lead image. */
+private const val HERO_KEY = "hero"
 
 /** Below this width (the narrow bottom screen, the DMG) covers stack above the text instead of beside it. */
 private val NarrowWidth = 560.dp
@@ -514,10 +531,12 @@ private fun ShelfView(shelf: MagazineShelf, store: MagazineReadingStore, clipCou
                         }
                     }
                 }
+                // compact entries keep a number column when any of them has a number, so titles line up
+                val numbered = shelf.issues.drop(1).any { it.issue.issueNumber != null }
                 itemsIndexed(shelf.issues, key = { _, s -> "issue:${s.issue.id}" }) { i, s ->
                     val k = "issue:${s.issue.id}"
                     Entry(focus, k, keys.indexOf(k), onClick = { open(ReaderLocation(s.issue.id)) }, modifier = Modifier.measure()) {
-                        if (i == 0) FeatureIssue(s, narrow) else CompactIssue(s)
+                        if (i == 0) FeatureIssue(s, narrow) else CompactIssue(s, numbered)
                     }
                 }
                 itemsIndexed(shelf.broken, key = { _, b -> "broken:${b.folder}" }) { _, b ->
@@ -580,6 +599,7 @@ private fun FeatureIssue(s: ShelfIssue, narrow: Boolean) {
     val issue = s.issue
     val text: @Composable () -> Unit = {
         Column {
+            issue.issueNumber?.let { IssueNumber(it, if (narrow) 34.sp else 46.sp, Modifier.padding(bottom = 4.dp)) }
             Text("LATEST ISSUE · ${issueDate(issue).uppercase()}", style = kicker())
             Text(issue.title, style = headline(if (narrow) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium))
             if (issue.subtitle.isNotEmpty()) Text(issue.subtitle, style = deckStyle(), color = Muted)
@@ -635,8 +655,11 @@ private fun ArticleTeasers(issue: MagazineIssue, modifier: Modifier) {
 }
 
 @Composable
-private fun CompactIssue(s: ShelfIssue) {
+private fun CompactIssue(s: ShelfIssue, numberColumn: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
+        if (numberColumn) {
+            Box(Modifier.width(72.dp)) { s.issue.issueNumber?.let { IssueNumber(it, 30.sp, stacked = true) } }
+        }
         IssueCover(s, 58.dp, 78.dp)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
@@ -672,6 +695,40 @@ private fun IssueCover(s: ShelfIssue, width: Dp, height: Dp) {
         }
     }
 }
+
+/**
+ * "No. 010": an issue's number (see [MagazineIssue.issueNumber]) set large, its digits outlined in amber like the printed
+ * numbers of the web reader. [size]: the digits; [stacked] puts "No." above them for a narrow column.
+ */
+@Composable
+private fun IssueNumber(n: Int, size: TextUnit, modifier: Modifier = Modifier, stacked: Boolean = false) {
+    val stroke = with(LocalDensity.current) { (size.value / 22f).dp.toPx() }
+    val digits: @Composable (Modifier) -> Unit = { m ->
+        Text(
+            issueNumberText(n),
+            style = headline(MaterialTheme.typography.displaySmall).copy(fontSize = size, lineHeight = size, drawStyle = Stroke(width = stroke)),
+            color = Amber,
+            maxLines = 1,
+            modifier = m
+        )
+    }
+    val label = kicker().copy(fontSize = (size.value * 0.3f).coerceAtLeast(11f).sp, fontFamily = FontFamily.Serif)
+    val described = modifier.semantics(mergeDescendants = true) { contentDescription = "Issue $n" }
+    if (stacked) {
+        Column(described) {
+            Text("No.", style = label)
+            digits(Modifier)
+        }
+    } else {
+        Row(described) {
+            Text("No.", style = label, modifier = Modifier.alignByBaseline().padding(end = 6.dp))
+            digits(Modifier.alignByBaseline())
+        }
+    }
+}
+
+/** At least three digits, as printed: 10 → "010". */
+private fun issueNumberText(n: Int): String = n.toString().padStart(3, '0')
 
 // ---------------------------------------------------------------- contents
 
@@ -958,6 +1015,7 @@ private fun IssueMasthead(s: ShelfIssue, narrow: Boolean) {
     val issue = s.issue
     val text: @Composable () -> Unit = {
         Column {
+            issue.issueNumber?.let { IssueNumber(it, if (narrow) 38.sp else 52.sp, Modifier.padding(bottom = 4.dp)) }
             Text(issueDate(issue).uppercase(), style = kicker())
             Text(issue.title, style = headline(if (narrow) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.displaySmall))
             if (issue.subtitle.isNotEmpty()) Text(issue.subtitle, style = deckStyle(), color = Muted, modifier = Modifier.padding(top = 4.dp))
@@ -1045,12 +1103,27 @@ private fun ContentsEntry(s: ShelfIssue, a: MagazineArticle, index: Int, narrow:
 private const val NOT_CLIPPING = Int.MIN_VALUE
 private const val CLIP_WHOLE_ARTICLE = -1
 
+/** An article's text with its pictures, each with its pixel size already read. */
+private class OpenedArticle(val content: ArticleContent, val figures: List<ArticleFigure>)
+
+/** The pictures the reader shows, in reading order: the lead image, then every Markdown image whose file is in the issue. Blocking. */
+private fun articleFigures(s: ShelfIssue, article: MagazineArticle, content: ArticleContent): List<ArticleFigure> = buildList {
+    s.images[article.id]?.file?.let { add(ArticleFigure(HERO_KEY, it, article.imageCaption, imageSize(it))) }
+    if (content is ArticleContent.Ready) {
+        content.blocks.forEachIndexed { i, b ->
+            if (b is MdBlock.Image) content.images[b.src]?.file?.let { add(ArticleFigure("b$i", it, b.caption, imageSize(it))) }
+        }
+    }
+}
+
 /**
  * Clipping in the reader: Y (or the Highlight chip) enters marking, where ↑/↓ choose a passage (a paragraph, bullet or quote)
  * and A saves it with an optional note; a tap chooses one, a long press or the accessibility action opens it straight away.
  * Y or B leaves marking. Select opens the reader menu: mark, clip the whole article as a recommendation, the scrapbook.
  * Saved highlights are marked in the text while their passage is still in the article; [jumpTo] (a clipping id) scrolls to
  * its passage once, or says the passage is gone instead of landing anywhere else.
+ * Pictures: a tap on one, or R2 for the one most on screen (the hint bar offers it), opens [FigureViewer] over the article,
+ * which stays where it was.
  */
 @Composable
 private fun ArticleReader(
@@ -1077,7 +1150,14 @@ private fun ArticleReader(
         store.opened(issue.issue.id, article.id)
         contentsKey?.let { store.setContentsFocus(issue.issue.id, it) }
     }
-    val content by produceState<ArticleContent?>(null) { value = repo.article(issue, article) }
+    // the text and its pictures' pixel sizes arrive together, so every figure is laid out at its final size from the first frame
+    // and a restored scroll position never shifts while pictures load
+    val opened by produceState<OpenedArticle?>(null) {
+        val c = repo.article(issue, article)
+        value = OpenedArticle(c, withContext(Dispatchers.IO) { articleFigures(issue, article, c) })
+    }
+    val content = opened?.content
+    val figures = opened?.figures.orEmpty()
     if (content == null) PublishMagazineCompanion(readerOwner, issue.issue, article.id)
     var picking by rememberSaveable { mutableStateOf(false) }
     var marking by rememberSaveable { mutableStateOf(false) }
@@ -1085,6 +1165,9 @@ private fun ArticleReader(
     var clipping by rememberSaveable { mutableStateOf(NOT_CLIPPING) }
     var menu by rememberSaveable { mutableStateOf(false) }
     var hangar by rememberSaveable { mutableStateOf(false) }
+    // the full-screen picture (its figure key), and the one R2 would open
+    var viewing by rememberSaveable { mutableStateOf<String?>(null) }
+    var figureInView by remember { mutableStateOf<String?>(null) }
     val blocks = (content as? ArticleContent.Ready)?.blocks.orEmpty()
     val highlights = remember(clippings, blocks) { clippings.highlightsIn(issue.issue.id, article.id, blocks) }
     val articleClip = remember(clippings) { clippings.articleClip(issue.issue.id, article.id) }
@@ -1121,15 +1204,31 @@ private fun ArticleReader(
             if (c == null) {
                 Text("Opening article…", color = Muted, modifier = Modifier.align(Alignment.Center))
             } else {
+                val narrow = maxWidth < NarrowWidth
+                val density = LocalDensity.current.density
+                val reading = maxWidth - (if (narrow) 16.dp else 28.dp) * 2
+                val boxes = remember(figures, maxWidth, maxHeight, density) {
+                    val column = Measure.coerceAtMost(reading).value
+                    val wide = WideMeasure.coerceAtMost(reading).value
+                    figures.associate { f ->
+                        // the lead image leaves room for the headline under it; figures may take most of the screen
+                        val hero = f.key == HERO_KEY
+                        val cap = (maxHeight * if (hero) 0.55f else 0.7f).value.coerceAtLeast(120f)
+                        val limit = if (hero) wide else column
+                        f.key to (f.size?.let { figureBox(it.width, it.height, limit, wide, cap, density) } ?: unknownFigureBox(limit, cap))
+                    }
+                }
                 ArticleList(
                     issue,
                     article,
                     c,
                     store,
                     readerOwner = readerOwner,
-                    narrow = maxWidth < NarrowWidth,
-                    heroHeight = (maxHeight * 0.45f).coerceIn(150.dp, 340.dp),
-                    figureHeight = (maxHeight * 0.4f).coerceIn(130.dp, 300.dp),
+                    narrow = narrow,
+                    figures = figures,
+                    boxes = boxes,
+                    onView = { viewing = it },
+                    onFigureInView = { figureInView = it },
                     onGames = ::openGames,
                     gamesLabel = gamesLabel,
                     next = next,
@@ -1168,6 +1267,7 @@ private fun ArticleReader(
                 add("←/→" to "page")
                 add("L1/R1" to "articles")
                 if (article.games.isNotEmpty()) add("A" to if (article.games.size == 1) "library page" else "games")
+                if (figureInView != null) add("R2" to "view picture")
                 if (canMark) add("Y" to "highlight")
                 add("Select" to "reader menu")
                 add("B" to backLabel)
@@ -1213,6 +1313,8 @@ private fun ArticleReader(
     if (hangar) {
         Hangar((context.applicationContext as SortieApp).graph.mecha, onClose = { hangar = false })
     }
+    // after recreation the viewer reopens once the pictures are known again
+    if (opened != null) viewing?.let { start -> FigureViewer(figures, start, onClose = { viewing = null }) }
     val target = clipping
     if (target != NOT_CLIPPING) {
         val close = { clipping = NOT_CLIPPING }
@@ -1322,8 +1424,10 @@ private fun ArticleList(
     store: MagazineReadingStore,
     readerOwner: Any,
     narrow: Boolean,
-    heroHeight: Dp,
-    figureHeight: Dp,
+    figures: List<ArticleFigure>,
+    boxes: Map<String, FigureBox>,
+    onView: (String) -> Unit,
+    onFigureInView: (String?) -> Unit,
     onGames: () -> Unit,
     gamesLabel: String?,
     next: MagazineArticle?,
@@ -1384,6 +1488,19 @@ private fun ArticleList(
             flash = -1
         }
     }
+    val figureKeys = remember(figures) { figures.mapTo(HashSet()) { it.key } }
+
+    /** The picture most on screen, when at least half of it (or half the screen) shows: what R2 opens full screen. */
+    fun figureInView(): String? {
+        val info = state.layoutInfo
+        val viewport = info.viewportEndOffset - info.viewportStartOffset
+        return info.visibleItemsInfo.mapNotNull { item ->
+            val key = (item.key as? String)?.takeIf { it in figureKeys } ?: return@mapNotNull null
+            val shown = min(item.offset + item.size, info.viewportEndOffset) - max(item.offset, info.viewportStartOffset)
+            if (shown * 2 >= min(item.size, viewport)) key to shown else null
+        }.maxByOrNull { it.second }?.first
+    }
+    LaunchedEffect(state, figureKeys) { snapshotFlow { figureInView() }.collect { onFigureInView(it) } }
     LaunchedEffect(clips.jump?.id, content) {
         val clip = clips.jump ?: return@LaunchedEffect
         if (content is ArticleContent.Ready) {
@@ -1508,6 +1625,11 @@ private fun ArticleList(
                         if (first) clips.onMenu()
                         true
                     }
+                    // R2 zooms in the picture viewer too; here it opens the picture in view (never while marking)
+                    Key.ButtonR2 -> {
+                        if (first && !clips.marking) figureInView()?.let(onView)
+                        true
+                    }
                     else -> false
                 }
             },
@@ -1516,7 +1638,7 @@ private fun ArticleList(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         val lead = s.images[article.id]
-        if (lead != null) item(key = "hero") { Hero(lead, article.imageCaption, heroHeight) }
+        if (lead != null) item(key = HERO_KEY) { Hero(lead, article.imageCaption, boxes[HERO_KEY]) { onView(HERO_KEY) } }
         item(key = "head") {
             ArticleHead(
                 s.issue,
@@ -1550,7 +1672,7 @@ private fun ArticleList(
                         onHold = { clips.onClip(i) }
                     )
                 }
-                ArticleBlock(b, content.images, figureHeight, mark)
+                ArticleBlock(b, content.images, boxes["b$i"], onView = { onView("b$i") }, mark)
             }
             is ArticleContent.Failed -> item(key = "error") {
                 Column(Modifier.measure().padding(vertical = 16.dp)) {
@@ -1570,17 +1692,40 @@ private fun ArticleList(
 }
 
 @Composable
-private fun Hero(lead: IssueImage, caption: String, height: Dp) {
-    Column(Modifier.widthIn(max = 920.dp).fillMaxWidth()) {
-        val file = lead.file
-        if (file != null) {
-            Box(Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(8.dp)).background(Slate)) {
-                CoverImage(file.path, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-            }
-            if (caption.isNotEmpty()) Text(inlineText(caption), style = captionStyle(), modifier = Modifier.padding(top = 6.dp))
-        } else {
-            lead.problem?.let { PackNote("Lead image: $it") }
+private fun Hero(lead: IssueImage, caption: String, box: FigureBox?, onView: () -> Unit) {
+    val file = lead.file
+    if (file != null && box != null) {
+        Figure(file, caption, box, RoundedCornerShape(8.dp), onView)
+    } else {
+        Column(Modifier.widthIn(max = WideMeasure).fillMaxWidth()) { lead.problem?.let { PackNote("Lead image: $it") } }
+    }
+}
+
+/**
+ * A picture at its final [box] size — the slate shows only while it loads, so nothing below moves — with its caption under it
+ * at the picture's width (never narrower than [MinCaptionWidth]). A tap opens the full-screen viewer; the controller uses R2.
+ */
+@Composable
+private fun Figure(file: File, caption: String, box: FigureBox, shape: Shape, onView: () -> Unit, modifier: Modifier = Modifier) {
+    val width = box.width.dp
+    Column(modifier.width(width.coerceAtLeast(MinCaptionWidth)), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier
+                .size(width, box.height.dp)
+                .clip(shape)
+                .background(Slate)
+                // touch only: the D-pad scrolls the article and never stops on a picture
+                .focusProperties { canFocus = false }
+                .clickable(role = Role.Image, onClickLabel = "View full screen", onClick = onView)
+        ) {
+            CoverImage(
+                file.path,
+                Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+                filterQuality = if (box.upscaled) FilterQuality.None else DrawScope.DefaultFilterQuality
+            )
         }
+        if (caption.isNotEmpty()) Text(inlineText(caption), style = captionStyle(), modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
     }
 }
 
@@ -1681,7 +1826,7 @@ private fun HeadChip(label: String, onClick: () -> Unit) {
 private class BlockMark(val highlight: MagazineClipping?, val selected: Boolean, val onTap: () -> Unit, val onHold: () -> Unit)
 
 @Composable
-private fun ArticleBlock(b: MdBlock, images: Map<String, IssueImage>, figureHeight: Dp, mark: BlockMark? = null) {
+private fun ArticleBlock(b: MdBlock, images: Map<String, IssueImage>, figure: FigureBox?, onView: () -> Unit, mark: BlockMark? = null) {
     val m = Modifier.measure()
     when (b) {
         is MdBlock.Heading -> when (b.level) {
@@ -1690,16 +1835,13 @@ private fun ArticleBlock(b: MdBlock, images: Map<String, IssueImage>, figureHeig
             else -> Text(b.text, style = headline(MaterialTheme.typography.titleMedium), modifier = m.padding(top = 16.dp, bottom = 6.dp))
         }
         is MdBlock.Paragraph, is MdBlock.Bullet, is MdBlock.Quote -> TextBlock(b, mark)
-        is MdBlock.Image -> Column(m.padding(top = 6.dp, bottom = 18.dp)) {
+        is MdBlock.Image -> {
             val image = images[b.src]
             val file = image?.file
-            if (file != null) {
-                Box(Modifier.fillMaxWidth().height(figureHeight).clip(RoundedCornerShape(6.dp)).background(Slate)) {
-                    CoverImage(file.path, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-                }
-                if (b.caption.isNotEmpty()) Text(inlineText(b.caption), style = captionStyle(), modifier = Modifier.padding(top = 6.dp))
+            if (file != null && figure != null) {
+                Figure(file, b.caption, figure, RoundedCornerShape(6.dp), onView, Modifier.padding(top = 6.dp, bottom = 18.dp))
             } else {
-                PackNote(image?.problem ?: "Image missing: ${b.src}")
+                Column(m.padding(top = 6.dp, bottom = 18.dp)) { PackNote(image?.problem ?: "Image missing: ${b.src}") }
             }
         }
         MdBlock.Rule -> Box(m.padding(vertical = 14.dp).height(1.dp).background(Hairline))

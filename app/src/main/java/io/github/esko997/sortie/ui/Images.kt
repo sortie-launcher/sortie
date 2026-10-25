@@ -3,6 +3,8 @@ package io.github.esko997.sortie.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import coil3.compose.ConstraintsSizeResolver
@@ -25,10 +27,17 @@ private const val UNBOUNDED_FALLBACK_PX = 512
  * constraints (INEXACT, so BitmapFactory may stop at the nearest power-of-two sample instead of rescaling), lands in a hardware
  * bitmap (pixels live in graphics memory, not on the heap; nothing may read them back, see [paletteFor]) and is never cross-faded.
  * Callers must give [modifier] a bounded size; a fully unbounded layout falls back to [UNBOUNDED_FALLBACK_PX].
- * A null [path] draws nothing, so callers keep their own placeholder underneath.
+ * A null [path] draws nothing, so callers keep their own placeholder underneath. [filterQuality] [FilterQuality.None] keeps
+ * upscaled pixel art sharp instead of smoothing it.
  */
 @Composable
-fun CoverImage(path: String?, modifier: Modifier = Modifier, contentScale: ContentScale = ContentScale.Crop, alpha: Float = 1f) {
+fun CoverImage(
+    path: String?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Crop,
+    alpha: Float = 1f,
+    filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
+) {
     if (path == null) return
     val context = LocalPlatformContext.current
     val constraints = rememberConstraintsSizeResolver()
@@ -47,7 +56,8 @@ fun CoverImage(path: String?, modifier: Modifier = Modifier, contentScale: Conte
         contentDescription = null,
         modifier = modifier.then(constraints),
         contentScale = contentScale,
-        alpha = alpha
+        alpha = alpha,
+        filterQuality = filterQuality
     )
 }
 

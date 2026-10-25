@@ -121,6 +121,36 @@ class MagazinePublicationTest {
     }
 
     @Test
+    fun issueNumberComesFromThePackElseTheIdsTrailingDigits() {
+        fun parsed(text: String, folder: String) = (parseIssue(text, folder) as IssueParse.Valid).issue
+        val explicit = parsed(v2("field-notes-008").replace("\"revision\": 2,", "\"revision\": 2, \"number\": 12,"), "field-notes-008")
+        assertEquals(12, explicit.number)
+        assertEquals(12, explicit.issueNumber)
+        val derived = parsed(v2("field-notes-010"), "field-notes-010")
+        assertNull(derived.number)
+        assertEquals(10, derived.issueNumber)
+        assertNull(parsed(v2("my-own-zine"), "my-own-zine").issueNumber)
+        assertNull(parsed(v2("zine-000"), "zine-000").issueNumber)
+        assertNull(parsed(v2("zine-99999999999"), "zine-99999999999").issueNumber) // too long for a number: none, not a crash
+        assertEquals(3, parsed(LEGACY.replace("ID", "old-zine-3"), "old-zine-3").issueNumber)
+        for (bad in listOf("0", "-1", "1.5", "\"3\"", "true")) {
+            val reason = invalid(v2("field-notes-008").replace("\"revision\": 2,", "\"revision\": 2, \"number\": $bad,"))
+            assertTrue(reason, reason.contains("\"number\" must be a positive whole number"))
+        }
+    }
+
+    @Test
+    fun sameDayIssuesOrderByNumberNotByIdText() {
+        val card = tmp.newFolder("card")
+        writePack(card, "field-notes-9", v2("field-notes-9"))
+        writePack(card, "field-notes-10", v2("field-notes-10"))
+        // an explicit number outranks the id's digits
+        writePack(card, "special", v2("special").replace("\"revision\": 2,", "\"revision\": 2, \"number\": 11,"))
+        writePack(card, "no-digits", v2("no-digits"))
+        assertEquals(listOf("special", "field-notes-10", "field-notes-9", "no-digits"), readShelf(card).issues.map { it.issue.id })
+    }
+
+    @Test
     fun malformedCardPackNeverHidesTheBundledIssue() {
         val bundled = tmp.newFolder("bundled")
         val card = tmp.newFolder("card")

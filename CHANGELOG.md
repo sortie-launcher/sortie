@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- Magazine pictures are sized from their real shape instead of a fixed-height slate box: portrait frames stand at up to 70%
+  of the screen, wide diagrams and 16:9 shots may use the full reading width, captions sit under the picture at its width,
+  and small pixel art is enlarged by whole steps without smoothing. Placeholders already have the final size, so a restored
+  reading position no longer moves while pictures load.
+- Full-screen picture viewer: tap a picture, or press R2 for the one in view (shown in the hint bar), for a black, fitted
+  view with pinch, double-tap, A and L2/R2 zoom, D-pad/stick panning, Left/Right or L1/R1 between the article's pictures,
+  Y for the caption and B/Back/tap to return to the unmoved article. It opens on the screen the reader is on.
+- Issue numbers: the shelf's feature and compact entries and the contents masthead show "No. 010" large. Magazine packs may
+  give an optional positive `number`; otherwise it comes from the issue id's trailing digits (none without digits). The
+  publisher rejects malformed or duplicate numbers. The shelf stays newest-date first, with the number ordering issues of
+  the same day (rather than number first), so an old high-numbered card pack never displaces the latest issue.
 - Local Hangar experiment (not a production release): an optional pixel-art mecha hangs out below Home, browsing and
   zine pages. Its Workshop supports naming, care, mixing owned parts and salvage from new completed game sessions;
   Gallery compares three original art families and four animated poses without unlocking preview parts.
