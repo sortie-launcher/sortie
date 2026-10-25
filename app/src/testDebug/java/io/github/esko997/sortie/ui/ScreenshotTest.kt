@@ -4,13 +4,16 @@ import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.testing.Controller
-import io.github.esko997.sortie.testing.Controller.Companion.A
 import io.github.esko997.sortie.testing.Controller.Companion.DOWN
-import io.github.esko997.sortie.testing.Controller.Companion.RIGHT
 import io.github.esko997.sortie.testing.DMG
 import io.github.esko997.sortie.testing.ImageLoads
 import io.github.esko997.sortie.testing.RP_NOVA
@@ -91,6 +94,30 @@ abstract class ScreenshotTest(private val device: String) {
     }
 
     @Test
+    fun homeCompactBrowsing() {
+        awaitHome()
+        compose.onNodeWithContentDescription("Hide header").performClick()
+        capture("home-compact")
+    }
+
+    @Test
+    fun homeAlwaysExpanded() {
+        awaitHome()
+        compose.runOnIdle { ApplicationProvider.getApplicationContext<SortieApp>().graph.user.setBrowseChrome("expanded") }
+        compose.waitForIdle()
+        capture("home-expanded")
+    }
+
+    @Test
+    fun systemCompactBrowsing() {
+        awaitHome()
+        Selection.openRoute.tryEmit("system/genesis")
+        await("Cinder Vale")
+        compose.onNodeWithContentDescription("Hide header").performClick()
+        capture("system-compact")
+    }
+
+    @Test
     fun magazineShelf() {
         awaitHome()
         Selection.openRoute.tryEmit("magazines")
@@ -115,8 +142,7 @@ abstract class ScreenshotTest(private val device: String) {
     @Test
     fun hangarWorkshop() {
         awaitHome()
-        pad.press(DOWN, RIGHT) // Apps, then the header's Hangar button
-        pad.press(A)
+        compose.onNodeWithText("Hangar").performClick()
         await("Workshop", "Gallery")
         capture("hangar-workshop")
     }

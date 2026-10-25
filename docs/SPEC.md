@@ -44,7 +44,7 @@ Outputs (owned by Sortie, append-only or small):
 
 - `sortie/playlog.jsonl` : one line per session (see formats).
 - `sortie/user.json` : favourites, per-game overrides, hidden entries, home sort and custom layout, list/grid choices,
-  opted-in launcher shortcuts (see formats/user.md).
+  header/hint density, opted-in launcher shortcuts (see formats/user.md).
 
 Entities: System, Game (a launchable file with metadata), App (an installed Android app treated as
 a launchable), Folder (a system folder, a smart folder, or a manual folder), LaunchProfile.
@@ -133,6 +133,11 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Browse screens (system lists, folders, search, Apps) share one list↔grid setting. Grid tiles are 1:1: cropped cover with
   the title over a bottom gradient, ★ when favourited, focus glow in the cover's palette accent; apps and shortcuts show their
   icon on slate with the label below. Columns = `gridColumns`.
+- Header and hints (`user.browseChrome`, `BrowseChromeMode`: Auto/Expanded/Compact, Settings cycles, unknown reads Auto)
+  apply to Home and every browse screen alike. Auto decides from the window's actual constraints (compact under 600 dp
+  height or width, font scale accounted for), never from whether the device is dual-screen. Compact folds the header to a
+  strip while browsing (tap, pull down, or Up from the first row reveals it) and uses one row of light hints with a
+  Controls dialog listing every command; the hint bar stays in the measured layout, never over the last row of tiles.
 - Launcher shortcuts are opt-in: Apps lists only `user.shortcuts` (pinned to Sortie or added with "Add shortcut from…" are
   opted in automatically; "Browse all shortcuts…" toggles the rest). Smart folders see a shortcut only if it is opted in,
   favourited or placed on home.

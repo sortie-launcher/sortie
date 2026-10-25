@@ -19,6 +19,7 @@ import io.github.esko997.sortie.data.db.byIds
 import io.github.esko997.sortie.data.db.toRoom
 import io.github.esko997.sortie.data.folders.FolderView
 import io.github.esko997.sortie.data.index.Indexer
+import io.github.esko997.sortie.data.manifest.BrowseChromeMode
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.LaunchProfile
 import io.github.esko997.sortie.data.manifest.SystemDef
@@ -188,6 +189,9 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     /** List or grid for every browse screen (system, folder, search, apps); one setting, separate from home. */
     fun setBrowseLayout(layout: String) = graph.user.setBrowseLayout(layout)
+
+    /** Header and hint density for Home and every browse screen; one setting for all of them. */
+    fun setBrowseChrome(mode: BrowseChromeMode) = graph.user.setBrowseChrome(mode.id)
 
     fun setHomeSort(sort: String) {
         if (sort == "console" && user.value.homeSort != "console") homeSortBefore = user.value.homeSort

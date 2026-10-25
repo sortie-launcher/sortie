@@ -122,6 +122,7 @@ to change the Apps grid density. The label cutoff adapts to tile width and your 
 On narrow portrait screens, Home puts its actions on a sideways-scrolling row below the clock. Short landscape screens put
 that row beside the title, leaving room for tiles. Larger screens keep the wrapping header. Sort choices scroll sideways
 (touch or D-pad), and controller hints wrap as whole button/action pairs. Switching list/grid retains the selected tile.
+**Settings → Header and hints** can fold this header and the hints out of the way while you browse (see Settings).
 
 System and folder filter chips: **Fit 4+** (guide rating 4 or 5), **✍ notes** (guide or personal notes), **💾 started** (a save or state exists
 on the card), **on device** (hide placeholders for games not copied yet). **🎲 Pick one** opens a random game from what is shown.
@@ -354,10 +355,17 @@ RAM and the battery temperature show. FPS and power draw are not shown.
 ## Settings
 
 **Library and emulators** (systems, game folders, emulators, BIOS/save folders, re-index), **Default home app** (once you
-have games), layouts (home/browse grid, sideways grids, rows and columns, app tile density), hero rotation, the overlay
-switcher, device stats, a default launcher per system, the optional **Radial keyboard**, **Backup and restore**,
+have games), layouts (home/browse grid, sideways grids, rows and columns, app tile density, header and hints), hero rotation,
+the overlay switcher, device stats, a default launcher per system, the optional **Radial keyboard**, **Backup and restore**,
 **Import from Cocoon…**, Diagnostics and this manual. Smart folders, guide notes, logos and custom launch profiles still
 come from a computer-prepared card if you use one.
+
+**Header and hints (Home and browse)** sets how much room Home, system lists, folders, search and Apps give their header
+and button hints: *Auto* (the default), *Expanded* or *Compact*; **A** cycles. *Auto* is compact when the window is short or
+narrow, on any device, and returns to the full header when there is room again. *Expanded* always shows the full header
+and hints. In compact mode the header folds into a thin strip while you browse: tap it, pull it down, or press **Up** on
+the first row to bring it back. The hints shrink to one light row with the main buttons, and **Controls** lists every
+command.
 
 **Device stats → Show device stats** puts CPU, GPU, RAM, temperatures and the fan on the companion screen, the switcher
 overlay, both, or nowhere (*Off*, the default); **A** cycles. **Device stats refresh** reads them every 2, 5 or 10

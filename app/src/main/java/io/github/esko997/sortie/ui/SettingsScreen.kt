@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.SortieApp
+import io.github.esko997.sortie.data.manifest.BrowseChromeMode
 import io.github.esko997.sortie.stats.CompanionView
 import io.github.esko997.sortie.stats.DeviceStatsMode
 import io.github.esko997.sortie.stats.nextPerfInterval
@@ -70,6 +71,22 @@ fun SettingsScreen(
                 Toggle("Home layout: grid", user.homeLayout == "grid") { vm.setHomeLayout(if (it) "grid" else "list") }
             }
             item { Toggle("Browse layout: grid", user.browseLayout == "grid") { vm.setBrowseLayout(if (it) "grid" else "list") } }
+            item {
+                val chrome = BrowseChromeMode.of(user.browseChrome)
+                val explain = when (chrome) {
+                    BrowseChromeMode.AUTO -> "compact when the window is short or narrow, full when there is room"
+                    BrowseChromeMode.EXPANDED -> "full header and hints always"
+                    BrowseChromeMode.COMPACT -> "compact always"
+                }
+                FocusRow(onClick = { vm.setBrowseChrome(chrome.next()) }) {
+                    Line(
+                        "Header and hints (Home and browse)",
+                        "${chrome.label} · A cycles Auto, Expanded, Compact · $explain · compact folds the header while browsing " +
+                            "(tap or pull down its strip, or press Up on the first row, to show it) and shows lighter hints; " +
+                            "Controls lists every command"
+                    )
+                }
+            }
             item { Toggle("Grids scroll sideways (rows of tiles)", user.gridHorizontal) { vm.setGridHorizontal(it) } }
             item {
                 FocusRow(onClick = { vm.setGridRows(if (user.gridRows >= 5) 2 else user.gridRows + 1) }) {

@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.data.backup
 
 import io.github.esko997.sortie.data.db.SessionEntity
+import io.github.esko997.sortie.data.manifest.BrowseChromeMode
 import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.mecha.MechaState
 import io.github.esko997.sortie.stats.CompanionView
@@ -142,6 +143,7 @@ private fun UserData.clamped() = copy(
     deviceStatsInterval = statsInterval(deviceStatsInterval),
     perfInterval = perfInterval(perfInterval),
     companionView = CompanionView.of(companionView).id,
+    browseChrome = BrowseChromeMode.of(browseChrome).id,
     layout = layout.distinct()
 )
 

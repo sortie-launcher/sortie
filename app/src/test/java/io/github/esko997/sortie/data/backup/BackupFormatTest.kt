@@ -22,6 +22,7 @@ class BackupFormatTest {
         // queued games are independent of favourites; an id the restoring device has not indexed yet must survive too
         wantToPlay = setOf("ps2/Armored Core 3 (USA).chd", "gba/Not On This Card.gba"),
         homeSort = "custom",
+        browseChrome = "compact",
         layout = listOf("system:snes", "folder:want-to-play", "ps2/Armored Core 3 (USA).chd"),
         dock = listOf("app:org.ppsspp.ppsspp", "", "", "", ""),
         gameAnnotations = mapOf("ps2/Armored Core 3 (USA).chd" to GameAnnotation(ControllerSupport.GAMEPAD, "L2/R2 strafe", "Mission 12, garage")),
@@ -125,11 +126,12 @@ class BackupFormatTest {
     @Test
     fun outOfRangePreferencesAreClamped() {
         val text = """{"format": "sortie-backup", "version": 1, "createdAt": 1, "sessions": [],""" +
-            """ "user": {"gridColumns": 99, "gridRows": 0, "layout": ["x", "x"]}}"""
+            """ "user": {"gridColumns": 99, "gridRows": 0, "layout": ["x", "x"], "browseChrome": "sideways"}}"""
         val u = valid(text).backup.user
         assertEquals(10, u.gridColumns)
         assertEquals(2, u.gridRows)
         assertEquals(listOf("x"), u.layout)
+        assertEquals("auto", u.browseChrome)
         assertNull(valid(text).backup.openSessionExcluded)
     }
 

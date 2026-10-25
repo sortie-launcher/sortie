@@ -12,6 +12,7 @@ Every key is optional; unknown keys are ignored.
   "homeLayout": "grid",
   "gridColumns": 5,
   "browseLayout": "list",
+  "browseChrome": "auto",
   "homeSort": "custom",
   "layout": ["system:snes", "folder:unplayed-4", "apps", "ps2/Armored Core 3 (USA).chd", "app:org.ppsspp.ppsspp",
              "shortcut:com.droiddeck.launcher/game-42"],
@@ -32,6 +33,7 @@ Every key is optional; unknown keys are ignored.
 | `appColumns` | int | 8 | Apps screen tiles per row (4–14) |
 | `gridColumns` | 2..10 | `5` | columns of every grid (home and browse screens) |
 | `browseLayout` | `"list"` \| `"grid"` | `"list"` | view of the browse screens (system lists, folders, search, Apps); Select toggles it there. One setting for all of them, separate from `homeLayout` |
+| `browseChrome` | `"auto"` \| `"expanded"` \| `"compact"` | `"auto"` | header and controller hints on Home and every browse screen (system lists, folders, search, Apps); one setting for all of them, cycled in Settings → Header and hints. `auto` is compact when the window itself is under 600 dp tall or wide (measured, whatever the device), otherwise expanded. Compact folds the header into a strip while browsing (tap, pull down or Up from the first row reveals it) and shows one row of hints with a Controls button listing every command. A missing or unknown value reads as `auto`; Sortie and backup restore save only the three known values |
 | `homeSort` | `"alpha"` \| `"count"` \| `"generation"` \| `"custom"` | `"alpha"` | home order. The first three are generated and fixed and list systems only: by label, by game count (descending) or grouped by the system's `generation` (`8-bit` … `128-bit` ascending, then the rest in `systems.json` order). `custom` shows `layout` |
 | `layout` | tile ids, in order | `[]` | the custom home. Ids: `system:<systemId>`, `folder:<folderId>`, `apps` (the built-in Apps folder), `continue` (the last game played), a game id, `app:<pkg>`, `shortcut:<pkg>/<shortcutId>`. Continue, every smart folder (including Want to play) and Apps always show on Custom and cannot be removed: those missing here are shown anyway, Continue first and the rest after the saved ids (folders in `folders.json` order, then Apps). Moving any tile saves the full displayed order here. Ids that no longer resolve are skipped when rendering but kept here |
 | `shortcuts` | shortcut ids | `[]` | launcher shortcuts listed on the Apps screen. Shortcuts pinned to Sortie or added with "Add shortcut from…" are added automatically; others are opted in from "Browse all shortcuts…". Smart folders see only shortcuts that are opted in, favourited or placed on home |

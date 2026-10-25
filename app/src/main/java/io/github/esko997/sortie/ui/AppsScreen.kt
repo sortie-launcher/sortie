@@ -170,7 +170,14 @@ fun AppsScreen(vm: SortieViewModel) {
                 }
             }
         }
-        HintBar("A" to "open / toggle", "hold A" to "favourite / add to home", "Select" to if (grid) "list view" else "grid view", "B" to "back")
+        // Apps has no fixed header to fold: its title and shortcut expanders scroll away with the list
+        BrowseHintBar(
+            "A" to "open / toggle",
+            "hold A" to "favourite / add to home",
+            "Select" to if (grid) "list view" else "grid view",
+            "B" to "back",
+            compact = browseCompact(user.browseChrome)
+        )
     }
     sheet?.let { ItemSheet(it, vm) { sheet = null } }
 }

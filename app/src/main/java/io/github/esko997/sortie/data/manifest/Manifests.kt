@@ -173,6 +173,11 @@ data class UserData(
     val appColumns: Int = 8,
     /** Browse screens (system, folder, apps, search): "list" or "grid". */
     val browseLayout: String = "list",
+    /**
+     * Header and hints on Home and the browse screens: "auto" (compact when the window is short or narrow), "expanded" or
+     * "compact" (see BrowseChromeMode; unknown values read as "auto").
+     */
+    val browseChrome: String = "auto",
     /** Home tile order: "alpha", "count", "generation" (generated, fixed, systems only) or "custom" (built from [layout]). */
     val homeSort: String = "alpha",
     /**

@@ -2,6 +2,7 @@ package io.github.esko997.sortie.data.user
 
 import android.util.Log
 import io.github.esko997.sortie.data.apps.LibraryItem
+import io.github.esko997.sortie.data.manifest.BrowseChromeMode
 import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.UserData
@@ -209,6 +210,9 @@ class UserStore(
     fun setGridRows(n: Int) = update { it.copy(gridRows = n.coerceIn(2, 6)) }
 
     fun setBrowseLayout(layout: String) = update { it.copy(browseLayout = layout) }
+
+    /** Stores [mode] as a known [BrowseChromeMode] id; anything else becomes "auto". */
+    fun setBrowseChrome(mode: String) = update { it.copy(browseChrome = BrowseChromeMode.of(mode).id) }
 
     fun setHomeSort(sort: String) = update { it.copy(homeSort = sort) }
 

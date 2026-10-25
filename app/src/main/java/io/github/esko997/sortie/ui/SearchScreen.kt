@@ -37,6 +37,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -169,7 +170,8 @@ private fun SearchFilters.moreCount(): Int = listOf(favourites, wantToPlay, unpl
  * matches. Values within a filter match either; the filters all have to match. The count is of every match; results load in
  * steps as the grid nears the end. Opening Search focuses the search box with the keyboard up. D-pad Down from the box closes
  * the keyboard and goes to the results (Up from them reaches the filters); without results it goes to the filters. A picker is
- * a dialog: A toggles a value, B closes it.
+ * a dialog: A toggles a value, B closes it. While browsing results the filter buttons fold to one line naming the active
+ * filters ([BrowseChrome]); the search box never folds.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -218,6 +220,9 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
     var sheet by remember { mutableStateOf<LibraryItem?>(null) }
     val grid = user.browseLayout == "grid"
     BrowseLayoutHotkey(vm, grid)
+    // Nothing asked or nothing found: the filters stay open (the ways out of an empty result need them). The search box itself
+    // is never part of the fold, so it stays usable while typing.
+    val chrome = rememberBrowseChrome(user.browseChrome, pinned = !filters.hasCriteria || (fresh && games.isEmpty()))
     val memory = rememberGridMemory()
     RememberGridPosition(memory, gridState, remember(games) { games.map { it.id } })
     LaunchedEffect(gridState) {
@@ -245,7 +250,7 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
     var leaving by remember { mutableStateOf<Job?>(null) }
     // Down from the search box closes the keyboard first: on a short screen it squeezes the filters and results out of the
     // layout, and a control measured away cannot take the focus. Then retry until the focus has left the box: to the results,
-    // or to the filter buttons when there are none on screen.
+    // or to the filter buttons when there are none on screen (the folded strip's chevron while the filters are folded).
     val leaveField = {
         leaving?.cancel()
         leaving = scope.launch {
@@ -254,7 +259,7 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
             repeat(25) {
                 if (!fieldFocused) return@launch
                 val toResults = currentGames.isNotEmpty() && focusResults()
-                if (!toResults && systemChipShown) runCatching { systemChip.requestFocus() }
+                if (!toResults) runCatching { (if (systemChipShown) systemChip else chrome.showFocus).requestFocus() }
                 delay(40)
             }
         }
@@ -304,66 +309,91 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
                 update(filters.copy(text = input))
             })
         )
-        FlowRow(
-            Modifier.fillMaxWidth().padding(top = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            PickerChip(
-                "System",
-                filters.systems.size,
-                Modifier.focusRequester(systemChip).onGloballyPositioned { systemChipShown = it.fullyShown() }
-            ) { picker = Picker.SYSTEM }
-            PickerChip("Tags", filters.tags.size) { picker = Picker.TAGS }
-            PickerChip("Genre", filters.genres.size) { picker = Picker.GENRE }
-            PickerChip("More", filters.moreCount()) { picker = Picker.MORE }
-            if (filters.hasCriteria) {
-                val total = page?.total?.takeIf { fresh }
-                Text(
-                    when (total) {
-                        null -> "…"
-                        1 -> "1 game"
-                        else -> "$total games"
-                    },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.align(Alignment.CenterVertically).padding(start = 4.dp)
-                )
-            }
+        val total = page?.total?.takeIf { fresh }
+        val countText = when (total) {
+            null -> "…"
+            1 -> "1 game"
+            else -> "$total games"
         }
-        if (filters.hasFilters) {
-            // one sideways-scrolling line however many are active, so the results keep their height on a narrow screen
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 2.dp),
+        // the filter controls fold while browsing results; the box above never does
+        Column(Modifier.fillMaxWidth().foldingHeader()) {
+            if (!chrome.expanded) {
+                // folded: the count and every active filter by name, so what narrows the results stays in view
+                FoldedHeader(chrome, Modifier.padding(top = 4.dp), inset = 0.dp) {
+                    Text(countText, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    val active = activeFilters(filters, systemLabel)
+                    if (active.isNotEmpty()) {
+                        Text(
+                            active.joinToString(" · ") { it.label },
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Amber,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                    }
+                }
+                return@Column
+            }
+            // folded away, the System button is not on screen: Down from the box must not aim at it
+            DisposableEffect(Unit) { onDispose { systemChipShown = false } }
+            FlowRow(
+                Modifier.fillMaxWidth().padding(top = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                val clearInteraction = remember { MutableInteractionSource() }
-                AssistChip(
-                    onClick = {
-                        update(filters.clearedFilters())
-                        refocus(systemChip)
-                    },
-                    label = { Text("Clear filters", maxLines = 1) },
-                    modifier = Modifier
-                        .focusRequester(clearChip)
-                        .focusGlow(clearInteraction.collectIsFocusedAsState().value, AssistChipDefaults.shape),
-                    interactionSource = clearInteraction
-                )
-                activeFilters(filters, systemLabel).forEach { chip ->
-                    val interaction = remember(chip.label) { MutableInteractionSource() }
-                    InputChip(
-                        selected = true,
-                        onClick = {
-                            val next = chip.remove(filters)
-                            update(next)
-                            refocus(if (next.hasFilters) clearChip else systemChip)
-                        },
-                        label = { Text(chip.label, maxLines = 1) },
-                        trailingIcon = { Text("✕") },
-                        modifier = Modifier.focusGlow(interaction.collectIsFocusedAsState().value, InputChipDefaults.shape),
-                        interactionSource = interaction
+                PickerChip(
+                    "System",
+                    filters.systems.size,
+                    Modifier.focusRequester(systemChip).onGloballyPositioned { systemChipShown = it.fullyShown() }
+                ) { picker = Picker.SYSTEM }
+                PickerChip("Tags", filters.tags.size) { picker = Picker.TAGS }
+                PickerChip("Genre", filters.genres.size) { picker = Picker.GENRE }
+                PickerChip("More", filters.moreCount()) { picker = Picker.MORE }
+                if (filters.hasCriteria) {
+                    Text(
+                        countText,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.CenterVertically).padding(start = 4.dp)
                     )
+                }
+                HideHeaderButton(chrome)
+            }
+            if (filters.hasFilters) {
+                // one sideways-scrolling line however many are active, so the results keep their height on a narrow screen
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val clearInteraction = remember { MutableInteractionSource() }
+                    AssistChip(
+                        onClick = {
+                            update(filters.clearedFilters())
+                            refocus(systemChip)
+                        },
+                        label = { Text("Clear filters", maxLines = 1) },
+                        modifier = Modifier
+                            .focusRequester(clearChip)
+                            .focusGlow(clearInteraction.collectIsFocusedAsState().value, AssistChipDefaults.shape),
+                        interactionSource = clearInteraction
+                    )
+                    activeFilters(filters, systemLabel).forEach { chip ->
+                        val interaction = remember(chip.label) { MutableInteractionSource() }
+                        InputChip(
+                            selected = true,
+                            onClick = {
+                                val next = chip.remove(filters)
+                                update(next)
+                                refocus(if (next.hasFilters) clearChip else systemChip)
+                            },
+                            label = { Text(chip.label, maxLines = 1) },
+                            trailingIcon = { Text("✕") },
+                            modifier = Modifier.focusGlow(interaction.collectIsFocusedAsState().value, InputChipDefaults.shape),
+                            interactionSource = interaction
+                        )
+                    }
                 }
             }
         }
@@ -391,7 +421,7 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
                         refocus(systemChip)
                     }
                 )
-                else -> ItemGrid(grid, user, Modifier.fillMaxSize().padding(top = 4.dp), state = gridState) {
+                else -> ItemGrid(grid, user, Modifier.fillMaxSize().padding(top = 4.dp).foldsBrowseChrome(chrome, gridState, systemChip), state = gridState) {
                     items(games, key = { it.id }) { g ->
                         val isEntry by remember(g.id) { derivedStateOf { firstVisible == g.id } }
                         val item = LibraryItem.Game(g)
@@ -415,12 +445,13 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
                 }
             }
         }
-        HintBar(
+        BrowseHintBar(
             "A" to "open",
             "hold A" to "favourite / add to home",
             "R2" to "want to play",
             "Select" to if (grid) "list view" else "grid view",
-            "B" to "back"
+            "B" to "back",
+            compact = chrome.foldable
         )
     }
     when (picker) {
