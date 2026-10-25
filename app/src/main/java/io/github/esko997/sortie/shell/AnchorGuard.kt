@@ -6,9 +6,9 @@ package io.github.esko997.sortie.shell
  * other screen, whose companion would anchor back (two screens ping-ponging). So the resume an anchor causes on its own target
  * display is skipped, once.
  *
- * Only that resume: navigation resuming on the target shows the anchor has done its job, and from then on a companion
- * appearing there (navigation swapped away within the same second) must hand off again, or the controller stays behind on the
- * companion's screen. A target nothing of Sortie's resumes on (a game) stops counting after [windowMs].
+ * Only that resume, and only while no navigation is in the way: once navigation resumes, or an X swap starts to move it, a
+ * companion that appears hands off toward navigation's screen, which cannot loop, and must do so or the controller stays
+ * behind on the companion's screen. A target nothing of Sortie's resumes on (a game) stops counting after [windowMs].
  */
 internal class AnchorGuard(private val now: () -> Long, private val windowMs: Long = 1_500) {
     private var target: Int? = null
@@ -21,10 +21,10 @@ internal class AnchorGuard(private val now: () -> Long, private val windowMs: Lo
         at = now()
     }
 
-    /** Navigation resumed on [displayId]: an earlier anchor there has landed and explains no later companion resume. */
+    /** Navigation resumed, or an X swap is moving it: no later companion resume is an anchor's own. */
     @Synchronized
-    fun navigationResumed(displayId: Int) {
-        if (target == displayId) target = null
+    fun navigationShown() {
+        target = null
     }
 
     /** A companion resumed on [displayId]: true when it should hand the controller to the other screen. */

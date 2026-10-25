@@ -187,7 +187,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         (application as SortieApp).graph.switcher.run {
             homeResumed(this@MainActivity)
-            navigationResumed(myDisplayId())
+            navigationShown()
         }
         vm.onForeground() // closes an open play session when we come back from an emulator
         showCompanion()
@@ -257,6 +257,7 @@ class MainActivity : ComponentActivity() {
      */
     private fun swapScreens() {
         val target = otherDisplay() ?: return
+        (application as SortieApp).graph.switcher.navigationShown() // an anchor in flight no longer explains a companion's resume
         // the switcher route opens and closes the switcher for this window only: the new instance starts where it was opened from
         nav?.let { if (it.currentDestination?.route == "switcher") it.popBackStack() }
         val saved = Bundle()

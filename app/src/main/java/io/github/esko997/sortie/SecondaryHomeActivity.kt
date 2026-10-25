@@ -41,7 +41,12 @@ class SecondaryHomeActivity : CompanionHost() {
  */
 abstract class CompanionHost : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
-    private val handOff = Runnable { if (!keepController) graph().switcher.handOff(myDisplayId()) }
+
+    /**
+     * Never from a companion that is closing: an X swap back to this screen closes the companion here before it is paused, and
+     * a hand-off still pending from its last resume would then send the controller to the screen navigation just left.
+     */
+    private val handOff = Runnable { if (!keepController && !isFinishing) graph().switcher.handOff(myDisplayId()) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
