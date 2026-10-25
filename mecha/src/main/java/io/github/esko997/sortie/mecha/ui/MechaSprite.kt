@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -84,6 +85,18 @@ private val LOOPS = mapOf(
     MechaPose.CELEBRATE to PoseLoop(130, intArrayOf(7, 7, 7, 7, 0, 0), intArrayOf(0, -2, -3, -2, 0, 0), 7)
 )
 
+/** Frame index of this pose's loop at [step] (wrapping). */
+internal fun MechaPose.frameAt(step: Int): Int = LOOPS.getValue(this).let { it.frames[step.mod(it.frames.size)] }
+
+/** Whole sprite pixels the assembled mech is lifted at [step] (negative is up). */
+internal fun MechaPose.bobAt(step: Int): Int = LOOPS.getValue(this).let { it.bob[step.mod(it.bob.size)] }
+
+internal val MechaPose.steps: Int get() = LOOPS.getValue(this).frames.size
+internal val MechaPose.stepMs: Long get() = LOOPS.getValue(this).stepMs
+
+/** The frame shown while nothing moves. */
+internal val MechaPose.stillFrame: Int get() = LOOPS.getValue(this).still
+
 /**
  * Decoded sprite sheets, shared by every sprite in the process. Each sheet is decoded once on an IO thread (24 sheets of
  * 512x64 ARGB are ~3 MB) and uploaded ahead of the first draw; drawing never touches the assets again. A failed decode is
@@ -125,30 +138,25 @@ private object MechaSheets {
 }
 
 @Immutable
-private sealed interface SpriteLoad {
+internal sealed interface SpriteLoad {
     data object Loading : SpriteLoad
     class Ready(val layers: List<ImageBitmap>) : SpriteLoad
     class Failed(val reason: String) : SpriteLoad
 }
 
-/**
- * The equipped parts drawn as one mech. Each part is a 64px frame from its sheet, drawn at the largest whole multiple that fits
- * the bounds with nearest-neighbour sampling, centred on whole device pixels, so every sprite pixel stays a crisp square.
- *
- * Animation: one frame counter, read only while drawing, so a tick redraws this sprite without recomposing anything. The ticker
- * runs only while [motion] is on, the sprite is composed and its lifecycle is RESUMED. Sheets come from [MechaSheets].
- * A missing equipped part or an unreadable sheet says so in text instead of drawing an empty box.
- */
+/** The equipped parts in draw order, each resolved against the catalog (null: that slot's part is missing). */
 @Composable
-internal fun MechaSprite(parts: List<MechaPart>, equipped: Map<MechaSlot, String>, pose: MechaPose, motion: Boolean, modifier: Modifier = Modifier) {
+private fun rememberLayers(parts: List<MechaPart>, equipped: Map<MechaSlot, String>): List<Pair<MechaSlot, MechaPart?>> = remember(parts, equipped) {
+    DRAW_ORDER.map { slot -> slot to equipped[slot]?.let { id -> parts.firstOrNull { it.id == id && it.slot == slot } } }
+}
+
+/** The equipped parts' sheets from [MechaSheets]: ready at once when already decoded, else after an off-main decode. */
+@Composable
+internal fun rememberSpriteLoad(parts: List<MechaPart>, equipped: Map<MechaSlot, String>): SpriteLoad = spriteLoad(rememberLayers(parts, equipped))
+
+@Composable
+private fun spriteLoad(layers: List<Pair<MechaSlot, MechaPart?>>): SpriteLoad {
     val context = LocalContext.current
-    // per layer: the asset path, or why it cannot be drawn
-    val layers: List<Pair<MechaSlot, MechaPart?>> = remember(parts, equipped) {
-        DRAW_ORDER.map { slot -> slot to equipped[slot]?.let { id -> parts.firstOrNull { it.id == id && it.slot == slot } } }
-    }
-    val description = remember(layers) {
-        "Mech with " + layers.reversed().joinToString(", ") { (slot, part) -> part?.name ?: "no ${slot.label().lowercase()}" }
-    }
     val load by produceState(initialSpriteLoad(layers), layers) {
         val missing = layers.firstOrNull { it.second == null }
         value = if (missing != null) {
@@ -163,6 +171,39 @@ internal fun MechaSprite(parts: List<MechaPart>, equipped: Map<MechaSlot, String
             }
         }
     }
+    return load
+}
+
+/** Draws [frame] of every layer in [sheets], [scale]× with nearest-neighbour sampling, frame row 0 at [frameTop], box left [x]. */
+internal fun DrawScope.drawMechaFrame(sheets: List<ImageBitmap>, frame: Int, x: Int, frameTop: Int, scale: Int) {
+    val side = MECHA_FRAME * scale
+    for (sheet in sheets) {
+        drawImage(
+            sheet,
+            srcOffset = IntOffset(frame * MECHA_FRAME, 0),
+            srcSize = IntSize(MECHA_FRAME, MECHA_FRAME),
+            dstOffset = IntOffset(x, frameTop),
+            dstSize = IntSize(side, side),
+            filterQuality = FilterQuality.None
+        )
+    }
+}
+
+/**
+ * The equipped parts drawn as one mech. Each part is a 64px frame from its sheet, drawn at the largest whole multiple that fits
+ * the bounds with nearest-neighbour sampling, centred on whole device pixels, so every sprite pixel stays a crisp square.
+ *
+ * Animation: one frame counter, read only while drawing, so a tick redraws this sprite without recomposing anything. The ticker
+ * runs only while [motion] is on, the sprite is composed and its lifecycle is RESUMED. Sheets come from [MechaSheets].
+ * A missing equipped part or an unreadable sheet says so in text instead of drawing an empty box.
+ */
+@Composable
+internal fun MechaSprite(parts: List<MechaPart>, equipped: Map<MechaSlot, String>, pose: MechaPose, motion: Boolean, modifier: Modifier = Modifier) {
+    val layers = rememberLayers(parts, equipped)
+    val description = remember(layers) {
+        "Mech with " + layers.reversed().joinToString(", ") { (slot, part) -> part?.name ?: "no ${slot.label().lowercase()}" }
+    }
+    val load = spriteLoad(layers)
     val loop = LOOPS.getValue(pose)
     val tick = remember { mutableIntStateOf(0) }
     var visible by remember { mutableStateOf(false) }
@@ -177,13 +218,13 @@ internal fun MechaSprite(parts: List<MechaPart>, equipped: Map<MechaSlot, String
             }
         }
     }
-    when (val l = load) {
-        is SpriteLoad.Failed -> Box(modifier.semantics { contentDescription = "Mech can't be drawn: ${l.reason}" }, contentAlignment = Alignment.Center) {
-            Text(l.reason, style = MaterialTheme.typography.labelSmall, color = Color(0xFFF87171), textAlign = TextAlign.Center)
+    when (load) {
+        is SpriteLoad.Failed -> Box(modifier.semantics { contentDescription = "Mech can't be drawn: ${load.reason}" }, contentAlignment = Alignment.Center) {
+            Text(load.reason, style = MaterialTheme.typography.labelSmall, color = Color(0xFFF87171), textAlign = TextAlign.Center)
         }
         SpriteLoad.Loading -> Spacer(modifier.semantics { contentDescription = "Loading mech" })
         is SpriteLoad.Ready -> {
-            val sheets = l.layers
+            val sheets = load.layers
             Spacer(
                 modifier
                     .semantics { contentDescription = description }
@@ -202,17 +243,7 @@ internal fun MechaSprite(parts: List<MechaPart>, equipped: Map<MechaSlot, String
                         val side = MECHA_FRAME * scale
                         // centred across, standing on the bottom edge: the feet keep their floor and a hop rises into the headroom
                         val x = ((size.width - side) / 2).roundToInt()
-                        val y = size.height.toInt() - side + bob * scale
-                        for (sheet in sheets) {
-                            drawImage(
-                                sheet,
-                                srcOffset = IntOffset(frame * MECHA_FRAME, 0),
-                                srcSize = IntSize(MECHA_FRAME, MECHA_FRAME),
-                                dstOffset = IntOffset(x, y),
-                                dstSize = IntSize(side, side),
-                                filterQuality = FilterQuality.None
-                            )
-                        }
+                        drawMechaFrame(sheets, frame, x, size.height.toInt() - side + bob * scale, scale)
                     }
             )
         }

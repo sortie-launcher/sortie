@@ -20,9 +20,9 @@ import androidx.compose.ui.unit.dp
 /** Controller hints wrap as whole button/action pairs, never as narrow columns of letters. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun HintBar(vararg hints: Pair<String, String>) {
+fun HintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modifier) {
     FlowRow(
-        Modifier.fillMaxWidth().background(Color(0xFF0B0D10)).padding(horizontal = 14.dp, vertical = 6.dp),
+        modifier.fillMaxWidth().background(Color(0xFF0B0D10)).padding(horizontal = 14.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {

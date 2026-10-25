@@ -135,9 +135,58 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 
 ### Hangar companion (experimental)
 
-- A measured footer on Home, systems, folders, Apps, Search and magazines; never drawn over article text or launch controls.
-  Hidden while typing, absent from settings/editors/switcher. The Hangar dialog stays mounted while its rename field uses
-  the keyboard. Reader Select → Visit the hangar gives controller access without taking over reading's D-pad grammar.
+- Lives behind the interface on Home (navigation display) and on the other display's idle panel, never in a strip of its
+  own. `MechaStageHost` (in `:mecha`) wraps a window's content: the mech is drawn under it (every tile, control and text
+  wins; occlusion makes peeking free) and only a speech bubble is drawn over it, on empty space. Screens only declare
+  spots with `Modifier.mechaSpot(id, kind)` / `mechaObstacle(id)`; every declared element is also an obstacle.
+  Spot kinds: LEDGE (on an element's top edge), PEEK (head above an element's top edge, the rest clipped away),
+  BESIDE_END/START (on its bottom line, just outside it), ROOM (inside empty space), EDGE_START/END (partly off screen at
+  the edge, standing on the element: the way in and out). A spot counts only while its element is laid out and whole on
+  screen, the exposed art is inside the window and clear of every other element, and at least 40 dp × 40 dp of him shows
+  free of controls (so he is always tappable; a peek shows as many rows as that takes: head and shoulders). Scale: the
+  smallest whole multiple of the 64 px frame at least 9 mm tall from the display's real dpi (`ydpi`, or the density bucket
+  when it reports nonsense): 2× on the Thor, DMG and Nova; one step smaller only if fewer than two spots qualify.
+- Home base: when no spot qualifies he stands in empty space the host reserves for him (`mechaBaseSize`,
+  `Modifier.mechaHomeBase`): on Home at the end of the hint bar row, on the other display under the bell (the picture keeps
+  clear of it). A hidden companion reserves nothing. If even the base cannot hold him he hides; he is never visible and
+  untappable.
+- Home spots: after the clock/game count, on the header actions when they wrap below the title, after the sort chips,
+  over every laid-out tile (in practice the first visible row: elsewhere the head would be inside another tile), on the
+  hint bar, both edges along the hint bar. Other display: after the battery, before the bell, on and after **Want to
+  play**, over the hero picture (sized to the picture's real aspect ratio), before the **+**, both edges just above the
+  bottom. Text, the dock and the detail block are obstacles.
+- One mech per process (`MechaPresence`): he is on one display; the latest resumed, allowed stage there draws him. He
+  stays on that display while its window is paused, adopts the latest active window when his display has none left, and
+  changes display only by walking off one screen's edge into the other's (one stroll in three after two strolls on a
+  screen, when the other screen is up and has room; or at once when nothing fits here and the other has room).
+  Single-screen devices keep him on Home. The other display's stage is inactive while a game is in front.
+- Movement: a stroll every 45–90 s while the stage is resumed: walking (3 frame pixels per 120 ms walk frame) along a
+  shared floor up to half the screen, a seven-step hop for a small nearby step, otherwise sinking out of sight through
+  his floor line and rising into the next spot. With nothing qualifying he stands at the home base, or stays out of
+  sight. A spot that loses its room (scrolling, rewrapping) makes him sink away; he comes back to a qualifying place once
+  the layout has been still for 1.2 s. He follows his element while it moves. Motion off: always the first qualifying
+  place in declaration order (deterministic for screenshots).
+- Reactions: the first look after a play session closes (any session, games or apps) greets the player with a cheer and
+  "Welcome back!" plus the store's credit message; other store messages (care, salvage, rename, equipment) show in a
+  5 s bubble after the Hangar closes. A bubble only appears beside him on empty space; he moves to a spot with room or
+  skips it. Three minutes without key or touch input: he dozes (still SLEEP frame) until the next input. Resting shows
+  SLEEP and never strolls; motion off places him still at a spot with no walking or cheering; hidden: nothing roams.
+- Cost: positions and frames are snapshot state read only while drawing the layer; movement and cheers are the only
+  frame bursts. Idle, dozing, off screen, paused or behind a game: no frames, no timers but the next stroll.
+- Access: **Hangar** in Home's header (controller; focus returns to it on close), a tap on the visible mech (watched at the
+  host in the Initial pass: a short low-movement tap whose down landed on his target opens the Hangar and consumes only
+  its release; drags pass through untouched). The tap target is the exposed art widened to the frame where that touches
+  no control (at least 40 dp each way, which every place he stands guarantees). The Hangar holds Animate and Hide/Show companion. Reader
+  Select → Visit the hangar keeps its controller access. The Hangar dialog stays mounted while its rename field uses the
+  keyboard.
+- Roaming acceptance (`0.1.0-mecha-roam` debug on the DMG, `0.1.0-beta.1044-roam.1` on the Thor): DMG Home at the clock,
+  on the wrapped header buttons, on the hint bar (list view) and peeking over first-row tiles (grid view); peek-to-peek
+  strolls; 0 frames in 10 s windows between strolls, while dozing (only the clock's minute tick) and with motion off; a
+  real 70 s game session greeted with "Welcome back!" plus the credit message; Home Hangar button by controller with focus
+  returned on B; tap on him opens the Hangar, a tap beside him reaches the row, a drag starting on him scrolls the list;
+  hide removes him, show brings him back; name/parts/salvage unchanged. Thor: Mica at scale 2 beside the sort chips and
+  over tiles on top; leaving Home sent him to the bottom panel (battery, Want to play, +); two X swaps showed one mech and
+  no crash. The bottom panel's rotating hero still redraws on its own timer (not the mech).
 - One named companion, cosmetic Bond/Charge/Condition, tune/charge/rest interactions, motion toggle and hide/show.
   No time-away decay, death, streaks, notifications, network calls or requirement to care before playing.
 - Three original pixel-art families (yard, survey, courier), two variants for each head/body/arms/legs slot: 24 authored
@@ -157,9 +206,9 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Limits: a finite authored collection, not arbitrary generated artwork or statistical part affixes; no combat or
   test-course simulation. The existing preference/history backup does **not** include the companion save yet.
   Preserve app data; do not uninstall to change builds.
-- DMG acceptance for `0.1.0-mecha-lab.2`: rename/care/salvage/equipment, unowned-part preview restrictions, four animated
-  poses, hide/show persistence, and Home/system/folder/Apps placement exercised on device. Controller-only Home → Hangar
-  and reader Select → Hangar → Gallery → B → B preserve the article position and resume D-pad scrolling.
+- DMG acceptance for `0.1.0-mecha-lab.2` (dock era): rename/care/salvage/equipment, unowned-part preview restrictions,
+  four animated poses and hide/show persistence exercised on device; reader Select → Hangar → Gallery → B → B preserves the
+  article position and resumes D-pad scrolling.
   A real 310-second game session earned exactly one credit; process restart and in-place upgrade preserved inventory and
   did not repeat the reward. Background frame count stayed fixed with motion enabled. Motion-off sprites stayed still.
   Both JVM variants passed 308 tests. Original card configuration/preferences, all 10,154 game/path rows and 130 history
@@ -202,13 +251,14 @@ Code map (`app/src/main/java/io/github/esko997/sortie/`):
   `data/backup/` export/restore; `data/magazine/`, `data/reference/`, `data/journal/` the reading, reference-card and
   journal features; `data/apps/` installed apps and launcher shortcuts.
 - `launch/` intent building and launching with fallbacks; `shell/` the Shizuku user service, screen mover and app switcher;
-  `ui/` Compose screens (`ManualScreen` renders `assets/MANUAL.md`; `MechaFooter.kt` decides on which routes the companion
-  dock shows).
+  `ui/` Compose screens (`ManualScreen` renders `assets/MANUAL.md`).
 - `design/` library module (`:design`, still package `io.github.esko997.sortie.ui`): theme colours, `SortieTheme` and the
   controller-focus building blocks (`focusGlow`, `keyLongPress`, `FocusRow`) shared by the app and feature modules.
 - `mecha/` library module (`:mecha`, package `io.github.esko997.sortie.mecha`): the Hangar companion's rules, save,
-  parts catalog and art (`mecha/src/main/assets/mecha/`), dock and Hangar UI. It knows no Room, app or navigation types:
-  `SortieApp` maps sessions to `PlaySession` for `MechaStore`, and the app shows `MechaDock` and `Hangar`.
+  parts catalog and art (`mecha/src/main/assets/mecha/`), roaming (`MechaRoam` geometry/choices, `ui/MechaStage` host
+  and spot modifiers, `ui/MechaDirector` behaviour, `ui/MechaPresence` one mech across displays) and Hangar UI. It knows
+  no Room, app or navigation types: `SortieApp` maps sessions to `PlaySession` for `MechaStore`, `SortieNav` and
+  `CompanionScreen` host stages and declare spots, and the view model reports returns from play.
 - `app/src/test/`, `mecha/src/test/` JVM unit tests. Device paths, serials and emulator package names belong in the on-card
   manifests or environment variables (`tools/dev.sh` reads `SORTIE_SERIAL`, `SORTIE_TOP_DISPLAY`, `SORTIE_BOTTOM_DISPLAY`),
   never in code.

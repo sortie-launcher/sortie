@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -86,6 +88,13 @@ import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import io.github.esko997.sortie.mecha.MechaSpotKind
+import io.github.esko997.sortie.mecha.ui.MechaStageHost
+import io.github.esko997.sortie.mecha.ui.mechaBaseSize
+import io.github.esko997.sortie.mecha.ui.mechaHomeBase
+import io.github.esko997.sortie.mecha.ui.mechaObstacle
+import io.github.esko997.sortie.mecha.ui.mechaSpot
+import io.github.esko997.sortie.mecha.ui.rememberMechaStage
 import io.github.esko997.sortie.shell.ScreenMover
 import io.github.esko997.sortie.shell.TaskSwitcher
 import kotlinx.coroutines.CoroutineScope
@@ -130,8 +139,10 @@ fun CompanionScreen(displayId: Int) {
     val contents = rememberSaveableStateHolder()
     // the host hands the controller away on every tap; not while a text field here needs the IME
     val host = LocalContext.current as? CompanionHost
-    // pickers and the open dock keep the controller here: their slots take the D-pad (A opens, hold A unpins), B closes
-    val picking = launcher || dockSlot >= 0 || dock
+    // The companion roams this panel too (one mech for both screens, MechaPresence), but never while a game is in front.
+    val stage = rememberMechaStage(graph.mecha)
+    // pickers, the open dock and the Hangar keep the controller here: their controls take the D-pad, B closes
+    val picking = launcher || dockSlot >= 0 || dock || stage.hangarOpen
     LaunchedEffect(picking) {
         if (picking) host?.keepController = true else if (host?.keepController == true) host.releaseController()
     }
@@ -142,32 +153,55 @@ fun CompanionScreen(displayId: Int) {
         dockSlot = -1
     }
     Surface(Modifier.fillMaxSize(), color = Ink) {
-        when {
-            switcher.open && !switcher.overlay -> TouchSwitcher(graph.switcher, switcher, displayId)
-            launcher -> TouchLauncher(graph, displayId, scope, onClose = { launcher = false })
-            dockSlot >= 0 -> AppPicker(graph, "Add to the dock", onClose = { dockSlot = -1 }) {
-                graph.user.setDockSlot(dockSlot, it.id)
-                dockSlot = -1
-            }
-            navigationVisible && magazine != null -> {
-                val panel = magazine!!
-                val contentsKey = remember(panel.issue.id, panel.articleId) { "${panel.issue.id}/${panel.articleId.orEmpty()}" }
-                contents.SaveableStateProvider(contentsKey) {
-                    MagazineCompanion(panel) { CornerPlus(Modifier) { launcher = true } }
+        MechaStageHost(stage, active = session == null || navigationVisible) {
+            when {
+                switcher.open && !switcher.overlay -> TouchSwitcher(graph.switcher, switcher, displayId)
+                launcher -> TouchLauncher(graph, displayId, scope, onClose = { launcher = false })
+                dockSlot >= 0 -> AppPicker(graph, "Add to the dock", onClose = { dockSlot = -1 }) {
+                    graph.user.setDockSlot(dockSlot, it.id)
+                    dockSlot = -1
                 }
-            }
-            else -> Box(Modifier.fillMaxSize()) {
-                // Exactly one of these is composed: the hero ticker only runs while nothing is being played. Browsing another
-                // game with the navigation visible takes the panel without ending the session; once the navigation is gone (the
-                // game is in front again) or nothing else is selected, Now playing returns.
-                val s = session
-                val browsingOther = navigationVisible && selected != null && selected?.id != s?.gameId
-                if (s != null && !browsingOther) NowPlaying(graph, s) else HeroPanel(graph)
-                CornerPlus(Modifier.align(Alignment.BottomEnd).padding(16.dp)) { launcher = true }
-                Dock(graph, displayId, scope, dock, Modifier.align(Alignment.BottomStart).padding(16.dp), onToggle = { dock = !dock }) { dockSlot = it }
-                // one element per corner, all on the same 44 dp inset: battery · bell / dock · '+'
-                Battery(Modifier.align(Alignment.TopStart).padding(16.dp))
-                Bell(graph, Modifier.align(Alignment.TopEnd).padding(16.dp))
+                navigationVisible && magazine != null -> {
+                    val panel = magazine!!
+                    val contentsKey = remember(panel.issue.id, panel.articleId) { "${panel.issue.id}/${panel.articleId.orEmpty()}" }
+                    contents.SaveableStateProvider(contentsKey) {
+                        MagazineCompanion(panel) { CornerPlus(Modifier) { launcher = true } }
+                    }
+                }
+                else -> Box(Modifier.fillMaxSize()) {
+                    // Exactly one of these is composed: the hero ticker only runs while nothing is being played. Browsing another
+                    // game with the navigation visible takes the panel without ending the session; once the navigation is gone (the
+                    // game is in front again) or nothing else is selected, Now playing returns.
+                    val s = session
+                    val browsingOther = navigationVisible && selected != null && selected?.id != s?.gameId
+                    if (s != null && !browsingOther) NowPlaying(graph, s) else HeroPanel(graph)
+                    // the companion's way in and out of this screen: the screen edges just above the bottom inset
+                    Spacer(
+                        Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(16.dp)
+                            .mechaSpot("companion:edge-start", MechaSpotKind.EDGE_START)
+                            .mechaSpot("companion:edge-end", MechaSpotKind.EDGE_END)
+                    )
+                    CornerPlus(Modifier.align(Alignment.BottomEnd).padding(16.dp).mechaSpot("companion:plus", MechaSpotKind.BESIDE_START, interactive = true)) {
+                        launcher = true
+                    }
+                    Dock(
+                        graph,
+                        displayId,
+                        scope,
+                        dock,
+                        Modifier.align(Alignment.BottomStart).padding(16.dp).mechaObstacle("companion:dock", interactive = true),
+                        onToggle = { dock = !dock }
+                    ) { dockSlot = it }
+                    // one element per corner, all on the same 44 dp inset: battery · bell / dock · '+'
+                    Battery(Modifier.align(Alignment.TopStart).padding(16.dp).mechaSpot("companion:battery", MechaSpotKind.BESIDE_END))
+                    Bell(graph, Modifier.align(Alignment.TopEnd).padding(16.dp).mechaSpot("companion:bell", MechaSpotKind.BESIDE_START, interactive = true))
+                    // his home base: right under the bell, beside the picture (Panel keeps the picture clear of it)
+                    Spacer(
+                        Modifier.align(Alignment.TopEnd).padding(top = BASE_TOP, end = 8.dp)
+                            .size(mechaBaseSize())
+                            .mechaHomeBase("companion:base")
+                    )
+                }
             }
         }
     }
@@ -209,7 +243,7 @@ private fun HeroPanel(graph: SortieApp.Graph) {
         onTap = g?.let { openOnOtherScreen(it) }
     ) {
         val art = g?.screenshot ?: g?.cover
-        if (art != null) CoverImage(art, Modifier.fillMaxSize(), ContentScale.Fit)
+        if (art != null) HeroArt(art)
     }
 }
 
@@ -232,7 +266,10 @@ private fun HeroQueueButton(graph: SortieApp.Graph, id: String) {
             val added = graph.user.toggleWantToPlay(id)
             Toast.makeText(context, if (added) "Added to Want to play" else "Removed from Want to play", Toast.LENGTH_SHORT).show()
         },
+        // he may stand on the button or beside it; it is a control, so a tap on him there never lands on it
         modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+            .mechaSpot("companion:queue", MechaSpotKind.LEDGE, interactive = true)
+            .mechaSpot("companion:queue-end", MechaSpotKind.BESIDE_END, interactive = true)
             .focusGlow(interaction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape),
         interactionSource = interaction,
         colors = ButtonDefaults.outlinedButtonColors(
@@ -242,6 +279,17 @@ private fun HeroQueueButton(graph: SortieApp.Graph, id: String) {
     ) {
         Text(if (queued) "Remove from Want to play" else "Want to play")
     }
+}
+
+/**
+ * The game's picture, fitted into the art area and, once its proportions are known, sized to exactly the drawn picture, so
+ * the companion peeks over the picture's real top edge rather than the letterboxed area's.
+ */
+@Composable
+private fun HeroArt(path: String) {
+    var ratio by remember(path) { mutableStateOf<Float?>(null) }
+    val fitted = ratio?.let { Modifier.aspectRatio(it).mechaSpot("companion:art", MechaSpotKind.PEEK) } ?: Modifier.fillMaxSize()
+    CoverImage(path, fitted, ContentScale.Fit, onIntrinsicSize = { s -> if (s.width > 0f && s.height > 0f) ratio = s.width / s.height })
 }
 
 /** Tapping the hero or now-playing card opens the game's entry in Sortie's navigation, which lives on the other screen. */
@@ -288,7 +336,7 @@ private fun NowPlaying(graph: SortieApp.Graph, session: SessionEntity) {
             }
         ) {
             val art = g?.screenshot ?: g?.cover
-            if (art != null) CoverImage(art, Modifier.fillMaxSize(), ContentScale.Fit)
+            if (art != null) HeroArt(art)
         }
     } else {
         val apps by graph.apps.apps.collectAsState()
@@ -339,13 +387,15 @@ private fun Panel(
     val hasNotes = notes != null && !notes.isEmpty()
     val lower = detail != null || hasNotes
     Column(Modifier.fillMaxSize().then(tap).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.weight(if (lower) 0.5f else 1f).fillMaxWidth(), contentAlignment = Alignment.Center) { art() }
+        // the picture keeps clear of the companion's home base at the top end (none while he is hidden)
+        val baseInset = mechaBaseSize().width
+        Box(Modifier.weight(if (lower) 0.5f else 1f).fillMaxWidth().padding(horizontal = baseInset), contentAlignment = Alignment.Center) { art() }
         if (status != null) {
             Text(
                 status,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 16.dp)
+                modifier = Modifier.padding(top = 16.dp).mechaObstacle("companion:status")
             )
         }
         Text(
@@ -354,7 +404,7 @@ private fun Panel(
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(start = 56.dp, top = if (status != null) 4.dp else 16.dp, end = 56.dp)
+            modifier = Modifier.padding(start = 56.dp, top = if (status != null) 4.dp else 16.dp, end = 56.dp).mechaObstacle("companion:title")
         )
         if (!metadata.isNullOrBlank()) {
             Text(
@@ -362,7 +412,7 @@ private fun Panel(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(start = 56.dp, top = 4.dp, end = 56.dp, bottom = 4.dp)
+                modifier = Modifier.padding(start = 56.dp, top = 4.dp, end = 56.dp, bottom = 4.dp).mechaObstacle("companion:metadata")
             )
         }
         if (subtitle.isNotBlank()) {
@@ -370,13 +420,17 @@ private fun Panel(
                 subtitle,
                 color = Amber,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(start = 56.dp, top = 8.dp, end = 56.dp, bottom = 8.dp)
+                modifier = Modifier.padding(start = 56.dp, top = 8.dp, end = 56.dp, bottom = 8.dp).mechaObstacle("companion:subtitle")
             )
         }
         action()
         if (lower) {
             // the user's own notes ("where was I?" first) above the guide text, in one scrollable block
-            Column(Modifier.weight(0.5f).fillMaxWidth().padding(horizontal = 72.dp).verticalScroll(rememberScrollState())) {
+            Column(
+                Modifier.weight(0.5f).fillMaxWidth().padding(horizontal = 72.dp)
+                    .mechaObstacle("companion:detail", interactive = true)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 if (notes != null && hasNotes) GameAnnotationSummary(notes, Modifier.padding(bottom = 12.dp))
                 if (!detail.isNullOrEmpty()) {
                     Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -529,6 +583,9 @@ private fun Bell(graph: SortieApp.Graph, modifier: Modifier) {
 
 /** Size of the four corner controls; the dock dot and battery centre themselves in it so every corner lines up. */
 private val CORNER = 44.dp
+
+/** Top of the companion's home base on the idle panel: under the bell's corner (16 dp inset + [CORNER] + a gap). */
+private val BASE_TOP = 68.dp
 
 /**
  * Small translucent round '+' in the corner of the idle panel and beside the magazine contents; opens [TouchLauncher]. A

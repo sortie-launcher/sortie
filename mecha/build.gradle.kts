@@ -1,5 +1,6 @@
-// The experimental Hangar companion: its rules, app-private save, parts catalog and art (assets/mecha/), and the dock and
-// Hangar UI. Host-neutral: the app supplies play sessions (PlaySession) and decides where the dock is shown.
+// The experimental Hangar companion: its rules, app-private save, parts catalog and art (assets/mecha/), roaming (stage,
+// spots, one mech across displays) and the Hangar UI. Host-neutral: the app supplies play sessions (PlaySession), hosts
+// stages and declares spots.
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)

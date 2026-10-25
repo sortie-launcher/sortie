@@ -147,11 +147,20 @@ Touch and keyboard arrows still position the caret, and **A** on a text field br
 
 ## Hangar companion (experimental)
 
-The little mech below Home, your library and magazines is an optional, experimental companion. It has its own space below
-the controls and dozes while you read.
+The little mech on Home is an optional, experimental companion, about a centimetre tall on any screen. He lives behind the
+interface, in its margins: beside the clock, at the end of the sort chips, peeking over the first row of tiles or standing
+on the hint bar. Every tile, button and line of text stays in front of him, so he never covers anything you need, and he
+only stops where enough of him shows to tap. When nowhere has room he goes to his home base at the end of the hint bar.
+On a dual-screen handheld he also roams the other screen (near the battery and bell, on or beside **Want to play**, over
+the game's picture, by the **+**, with his base under the bell) and can walk off one screen and onto the other. There is
+only one of him.
 
-- Tap the mech or **Hangar** to visit. In an article, **Select → Visit the hangar** also works with the controller.
-  **B** returns from Gallery to Workshop, then closes the Hangar without losing your article.
+- Every minute or so he strolls to another spot. When you come back from a game he waves and says what the session earned;
+  news from the Hangar shows in a speech bubble where there is empty space. After a few quiet minutes he dozes until you
+  press something. He never moves while a game is in front, and stands still while nothing happens.
+- **Hangar** in Home's header opens the Hangar with the controller; tapping the mech where he shows does too. In an article,
+  **Select → Visit the hangar** also works. **B** returns from Gallery to Workshop, then closes the Hangar without losing
+  your place.
 - **Workshop** lets you name your companion, tune it, charge it, or put it to sleep. Charge and condition never run down
   while you are away, and neither can stop you playing or using the companion.
 - Choose a part slot and **Equip** an owned part, or wear a complete family set. Mixing families is encouraged.
@@ -160,8 +169,8 @@ the controls and dozes while you read.
   Earlier play, abandoned sessions, apps and launcher shortcuts do not count. Recorded time is not a measure of active input.
 - **Gallery** compares all three families and idle, walking, sleeping and cheering animations. Parts labelled **preview**
   are not unlocked; a preview build can only be worn when you own every part.
-- At the bottom of Workshop, turn **Animate companion** off for a still sprite, or **Hide companion**.
-  **Show companion** at the bottom of Home brings it back without losing parts.
+- At the bottom of Workshop, turn **Animate companion** off and he stays put at one spot, or **Hide companion** and he
+  goes away entirely. **Show companion** in the Hangar brings him back without losing parts.
 
 Your companion survives app restarts and in-place updates. Its save is app-private and is **not included in the existing
 preference/history backup** yet. Do not uninstall the app if you want to keep it.

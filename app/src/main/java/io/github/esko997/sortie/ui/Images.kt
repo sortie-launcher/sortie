@@ -28,7 +28,7 @@ private const val UNBOUNDED_FALLBACK_PX = 512
  * bitmap (pixels live in graphics memory, not on the heap; nothing may read them back, see [paletteFor]) and is never cross-faded.
  * Callers must give [modifier] a bounded size; a fully unbounded layout falls back to [UNBOUNDED_FALLBACK_PX].
  * A null [path] draws nothing, so callers keep their own placeholder underneath. [filterQuality] [FilterQuality.None] keeps
- * upscaled pixel art sharp instead of smoothing it.
+ * upscaled pixel art sharp instead of smoothing it. [onIntrinsicSize] reports the loaded picture's size (its aspect ratio).
  */
 @Composable
 fun CoverImage(
@@ -36,7 +36,8 @@ fun CoverImage(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
     alpha: Float = 1f,
-    filterQuality: FilterQuality = DrawScope.DefaultFilterQuality
+    filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
+    onIntrinsicSize: ((androidx.compose.ui.geometry.Size) -> Unit)? = null
 ) {
     if (path == null) return
     val context = LocalPlatformContext.current
@@ -57,7 +58,8 @@ fun CoverImage(
         modifier = modifier.then(constraints),
         contentScale = contentScale,
         alpha = alpha,
-        filterQuality = filterQuality
+        filterQuality = filterQuality,
+        onSuccess = onIntrinsicSize?.let { report -> { success -> report(success.painter.intrinsicSize) } }
     )
 }
 

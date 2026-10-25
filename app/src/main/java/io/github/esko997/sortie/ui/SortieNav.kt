@@ -3,7 +3,6 @@ package io.github.esko997.sortie.ui
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,6 +19,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.magazine.ReaderLocation
+import io.github.esko997.sortie.mecha.ui.MechaStageHost
+import io.github.esko997.sortie.mecha.ui.rememberMechaStage
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -91,9 +92,10 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
         PermissionScreen()
         return
     }
-    // The companion takes its own measured strip under the screens (on browsing and reading routes only), never an overlay.
-    Column(Modifier.fillMaxSize()) {
-        NavHost(nav, startDestination = "home", modifier = Modifier.weight(1f)) {
+    // The companion roams Home's margins behind the screens (MechaStageHost draws him under them); Home declares the spots.
+    val stage = rememberMechaStage(graph.mecha)
+    MechaStageHost(stage) {
+        NavHost(nav, startDestination = "home", modifier = Modifier.fillMaxSize()) {
             composable("home") {
                 // Home is the launcher's root: Back has nothing to return to. Without this, Android moves a root task to the
                 // back, which on a device where Sortie runs in an ordinary task (started from an icon or another launcher)
@@ -171,7 +173,6 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
             composable("apps") { AppsScreen(vm) }
             composable("switcher") { SwitcherScreen() }
         }
-        MechaFooter(graph.mecha, nav)
     }
 }
 
