@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Narrow screens: grid tile titles no longer split a word across lines ("PlayStatio / n" on the Thor's bottom screen);
+  a word wider than the tile shrinks the title slightly instead. The Hangar's salvage, care, family-set and Gallery rows wrap
+  instead of running off the edge ("Any slot" was cut off on 640 dp-wide screens such as the Retroid Pocket Nova).
 - Hangar companion size and reach: he is now about a centimetre tall on every screen (2× on the Thor and DMG, from the
   display's real dpi), only stops where at least 40 dp of him shows clear of controls so he can always be tapped, and
   falls back to a reserved home base (end of Home's hint bar; under the bell on the other screen) or hides.

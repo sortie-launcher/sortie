@@ -52,11 +52,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.window.Dialog
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.UserData
@@ -131,13 +134,7 @@ fun SquareTile(
                         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                             IconView(icon, minOf(64.dp, maxWidth, maxHeight).value.toInt())
                         }
-                        Text(
-                            title,
-                            style = MaterialTheme.typography.titleSmall,
-                            textAlign = TextAlign.Center,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        TileTitle(title, MaterialTheme.typography.titleSmall.copy(textAlign = TextAlign.Center))
                     }
                 }
             }
@@ -156,13 +153,7 @@ fun SquareTile(
             }
             Column(Modifier.align(Alignment.BottomStart).padding(10.dp)) {
                 if (logo == null) {
-                    Text(
-                        title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    TileTitle(title, MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
                 }
                 subtitle?.let {
                     Text(
@@ -237,6 +228,45 @@ class SheetAction(val label: String, val run: () -> Unit)
  * Small controller-first context menu (hold A / long press): a dialog with one row per action plus Cancel; the first action takes
  * focus, A picks, B or a tap outside cancels. The dialog closes before the action runs.
  */
+/**
+ * A tile title in at most two lines that wraps between words, never inside one: when the longest word is wider than the tile
+ * the text shrinks until it fits (to [MIN_TITLE_SCALE] of [style]); a word too long even then keeps the title on one line,
+ * ellipsized. Compose would otherwise split it ("PlayStatio / n") on narrow tiles.
+ */
+@Composable
+private fun TileTitle(title: String, style: TextStyle, modifier: Modifier = Modifier) {
+    BoxWithConstraints(modifier) {
+        val measurer = rememberTextMeasurer()
+        val width = constraints.maxWidth
+        val (fitted, fits) = remember(title, style, width) {
+            val words = title.split(' ').filter { it.isNotEmpty() }
+            fun scaled(scale: Float) = if (scale == 1f) {
+                style
+            } else {
+                style.copy(
+                    fontSize = style.fontSize * scale,
+                    lineHeight = if (style.lineHeight.isSpecified) style.lineHeight * scale else style.lineHeight
+                )
+            }
+            fun longest(s: TextStyle) = words.maxOfOrNull { measurer.measure(it, s, softWrap = false, maxLines = 1).size.width } ?: 0
+            // text does not scale exactly linearly (hinting), so step down and re-measure rather than trust one ratio
+            var scale = 1f
+            while (longest(scaled(scale)) > width && scale > MIN_TITLE_SCALE) scale = (scale - 0.05f).coerceAtLeast(MIN_TITLE_SCALE)
+            scaled(scale) to (longest(scaled(scale)) <= width)
+        }
+        Text(
+            title,
+            style = fitted,
+            maxLines = if (fits) 2 else 1,
+            softWrap = fits,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+private const val MIN_TITLE_SCALE = 0.75f
+
 @Composable
 fun ContextSheet(title: String, actions: List<SheetAction>, onDismiss: () -> Unit) {
     val first = remember { FocusRequester() }
