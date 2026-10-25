@@ -1,8 +1,6 @@
 package io.github.esko997.sortie.ui
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -16,9 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -215,10 +211,10 @@ fun JournalScreen(graph: SortieApp.Graph, onGame: (String) -> Unit) {
             }
             item(key = "nav") {
                 FlowRow(Modifier.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    WeekButton("New note", Modifier.focusRequester(primary)) { newEntry(if (week == thisWeek) today else week, null, null) }
-                    WeekButton("Previous week") { weekEpochDay -= 7 }
-                    WeekButton("Next week") { weekEpochDay += 7 }
-                    WeekButton("This week", enabled = week != thisWeek) { weekEpochDay = thisWeek.toEpochDay() }
+                    GlowButton("New note", Modifier.focusRequester(primary)) { newEntry(if (week == thisWeek) today else week, null, null) }
+                    GlowButton("Previous week") { weekEpochDay -= 7 }
+                    GlowButton("Next week") { weekEpochDay += 7 }
+                    GlowButton("This week", enabled = week != thisWeek) { weekEpochDay = thisWeek.toEpochDay() }
                 }
             }
             writeError?.let { item(key = "write-error") { Notice("Preferences are not being saved: $it", error = true) } }
@@ -444,17 +440,6 @@ private fun Legend(colour: Color, text: String) {
         Canvas(Modifier.width(14.dp).height(8.dp)) { drawRoundRect(colour, cornerRadius = CornerRadius(2.dp.toPx())) }
         Text(text, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 6.dp))
     }
-}
-
-@Composable
-private fun WeekButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.focusGlow(interaction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape),
-        interactionSource = interaction
-    ) { Text(text, maxLines = 1) }
 }
 
 @Composable

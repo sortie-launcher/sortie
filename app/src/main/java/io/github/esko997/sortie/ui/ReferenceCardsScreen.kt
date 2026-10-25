@@ -26,10 +26,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -236,36 +233,6 @@ private fun InitialFocus(key: Any?, requester: FocusRequester) {
 }
 
 @Composable
-private fun ActionButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    primary: Boolean = false,
-    colour: Color = Amber
-) {
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    if (primary) {
-        Button(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = modifier.focusGlow(focused, ButtonDefaults.shape, colour),
-            colors = ButtonDefaults.buttonColors(containerColor = colour, contentColor = Ink),
-            interactionSource = interaction
-        ) { Text(text) }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = modifier.focusGlow(focused, ButtonDefaults.outlinedShape, colour),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = colour),
-            interactionSource = interaction
-        ) { Text(text) }
-    }
-}
-
-@Composable
 private fun Notice(text: String?, error: Boolean, modifier: Modifier = Modifier) {
     if (text == null) return
     Text(text, style = MaterialTheme.typography.bodyMedium, color = if (error) ErrorRed else MaterialTheme.colorScheme.onSurfaceVariant, modifier = modifier)
@@ -306,9 +273,9 @@ private fun ReferenceList(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             FlowRow(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ActionButton("New card", onNew, if (target == null) Modifier.focusRequester(initial) else Modifier, enabled = !busy)
-                ActionButton("Import Markdown", onImportMarkdown, enabled = !busy)
-                ActionButton("Import image", onImportImage, enabled = !busy)
+                GlowButton("New card", if (target == null) Modifier.focusRequester(initial) else Modifier, enabled = !busy, onClick = onNew)
+                GlowButton("Import Markdown", enabled = !busy, onClick = onImportMarkdown)
+                GlowButton("Import image", enabled = !busy, onClick = onImportImage)
             }
             Notice(if (busy) "Importing…" else notice, !busy && noticeIsError, Modifier.padding(top = 8.dp))
         }
@@ -443,7 +410,7 @@ private fun ReferenceViewer(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ActionButton("‹", { step(-1) }, enabled = cards.size > 1 && !deleting)
+            GlowButton("‹", enabled = cards.size > 1 && !deleting) { step(-1) }
             Column(Modifier.weight(1f)) {
                 Text(card.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
@@ -454,9 +421,14 @@ private fun ReferenceViewer(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            ActionButton("›", { step(1) }, enabled = cards.size > 1 && !deleting)
+            GlowButton("›", enabled = cards.size > 1 && !deleting) { step(1) }
             if (confirming) {
-                ActionButton(if (deleting) "Deleting…" else "Delete card", {
+                GlowButton(
+                    if (deleting) "Deleting…" else "Delete card",
+                    enabled = !deleting,
+                    primary = true,
+                    colour = ErrorRed
+                ) {
                     deleting = true
                     scope.launch {
                         val gone = onDelete()
@@ -464,11 +436,11 @@ private fun ReferenceViewer(
                         confirming = false
                         if (!gone) runCatching { body.requestFocus() }
                     }
-                }, enabled = !deleting, primary = true, colour = ErrorRed)
-                ActionButton("Keep", { confirming = false }, Modifier.focusRequester(keep), enabled = !deleting)
+                }
+                GlowButton("Keep", Modifier.focusRequester(keep), enabled = !deleting) { confirming = false }
             } else {
-                ActionButton("Edit", onEdit)
-                ActionButton("Delete", { confirming = true })
+                GlowButton("Edit", onClick = onEdit)
+                GlowButton("Delete") { confirming = true }
             }
         }
         Notice(notice, noticeIsError, Modifier.padding(start = 24.dp, top = 4.dp, end = 24.dp))
@@ -570,21 +542,20 @@ private fun ReferenceCardEditor(
             )
             error?.let { Text("Not saved: $it — Save retries; Cancel discards this draft.", style = MaterialTheme.typography.bodySmall, color = ErrorRed) }
             FlowRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ActionButton(
+                GlowButton(
                     if (saving) "Saving…" else "Save",
-                    {
-                        saving = true
-                        scope.launch {
-                            val failure = save(title, body)
-                            saving = false
-                            error = failure
-                        }
-                    },
                     Modifier.focusRequester(saveFocus),
                     enabled = canSave,
                     primary = true
-                )
-                ActionButton("Cancel", onClose, Modifier.focusRequester(cancelFocus), enabled = !saving)
+                ) {
+                    saving = true
+                    scope.launch {
+                        val failure = save(title, body)
+                        saving = false
+                        error = failure
+                    }
+                }
+                GlowButton("Cancel", Modifier.focusRequester(cancelFocus), enabled = !saving, onClick = onClose)
             }
         }
         HintBar("↕" to "move", "A" to "select / type", "B" to "cancel")

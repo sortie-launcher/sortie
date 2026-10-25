@@ -1,17 +1,29 @@
 package io.github.esko997.sortie.ui
 
 import android.graphics.BlurMaskFilter
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.FocusInteraction
+import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -22,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
@@ -33,17 +46,23 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.node.DelegatableNode
+import androidx.compose.ui.node.DrawModifierNode
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private const val PULSE_HALF_PERIOD_S = 0.6
 private const val PULSE_FOR_S = 3.0
@@ -51,7 +70,8 @@ private const val PULSE_FOR_S = 3.0
 /**
  * Controller-focus highlight shared by every focusable row/tile: a 3dp [colour] border, a soft blurred glow just outside the bounds whose
  * alpha pulses 0.55..1 (~1.2 s period) and a subtle [focusedScale]. The pulse transition only exists while [focused], so unfocused items
- * run no infinite animation. Unfocused items draw a 2dp [idleBorder] unless it is transparent, i.e. they look exactly as before.
+ * run no infinite animation; with the system's animations off it does not run at all. Unfocused items draw a 2dp [idleBorder] unless it
+ * is transparent, i.e. they look exactly as before.
  */
 @Composable
 fun Modifier.focusGlow(focused: Boolean, shape: Shape, colour: Color = Amber, focusedScale: Float = 1.02f, idleBorder: Color = Color.Transparent): Modifier {
@@ -62,6 +82,8 @@ fun Modifier.focusGlow(focused: Boolean, shape: Shape, colour: Color = Amber, fo
     val pulse: State<Float>? = if (focused) {
         val alpha = remember { mutableFloatStateOf(1f) }
         LaunchedEffect(Unit) {
+            // Remove animations / animator duration scale 0: the glow holds still, as the scale above snaps
+            if (coroutineContext[MotionDurationScale]?.scaleFactor == 0f) return@LaunchedEffect
             val t0 = withFrameNanos { it }
             while (true) {
                 val t = (withFrameNanos { it } - t0) / 1e9
@@ -143,6 +165,81 @@ fun Modifier.keyLongPress(onLongClick: (() -> Unit)?, onHoldR1: (() -> Unit)? = 
     }
 }
 
+/**
+ * Touch feedback for Sortie's own clickable surfaces (rows, tiles, dock slots) instead of the Material ripple: a faint light veil over
+ * the clipped element that fades in on press and out on release. A quick tap still shows it briefly before it fades. Presses made
+ * while the element has the controller focus are ignored: the focus glow already marks it, and a held A ends in a release that
+ * [keyLongPress] swallows, so such a press would never end. Nothing runs between presses; the drawing reads one float.
+ */
+val PressVeil: IndicationNodeFactory = object : IndicationNodeFactory {
+    override fun create(interactionSource: InteractionSource): DelegatableNode = PressVeilNode(interactionSource)
+
+    override fun hashCode(): Int = -1
+
+    override fun equals(other: Any?): Boolean = other === this
+}
+
+private const val VEIL_ALPHA = 0.08f
+private const val VEIL_IN_MS = 90
+private const val VEIL_OUT_MS = 180
+
+private class PressVeilNode(private val source: InteractionSource) : Modifier.Node(), DrawModifierNode {
+    private val veil = Animatable(0f)
+
+    private suspend fun fadeTo(target: Float, ms: Int) = veil.animateTo(target, animationSpec = tween(ms))
+
+    override fun onAttach() {
+        coroutineScope.launch {
+            veil.snapTo(0f)
+            val presses = ArrayList<PressInteraction.Press>(1)
+            var focused = false
+            var fade: Job? = null
+            source.interactions.collect { interaction ->
+                val ended = when (interaction) {
+                    is FocusInteraction.Focus -> {
+                        focused = true
+                        null
+                    }
+                    is FocusInteraction.Unfocus -> {
+                        focused = false
+                        null
+                    }
+                    is PressInteraction.Press -> {
+                        if (!focused) {
+                            presses += interaction
+                            fade?.cancel()
+                            fade = launch { fadeTo(1f, VEIL_IN_MS) }
+                        }
+                        null
+                    }
+                    is PressInteraction.Release -> interaction.press
+                    is PressInteraction.Cancel -> interaction.press
+                    else -> null
+                }
+                if (ended != null && presses.remove(ended) && presses.isEmpty()) {
+                    val shown = fade
+                    fade = launch {
+                        shown?.join()
+                        fadeTo(0f, VEIL_OUT_MS)
+                    }
+                }
+            }
+        }
+    }
+
+    override fun ContentDrawScope.draw() {
+        drawContent()
+        val alpha = veil.value
+        if (alpha > 0f) drawRect(Color.White, alpha = VEIL_ALPHA * alpha)
+    }
+}
+
+/**
+ * The surface under a focused [FocusRow]: on Ink it is Slate, as rows always were; on a Slate dialog (context sheets, pickers) it
+ * still lifts the row a step instead of vanishing into the background.
+ */
+private val RowSurface = Color(0x403C485C)
+
 /** A focus-aware row: [focusGlow] outline in [colour] plus a subtle surface when focused (D-pad). Long press = context menu. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -162,15 +259,57 @@ fun FocusRow(
             .focusGlow(focused, shape, colour)
             .fillMaxWidth()
             .clip(shape)
-            .background(if (focused) Slate else Color.Transparent)
+            .background(if (focused) RowSurface else Color.Transparent)
             .keyLongPress(onLongClick, onFavourite)
             .combinedClickable(
                 interactionSource = interaction,
-                indication = null,
+                indication = PressVeil,
                 role = androidx.compose.ui.semantics.Role.Button,
                 onClick = onClick,
                 onLongClick = onLongClick
             )
             .padding(8.dp)
     ) { content() }
+}
+
+/**
+ * Sortie's standard text button: outlined, or filled in [colour] when [primary]; the [focusGlow] in [colour] shows the controller
+ * focus. The label stays on one line (ellipsized), so a button never grows into a two-line pill.
+ */
+@Composable
+fun GlowButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, primary: Boolean = false, colour: Color = Amber, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    if (primary) {
+        Button(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = modifier.focusGlow(focused, ButtonDefaults.shape, colour),
+            colors = ButtonDefaults.buttonColors(containerColor = colour, contentColor = Ink),
+            interactionSource = interaction
+        ) { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = modifier.focusGlow(focused, ButtonDefaults.outlinedShape, colour),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = colour),
+            interactionSource = interaction
+        ) { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    }
+}
+
+/** A filter toggle (Material filter chip) with the controller [focusGlow]; [trailing] is a short mark after the label, e.g. ▾. */
+@Composable
+fun GlowChip(label: String, selected: Boolean, modifier: Modifier = Modifier, trailing: String? = null, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        trailingIcon = trailing?.let { mark -> { Text(mark) } },
+        modifier = modifier.focusGlow(focused, FilterChipDefaults.shape),
+        interactionSource = interaction
+    )
 }

@@ -185,17 +185,18 @@ accepts. Consequently:
 
 ### Pinned magazine content
 
-Hosted builds bundle exactly `sortie-launcher/sortie-zines` at the commit in `ZINES_COMMIT` at the top of `build.yml`
-(currently `65c179e913b30e643879d59325d676b99459a1a0`), and Gradle verifies that content against `app/magazines.lock`.
-To ship new or corrected issues:
+Hosted builds resolve `sortie-launcher/sortie-zines` **`main` once**, in `build-apks`. That checkout's full commit SHA
+and catalog digest become the build's content pins. CI writes the digest into its workspace's `app/magazines.lock`;
+Gradle still verifies the catalog and every bundled file. The signing job checks out that exact SHA and requires the
+same digest, rather than looking up `main` again. Release notes record both pins.
 
-1. Publish into a `sortie-zines` checkout with `tools/publish-magazines.py … --pin` (see
-   [Publishing issue packs](#publishing-issue-packs)), review it and push `sortie-zines` `main`.
-2. In one app pull request, set `ZINES_COMMIT` to the full SHA of that pushed commit and commit the updated
-   `app/magazines.lock`.
-3. The pull request's `build-apks` run proves the two pins agree; merging publishes a release with the new content.
+Publishing a new issue to zines `main` makes it available to the next app build; it does not itself trigger an app
+release. No app pull request is needed just to advance the content pin. A release-only retry reuses the successful
+build's snapshot; re-running the build job resolves a new snapshot. Published release assets are never replaced.
 
-If they disagree the build fails; there is no fallback to other content or to none.
+The separate emulator workflow also resolves zines `main` once per run. Its snapshot can differ from the release
+workflow's if content changes between runs. Local builds remain offline and use the checked-in lock unless explicitly
+repinned. Missing or inconsistent content fails the build; there is no fallback to older content or to none.
 
 ### Recovering a failed release
 
@@ -379,8 +380,8 @@ code can be cloned, built and distributed without third-party magazine media.
 - **Default local build: no zines.** Without `sortieMagazinesDir`, `tools/build.sh`, `tools/release.sh` and plain Gradle
   builds bundle no issues and Gradle never fetches anything. The generated asset folder is emptied on every such build, so
   content staged by an earlier build cannot leak into a later one. The Magazines shelf starts empty and still reads card
-  packs. The hosted workflow is the exception: it checks out the pinned content commit itself and passes it in (see
-  [Pinned magazine content](#pinned-magazine-content)).
+  packs. The hosted workflow is the exception: it resolves zines `main` once, pins that snapshot for the run, and passes
+  it in (see [Pinned magazine content](#pinned-magazine-content)).
 - **Opt-in bundle:** pass the content directory explicitly. Relative paths resolve against this repository's root; Gradle's
   standard `ORG_GRADLE_PROJECT_sortieMagazinesDir` environment variable works too. An empty value is an error.
 
@@ -397,9 +398,9 @@ code can be cloned, built and distributed without third-party magazine media.
   Dot-files are ignored and never copied. There is no fallback content.
 - **No in-tree zines:** the build also refuses any `app/src/{main,debug,release}/assets/magazines/` folder; those paths are
   git-ignored. Issues reach an APK only through `sortieMagazinesDir`.
-- **Pinning:** `app/magazines.lock` holds `#` comment lines and exactly one 64-hex catalog digest (currently
-  `aacc00fc7f6bc8bcf44f9f68475fbd7f24e4de2e6c5ec61ecedb94c3c382975c`). Change it only deliberately, together with the
-  content-repository commit it should ship (see `--pin` below) and the workflow's `ZINES_COMMIT`.
+- **Local pinning:** `app/magazines.lock` holds `#` comment lines and exactly one 64-hex catalog digest. Update it
+  deliberately when changing the content used for local builds (see `--pin` below). Hosted workflows prepare their
+  own per-run lock from the resolved zines snapshot; they do not require this checked-in baseline to be advanced.
 - **Update preservation:** bundled issues are extracted into app-private storage once per catalog digest. On the shelf,
   issues merge by stable issue ID: the higher revision wins and a card copy wins a tie. Card packs in `sortie/magazines/`
   are never overwritten or deleted. Reading positions and clippings are keyed by issue/article IDs; clipped text and notes
@@ -419,7 +420,8 @@ python3 tools/publish-magazines.py /path/to/issue-sources --out ../sortie-zines/
 The source directory contains one `<issue-id>/` folder per issue. `--out` is required to publish and must be outside this
 repository; the tool never writes into `app/src/main/assets`. Publication stages a complete snapshot including a
 reproducible size/SHA-256 `catalog.json`; a failed final swap restores the prior output. `--pin` then writes the new catalog
-digest into `app/magazines.lock`. Review and commit both repositories together; do not hand-edit only the published copy.
+digest into `app/magazines.lock` for local builds. Review the new packs and catalog before merging the content
+repository; the next hosted app build picks them up automatically. Do not hand-edit only the published copy.
 
 - Use schema 2, positive `revision`, stable issue/article/reference IDs and portable `games` references. Increment revision
   for a correction; retain the original publication date. Check cross-issue identity and meaningful edition aliases.

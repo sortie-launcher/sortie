@@ -20,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -174,11 +173,11 @@ internal fun JournalEditor(
             Label("Day")
             Text(date.format(LONG_DATE), style = MaterialTheme.typography.titleMedium)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                EditorButton("Day before", enabled) { draft = draft.copy(date = date.minusDays(1).toString()) }
-                EditorButton("Day after", enabled) { draft = draft.copy(date = date.plusDays(1).toString()) }
-                EditorButton("Week before", enabled) { draft = draft.copy(date = date.minusWeeks(1).toString()) }
-                EditorButton("Week after", enabled) { draft = draft.copy(date = date.plusWeeks(1).toString()) }
-                EditorButton("Today", enabled && date != LocalDate.now(zone)) { draft = draft.copy(date = LocalDate.now(zone).toString()) }
+                GlowButton("Day before", enabled = enabled) { draft = draft.copy(date = date.minusDays(1).toString()) }
+                GlowButton("Day after", enabled = enabled) { draft = draft.copy(date = date.plusDays(1).toString()) }
+                GlowButton("Week before", enabled = enabled) { draft = draft.copy(date = date.minusWeeks(1).toString()) }
+                GlowButton("Week after", enabled = enabled) { draft = draft.copy(date = date.plusWeeks(1).toString()) }
+                GlowButton("Today", enabled = enabled && date != LocalDate.now(zone)) { draft = draft.copy(date = LocalDate.now(zone).toString()) }
             }
 
             Label("Note")
@@ -209,9 +208,9 @@ internal fun JournalEditor(
                 )
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                EditorButton(if (draft.gameId == null) "Choose game…" else "Change game…", enabled, Modifier.focusRequester(chooseGame)) { picking = true }
-                if (draft.gameId != null) EditorButton("Remove game", enabled) { draft = draft.copy(gameId = null, sessionStartedAt = null) }
-                if (draft.sessionStartedAt != null) EditorButton("Unlink session", enabled) { draft = draft.copy(sessionStartedAt = null) }
+                GlowButton(if (draft.gameId == null) "Choose game…" else "Change game…", Modifier.focusRequester(chooseGame), enabled) { picking = true }
+                if (draft.gameId != null) GlowButton("Remove game", enabled = enabled) { draft = draft.copy(gameId = null, sessionStartedAt = null) }
+                if (draft.sessionStartedAt != null) GlowButton("Unlink session", enabled = enabled) { draft = draft.copy(sessionStartedAt = null) }
             }
 
             Label("Screenshots (${draft.attachments.size} of $MAX_ATTACHMENTS)")
@@ -220,12 +219,12 @@ internal fun JournalEditor(
                     draft.attachments.forEachIndexed { i, a ->
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             AttachmentThumb(a, store.media, onOpen = { viewing = i })
-                            EditorButton("Remove", enabled) { draft = draft.copy(attachments = draft.attachments.filterNot { it.path == a.path }) }
+                            GlowButton("Remove", enabled = enabled) { draft = draft.copy(attachments = draft.attachments.filterNot { it.path == a.path }) }
                         }
                     }
                 }
             }
-            EditorButton("Add screenshots…", enabled && draft.attachments.size < MAX_ATTACHMENTS) {
+            GlowButton("Add screenshots…", enabled = enabled && draft.attachments.size < MAX_ATTACHMENTS) {
                 runCatching {
                     pick.launch(
                         arrayOf("image/*")
@@ -267,8 +266,8 @@ internal fun JournalEditor(
                     colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = Ink),
                     interactionSource = saveInteraction
                 ) { Text("Save") }
-                EditorButton("Cancel", enabled, onClick = cancel)
-                if (!isNew && !confirmDelete) EditorButton("Delete note…", enabled) { confirmDelete = true }
+                GlowButton("Cancel", enabled = enabled, onClick = cancel)
+                if (!isNew && !confirmDelete) GlowButton("Delete note…", enabled = enabled) { confirmDelete = true }
             }
             if (draft.isBlank()) {
                 Text(
@@ -286,8 +285,8 @@ internal fun JournalEditor(
                     color = MaterialTheme.colorScheme.error
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    EditorButton("Keep note", enabled) { confirmDelete = false }
-                    EditorButton("Delete note", enabled) {
+                    GlowButton("Keep note", enabled = enabled) { confirmDelete = false }
+                    GlowButton("Delete note", enabled = enabled) {
                         busy = "Deleting…"
                         scope.launch {
                             val failure = store.delete(saved)
@@ -380,15 +379,4 @@ private fun GamePicker(graph: SortieApp.Graph, weekItems: List<String>, onPick: 
 @Composable
 private fun Label(text: String) {
     Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
-}
-
-@Composable
-private fun EditorButton(text: String, enabled: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.focusGlow(interaction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape),
-        interactionSource = interaction
-    ) { Text(text, maxLines = 1) }
 }

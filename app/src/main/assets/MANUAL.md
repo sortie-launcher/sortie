@@ -119,6 +119,10 @@ Small app and shortcut tiles automatically show only their icons instead of cram
 keep their names; icon-only tiles still expose names to accessibility services. Adjust **Settings → App tiles per row**
 to change the Apps grid density. The label cutoff adapts to tile width and your text size.
 
+The small **hack** mark on game tiles and list rows identifies a hack, translation or other patched build. It uses
+explicit guide flags and filename markers, not guesses from the description. A missing mark does not guarantee an
+unmodified release. The favourite star and personal controller-support badge remain separate.
+
 On narrow portrait screens, Home puts its actions on a sideways-scrolling row below the clock. Short landscape screens put
 that row beside the title, leaving room for tiles. Larger screens keep the wrapping header. Sort choices scroll sideways
 (touch or D-pad), and controller hints wrap as whole button/action pairs. Switching list/grid retains the selected tile.

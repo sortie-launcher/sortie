@@ -7,8 +7,9 @@ on:
 permissions:
   contents: read
 env:
-  # Update together with app/magazines.lock after reviewing the content change.
-  ZINES_COMMIT: 65c179e913b30e643879d59325d676b99459a1a0
+  # Field Notes come from sortie-zines main as it is when build-apks starts: that job reads it once and pins it for its own
+  # build (tools/pin-zines-snapshot.py); the release job signs exactly that commit and catalog, never a newer main.
+  ZINES_REPOSITORY: sortie-launcher/sortie-zines
 jobs:
   build-apks:
     runs-on: ubuntu-24.04
@@ -16,15 +17,21 @@ jobs:
     outputs:
       code: ${{ steps.version.outputs.code }}
       name: ${{ steps.version.outputs.name }}
+      zines-commit: ${{ steps.zines.outputs.commit }}
+      zines-digest: ${{ steps.zines.outputs.digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: sortie-launcher/sortie-zines
-          ref: ${{ env.ZINES_COMMIT }}
+          repository: ${{ env.ZINES_REPOSITORY }}
+          ref: main
           path: release-content
           persist-credentials: false
+      - name: Pin this run's magazine snapshot
+        id: zines
+        shell: bash
+        run: tools/pin-zines-snapshot.py release-content | tee -a "$GITHUB_OUTPUT"
       - name: Assign an increasing Android version
         id: version
         shell: bash
@@ -44,7 +51,7 @@ jobs:
         with:
           path: ~/.m2/repository/org/robolectric
           key: robolectric-${{ hashFiles('gradle/libs.versions.toml') }}
-      - name: Check, test and build with the pinned magazines
+      - name: Check, test and build with this run's magazine snapshot
         env:
           VERSION_CODE: ${{ steps.version.outputs.code }}
           VERSION_NAME: ${{ steps.version.outputs.name }}
@@ -85,6 +92,8 @@ jobs:
       VERSION_CODE: ${{ needs.build-apks.outputs.code }}
       VERSION_NAME: ${{ needs.build-apks.outputs.name }}
       TAG: v${{ needs.build-apks.outputs.name }}
+      ZINES_COMMIT: ${{ needs.build-apks.outputs.zines-commit }}
+      ZINES_DIGEST: ${{ needs.build-apks.outputs.zines-digest }}
     steps:
       - name: Refuse replacement or an out-of-order release
         id: publish
@@ -116,10 +125,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.publish.outputs.publish == 'true'
         with:
-          repository: sortie-launcher/sortie-zines
+          repository: ${{ env.ZINES_REPOSITORY }}
           ref: ${{ env.ZINES_COMMIT }}
           path: release-content
           persist-credentials: false
+      # A rerun of only this job keeps build-apks' outputs, so it too signs the snapshot that was tested.
+      - name: Restore the build job's magazine snapshot
+        if: steps.publish.outputs.publish == 'true'
+        shell: bash
+        run: tools/pin-zines-snapshot.py release-content --expect-commit "$ZINES_COMMIT" --expect-digest "$ZINES_DIGEST"
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         if: steps.publish.outputs.publish == 'true'
         with: { distribution: temurin, java-version: '17' }
@@ -165,7 +179,8 @@ jobs:
           Download the APK below. For an existing production-signed installation, install it as an update; **do not uninstall**.
           Debug-signed installations require a separately planned, backed-up signing migration.
 
-          Includes Field Notes magazines from sortie-launcher/sortie-zines@$ZINES_COMMIT, verified against app/magazines.lock.
+          Includes Field Notes magazines from $ZINES_REPOSITORY@$ZINES_COMMIT (main when this run's build job read it),
+          catalog digest \`$ZINES_DIGEST\`. Tests, build and signing all used that one snapshot, verified file by file.
           Third-party magazine media retains its original rights and credits; it is not covered by the app's MIT licence.
 
           Signing certificate SHA-256: \`c4fc71bdee0987939c7af166465241c9c1bd3fc6c0a486d9dd76546975414cf4\`.

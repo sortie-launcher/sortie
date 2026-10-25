@@ -133,10 +133,11 @@ fun BrowseHintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modif
             TextButton(
                 onClick = { controls = true },
                 interactionSource = controlInteraction,
+                shape = ControlsShape,
                 modifier = Modifier.focusRequester(opener).heightIn(min = 48.dp)
-                    .focusGlow(controlsFocused, RoundedCornerShape(10.dp))
+                    .focusGlow(controlsFocused, ControlsShape)
                     .mechaObstacle("browse:controls", interactive = true)
-            ) { Text("Controls", style = MaterialTheme.typography.labelLarge, color = Amber) }
+            ) { Text("Controls", style = MaterialTheme.typography.labelLarge, color = Amber, maxLines = 1) }
         }
     }
     if (controls) {
@@ -146,6 +147,9 @@ fun BrowseHintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modif
         }
     }
 }
+
+/** The compact bar's Controls button: its touch ripple and its controller glow share this shape. */
+private val ControlsShape = RoundedCornerShape(10.dp)
 
 @Composable
 private fun BrowseHint(button: String, action: String, modifier: Modifier = Modifier) {

@@ -10,9 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -100,6 +98,7 @@ fun ItemCell(
                     paletteGlow = true,
                     favourite = favourite,
                     annotation = annotation,
+                    hack = g.hack,
                     onLongClick = onLongClick,
                     onFavourite = fav
                 )
@@ -258,13 +257,11 @@ private fun ItemListScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    OutlinedButton(onClick = { shown.randomOrNull()?.let(open) }, enabled = shown.isNotEmpty(), modifier = Modifier.focusRequester(pickFocus)) {
-                        Text("🎲 Pick one", maxLines = 1)
-                    }
-                    FilterChip(selected = minFit >= 4, onClick = { minFit = if (minFit >= 4) 0 else 4 }, label = { Text("Fit 4+", maxLines = 1) })
-                    FilterChip(selected = notesOnly, onClick = { notesOnly = !notesOnly }, label = { Text("✍ notes", maxLines = 1) })
-                    FilterChip(selected = startedOnly, onClick = { startedOnly = !startedOnly }, label = { Text("💾 started", maxLines = 1) })
-                    FilterChip(selected = onDeviceOnly, onClick = { onDeviceOnly = !onDeviceOnly }, label = { Text("on device", maxLines = 1) })
+                    GlowButton("🎲 Pick one", Modifier.focusRequester(pickFocus), enabled = shown.isNotEmpty()) { shown.randomOrNull()?.let(open) }
+                    GlowChip("Fit 4+", minFit >= 4) { minFit = if (minFit >= 4) 0 else 4 }
+                    GlowChip("✍ notes", notesOnly) { notesOnly = !notesOnly }
+                    GlowChip("💾 started", startedOnly) { startedOnly = !startedOnly }
+                    GlowChip("on device", onDeviceOnly) { onDeviceOnly = !onDeviceOnly }
                     if (parent == null) HideHeaderButton(chrome)
                 }
             }

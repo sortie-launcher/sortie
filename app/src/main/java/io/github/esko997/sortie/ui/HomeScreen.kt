@@ -6,8 +6,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,12 +26,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -417,15 +411,15 @@ fun HomeScreen(
         }
     }
     val actions: @Composable () -> Unit = {
-        HeaderButton("Apps", onApps)
-        if (stage != null) HeaderButton("Hangar", stage::openHangar, Modifier.focusRequester(hangarButton))
-        HeaderButton("Library setup", onLibrary)
-        HeaderButton("Search", onSearch)
-        HeaderButton("Magazines", onMagazines)
-        HeaderButton("Journal", onJournal)
+        GlowButton("Apps", onClick = onApps)
+        if (stage != null) GlowButton("Hangar", Modifier.focusRequester(hangarButton), onClick = stage::openHangar)
+        GlowButton("Library setup", onClick = onLibrary)
+        GlowButton("Search", onClick = onSearch)
+        GlowButton("Magazines", onClick = onMagazines)
+        GlowButton("Journal", onClick = onJournal)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            HeaderButton("📖", onManual, Modifier.semantics { contentDescription = "Manual" })
-            HeaderButton("Settings", onDiagnostics)
+            GlowButton("📖", Modifier.semantics { contentDescription = "Manual" }, onClick = onManual)
+            GlowButton("Settings", onClick = onDiagnostics)
             HideHeaderButton(chrome)
         }
     }
@@ -443,7 +437,7 @@ fun HomeScreen(
                 FoldedHeader(
                     chrome,
                     Modifier.mechaObstacle("home:strip", interactive = true, solid = false),
-                    actions = { HeaderButton("Search", onSearch) }
+                    actions = { GlowButton("Search", onClick = onSearch) }
                 ) {
                     Text("Sortie", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1)
                     Clock()
@@ -496,7 +490,7 @@ fun HomeScreen(
             ) {
                 Text("Sort", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 SORTS.forEach { (id, label) ->
-                    SortChip(label, selected = sort == id, modifier = if (sort == id) Modifier.focusRequester(sortFocus) else Modifier) { vm.setHomeSort(id) }
+                    GlowChip(label, selected = sort == id, modifier = if (sort == id) Modifier.focusRequester(sortFocus) else Modifier) { vm.setHomeSort(id) }
                 }
             }
             if (console) {
@@ -510,7 +504,7 @@ fun HomeScreen(
                     }
                 ) {
                     items(systems, key = { it.def.id }) { row ->
-                        SortChip(row.def.label, selected = row.def.id == homeConsole) { vm.homeConsole.value = row.def.id }
+                        GlowChip(row.def.label, selected = row.def.id == homeConsole) { vm.homeConsole.value = row.def.id }
                     }
                 }
             }
@@ -530,7 +524,7 @@ fun HomeScreen(
                     },
                     style = MaterialTheme.typography.bodyLarge
                 )
-                HeaderButton(if (manifest.systems.isEmpty()) "Set up library" else "Manage library", onLibrary)
+                GlowButton(if (manifest.systems.isEmpty()) "Set up library" else "Manage library", onClick = onLibrary)
                 Text(
                     "You can also use Apps, read Magazines or open the Manual without adding games.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -690,31 +684,6 @@ fun HomeScreen(
     }
 }
 
-/** A home sort choice; [focusGlow] so the controller can see where it is. */
-@Composable
-private fun SortChip(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label, maxLines = 1) },
-        modifier = modifier.focusGlow(focused, FilterChipDefaults.shape),
-        interactionSource = interaction
-    )
-}
-
-/** A Home action button (header, empty library); [focusGlow] so the controller can see where it is. */
-@Composable
-private fun HeaderButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val interaction = remember { MutableInteractionSource() }
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.focusGlow(interaction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape),
-        interactionSource = interaction
-    ) { Text(text, maxLines = 1) }
-}
-
 /** Renders a [HomeTile] as a square tile (grid) or a row (list); [lifted] marks the tile being moved. */
 @Composable
 private fun HomeTileView(
@@ -756,6 +725,7 @@ private fun HomeTileView(
                 paletteGlow = true,
                 favourite = favourite,
                 annotation = annotation,
+                hack = item.game.hack,
                 lifted = lifted,
                 onLongClick = onLongClick,
                 onFavourite = onFavourite

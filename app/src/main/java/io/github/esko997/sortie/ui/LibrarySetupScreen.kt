@@ -6,8 +6,6 @@ import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -23,11 +21,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -932,15 +927,15 @@ private fun SystemEditor(
 
         DraftFooter(error = error, conflict = conflict, working = working, onReload = onReload)
         FlowRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SetupButton(
+            GlowButton(
                 if (busy) "Saving…" else "Save",
-                onSave,
                 modifier = at("save"),
                 enabled = !busy && sys.profiles.isNotEmpty() && (draft.changed || isNew || error != null),
-                primary = true
+                primary = true,
+                onClick = onSave
             )
-            SetupButton("Cancel", onCancel, enabled = !busy)
-            if (!isNew) SetupButton("Remove from library…", onRemove, enabled = !busy, colour = ErrorText)
+            GlowButton("Cancel", enabled = !busy, onClick = onCancel)
+            if (!isNew) GlowButton("Remove from library…", enabled = !busy, colour = ErrorText, onClick = onRemove)
         }
     }
 
@@ -1056,8 +1051,8 @@ private fun SupportEditor(
         FocusRow(onClick = { if (!busy) onAddSave() }, modifier = at("add-save")) { Line("Add a save folder…", "e.g. RetroArch's saves folder") }
         DraftFooter(error = error, conflict = conflict, working = working, onReload = onReload)
         FlowRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SetupButton(if (busy) "Saving…" else "Save", onSave, enabled = !busy && (draft.changed || error != null), primary = true)
-            SetupButton("Cancel", onCancel, enabled = !busy)
+            GlowButton(if (busy) "Saving…" else "Save", enabled = !busy && (draft.changed || error != null), primary = true, onClick = onSave)
+            GlowButton("Cancel", enabled = !busy, onClick = onCancel)
         }
     }
     if (biosSheet) {
@@ -1136,36 +1131,6 @@ private fun Note(text: String, error: Boolean = false) {
         color = if (error) ErrorText else MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
     )
-}
-
-@Composable
-internal fun SetupButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    primary: Boolean = false,
-    colour: Color = Amber
-) {
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    if (primary) {
-        Button(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = modifier.focusGlow(focused, ButtonDefaults.shape, colour),
-            colors = ButtonDefaults.buttonColors(containerColor = colour, contentColor = Ink),
-            interactionSource = interaction
-        ) { Text(text) }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = modifier.focusGlow(focused, ButtonDefaults.outlinedShape, colour),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = colour),
-            interactionSource = interaction
-        ) { Text(text) }
-    }
 }
 
 /**

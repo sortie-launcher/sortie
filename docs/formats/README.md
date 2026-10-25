@@ -24,6 +24,18 @@ ignored so files can evolve. For the normal on-device path, start with the [begi
 
 See `../../examples/card/sortie/` for a complete minimal card (two systems, four profiles, four folders).
 
+## Modified-game marks
+
+The indexer's `hack` flag drives the **hack** mark on game tiles and list rows. Positive evidence is a `guide.json`
+entry whose `flags` contains `hack`, `translation` or `fan translation` (case-insensitive), the word `hack` in a
+bracketed filename qualifier, or `systems.json`'s `library.hackRegex`. The configured expression is also tried after
+removing version numbers inside qualifiers, so a rule for `(True Analogs)` covers `(True Analogs v1.03)`.
+
+Descriptions and guide hooks are not classification inputs; unfamiliar names are not assumed to be modified.
+Processing tools should record an explicit guide flag when the filename is ambiguous. The index automatically
+reclassifies cached entries once after a classification-rule upgrade or a change to `hackRegex`, then returns to
+incremental indexing. No ROM rename or manual rescan is required.
+
 ## Magazine packs (version 2)
 
 An issue is a self-contained directory named exactly after its stable `id`. The same format is used for APK assets and

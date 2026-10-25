@@ -125,11 +125,14 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
             Cover(game, width = if (narrow) 120 else 200, height = if (narrow) 156 else 260)
             Column(Modifier.padding(start = if (narrow) 12.dp else 20.dp).verticalScroll(rememberScrollState())) {
                 Text(displayTitle(game), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Row {
+                // the gap follows the stars only when there are any, so an unrated game's line starts under the title
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Stars(game.fit)
                     Text(
-                        "  " + listOfNotNull(
-                            game.systemId.uppercase(), game.year?.toString(), game.developer,
+                        listOfNotNull(
+                            game.systemId.uppercase(),
+                            game.year?.toString(),
+                            game.developer,
                             game.players?.let {
                                 "$it players"
                             }

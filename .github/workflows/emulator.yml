@@ -10,9 +10,6 @@ on:
 permissions:
   contents: read
   pull-requests: read
-env:
-  # Keep in step with build.yml: the magazines the release build pins (the reader test opens one of their articles).
-  ZINES_COMMIT: 65c179e913b30e643879d59325d676b99459a1a0
 jobs:
   decide:
     runs-on: ubuntu-24.04
@@ -63,12 +60,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
+      # Field Notes as on sortie-zines main now, read once and pinned for this run (the reader test opens one of their
+      # articles); build.yml does the same for its own runs.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: sortie-launcher/sortie-zines
-          ref: ${{ env.ZINES_COMMIT }}
+          ref: main
           path: release-content
           persist-credentials: false
+      - name: Pin this run's magazine snapshot
+        shell: bash
+        run: tools/pin-zines-snapshot.py release-content
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with: { distribution: temurin, java-version: '17' }
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
