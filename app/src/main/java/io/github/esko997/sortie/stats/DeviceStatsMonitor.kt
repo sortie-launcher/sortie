@@ -9,6 +9,7 @@ import android.os.SystemClock
 import androidx.lifecycle.Lifecycle
 import io.github.esko997.sortie.shell.DeviceStatsProbe
 import io.github.esko997.sortie.shell.ScreenMover
+import io.github.esko997.sortie.ui.shownFlow
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,8 +22,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -144,9 +143,7 @@ class DeviceStatsMonitor internal constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun <T> gated(lifecycle: Lifecycle, displayLit: Flow<Boolean>, shown: () -> Flow<T?>): Flow<T?> =
-        combine(lifecycle.currentStateFlow.map { it.isAtLeast(Lifecycle.State.RESUMED) }, displayLit) { resumed, lit -> resumed && lit }
-            .distinctUntilChanged()
-            .flatMapLatest { if (it) shown() else flowOf(null) }
+        shownFlow(lifecycle, displayLit).flatMapLatest { if (it) shown() else flowOf(null) }
 
     private companion object {
         fun appStatsOf(context: Context): () -> DeviceStats {

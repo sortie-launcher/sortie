@@ -5,10 +5,13 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Display
 import android.view.View
+import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * Whether a display state draws: a display that is off or dozing (the whole device asleep, or the Thor's bottom screen
@@ -46,3 +49,13 @@ fun displayLitFlow(view: View): Flow<Boolean> = callbackFlow {
     send(displayLit(display.state))
     awaitClose { manager.unregisterDisplayListener(listener) }
 }.distinctUntilChanged()
+
+/**
+ * Whether a surface is shown: its [lifecycle] at least RESUMED and its display [lit] (usually [displayLitFlow]). Work a
+ * surface does by itself (stats polls, the hero rotation, the companion's idle life) runs only while this is true. Both
+ * inputs come from their own callbacks, never from composition or the frame clock: a stopped window or a dark screen
+ * composes and draws nothing while timers and flows keep running, so a gate that waited for a frame would never close.
+ */
+fun shownFlow(lifecycle: Lifecycle, lit: Flow<Boolean>): Flow<Boolean> =
+    combine(lifecycle.currentStateFlow.map { it.isAtLeast(Lifecycle.State.RESUMED) }, lit) { resumed, on -> resumed && on }
+        .distinctUntilChanged()

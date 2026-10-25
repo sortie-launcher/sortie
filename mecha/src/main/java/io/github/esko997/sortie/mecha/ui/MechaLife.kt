@@ -1,21 +1,9 @@
 package io.github.esko997.sortie.mecha.ui
 
-import androidx.lifecycle.Lifecycle
 import kotlin.random.Random
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-
-/**
- * Whether a window is in front: [lifecycle] at least RESUMED and its display [lit]. Both come from their own callbacks (the
- * lifecycle's state flow, the display listener), never from composition or the frame clock: a stopped or dark window
- * composes and draws nothing, so a gate that waited for a frame would never close.
- */
-internal fun mechaShown(lifecycle: Lifecycle, lit: Flow<Boolean>): Flow<Boolean> =
-    combine(lifecycle.currentStateFlow.map { it.isAtLeast(Lifecycle.State.RESUMED) }, lit) { resumed, on -> resumed && on }
-        .distinctUntilChanged()
 
 /**
  * Runs [block] each time [shown] turns true and cancels it the moment it turns false, so no timer or loop of his outlives

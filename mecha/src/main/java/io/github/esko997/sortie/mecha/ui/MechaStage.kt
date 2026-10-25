@@ -82,6 +82,7 @@ import io.github.esko997.sortie.mecha.MechaTouch
 import io.github.esko997.sortie.ui.Amber
 import io.github.esko997.sortie.ui.Slate
 import io.github.esko997.sortie.ui.displayLitFlow
+import io.github.esko997.sortie.ui.shownFlow
 import kotlin.math.roundToInt
 import kotlinx.coroutines.channels.Channel
 
@@ -401,7 +402,7 @@ fun MechaStageHost(stage: MechaStage, modifier: Modifier = Modifier, active: Boo
         }
     }
     LaunchedEffect(stage, lifecycle, androidView) {
-        mechaShown(lifecycle, displayLitFlow(androidView)).collect { shown ->
+        shownFlow(lifecycle, displayLitFlow(androidView)).collect { shown ->
             stage.resumed = shown
             MechaPresence.setActive(stage, shown && stage.allowed)
         }

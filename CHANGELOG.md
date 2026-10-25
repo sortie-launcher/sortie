@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Screens off or Sortie out of sight: the companion screen's rotating hero now pauses instead of loading a new picture
+  and palette every 20 seconds (and re-tinting the other screen's background) where no one can see it. On the AYN Thor
+  with both screens off Sortie's CPU use drops from about 2 % of a core to about 0.2 %; the rotation resumes on wake.
 - Hangar companion, playful: tap him to pet him (a bounce and a little heart; a little bond at most once every five
   minutes), hold still for half a second and let go to open the Hangar, or hold and move to pick him up and carry him: he
   dangles from your finger and drops to the nearest place he can stand with a hop; on a dual-screen handheld, let go near

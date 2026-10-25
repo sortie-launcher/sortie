@@ -350,4 +350,8 @@ Android behaviour that shaped the design (observed on Android 13 dual-screen har
   a transaction, debounce and catch.
 - Reinstalling an APK drops the default-home choice (`SORTIE_HOME=1 tools/dev.sh install` restores it).
 - Idle cost is checked with `dumpsys gfxinfo` (no new frames while idle), `dumpsys meminfo` and `top`; covers go through
-  `CoverImage` (constraint-sized, hardware bitmaps) with a fixed 96 MB memory cache and no disk cache.
+  `CoverImage` (constraint-sized, hardware bitmaps) with a fixed 96 MB memory cache and no disk cache. No frames is not
+  enough: timers and flows keep running in a stopped activity or on a dark screen, and Compose still recomposes there. Work a
+  surface starts itself (stats polls, the companion's 20 s hero rotation, which loads a picture and a palette and makes the
+  navigation background blend) is gated on `shownFlow` (lifecycle RESUMED and display lit, from their own events;
+  `rememberShown()` in Compose). With both Thor screens off the hero rotation cost ~134 jiffies a minute; gated, ~12.

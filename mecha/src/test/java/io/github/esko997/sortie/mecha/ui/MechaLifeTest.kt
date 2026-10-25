@@ -4,6 +4,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import io.github.esko997.sortie.mecha.MechaSlot
+import io.github.esko997.sortie.ui.shownFlow
 import kotlin.random.Random
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -37,7 +38,7 @@ class MechaLifeTest {
         var ticks = 0
         var running = 0
         val job = launch {
-            whileShown(mechaShown(window.lifecycle, lit)) {
+            whileShown(shownFlow(window.lifecycle, lit)) {
                 running++
                 try {
                     while (true) {
