@@ -1,18 +1,15 @@
-package io.github.esko997.sortie.ui.mecha
+package io.github.esko997.sortie.mecha.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -48,21 +45,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.currentBackStackEntryAsState
-import io.github.esko997.sortie.data.mecha.MechaSlot
-import io.github.esko997.sortie.data.mecha.MechaState
-import io.github.esko997.sortie.data.mecha.MechaStore
-import io.github.esko997.sortie.data.mecha.MechaView
+import io.github.esko997.sortie.mecha.MechaSlot
+import io.github.esko997.sortie.mecha.MechaState
+import io.github.esko997.sortie.mecha.MechaStore
+import io.github.esko997.sortie.mecha.MechaView
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-/** Ordinary browsing and reading routes, where the companion hangs out below the screen. Settings, editors and the switcher stay bare. */
-private val DOCK_ROUTES = setOf("home", "system/{id}", "folder/{id}", "apps", "search", "magazines", "magazines/{issue}/{article}")
 
 /** The dock's sprite box aims for this height; [mechaSize] rounds it to a whole multiple of the 64px frame. */
 private val DOCK_SPRITE = 52.dp
@@ -76,26 +68,13 @@ private const val STRIDE_PX = 3
 private const val STEP_MS = 120L
 
 /**
- * The footer under [SortieNav]'s screens: shown on [DOCK_ROUTES] while the keyboard is down, so it takes its own measured
- * space and never covers content, hint bars or text fields. A hidden companion leaves only a "Show companion" entry on Home.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun MechaFooter(store: MechaStore, nav: NavHostController) {
-    val entry by nav.currentBackStackEntryAsState()
-    val route = entry?.destination?.route ?: return
-    if (route !in DOCK_ROUTES) return
-    val view by store.view.collectAsState()
-    if (view.state?.enabled == false && route != "home") return
-    MechaDock(store, reading = route.startsWith("magazines"), wander = entry?.id, hideStrip = WindowInsets.isImeVisible)
-}
-
-/**
  * The companion's strip: a floor lane the mech idles and strolls along, its name and one line of status, and the Hangar
  * button. Touching the mech also opens the Hangar; the controller reaches it through the button only (one focus stop).
  *
  * Behaviour: a stroll to a new spot whenever [wander] changes (each navigation) and now and then while the screen is resumed;
  * never while [reading] (it dozes then), resting or with motion off. New parts, care and renames get a short cheer.
+ * A hidden companion shows only a "Show companion" button. [hideStrip] (e.g. while the keyboard is up) removes the strip but
+ * keeps an open Hangar composed. Where the dock appears is the host's choice.
  */
 @Composable
 fun MechaDock(store: MechaStore, reading: Boolean = false, modifier: Modifier = Modifier, wander: Any? = null, hideStrip: Boolean = false) {

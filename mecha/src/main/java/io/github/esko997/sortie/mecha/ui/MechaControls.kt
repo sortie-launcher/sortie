@@ -1,4 +1,4 @@
-package io.github.esko997.sortie.ui.mecha
+package io.github.esko997.sortie.mecha.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,8 +32,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.github.esko997.sortie.data.mecha.MECHA_FAMILIES
-import io.github.esko997.sortie.data.mecha.MechaPart
+import io.github.esko997.sortie.mecha.MECHA_FAMILIES
+import io.github.esko997.sortie.mecha.MechaPart
 import io.github.esko997.sortie.ui.Amber
 import io.github.esko997.sortie.ui.Ink
 import io.github.esko997.sortie.ui.focusGlow

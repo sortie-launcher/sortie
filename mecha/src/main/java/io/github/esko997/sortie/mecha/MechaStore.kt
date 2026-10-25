@@ -1,11 +1,9 @@
-package io.github.esko997.sortie.data.mecha
+package io.github.esko997.sortie.mecha
 
 import android.content.Context
 import android.content.res.AssetManager
 import android.graphics.BitmapFactory
 import android.util.Log
-import io.github.esko997.sortie.data.db.GameDao
-import io.github.esko997.sortie.data.db.SessionEntity
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -36,20 +34,23 @@ import kotlinx.serialization.json.Json
  * never disagree after a crash.
  *
  * An unreadable or inconsistent save is reported in [view] and left byte-for-byte as it is; nothing is written until the player
- * chooses [startFresh]. Play credit comes from the sessions table itself ([GameDao.completedSessionsFrom], re-read by Room when
- * sessions change; no polling); [refreshSessions] re-reads it on demand.
+ * chooses [startFresh]. Play credit comes from the host's completed sessions ([sessions]: in Sortie the Room sessions table,
+ * re-emitted whenever it changes; no polling); [refreshSessions] re-reads it on demand.
+ *
+ * The public constructor takes the app [Context] (for `files/` and the parts in the assets) and `sessions(from)`: the completed
+ * (ended, not abandoned) sessions that started at or after `from`, re-emitted whenever they change.
  */
 class MechaStore internal constructor(
     locate: () -> File,
     private val loadCatalog: () -> List<MechaPart>,
-    private val sessions: (Long) -> Flow<List<SessionEntity>>,
+    private val sessions: (from: Long) -> Flow<List<PlaySession>>,
     private val clock: () -> Long = System::currentTimeMillis,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 ) {
-    constructor(context: Context, dao: GameDao) : this(
+    constructor(context: Context, sessions: (from: Long) -> Flow<List<PlaySession>>) : this(
         locate = { File(context.applicationContext.filesDir, "mecha/state.json") },
         loadCatalog = { assetCatalog(context.applicationContext.assets) },
-        sessions = dao::completedSessionsFrom
+        sessions = sessions
     )
 
     private val json = Json { encodeDefaults = true }
@@ -84,20 +85,20 @@ class MechaStore internal constructor(
         enqueue { open() }
     }
 
-    fun rename(name: String) = change { it.renamed(name) }
+    internal fun rename(name: String) = change { it.renamed(name) }
 
-    fun equip(partId: String) = change { it.equipping(partId, parts) }
+    internal fun equip(partId: String) = change { it.equipping(partId, parts) }
 
-    fun care(action: MechaCare) = change { it.cared(action) }
+    internal fun care(action: MechaCare) = change { it.cared(action) }
 
-    fun salvage(slot: MechaSlot? = null) = change { it.salvaged(parts, slot) }
+    internal fun salvage(slot: MechaSlot? = null) = change { it.salvaged(parts, slot) }
 
-    fun setEnabled(enabled: Boolean) = change { it.withEnabled(enabled) }
+    internal fun setEnabled(enabled: Boolean) = change { it.withEnabled(enabled) }
 
-    fun setMotion(enabled: Boolean) = change { it.withMotion(enabled) }
+    internal fun setMotion(enabled: Boolean) = change { it.withMotion(enabled) }
 
     /** Re-reads completed sessions now (e.g. when Sortie comes back to the foreground); already credited ones are skipped. */
-    fun refreshSessions() = enqueue {
+    internal fun refreshSessions() = enqueue {
         val current = state ?: return@enqueue
         val list = try {
             sessions(current.initializedAt).first()
@@ -114,7 +115,7 @@ class MechaStore internal constructor(
      * Only when the hangar could not be opened: sets an unreadable save aside as `state.damaged-<time>.json` (same bytes) and
      * opens a new hangar, which counts play from now on. Does nothing while a hangar is open or the parts catalog is incomplete.
      */
-    fun startFresh() = enqueue {
+    internal fun startFresh() = enqueue {
         if (state != null || parts.isEmpty()) return@enqueue
         if (damaged) {
             val kept = File(file.parentFile, "state.damaged-${clock()}.json")
@@ -213,7 +214,7 @@ class MechaStore internal constructor(
         }
     }
 
-    private fun credit(list: List<SessionEntity>) {
+    private fun credit(list: List<PlaySession>) {
         val current = state ?: return
         val result = current.credited(list)
         if (result.state != current) commit(current, result)

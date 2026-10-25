@@ -1,9 +1,8 @@
-package io.github.esko997.sortie.data.mecha
+package io.github.esko997.sortie.mecha
 
-import io.github.esko997.sortie.data.db.SessionEntity
-import io.github.esko997.sortie.data.mecha.MechaRulesTest.Companion.INIT
-import io.github.esko997.sortie.data.mecha.MechaRulesTest.Companion.parts
-import io.github.esko997.sortie.data.mecha.MechaRulesTest.Companion.session
+import io.github.esko997.sortie.mecha.MechaRulesTest.Companion.INIT
+import io.github.esko997.sortie.mecha.MechaRulesTest.Companion.parts
+import io.github.esko997.sortie.mecha.MechaRulesTest.Companion.session
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -31,8 +30,8 @@ class MechaStoreTest {
     private val file = File(dir, "mecha/state.json")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    /** Stands in for the sessions table: what GameDao.completedSessionsFrom would return, re-emitted on every change. */
-    private val table = MutableStateFlow<List<SessionEntity>>(emptyList())
+    /** Stands in for the host's sessions: what SortieApp maps from GameDao.completedSessionsFrom, re-emitted on every change. */
+    private val table = MutableStateFlow<List<PlaySession>>(emptyList())
 
     @After
     fun tearDown() {
@@ -104,7 +103,7 @@ class MechaStoreTest {
         s.idle()
         assertEquals(MECHA_STARTER_CREDITS, s.view.value.state!!.salvage)
 
-        table.value = table.value + session("snes/after.sfc", INIT + 60_000L, 12, rowId = 7)
+        table.value = table.value + session("snes/after.sfc", INIT + 60_000L, 12)
         withTimeout(5_000) { s.view.first { it.state?.salvage == MECHA_STARTER_CREDITS + 2 } }
         s.idle()
         val saved = onDisk()
@@ -112,8 +111,8 @@ class MechaStoreTest {
         assertEquals(2, saved.pendingMinutes)
         assertEquals(setOf("snes/after.sfc@${INIT + 60_000L}"), saved.processedSessions)
 
-        // a backup restore re-inserts the same session under a new row id; a restart reads it all again
-        table.value = table.value.map { it.copy(rowId = it.rowId + 1000) }
+        // a backup restore re-inserts the same session (under a new row id, which never reaches the store); a restart reads it all again
+        table.value = table.value.map { it.copy() }
         val restarted = store(now = INIT + 3_600_000L)
         restarted.settled()
         restarted.refreshSessions()

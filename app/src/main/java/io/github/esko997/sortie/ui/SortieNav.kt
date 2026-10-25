@@ -20,7 +20,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.magazine.ReaderLocation
-import io.github.esko997.sortie.ui.mecha.MechaFooter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 

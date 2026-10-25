@@ -135,7 +135,7 @@ import io.github.esko997.sortie.data.magazine.saveClipping
 import io.github.esko997.sortie.data.magazine.source
 import io.github.esko997.sortie.data.markdown.MdBlock
 import io.github.esko997.sortie.data.user.UserStore
-import io.github.esko997.sortie.ui.mecha.Hangar
+import io.github.esko997.sortie.mecha.ui.Hangar
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId

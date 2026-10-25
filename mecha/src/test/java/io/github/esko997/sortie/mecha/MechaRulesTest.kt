@@ -1,6 +1,5 @@
-package io.github.esko997.sortie.data.mecha
+package io.github.esko997.sortie.mecha
 
-import io.github.esko997.sortie.data.db.SessionEntity
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -30,13 +29,12 @@ class MechaRulesTest {
 
         fun starter(): MechaState = starterMechaState(parts, INIT)
 
-        fun session(gameId: String, start: Long, minutes: Long?, abandoned: Boolean = false, rowId: Long = 0) = SessionEntity(
-            rowId = rowId,
+        fun session(gameId: String, start: Long, minutes: Long?, abandoned: Boolean = false, isGame: Boolean = true) = PlaySession(
             gameId = gameId,
-            profileId = null,
             startedAt = start,
             endedAt = minutes?.let { start + it * MINUTE },
-            abandoned = abandoned
+            abandoned = abandoned,
+            isGame = isGame
         )
     }
 
@@ -109,8 +107,8 @@ class MechaRulesTest {
         val result = s.credited(
             listOf(
                 session("snes/old.sfc", INIT - 1, 60),
-                session("app:com.example", INIT + MINUTE, 60),
-                session("shortcut:com.example/x", INIT + MINUTE, 60),
+                session("app:com.example", INIT + MINUTE, 60, isGame = false),
+                session("shortcut:com.example/x", INIT + MINUTE, 60, isGame = false),
                 session("psx/quit.cue", INIT + 2 * MINUTE, 60, abandoned = true),
                 session("psx/open.cue", INIT + 3 * MINUTE, null),
                 session("snes/new.sfc", INIT + 4 * MINUTE, 12)
@@ -139,10 +137,10 @@ class MechaRulesTest {
 
     @Test
     fun replayedRestoredOrReimportedSessionsCountOnce() {
-        val sessions = listOf(session("gba/a.gba", INIT + MINUTE, 7, rowId = 4), session("gba/b.gba", INIT + 20 * MINUTE, 8, rowId = 5))
+        val sessions = listOf(session("gba/a.gba", INIT + MINUTE, 7), session("gba/b.gba", INIT + 20 * MINUTE, 8))
         val once = starter().credited(sessions).state
-        // the same sessions as a restore or history import re-inserts them: new row ids, any order
-        val reimported = sessions.reversed().mapIndexed { i, s -> s.copy(rowId = 100L + i) }
+        // the same sessions as a restore or history import re-inserts them (under new row ids, which never reach the rules), any order
+        val reimported = sessions.reversed().map { it.copy() }
         assertSame(once, once.credited(sessions).state)
         assertSame(once, once.credited(reimported).state)
         val plus = once.credited(reimported + session("gba/c.gba", INIT + 60 * MINUTE, 5)).state

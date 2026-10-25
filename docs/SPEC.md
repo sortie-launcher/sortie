@@ -143,7 +143,8 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Three original pixel-art families (yard, survey, courier), two variants for each head/body/arms/legs slot: 24 authored
   parts and 1,296 possible loadouts. Eight 64×64 frames per transparent 512×64 atlas, shared attachment points, four poses.
   Grounded sole fill y61, outline y62, y63 clear. Nearest-neighbour integer display scaling; sheets decoded once off-main.
-  Family-local Pillow generators in `tools/mecha/` reproduce the assets and review boards.
+  Family-local Pillow generators in `tools/mecha/` reproduce the assets (`mecha/src/main/assets/mecha/`) and review boards.
+  The companion is the `:mecha` module (see the code map below).
 - Twelve starter parts and three clearly labelled starter salvage credits. A deterministic salvage choice finds an unowned
   part for one credit; completed collections cost nothing. Gallery previews all parts but cannot equip unowned ones.
 - Room's completed, non-abandoned game sessions after initialization earn one credit per five accumulated whole minutes,
@@ -201,9 +202,16 @@ Code map (`app/src/main/java/io/github/esko997/sortie/`):
   `data/backup/` export/restore; `data/magazine/`, `data/reference/`, `data/journal/` the reading, reference-card and
   journal features; `data/apps/` installed apps and launcher shortcuts.
 - `launch/` intent building and launching with fallbacks; `shell/` the Shizuku user service, screen mover and app switcher;
-  `ui/` Compose screens (`ManualScreen` renders `assets/MANUAL.md`).
-- `app/src/test/` JVM unit tests. Device paths, serials and emulator package names belong in the on-card manifests or
-  environment variables (`tools/dev.sh` reads `SORTIE_SERIAL`, `SORTIE_TOP_DISPLAY`, `SORTIE_BOTTOM_DISPLAY`), never in code.
+  `ui/` Compose screens (`ManualScreen` renders `assets/MANUAL.md`; `MechaFooter.kt` decides on which routes the companion
+  dock shows).
+- `design/` library module (`:design`, still package `io.github.esko997.sortie.ui`): theme colours, `SortieTheme` and the
+  controller-focus building blocks (`focusGlow`, `keyLongPress`, `FocusRow`) shared by the app and feature modules.
+- `mecha/` library module (`:mecha`, package `io.github.esko997.sortie.mecha`): the Hangar companion's rules, save,
+  parts catalog and art (`mecha/src/main/assets/mecha/`), dock and Hangar UI. It knows no Room, app or navigation types:
+  `SortieApp` maps sessions to `PlaySession` for `MechaStore`, and the app shows `MechaDock` and `Hangar`.
+- `app/src/test/`, `mecha/src/test/` JVM unit tests. Device paths, serials and emulator package names belong in the on-card
+  manifests or environment variables (`tools/dev.sh` reads `SORTIE_SERIAL`, `SORTIE_TOP_DISPLAY`, `SORTIE_BOTTOM_DISPLAY`),
+  never in code.
 
 Android behaviour that shaped the design (observed on Android 13 dual-screen hardware):
 

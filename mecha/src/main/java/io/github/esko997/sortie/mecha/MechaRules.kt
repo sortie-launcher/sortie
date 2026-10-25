@@ -1,19 +1,17 @@
-package io.github.esko997.sortie.data.mecha
+package io.github.esko997.sortie.mecha
 
-import io.github.esko997.sortie.data.apps.LibraryItem
-import io.github.esko997.sortie.data.db.SessionEntity
 import kotlin.math.max
 import kotlin.math.min
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
 /** A rule's outcome: the next state (the same instance when nothing changed) and what to tell the player. */
-data class MechaResult(val state: MechaState, val message: String? = null, val error: String? = null)
+internal data class MechaResult(val state: MechaState, val message: String? = null, val error: String? = null)
 
-const val MECHA_STARTER_ORIGIN = "Starter kit"
+internal const val MECHA_STARTER_ORIGIN = "Starter kit"
 
 /** The family whose variant-1 parts a new hangar wears. */
-const val MECHA_STARTER_FAMILY = "yard"
+internal const val MECHA_STARTER_FAMILY = "yard"
 
 private const val PART_NAME_MAX = 32
 private const val STARTER_CHARGE = 80
@@ -32,7 +30,7 @@ private val catalogJson = Json
  * `mecha/<family>/<id>.png` asset (whose sheet [assetProblem] checks: null = fine), with a short name. Throws [IllegalArgumentException]
  * naming every problem. Returns the parts in slot then variant order.
  */
-fun parseMechaCatalog(family: String, text: String, assetProblem: (String) -> String?): List<MechaPart> {
+internal fun parseMechaCatalog(family: String, text: String, assetProblem: (String) -> String?): List<MechaPart> {
     val rows = try {
         catalogJson.decodeFromString(ListSerializer(MechaPart.serializer()), text)
     } catch (e: Exception) {
@@ -60,7 +58,7 @@ fun parseMechaCatalog(family: String, text: String, assetProblem: (String) -> St
 }
 
 /** A new hangar: every family's variant-1 parts (twelve), the starter family fitted, [MECHA_STARTER_CREDITS] credits. */
-fun starterMechaState(parts: List<MechaPart>, now: Long): MechaState {
+internal fun starterMechaState(parts: List<MechaPart>, now: Long): MechaState {
     val starters = parts.filter { it.variant == 1 }
     val equipped = MechaSlot.entries.associateWith { slot ->
         starters.first { it.family == MECHA_STARTER_FAMILY && it.slot == slot }.id
@@ -83,7 +81,7 @@ fun starterMechaState(parts: List<MechaPart>, now: Long): MechaState {
 }
 
 /** Why [name] (already trimmed) can't be the companion's name, or null when it can. */
-fun mechaNameProblem(name: String): String? = when {
+internal fun mechaNameProblem(name: String): String? = when {
     name.isBlank() -> "Give your mech a name."
     name != name.trim() -> "Names can't start or end with spaces."
     name.length > MECHA_NAME_MAX -> "Names are at most $MECHA_NAME_MAX characters."
@@ -92,7 +90,7 @@ fun mechaNameProblem(name: String): String? = when {
 }
 
 /** Why a loaded [MechaState] can't be used with [parts], or null when it is consistent. */
-fun mechaStateProblem(state: MechaState, parts: List<MechaPart>): String? {
+internal fun mechaStateProblem(state: MechaState, parts: List<MechaPart>): String? {
     val byId = parts.associateBy { it.id }
     val unknown = state.owned.filter { it !in byId }
     val stats = MECHA_STAT_FLOOR..MECHA_STAT_MAX
@@ -113,26 +111,26 @@ fun mechaStateProblem(state: MechaState, parts: List<MechaPart>): String? {
 }
 
 /** Parts not yet in the hangar, of [slot] (any when null), sorted by id. */
-fun MechaState.unownedIn(parts: List<MechaPart>, slot: MechaSlot? = null): List<MechaPart> =
+internal fun MechaState.unownedIn(parts: List<MechaPart>, slot: MechaSlot? = null): List<MechaPart> =
     parts.filter { it.id !in owned && (slot == null || it.slot == slot) }.sortedBy { it.id }
 
-fun MechaState.owns(partId: String): Boolean = partId in owned
+internal fun MechaState.owns(partId: String): Boolean = partId in owned
 
-fun MechaState.renamed(input: String): MechaResult {
+internal fun MechaState.renamed(input: String): MechaResult {
     val next = input.trim()
     mechaNameProblem(next)?.let { return MechaResult(this, error = it) }
     if (next == name) return MechaResult(this, message = "Still called $name.")
     return MechaResult(copy(name = next), message = "$name answers to $next now.")
 }
 
-fun MechaState.equipping(partId: String, parts: List<MechaPart>): MechaResult {
+internal fun MechaState.equipping(partId: String, parts: List<MechaPart>): MechaResult {
     val part = parts.firstOrNull { it.id == partId } ?: return MechaResult(this, error = "There is no part \"$partId\".")
     if (partId !in owned) return MechaResult(this, error = "${part.name} isn't in the hangar yet; salvage can turn it up.")
     if (equipped[part.slot] == partId) return MechaResult(this, message = "${part.name} is already fitted.")
     return MechaResult(copy(equipped = equipped + (part.slot to partId)), message = "Fitted ${part.name}.")
 }
 
-fun MechaState.cared(action: MechaCare): MechaResult = when (action) {
+internal fun MechaState.cared(action: MechaCare): MechaResult = when (action) {
     MechaCare.TUNE ->
         if (condition >= MECHA_STAT_MAX) {
             MechaResult(this, message = "$name is already running smooth.")
@@ -155,17 +153,17 @@ fun MechaState.cared(action: MechaCare): MechaResult = when (action) {
         }
 }
 
-fun MechaState.withEnabled(on: Boolean): MechaResult =
+internal fun MechaState.withEnabled(on: Boolean): MechaResult =
     if (enabled == on) MechaResult(this) else MechaResult(copy(enabled = on), message = if (on) "$name is back." else "$name is hidden.")
 
-fun MechaState.withMotion(on: Boolean): MechaResult =
+internal fun MechaState.withMotion(on: Boolean): MechaResult =
     if (motion == on) MechaResult(this) else MechaResult(copy(motion = on), message = if (on) "Animation on." else "Animation off.")
 
 /**
  * Spends one credit on a part not yet owned in [slot] (any slot when null). The pick is deterministic: the same state always
  * finds the same part. With nothing left to find, or no credit, nothing changes and nothing is spent.
  */
-fun MechaState.salvaged(parts: List<MechaPart>, slot: MechaSlot? = null): MechaResult {
+internal fun MechaState.salvaged(parts: List<MechaPart>, slot: MechaSlot? = null): MechaResult {
     val candidates = unownedIn(parts, slot)
     if (candidates.isEmpty()) {
         val what = if (slot == null) "Every part" else "Every ${slot.label()} part"
@@ -188,15 +186,15 @@ fun MechaState.salvaged(parts: List<MechaPart>, slot: MechaSlot? = null): MechaR
 }
 
 /** The key that identifies a play session across backup restores and history imports, which keep game and start time. */
-fun mechaSessionKey(session: SessionEntity): String = "${session.gameId}@${session.startedAt}"
+internal fun mechaSessionKey(session: PlaySession): String = "${session.gameId}@${session.startedAt}"
 
 /**
- * Credits completed game sessions not seen before: only games (not apps or shortcuts), not abandoned, started at or after
+ * Credits completed game sessions not seen before: only games ([PlaySession.isGame], not apps or shortcuts), not abandoned, started at or after
  * [MechaState.initializedAt]. Each counts its whole minutes up to [MECHA_SESSION_MINUTES_CAP]; every [MECHA_MINUTES_PER_CREDIT]
  * accumulated minutes is one credit, the rest carries over. Every new eligible session is remembered, so the same session read
  * again (reopened, restored, re-imported) never counts twice. Play wears charge a little, never below [MECHA_STAT_FLOOR].
  */
-fun MechaState.credited(sessions: List<SessionEntity>): MechaResult {
+internal fun MechaState.credited(sessions: List<PlaySession>): MechaResult {
     val processed = LinkedHashSet(processedSessions)
     var pending = pendingMinutes
     var credits = 0
@@ -204,7 +202,7 @@ fun MechaState.credited(sessions: List<SessionEntity>): MechaResult {
     var played = 0
     for (s in sessions.sortedWith(compareBy({ it.startedAt }, { it.gameId }))) {
         val end = s.endedAt ?: continue
-        if (s.abandoned || s.startedAt < initializedAt || !LibraryItem.isGameId(s.gameId)) continue
+        if (s.abandoned || s.startedAt < initializedAt || !s.isGame) continue
         if (!processed.add(mechaSessionKey(s))) continue
         val counted = ((end - s.startedAt) / 60_000L).coerceIn(0L, MECHA_SESSION_MINUTES_CAP.toLong()).toInt()
         if (counted > 0) played++
