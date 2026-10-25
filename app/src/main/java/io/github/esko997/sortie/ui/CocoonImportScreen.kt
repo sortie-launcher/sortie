@@ -318,7 +318,10 @@ private fun LazyListScope.preview(
         }
     }
     if (plan.newSystems.isNotEmpty()) item { Toggle("Add ${plural(plan.newSystems.size, "system")}", o.systems) { onOptions(o.copy(systems = it)) } }
-    if (plan.favourites.isNotEmpty()) item { Toggle("Add ${plural(plan.favourites.size, "favourite")}", o.favourites) { onOptions(o.copy(favourites = it)) } }
+    if (plan.favourites.isNotEmpty() || plan.legacyFavourites > 0) {
+        item { Toggle(favouritesToggle(plan.favourites.size, plan.legacyFavourites), o.favourites) { onOptions(o.copy(favourites = it)) } }
+    }
+    if (plan.legacyFavourites > 0) item { InfoBlock("Old Favourites folder entry") { Note(legacyFavouritesNote(plan.legacyFavourites, o.favourites)) } }
     if (plan.hidden.isNotEmpty()) item { Toggle("Hide ${plural(plan.hidden.size, "game")}", o.hidden) { onOptions(o.copy(hidden = it)) } }
     if (plan.systemProfiles.isNotEmpty()) {
         item { Toggle("Choose emulators for ${plural(plan.systemProfiles.size, "system")}", o.emulators) { onOptions(o.copy(emulators = it)) } }
@@ -427,6 +430,28 @@ private fun LazyListScope.preview(
         }
     }
     if (plan.notes.isNotEmpty()) item { InfoBlock("Notes") { capped(plan.notes).forEach { Note(it) } } }
+}
+
+/** The Favourites switch: adding favourites as before, plus the old default Favourites entry's removal when there is one. */
+private fun favouritesToggle(favourites: Int, legacy: Int): String {
+    val cleanup = "remove the old Favourites folder ${if (legacy == 1) "entry" else "entries"}"
+    return when {
+        legacy == 0 -> "Add ${plural(favourites, "favourite")}"
+        favourites == 0 -> "${cleanup.replaceFirstChar { it.uppercase() }} (no new favourites)"
+        else -> "Add ${plural(favourites, "favourite")} and $cleanup"
+    }
+}
+
+private fun legacyFavouritesNote(legacy: Int, on: Boolean): String {
+    val copies = if (legacy == 1) "a copy" else "$legacy copies"
+    return "folders.json has $copies of Sortie's old default Favourites folder (every favourite, apps included, by title). The built-in " +
+        "Favourites folder replaced it and already lists the same favourites, so Sortie ignores the entry and reports it as a folder " +
+        "rule problem. " + if (on) {
+            "With Favourites on, the import removes only that entry from folders.json, after the safety copy. Your favourites, other " +
+                "folders and customised entries stay; folders.json isn't in the safety copy, but the entry only repeated the built-in folder."
+        } else {
+            "Favourites is off, so the entry stays in folders.json and keeps being reported."
+        }
 }
 
 /**

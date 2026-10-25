@@ -25,8 +25,8 @@ internet permission and never downloads games, BIOS files, emulators or artwork.
 ## Install
 
 Beta. Download the newest `.apk` (and its `.sha256`) from
-[GitHub releases](https://github.com/sortie-launcher/sortie/releases): each merge to `main` that passes CI publishes a
-signed prerelease, checked by hosted tests and signature verification but not tested on hardware build by build. Needs
+[GitHub releases](https://github.com/sortie-launcher/sortie/releases): merges to `main` that run and pass the Android build
+publish a signed beta release marked Latest, checked by hosted tests and signature verification but not tested on hardware build by build. Needs
 Android 11 or newer. Install newer APKs over the old one. **Never uninstall to update**, and don't use the debug-signed
 [Actions](https://github.com/sortie-launcher/sortie/actions/workflows/build.yml) artifacts as a daily install
 ([why](https://sortie-launcher.github.io/sortie/project/release/)).

@@ -40,6 +40,12 @@ reserved id is ignored and reported on the built-in folder. These folders always
 omit hidden entries. Favourites holds favourited games, installed apps and shortcuts; the other three hold games only. Ids
 temporarily absent from the game index (or apps not installed) are retained in the user's data and return when available.
 
+Cocoon import can remove the obsolete default definition `{ "id": "favourites", "label": "Favourites",
+"rule": { "favourite": true }, "apps": true, "sort": "title:asc" }` after showing the cleanup in its preview and only
+with Favourites enabled. This removes a redundant rule, not anyone's favourites. Custom rules, memberships, limits,
+labels and unknown fields prevent automatic removal; those conflicts remain reported for deliberate correction.
+A Cocoon user folder merely named "Favourites" keeps its separate `cocoon-<id>` identity.
+
 ## Recently played tags (`recentTags`)
 
 `{ "recentTags": { "minShared": 1, "window": 3 } }` matches a game whose guide `tags` share at least

@@ -33,8 +33,9 @@ import kotlinx.coroutines.withContext
  *
  * Every step is a union or an insert-if-absent, so running the same import again changes nothing: systems that exist are left
  * as they are, ids already in favourites/hidden stay once, user-chosen emulators win, sessions are deduplicated by
- * (game id, start time) and copied covers are skipped. Steps up to the folders are not cancellable once started; only the
- * artwork copy stops on request, keeping the files already copied.
+ * (game id, start time) and copied covers are skipped. The one removal is Sortie's own old default Favourites entry in
+ * folders.json (with the Favourites category on, after the safety copy), which a re-run no longer finds. Steps up to the
+ * folders are not cancellable once started; only the artwork copy stops on request, keeping the files already copied.
  */
 object CocoonImporter {
     private const val TAG = "SortieCocoon"
@@ -232,6 +233,15 @@ object CocoonImporter {
             )
         }
         if (options.favourites) done += countLine("Favourites", after.favourites.size - before.favourites.size, plan.favourites.size - favourites.size)
+
+        // 6b. Sortie's old default Favourites entries in folders.json, only when the preview offered them with Favourites on.
+        if (options.favourites && plan.legacyFavourites > 0) {
+            onProgress(CocoonImportState.Working("Removing the old Favourites folder entry…"))
+            // Recheck the current definitions; a customized entry is no longer eligible. Save errors stop the import.
+            val fresh = store.load()
+            store.removeLegacyFavourites(fresh)
+            done += "Old Favourites folder entries removed: ${fresh.legacyFavourites}. Your favourites and other folders were kept."
+        }
         if (options.hidden && plan.hidden.isNotEmpty()) {
             done += countLine("Hidden games", after.hidden.size - before.hidden.size, plan.hidden.size - hidden.size)
         }

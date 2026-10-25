@@ -35,7 +35,9 @@ import kotlinx.serialization.json.jsonObject
  * The editable part of the card configuration as last read. [fingerprint] identifies the exact bytes of every manifest; pass
  * the configuration back as `expected` so a save is refused when anything changed in between. [errors] lists files that
  * could not be read (saving is refused while one of device/systems/launchers.json is among them) and interrupted changes.
- * [exists] is false when there is no device.json, systems.json or launchers.json yet (first setup).
+ * [exists] is false when there is no device.json, systems.json or launchers.json yet (first setup). [legacyFavourites] counts
+ * folders.json entries that only repeat the old default Favourites folder (now built in) and can be removed losslessly with
+ * [LibrarySetupStore.removeLegacyFavourites]; customised entries using the reserved id are not counted.
  */
 data class LibraryConfiguration(
     val systems: List<SystemDef>,
@@ -44,7 +46,8 @@ data class LibraryConfiguration(
     val errors: List<String>,
     val exists: Boolean,
     val biosDir: String?,
-    val saves: List<String>
+    val saves: List<String>,
+    val legacyFavourites: Int = 0
 )
 
 /** The card configuration changed since it was loaded (desktop edit, another screen): reload, keep the draft, try again. */
@@ -99,7 +102,9 @@ class LibrarySetupStore internal constructor(
             errors = errors,
             exists = exists,
             biosDir = device.value?.biosDir,
-            saves = device.value?.saves.orEmpty()
+            saves = device.value?.saves.orEmpty(),
+            // folders.obj is set only when the whole file loads as the app reads it
+            legacyFavourites = if (exists) folders.obj?.let { f -> elements(f, "folders").count { isLegacyFavourites(it) } } ?: 0 else 0
         )
     }
 
@@ -237,21 +242,39 @@ class LibrarySetupStore internal constructor(
         }
     }
 
+    /**
+     * Removes the folders.json entries that only repeat the old default Favourites folder ([LibraryConfiguration.legacyFavourites]):
+     * the app ignores them in favour of the built-in folder, which shows the same members. Other folders, entries using the
+     * reserved id with any customisation and unknown keys are kept; favourites themselves live in user.json and are not
+     * touched. Only folders.json is ever written: missing manifests of a partial configuration are not added, and nothing to
+     * remove changes no file. Refused, without writing, when folders.json cannot be read or there is no library configuration.
+     */
+    suspend fun removeLegacyFavourites(expected: LibraryConfiguration): LibraryConfiguration = mutate(expected, complete = false) { state, work ->
+        if (!state.exists) throw IOException("There are no library settings in ${directory.path} to tidy.")
+        if (state.raw[FOLDERS] != null && state.folders.obj == null) {
+            throw IOException(state.errors.firstOrNull { it.startsWith(FOLDERS) } ?: "$FOLDERS could not be read; Sortie will not overwrite it.")
+        }
+        val array = elements(work.folders, "folders")
+        val kept = array.filterNot { isLegacyFavourites(it) }
+        if (kept.size != array.size) work.folders = JsonObject(work.folders + ("folders" to JsonArray(kept)))
+    }
+
     private class Work(var device: JsonObject, var systems: JsonObject, var launchers: JsonObject, var folders: JsonObject)
 
     private enum class Outcome { UNCHANGED, COMMITTED }
 
     /**
      * Checks [expected] against the card under the commit lock, applies [edit] to the parsed (or scaffolded) objects and commits
-     * every changed or missing manifest as one unit. Cancellation before the commit starts changes nothing; once it started it
-     * finishes (and reloads) before the cancellation is delivered. A decided save returns the recovered configuration, with
-     * any remaining recovery errors, rather than inviting the caller to repeat an already committed addition.
+     * every changed manifest, plus every missing one when [complete], as one unit. Cancellation before the commit starts changes
+     * nothing; once it started it finishes (and reloads) before the cancellation is delivered. A decided save returns the
+     * recovered configuration, with any remaining recovery errors, rather than inviting the caller to repeat an already
+     * committed addition.
      */
-    private suspend fun mutate(expected: LibraryConfiguration, edit: (State, Work) -> Unit): LibraryConfiguration {
+    private suspend fun mutate(expected: LibraryConfiguration, complete: Boolean = true, edit: (State, Work) -> Unit): LibraryConfiguration {
         currentCoroutineContext().ensureActive()
         withContext(Dispatchers.IO + NonCancellable) {
             val outcome = try {
-                ManifestCommit.withLock(directory) { commitLocked(expected, edit) }
+                ManifestCommit.withLock(directory) { commitLocked(expected, complete, edit) }
             } catch (_: ManifestCommit.PartiallyApplied) {
                 // The journal is durable: reload rolls it forward, or reads the complete staged set with an error.
                 Outcome.COMMITTED
@@ -266,7 +289,7 @@ class LibrarySetupStore internal constructor(
         }
     }
 
-    private fun commitLocked(expected: LibraryConfiguration, edit: (State, Work) -> Unit): Outcome {
+    private fun commitLocked(expected: LibraryConfiguration, complete: Boolean, edit: (State, Work) -> Unit): Outcome {
         val state = readState()
         if (state.fingerprint != expected.fingerprint) {
             throw LibraryConflictException("The library settings on the card changed since this screen loaded them. Reload, then make the change again.")
@@ -287,21 +310,24 @@ class LibrarySetupStore internal constructor(
         )
         edit(state, work)
         val next = LinkedHashMap<String, JsonObject>()
-        if (state.device.obj != work.device) next[DEVICE] = work.device
-        if (state.systems.obj != work.systems) next[SYSTEMS] = work.systems
-        if (state.launchers.obj != work.launchers) next[LAUNCHERS] = work.launchers
+        if ((complete || state.device.obj != null) && state.device.obj != work.device) next[DEVICE] = work.device
+        if ((complete || state.systems.obj != null) && state.systems.obj != work.systems) next[SYSTEMS] = work.systems
+        if ((complete || state.launchers.obj != null) && state.launchers.obj != work.launchers) next[LAUNCHERS] = work.launchers
         // compared with the scaffold when the file is missing or broken, so a broken folders.json is never replaced by it
         if ((state.folders.obj ?: foldersScaffold) != work.folders) next[FOLDERS] = work.folders
-        if (next.isEmpty() && state.exists) {
+        if (next.isEmpty() && (state.exists || !complete)) {
             // a no-op edit of an existing configuration changes no file, not even missing folders/guide (not ours to add)
             return Outcome.UNCHANGED
         }
-        // a configuration being created or edited is completed so the app loads it without "missing" errors
-        if (state.raw[DEVICE] == null) next[DEVICE] = work.device
-        if (state.raw[SYSTEMS] == null) next[SYSTEMS] = work.systems
-        if (state.raw[LAUNCHERS] == null) next[LAUNCHERS] = work.launchers
-        if (state.raw[FOLDERS] == null) next[FOLDERS] = work.folders
-        if (state.raw[GUIDE] == null) next[GUIDE] = JsonObject(mapOf("built" to JsonPrimitive(""), "games" to JsonObject(emptyMap())))
+        // a configuration being created or edited is completed so the app loads it without "missing" errors; a tidy-up
+        // ([complete] false) writes only what it changed
+        if (complete) {
+            if (state.raw[DEVICE] == null) next[DEVICE] = work.device
+            if (state.raw[SYSTEMS] == null) next[SYSTEMS] = work.systems
+            if (state.raw[LAUNCHERS] == null) next[LAUNCHERS] = work.launchers
+            if (state.raw[FOLDERS] == null) next[FOLDERS] = work.folders
+            if (state.raw[GUIDE] == null) next[GUIDE] = JsonObject(mapOf("built" to JsonPrimitive(""), "games" to JsonObject(emptyMap())))
+        }
         // the result must load exactly as ManifestStore will load it
         next[DEVICE]?.let { decoder.decodeFromJsonElement(DeviceManifest.serializer(), it) }
         next[SYSTEMS]?.let { decoder.decodeFromJsonElement(SystemsManifest.serializer(), it) }
@@ -403,6 +429,28 @@ class LibrarySetupStore internal constructor(
         private val COLOUR = Regex("#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})")
         private val DISPLAYS = setOf("same", "top", "bottom")
         private val RESERVED_FOLDER_IDS = setOf(FAVOURITES_FOLDER_ID, WANT_TO_PLAY_FOLDER_ID, FINISHED_FOLDER_ID, SHELVED_FOLDER_ID)
+        private val LEGACY_FAVOURITES_KEYS = setOf("id", "label", "rule", "include", "exclude", "apps", "sort", "limit")
+
+        /**
+         * The default Favourites folder older builds and examples wrote (`{"id": "favourites", "label": "Favourites",
+         * "rule": {"favourite": true}, "apps": true}`, sort title ascending): exactly that, other keys absent or explicitly at
+         * their default. Any other key, value or label is a user's own definition and is never matched.
+         */
+        private fun isLegacyFavourites(e: JsonElement): Boolean {
+            val o = e as? JsonObject ?: return false
+            if (!LEGACY_FAVOURITES_KEYS.containsAll(o.keys)) return false
+            fun string(key: String) = (o[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
+            fun isTrue(v: JsonElement?) = v is JsonPrimitive && !v.isString && v.content == "true"
+            fun emptyArray(key: String) = o[key].let { it == null || (it is JsonArray && it.isEmpty()) }
+            val rule = o["rule"] as? JsonObject ?: return false
+            return string("id") == FAVOURITES_FOLDER_ID &&
+                string("label") == "Favourites" &&
+                rule.size == 1 && isTrue(rule["favourite"]) &&
+                isTrue(o["apps"]) &&
+                ("sort" !in o || string("sort") == "title:asc") &&
+                emptyArray("include") && emptyArray("exclude") &&
+                o["limit"].let { it == null || (it is JsonPrimitive && !it.isString && it.content == "0") }
+        }
 
         /** A stable, readable device name for playlog lines (`ayn-thor`); "android" when the model is unknown. */
         internal fun defaultDeviceName(): String = runCatching { android.os.Build.MODEL }.getOrNull()
