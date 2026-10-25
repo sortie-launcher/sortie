@@ -65,8 +65,13 @@ sh_ input keyevent KEYCODE_HOME
 # would not do: Android leaves overlay displays out of accessibility, so no test could read the second screen.
 echo "== second screen"
 before=$(displays)
-adb emu multidisplay add 1 1240 1080 369 1739
-for _ in $(seq 30); do [ "$(displays)" -gt "$before" ] && break; sleep 1; done
+# The first request can answer "MultiDisplayPipe is not up yet" while it starts the guest's display service; repeating the
+# same request is harmless (unchanged parameters are ignored).
+for attempt in 1 2 3; do
+  adb emu multidisplay add 1 1240 1080 369 1739 || true
+  for _ in $(seq 15); do [ "$(displays)" -gt "$before" ] && break 2; sleep 1; done
+  echo "No second display after attempt $attempt"
+done
 [ "$(displays)" -gt "$before" ] || { echo "The emulator did not add a second display" >&2; exit 1; }
 sh_ dumpsys display | grep -E 'DisplayDeviceInfo\{"' || true
 
