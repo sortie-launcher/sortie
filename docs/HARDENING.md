@@ -123,21 +123,24 @@ removed them and the next Home created new ones. Any app's window churn can stil
 
 `app/src/testDebug/` runs the real `MainActivity`, `SortieApp` graph, view model, Room database (Robolectric's native
 SQLite), indexer and stores under Robolectric with native graphics, against a fixture card. They are part of
-`testDebugUnitTest`, so `tools/build.sh` and CI run them on every build (about 60 s of added test time locally; release unit
-tests stay plain JUnit).
+`testDebugUnitTest`, so `tools/build.sh` and CI run them on every build (27 tests, about 30 s of added test time locally;
+release unit tests stay plain JUnit).
 
 - **Fixture** (`testing/FixtureCard.kt`, `resources/fixtures/`): a card with `device.json`, `systems.json` (three systems),
   `launchers.json`, `folders.json` (one folder), `user.json` (custom sort, five-column grid), six ROM stubs with generated PNG
   covers and two magazine issues (No. 007 and No. 012, a long article with a lead, a portrait and a wide figure). The
-  Hangar save in `fixtures/app/` has motion off. `SortieCardRule` writes it, pins the card folder, fixes the displayed clock
+  Hangar save in `fixtures/app/` has the companion hidden and motion off, so no roaming mech is drawn on Home, the shelf or
+  articles, and the Hangar's sprites hold still. `SortieCardRule` writes it, pins the card folder, fixes the displayed clock
   (09:41 UTC, `uiNow`) and hides the bundled Field Notes issues of `-PsortieMagazinesDir` builds, so every build shows the
-  same shelf.
+  same shelf. Pictures load through the app's Coil loader on the main thread with BitmapFactory (Robolectric has no
+  ImageDecoder), so a screenshot never races a background load.
 - **Controller** (`testing/Controller.kt`): keys go to the focused window the way the input dispatcher sends them, including
   the generic controller fallbacks (A → DPAD_CENTER, B → BACK, Select → MENU) and the first D-pad press leaving touch mode.
 - **Interaction tests**: Home, Home, B keeps Sortie on Home; D-pad order through the header, sort chips and custom grid;
   A/B return to the same tile; reader position survives activity recreation; R2 opens the picture in view and B closes it
-  with the article unmoved; reader Select → Visit the hangar, B returns to the article.
-- **Screenshots** (Roborazzi): Home, magazine shelf, article at each figure and Hangar Workshop on the Thor's top
+  with the article unmoved; Home's Hangar button opens the Hangar and B puts the focus back on it; reader Select → Visit
+  the hangar, B returns to the article.
+- **Screenshots** (Roborazzi): Home, magazine shelf, article at each figure and the Hangar Workshop (from Home's header) on the Thor's top
   (`w833dp-h421dp`) and bottom (`w538dp-h444dp`) screens, the DMG (`w480dp-h551dp`) and the Retroid Pocket Nova
   (`w640dp-h480dp`), recorded at half size with no tolerance into `app/src/testDebug/screenshots/<device>/`. A build run
   with `-Proborazzi.test.verify=true` (`tools/build.sh`, CI) fails on any pixel change; CI uploads the diffs as

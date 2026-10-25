@@ -10,7 +10,7 @@ import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.esko997.sortie.testing.Controller
 import io.github.esko997.sortie.testing.Controller.Companion.A
 import io.github.esko997.sortie.testing.Controller.Companion.DOWN
-import io.github.esko997.sortie.testing.Controller.Companion.SELECT
+import io.github.esko997.sortie.testing.Controller.Companion.RIGHT
 import io.github.esko997.sortie.testing.DMG
 import io.github.esko997.sortie.testing.ImageLoads
 import io.github.esko997.sortie.testing.RP_NOVA
@@ -114,10 +114,8 @@ abstract class ScreenshotTest(private val device: String) {
 
     @Test
     fun hangarWorkshop() {
-        openArticle()
-        pad.press(SELECT)
-        await("Reader tools")
-        repeat(6) { if (pad.focusedLabel()?.startsWith("Visit the hangar") != true) pad.press(DOWN) }
+        awaitHome()
+        pad.press(DOWN, RIGHT) // Apps, then the header's Hangar button
         pad.press(A)
         await("Workshop", "Gallery")
         capture("hangar-workshop")

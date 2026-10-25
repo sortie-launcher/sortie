@@ -72,19 +72,23 @@ class HomeControllerTest {
     }
 
     /**
-     * The first D-pad press lands on the header's first action; Right walks the actions in reading order; Down reaches the sort
-     * chips, then the first tile; the grid follows the user's custom order (Continue is absent: nothing has been played), and
-     * Up from the first row returns to the sort chips rather than skipping them.
+     * The first D-pad press lands on the header's first action; Right walks the first header row in reading order and stops at
+     * its end (on the Thor's top screen the header wraps after Journal); Down reaches the second row, then the sort chips, then
+     * the first tile; the grid follows the user's custom order (Continue is absent: nothing has been played), and Up from the
+     * first row returns to the sort chips rather than skipping them.
      */
     @Test
     fun dpadWalksHeaderSortChipsAndCustomGridInOrder() {
         awaitHome()
         assertEquals(
-            listOf("Apps", "Library setup", "Search", "Magazines", "Journal", "Manual", "Settings"),
+            listOf("Apps", "Hangar", "Library setup", "Search", "Magazines", "Journal", "Journal"),
             walk(DOWN, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT)
         )
-        assertEquals(listOf("Manual", "Journal", "Magazines", "Search", "Library setup", "Apps"), walk(LEFT, LEFT, LEFT, LEFT, LEFT, LEFT))
-        assertEquals(listOf("Alphabetical", "PlayStation 1 · 32-bit"), walk(DOWN, DOWN))
+        assertEquals(
+            listOf("Magazines", "Search", "Library setup", "Hangar", "Apps", "Apps"),
+            walk(LEFT, LEFT, LEFT, LEFT, LEFT, LEFT)
+        )
+        assertEquals(listOf("Manual", "Settings", "Manual", "Alphabetical", "PlayStation 1 · 32-bit"), walk(DOWN, RIGHT, LEFT, DOWN, DOWN))
         assertEquals(
             listOf("Ace Sortie Mega Drive ★", "Mega Drive 3 · 16-bit", "Shooters 2", "Super NES 2 · 16-bit"),
             walk(RIGHT, RIGHT, RIGHT, RIGHT)
@@ -96,12 +100,27 @@ class HomeControllerTest {
     @Test
     fun aOpensTheFocusedSystemAndBReturnsToTheSameTile() {
         awaitHome()
-        walk(DOWN, DOWN, DOWN, RIGHT, RIGHT)
+        walk(DOWN, DOWN, DOWN, DOWN, RIGHT, RIGHT) // Apps, Manual, Alphabetical, PlayStation, Ace Sortie, Mega Drive
         assertEquals("Mega Drive 3 · 16-bit", pad.focusedLabel())
         pad.press(A)
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Cinder Vale").fetchSemanticsNodes().isNotEmpty() }
         pad.press(B)
         awaitHome()
         assertEquals("Mega Drive 3 · 16-bit", pad.focusedLabel())
+    }
+
+    /** The header's Hangar button opens the Hangar from the controller; B closes it and the focus is back on the button. */
+    @Test
+    fun hangarButtonOpensTheHangarAndBReturnsToIt() {
+        awaitHome()
+        assertEquals(listOf("Apps", "Hangar"), walk(DOWN, RIGHT))
+        pad.press(A)
+        compose.waitUntil(5_000) { listOf("Workshop", "Gallery").all { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() } }
+        pad.press(B)
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Workshop").fetchSemanticsNodes().isEmpty() }
+        compose.mainClock.advanceTimeBy(500) // the button takes the focus back once the Hangar's window is gone
+        compose.waitForIdle()
+        assertEquals("Hangar", pad.focusedLabel())
+        assertEquals(listOf("Library setup"), walk(RIGHT))
     }
 }

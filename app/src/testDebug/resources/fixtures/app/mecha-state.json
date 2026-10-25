@@ -1,7 +1,7 @@
 {
  "version": 1,
  "name": "Rivet",
- "enabled": true,
+ "enabled": false,
  "motion": false,
  "equipped": {
   "HEAD": "survey_head_1",
