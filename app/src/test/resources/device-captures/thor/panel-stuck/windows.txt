@@ -1,0 +1,92 @@
+WINDOW MANAGER WINDOWS (dumpsys window windows)
+  Window #0 Window{3befde8 u0 ScreenDecorOverlayBottom}:
+    mDisplayId=0 mSession=Session{5f3dcb1 2601:u0a10090} mClient=android.os.BinderProxy@bedada
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #1 Window{7cf1d82 u0 ScreenDecorOverlay}:
+    mDisplayId=0 mSession=Session{5f3dcb1 2601:u0a10090} mClient=android.os.BinderProxy@1c64664
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #2 Window{b2658ee u0 com.odin.gameassistant}:
+    mDisplayId=0 mSession=Session{28b8948 2714:1000} mClient=android.os.BinderProxy@ddd80f0
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #3 Window{7bcbd16 u0 com.odin.gameassistant}:
+    mDisplayId=0 mSession=Session{28b8948 2714:1000} mClient=android.os.BinderProxy@283aed8
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #4 Window{445521 u0 com.odin.gameassistant}:
+    mDisplayId=0 mSession=Session{28b8948 2714:1000} mClient=android.os.BinderProxy@195f72b
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #5 Window{573570 u0 com.odin.settings}:
+    mDisplayId=0 mSession=Session{b83df21 2801:1000} mClient=android.os.BinderProxy@3781522
+    mHasSurface=true isReadyForDisplay()=true mWindowRemovalAllowed=false
+  Window #6 Window{8359985 u0 SecondaryHomeHandle0}:
+    mDisplayId=0 mSession=Session{5f3dcb1 2601:u0a10090} mClient=android.os.BinderProxy@41723ef
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #7 Window{ac33a68 u0 EdgeBackGestureHandler0}:
+    mDisplayId=0 mSession=Session{5f3dcb1 2601:u0a10090} mClient=android.os.BinderProxy@8ca35a
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #8 Window{d92ce0e u0 NavigationBar0}:
+    mDisplayId=0 mSession=Session{5f3dcb1 2601:u0a10090} mClient=android.os.BinderProxy@5786910
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #9 Window{7cc0cc8 u0 NotificationShade}:
+    mDisplayId=0 mSession=Session{5f3dcb1 2601:u0a10090} mClient=android.os.BinderProxy@ff8d6ba
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #10 Window{cc70b99 u0 StatusBar}:
+    mDisplayId=0 mSession=Session{5f3dcb1 2601:u0a10090} mClient=android.os.BinderProxy@b367ae3
+    mHasSurface=true isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #11 Window{cb9b901 u0 Application Not Responding: io.github.esko997.sortie}:
+    mDisplayId=0 mSession=Session{c4b120c 2176:1000} mClient=android.view.ViewRootImpl$W@6b9000b
+    mHasSurface=true isReadyForDisplay()=true mWindowRemovalAllowed=false
+  Window #12 Window{f6a1a93 u0 ShellDropTarget}:
+    mDisplayId=0 mSession=Session{5f3dcb1 2601:u0a10090} mClient=android.os.BinderProxy@5f41382
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #13 Window{6ca6a85 u0 InputMethod}:
+    mDisplayId=0 mSession=Session{70b0f 17001:u0a10077} mClient=android.os.BinderProxy@a38c3fc
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #14 Window{6a4040b u0 io.github.esko997.sortie/io.github.esko997.sortie.CompanionActivity}:
+    mDisplayId=0 rootTaskId=5503 mSession=Session{43a96e9 28060:u0a10193} mClient=android.os.BinderProxy@d657da
+    mHasSurface=true isReadyForDisplay()=true mWindowRemovalAllowed=false
+  Window #15 Window{dbd4759 u0 com.android.launcher3/com.android.quickstep.RecentsActivity}:
+    mDisplayId=0 rootTaskId=2025 mSession=Session{473b72b 7607:u0a10091} mClient=android.os.BinderProxy@5f47fa0
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #16 Window{144590e u0 example.frontend/example.frontend.MainActivity}:
+    mDisplayId=0 rootTaskId=5294 mSession=Session{2e75936 19252:u0a10149} mClient=android.os.BinderProxy@94ca309
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #17 Window{ff2d718 u0 com.android.systemui.wallpapers.ImageWallpaper}:
+    mDisplayId=0 mSession=Session{5f3dcb1 2601:u0a10090} mClient=android.os.BinderProxy@3118afb
+    mHasSurface=true isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #18 Window{4dbb146 u0 com.odin.dualscreen.assistant}:
+    mDisplayId=4 rootTaskId=2625 mSession=Session{a5a1f8b 2841:1000} mClient=android.os.BinderProxy@a209b88
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #19 Window{badc573 u0 SecondaryHomeHandle4}:
+    mDisplayId=4 rootTaskId=2625 mSession=Session{5f3dcb1 2601:u0a10090} mClient=android.os.BinderProxy@6ede6ad
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #20 Window{69511fb u0 EdgeBackGestureHandler4}:
+    mDisplayId=4 rootTaskId=2625 mSession=Session{5f3dcb1 2601:u0a10090} mClient=android.os.BinderProxy@de8edf5
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #21 Window{cf1f4d2 u0 NavigationBar4}:
+    mDisplayId=4 rootTaskId=2625 mSession=Session{5f3dcb1 2601:u0a10090} mClient=android.os.BinderProxy@4b87a46
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #22 Window{4fe62e u0 Application Not Responding: io.github.esko997.sortie}:
+    mDisplayId=4 rootTaskId=2625 mSession=Session{c4b120c 2176:1000} mClient=android.view.ViewRootImpl$W@44c7c30
+    mHasSurface=true isReadyForDisplay()=true mWindowRemovalAllowed=false
+  Window #23 Window{1ac807 u0 io.github.esko997.sortie/io.github.esko997.sortie.MainActivity}:
+    mDisplayId=4 rootTaskId=5502 mSession=Session{43a96e9 28060:u0a10193} mClient=android.os.BinderProxy@bb5fe46
+    mHasSurface=true isReadyForDisplay()=true mWindowRemovalAllowed=false
+  Window #24 Window{d9fc97c u0 com.android.launcher3/com.android.launcher3.secondarydisplay.SecondaryDisplayLauncher}:
+    mDisplayId=4 rootTaskId=2625 mSession=Session{473b72b 7607:u0a10091} mClient=android.os.BinderProxy@d12f86f
+    mHasSurface=false isReadyForDisplay()=false mWindowRemovalAllowed=false
+  Window #25 Window{879a42c u0 com.android.systemui.wallpapers.ImageWallpaper}:
+    mDisplayId=4 rootTaskId=2625 mSession=Session{5f3dcb1 2601:u0a10090} mClient=android.os.BinderProxy@9f5cfdf
+    mHasSurface=true isReadyForDisplay()=false mWindowRemovalAllowed=false
+  mGlobalConfiguration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w833dp h421dp 369dpi nrml long hdr widecg land night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1920, 1080) mAppBounds=Rect(0, 0 - 1920, 1025) mMaxBounds=Rect(0, 0 - 1920, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_90} s.8628 fontWeightAdjustment=0}
+  mHasPermanentDpad=false
+  mTopFocusedDisplayId=0
+  mBlurEnabled=true
+  mLastDisplayFreezeDuration=+93ms due to Window{d7e38f4 u0 io.github.esko997.sortie/io.github.esko997.sortie.SecondaryHomeActivity}
+  mHighResTaskSnapshotScale=1.0
+  mTaskSnapshotEnabled=true
+  mWindowsForAccessibilityObserver={0=WindowsForAccessibilityObserver{mDisplayId=0, mInitialized=true}, 4=WindowsForAccessibilityObserver{mDisplayId=4, mInitialized=true}}
+  mInputMethodWindow=Window{6ca6a85 u0 InputMethod}
+  mTraversalScheduled=false
+  mSystemBooted=true mDisplayEnabled=true
+  mTransactionSequence=561606
+  mDisplayFrozen=false windows=0 client=false apps=0  mRotation=1  mLastOrientation=0

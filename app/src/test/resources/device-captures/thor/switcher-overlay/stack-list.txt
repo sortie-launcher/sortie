@@ -1,0 +1,56 @@
+RootTask id=10975 bounds=[0,0][1920,1080] displayId=0 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w833dp h444dp 369dpi nrml long hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1920, 1080) mAppBounds=Rect(0, 0 - 1920, 1025) mMaxBounds=Rect(0, 0 - 1920, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=10975: example.stream/example.stream.LauncherActivity bounds=[0,0][1920,1080] userId=0 visible=true topActivity=ComponentInfo{example.stream/example.stream.MainActivity}
+
+RootTask id=10962 bounds=[0,0][1920,1080] displayId=0 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w833dp h444dp 369dpi nrml long hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1920, 1080) mAppBounds=Rect(0, 0 - 1920, 1025) mMaxBounds=Rect(0, 0 - 1920, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=10962: io.github.esko997.sortie/io.github.esko997.sortie.CompanionActivity bounds=[0,0][1920,1080] userId=0 visible=false topActivity=ComponentInfo{io.github.esko997.sortie/io.github.esko997.sortie.CompanionActivity}
+
+RootTask id=10973 bounds=[0,0][1920,1080] displayId=0 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w833dp h444dp 369dpi nrml long hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1920, 1080) mAppBounds=Rect(0, 0 - 1920, 1025) mMaxBounds=Rect(0, 0 - 1920, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=10973: example.psp/example.psp.GameActivity bounds=[0,0][1920,1080] userId=0 visible=false topActivity=ComponentInfo{example.psp/example.psp.GameActivity}
+
+RootTask id=10796 bounds=[0,0][1920,1080] displayId=0 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w833dp h444dp 369dpi nrml long hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1920, 1080) mAppBounds=Rect(0, 0 - 1920, 1025) mMaxBounds=Rect(0, 0 - 1920, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=10796: com.android.deskclock/com.android.deskclock.DeskClock bounds=[0,0][1920,1080] userId=0 visible=false topActivity=ComponentInfo{com.android.deskclock/com.android.deskclock.DeskClock}
+
+RootTask id=10620 bounds=[0,0][1920,1080] displayId=0 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w833dp h444dp 369dpi nrml long hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1920, 1080) mAppBounds=Rect(0, 0 - 1920, 1025) mMaxBounds=Rect(0, 0 - 1920, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=recents mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=10621: com.android.launcher3/com.android.quickstep.RecentsActivity bounds=[0,0][1920,1080] userId=0 visible=false topActivity=ComponentInfo{com.android.launcher3/com.android.quickstep.RecentsActivity}
+
+RootTask id=2 bounds=[0,0][1920,1080] displayId=0 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w833dp h444dp 369dpi nrml long hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1920, 1080) mAppBounds=Rect(0, 0 - 1920, 1025) mMaxBounds=Rect(0, 0 - 1920, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=3: unknown bounds=[0,0][1920,1080] userId=0 visible=false
+  taskId=4: unknown bounds=[1920,0][2880,1080] userId=0 visible=false
+
+RootTask id=10795 bounds=[0,0][1920,1080] displayId=0 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w833dp h444dp 369dpi nrml long hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1920, 1080) mAppBounds=Rect(0, 0 - 1920, 1025) mMaxBounds=Rect(0, 0 - 1920, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=10795: example.psx/example.psx.MainActivity bounds=[0,0][1920,1080] userId=0 visible=false topActivity=ComponentInfo{example.psx/example.psx.MainActivity}
+
+RootTask id=10793 bounds=[0,0][1240,1080] displayId=4 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w538dp h444dp 369dpi nrml hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1240, 1080) mAppBounds=Rect(0, 0 - 1240, 1025) mMaxBounds=Rect(0, 0 - 1240, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=home mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=10965: io.github.esko997.sortie/io.github.esko997.sortie.SecondaryHomeActivity bounds=[0,0][1240,1080] userId=0 visible=true topActivity=ComponentInfo{io.github.esko997.sortie/io.github.esko997.sortie.SecondaryHomeActivity}
+
+RootTask id=10851 bounds=[0,0][1240,1080] displayId=4 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w538dp h444dp 369dpi nrml hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1240, 1080) mAppBounds=Rect(0, 0 - 1240, 1025) mMaxBounds=Rect(0, 0 - 1240, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=10851: example.emu/example.emu.MainActivity bounds=[0,0][1240,1080] userId=0 visible=false topActivity=ComponentInfo{example.emu/example.emu.MainActivity}
+
+RootTask id=10761 bounds=[0,0][1240,1080] displayId=4 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w538dp h444dp 369dpi nrml hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1240, 1080) mAppBounds=Rect(0, 0 - 1240, 1025) mMaxBounds=Rect(0, 0 - 1240, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=10761: example.video/example.video.Shell$HomeActivity bounds=[0,0][1240,1080] userId=0 visible=false topActivity=ComponentInfo{example.video/example.video.Shell$HomeActivity}
+
+RootTask id=10777 bounds=[0,0][1240,1080] displayId=4 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w538dp h444dp 369dpi nrml hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1240, 1080) mAppBounds=Rect(0, 0 - 1240, 1025) mMaxBounds=Rect(0, 0 - 1240, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=10777: com.android.settings/com.android.settings.Settings bounds=[0,0][1240,1080] userId=0 visible=false topActivity=ComponentInfo{com.android.settings/com.android.settings.Settings}
+
+RootTask id=10803 bounds=[0,0][1240,1080] displayId=4 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w538dp h444dp 369dpi nrml hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1240, 1080) mAppBounds=Rect(0, 0 - 1240, 1025) mMaxBounds=Rect(0, 0 - 1240, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=10803: example.frontend/example.frontend.MainActivity bounds=[0,0][1240,1080] userId=0 visible=false topActivity=ComponentInfo{example.frontend/example.frontend.MainActivity}
+
+RootTask id=10820 bounds=[0,0][1240,1080] displayId=4 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w538dp h444dp 369dpi nrml hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1240, 1080) mAppBounds=Rect(0, 0 - 1240, 1025) mMaxBounds=Rect(0, 0 - 1240, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=10820: io.github.esko997.sortie/io.github.esko997.sortie.MainActivity bounds=[0,0][1240,1080] userId=0 visible=false topActivity=ComponentInfo{io.github.esko997.sortie/io.github.esko997.sortie.MainActivity}
+
+RootTask id=10762 bounds=[0,0][1240,1080] displayId=4 userId=0
+ configuration={1.0 ?mcc?mnc [en_US] ldltr sw468dp w538dp h444dp 369dpi nrml hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1240, 1080) mAppBounds=Rect(0, 0 - 1240, 1025) mMaxBounds=Rect(0, 0 - 1240, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90} s.13 fontWeightAdjustment=0}
+  taskId=10762: example.browser/example.browser.Main bounds=[0,0][1240,1080] userId=0 visible=false topActivity=ComponentInfo{example.browser/example.browser.Main}

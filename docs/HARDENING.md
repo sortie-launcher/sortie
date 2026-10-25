@@ -116,3 +116,20 @@ removed them and the next Home created new ones. Any app's window churn can stil
   Sortie crash or ANR before the system crash above.
 - DMG, 90 + 150 min (~3,100 iterations; the second run on the Back fix with 93 Hangar visits, 52 Gallery visits and 93
   RetroArch launches): no Sortie crash or ANR. Every crash and ANR recorded was RetroArch's.
+
+## Testing
+
+### Tier 3: recorded device output
+
+`ScreenMover` and `TaskSwitcher` decide from what the shell prints: which tasks `cmd activity stack list` shows on which
+display, and what the AYN panel probe reads from `dumpsys connectivity` and `dumpsys window`. The `Replay*Test` classes in
+`app/src/test/java/io/github/esko997/sortie/shell/` run them against output recorded on the Thor and the DMG, kept in
+`app/src/test/resources/device-captures/`. A fake shell answers from the capture and records every command issued, so
+the tests assert exact `move-stack`, `task focus`, `stack remove` and `am crash` commands: which app moves, what Home
+reveals, where "Sortie" goes, that Launcher3 and Sortie's own tasks are never touched. The panel tests run the real probe
+script in a local `sh` with `pidof` and `dumpsys` printing the recorded dumps, so a probe that misreads the Thor's output
+fails here rather than on the device.
+
+They are plain JVM unit tests and run with the others (`tools/build.sh`, or
+`./gradlew :app:testDebugUnitTest --tests 'io.github.esko997.sortie.shell.*'`); they need a POSIX `sh`, `grep` and `awk`.
+To add a capture (and keep it free of private data), follow the README in the captures folder.

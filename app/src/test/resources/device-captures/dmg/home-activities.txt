@@ -1,0 +1,7 @@
+# HOME and SECONDARY_HOME activities on this device (what ScreenMover asks the package manager for), as package/class.
+# Not a capture: reconstructed from the components the captures and Sortie's manifest show; see ../README.md.
+com.android.launcher3/com.android.launcher3.uioverrides.QuickstepLauncher
+com.android.settings/com.android.settings.FallbackHome
+example.homeapp/example.homeapp.MainActivity
+io.github.esko997.sortie/io.github.esko997.sortie.MainActivity
+io.github.esko997.sortie/io.github.esko997.sortie.SecondaryHomeActivity
