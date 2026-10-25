@@ -10,6 +10,8 @@
   `app/magazines.lock`. Local build defaults name the last manual signed preview (code 9, `0.1.0-beta.8`); manual codes
   stay below 1000. Automatic releases are prereleases, not hardware-tested build by build. Procedure and recovery:
   docs/RELEASE.md.
+- Pin release verification to Android build-tools 35.0.0 instead of whichever SDK tool happens to be newest on the host.
+  Hosted jobs use Ubuntu 24.04 and commit-pinned, maintained action releases rather than deprecated Node 20 actions.
 - Settings → Import from Cocoon…: reads Cocoon's folder (detected, typed or picked; optionally a backup selected anywhere on the device) without
   changing it, previews systems with found ROM folders and emulators, favourites, hidden games, artwork vs. free space, and
   backup folders/sessions/per-game emulators with per-category switches, then imports. Artwork copy is stoppable and
