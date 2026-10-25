@@ -206,8 +206,8 @@ has `should_show_system_decorations`, but Android leaves overlay displays out of
 The tests run in their own process because instrumenting Sortie itself makes it an instrumented HOME, which Android never
 starts on a secondary display by itself (`RootWindowContainer.canStartHomeOnDisplayArea`).
 
-Run it locally on an API 33 x86_64 emulator (it refuses real devices: it replaces `/sdcard/sortie`, `/sdcard/roms`, HOME and
-the display size):
+Run it locally on an API 33 x86_64 emulator (it refuses real devices: it reinstalls Sortie and replaces `/sdcard/sortie`,
+`/sdcard/roms`, HOME and the display size):
 
 ```
 ./gradlew assembleDebug :smoke:assembleDebug -PsortieMagazinesDir=/path/to/sortie-zines/issues

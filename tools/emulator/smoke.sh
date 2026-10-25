@@ -4,8 +4,8 @@
 #   ./gradlew assembleDebug :smoke:assembleDebug [-PsortieMagazinesDir=...]
 # adb must reach exactly one device or ANDROID_SERIAL must name it. See docs/HARDENING.md, "Testing".
 #
-# The device is overwritten: /sdcard/sortie and /sdcard/roms are replaced by tools/emulator/card, Sortie becomes HOME and the
-# display size changes. It therefore refuses anything that is not an emulator.
+# The device is overwritten: Sortie is reinstalled (its data goes), /sdcard/sortie and /sdcard/roms are replaced by
+# tools/emulator/card, Sortie becomes HOME and the display size changes. It therefore refuses anything that is not an emulator.
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.."
 PKG=io.github.esko997.sortie
