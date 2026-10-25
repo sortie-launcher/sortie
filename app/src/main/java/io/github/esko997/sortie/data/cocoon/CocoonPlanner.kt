@@ -20,8 +20,12 @@ data class ArtworkCopy(val gameId: String, val kind: String, val source: File, v
 /** A system to create with LibrarySetupStore.saveSystem; [profiles] are the ones not configured yet. */
 data class NewSystem(val system: SystemDef, val profiles: List<LaunchProfile>, val fromPreset: Boolean)
 
-/** Cocoon's emulator for a system, to become `UserData.systemProfiles[systemId]` unless the user already chose one. */
-data class SystemProfileChoice(val systemId: String, val profileId: String, val installed: Boolean)
+/**
+ * The emulator a new system gets first in its profiles, from Cocoon's choice for its platform (preview metadata only: nothing
+ * goes to user.json, and existing systems never get one). [requestedProfileId] is set when Cocoon's RetroArch build isn't
+ * installed and [profileId], the same core in an installed official RetroArch build, replaces it.
+ */
+data class SystemProfileChoice(val systemId: String, val profileId: String, val installed: Boolean, val requestedProfileId: String? = null)
 
 /** A user folder from the backup: id "cocoon-<n>", include = matched game ids; [unresolved] members had no Sortie id. */
 data class FolderPlan(val def: FolderDef, val unresolved: Int)
@@ -37,6 +41,7 @@ data class CocoonImportPlan(
     val newSystems: List<NewSystem>,
     /** systemId → media path to set when an existing system has none (needed by artwork copy), relative to card root when possible. */
     val mediaDirs: Map<String, String>,
+    /** New systems only: the emulator each one lists first (equal to its `system.profiles.first()`). */
     val systemProfiles: List<SystemProfileChoice>,
     /** Game ids and app:<pkg> ids. */
     val favourites: List<String>,
@@ -66,7 +71,12 @@ data class CocoonImportPlan(
      * removed with the Favourites category, since the built-in Favourites folder replaces them. Customised entries with a
      * built-in folder's id are not counted and never removed.
      */
-    val legacyFavourites: Int = 0
+    val legacyFavourites: Int = 0,
+    /**
+     * Launch profiles [profileOverrides] refer to that are neither configured nor added with the overridden game's own new
+     * system (a RetroArch core no preset has, a catalog app); saved, if absent, together with the overrides.
+     */
+    val additionalProfiles: List<LaunchProfile> = emptyList()
 )
 
 /**
@@ -77,9 +87,10 @@ data class CocoonImportPlan(
  * Rules (docs/COCOON_IMPORT.md "Identity", "Systems and roots"): a Cocoon entry matches only within its platform's alias
  * group, case-insensitively with an exact-case hit preferred; ambiguous and missing entries are reported, never guessed, and
  * their flags are dropped. A discovered root already owned by a configured system maps to that system, which is not changed
- * (apart from a media folder when it has none and artwork is copied); unowned roots create systems, from a preset when the
- * alias table names one. A later index pass still applies Sortie's extension and skip rules, so the applier filters ids
- * against the index.
+ * (apart from a media folder when it has none and artwork is copied; its emulators stay the user's); unowned roots create
+ * systems, from a preset when the alias table names one, listing the file types of the games Cocoon matched there. A match of
+ * a type its system doesn't list is reported and dropped like a missing one. A later index pass still applies Sortie's skip
+ * rules, so the applier filters ids against the index.
  */
 class CocoonPlanner(
     val cardRoot: File,
@@ -104,12 +115,15 @@ class CocoonPlanner(
 
     private class Hit(val gameId: String, val systemId: String, val file: File, val exact: Boolean, val home: Boolean)
 
+    /** A Cocoon player as a Sortie profile; [requested] is Cocoon's uninstalled RetroArch build when [profile] replaces it. */
+    private class Resolved(val profile: LaunchProfile, val requested: LaunchProfile?)
+
     /** A system to be created, gathered over the Cocoon platforms that land on it. */
     private class Draft(val id: String, val preset: LibraryPreset?, val label: String) {
         val platforms = LinkedHashSet<String>()
         val rootKeys = LinkedHashSet<String>()
         val extensions = LinkedHashSet<String>()
-        var player: LaunchProfile? = null
+        var player: Resolved? = null
     }
 
     private inner class Planning(
@@ -144,6 +158,9 @@ class CocoonPlanner(
         val drafts = LinkedHashMap<String, Draft>()
         val groupKeys = HashMap<String, List<String>>()
         val outcomes = HashMap<Pair<String, String>, Outcome>()
+
+        /** System id → the lower-case file types it lists (empty: every type); set once the new systems are known. */
+        var listedTypes: Map<String, Set<String>> = emptyMap()
 
         /** Every lower-case folder name that stands for a system; see [claimUnownedRoots]. */
         val systemNames: Set<String> = buildSet {
@@ -203,22 +220,27 @@ class CocoonPlanner(
             val choices = chooseProfiles(romPlatforms, votes)
             val newSystems = drafts.values.map { newSystem(it) }
             val knownProfiles = LinkedHashMap(configuredProfiles).also { map -> newSystems.forEach { s -> s.profiles.forEach { map.putIfAbsent(it.id, it) } } }
+            listedTypes = config.systems.associate { it.id to lowerSet(it.extensions) } +
+                newSystems.associate { it.system.id to lowerSet(it.system.extensions) }
+            val (indexable, unlisted) = matches.partition { listed(it.systemId, it.file) }
+            reportUnlisted(unlisted)
 
-            val (artwork, unavailable, mediaDirs) = planArtwork(matches, newSystems)
+            val (artwork, unavailable, mediaDirs) = planArtwork(indexable, newSystems)
 
             val favourites = LinkedHashSet<String>()
             val hidden = LinkedHashSet<String>()
-            matches.forEach { m ->
+            indexable.forEach { m ->
                 if (m.game.favourite) favourites += m.gameId
                 if (m.game.hidden) hidden += m.gameId
             }
             val overrides = LinkedHashMap<String, String>()
+            val additional = LinkedHashMap<String, LaunchProfile>()
             val sessions = ArrayList<SessionPlan>()
             val folders = ArrayList<FolderPlan>()
             if (backup != null) {
                 backup.favourites.forEach { ref -> resolve(ref)?.let { favourites += it } }
                 backup.hidden.forEach { ref -> resolve(ref)?.let { hidden += it } }
-                overrides += planOverrides(backup, knownProfiles)
+                overrides += planOverrides(backup, newSystems, additional)
                 sessions += planSessions(backup, knownProfiles, newSystems)
                 folders += planFolders(backup)
             }
@@ -236,7 +258,7 @@ class CocoonPlanner(
                 folders = folders,
                 artwork = artwork,
                 artworkBytes = artwork.sumOf { it.bytes },
-                matched = matches.size,
+                matched = indexable.size,
                 unmatched = unmatched,
                 ambiguous = ambiguous,
                 missingVolume = unavailable,
@@ -244,7 +266,8 @@ class CocoonPlanner(
                 droidDeck = droidDeck,
                 skippedPlatforms = skipped,
                 notes = notes,
-                legacyFavourites = config.legacyFavourites
+                legacyFavourites = config.legacyFavourites,
+                additionalProfiles = additional.values.toList()
             )
         }
 
@@ -367,50 +390,118 @@ class CocoonPlanner(
         }
 
         /**
-         * Cocoon's per-platform emulator becomes the system's profile choice. Several platforms on one system (tg16 and
-         * pcengine both on pcengine) vote by matched games. An existing system only gets a choice of a profile already
-         * configured: the plan does not change existing systems' launchers.
+         * Cocoon's per-platform emulator goes first in a new system's profiles; several platforms on one new system (tg16 and
+         * pcengine both on pcengine) vote by matched games. Existing systems keep the emulators the user set up: when Cocoon
+         * launched one with another emulator, a note says so and nothing is changed.
          */
         fun chooseProfiles(platforms: List<CocoonPlatform>, votes: Map<String, Map<String, Int>>): List<SystemProfileChoice> {
-            val byPlatform = HashMap<String, LaunchProfile>()
+            val byPlatform = HashMap<String, Resolved>()
             for (p in platforms) {
                 val raw = p.defaultPlayer ?: continue
-                val profile = CocoonAliases.player(raw)?.let { profileFor(it) }
-                if (profile == null) {
+                val resolved = CocoonAliases.player(raw)?.let { resolvePlayer(it) }
+                if (resolved == null) {
                     notes += "${p.id}: Cocoon's emulator \"$raw\" has no Sortie launch profile; choose one in Library setup."
                 } else {
-                    byPlatform[p.id] = profile
+                    byPlatform[p.id] = resolved
                 }
             }
             val choices = ArrayList<SystemProfileChoice>()
             for ((systemId, perPlatform) in votes) {
                 val ranked = perPlatform.entries.filter { it.key in byPlatform }.sortedByDescending { it.value }
                 val chosen = ranked.firstOrNull()?.let { byPlatform.getValue(it.key) } ?: continue
-                val others = ranked.map { byPlatform.getValue(it.key) }.filter { it.id != chosen.id }.map { it.label }.distinct()
+                val profile = chosen.profile
                 val draft = drafts[systemId]
-                val label = draft?.label ?: configuredById[systemId]?.label ?: systemId
-                if (others.isNotEmpty()) notes += "$label: Cocoon used ${chosen.label} and also ${others.joinToString()}; ${chosen.label} is chosen."
-                if (draft != null) {
-                    draft.player = chosen
-                } else if (chosen.id !in configuredProfiles) {
-                    notes += "$label: Cocoon launched it with ${chosen.label}, which is not set up in Sortie; add it in Library setup."
+                if (draft == null) {
+                    val system = configuredById[systemId] ?: continue
+                    val cocoonIds = setOfNotNull(profile.id, chosen.requested?.id)
+                    if (system.profiles.firstOrNull() !in cocoonIds) {
+                        val cocoonLabel = (chosen.requested ?: profile).label
+                        notes += "${system.label}: Cocoon launched it with $cocoonLabel; your emulator setup for it is kept " +
+                            "(change it in Library setup if wanted)."
+                    }
                     continue
                 }
-                choices += SystemProfileChoice(systemId, chosen.id, chosen.generic || chosen.`package`?.let(installed) ?: true)
+                val others = ranked.map { byPlatform.getValue(it.key).profile }.filter { it.id != profile.id }.map { it.label }.distinct()
+                if (others.isNotEmpty()) notes += "${draft.label}: Cocoon used ${profile.label} and also ${others.joinToString()}; ${profile.label} is chosen."
+                chosen.requested?.let { requested ->
+                    notes += "${draft.label}: Cocoon used ${requested.label} (${requested.`package`}), which isn't installed, so ${profile.label} " +
+                        "(${profile.`package`}) runs the same core instead. $UNCHECKED_CORE"
+                }
+                draft.player = chosen
+                choices += SystemProfileChoice(systemId, profile.id, isInstalled(profile), chosen.requested?.id)
             }
             return choices
         }
 
-        /** The configured profile with that id, else the catalog's, else a RetroArch profile made for the core. */
-        fun profileFor(player: CocoonPlayer): LaunchProfile? = configuredProfiles[player.profileId]
-            ?: presetProfiles[player.profileId]
-            ?: player.retroArchCore?.let { core ->
-                try {
-                    LibraryPresets.retroArch(core, core, player.packageName ?: RETROARCH)
-                } catch (_: IllegalArgumentException) {
-                    null
-                }
+        fun isInstalled(profile: LaunchProfile): Boolean = profile.generic || profile.`package`?.let(installed) ?: true
+
+        /**
+         * Cocoon's player as a Sortie profile, for platform defaults and per-game choices alike: the configured profile with
+         * that id, else the catalog's, else a RetroArch profile made for the core. When that RetroArch build isn't installed
+         * and another official build is, the same core there (configured or catalog profile when one exists) replaces it;
+         * the exact build Cocoon named is kept whenever it is installed. Null for an app no profile describes.
+         */
+        fun resolvePlayer(player: CocoonPlayer): Resolved? {
+            val core = player.retroArchCore
+            val requested = knownProfile(player.profileId)
+                ?: core?.let { retroArchProfile(it, player.packageName ?: RETROARCH) }
+                ?: return null
+            if (core == null || isInstalled(requested)) return Resolved(requested, null)
+            val substitute = CocoonAliases.RETROARCH_PACKAGES.asSequence()
+                .filter { it != requested.`package` && installed(it) }
+                .mapNotNull { pkg -> retroArchProfile(core, pkg)?.let { knownProfile(it.id) ?: it } }
+                .firstOrNull { isInstalled(it) }
+            return Resolved(substitute ?: requested, substitute?.let { requested })
+        }
+
+        fun knownProfile(id: String): LaunchProfile? = configuredProfiles[id] ?: presetProfiles[id]
+
+        /** The catalog-shaped RetroArch profile for [core] in the official build [packageName]; null for any other package. */
+        fun retroArchProfile(core: String, packageName: String): LaunchProfile? = try {
+            LibraryPresets.retroArch(core, core, packageName)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+
+        /**
+         * The preset's file types plus those of the games Cocoon matched in the new system's folders (an N64 library of .7z
+         * files), so the index lists them. A disc track type (.bin, .img, …) is left out when a cue sheet, playlist or other
+         * sheet lies in those folders: it would list each track next to its sheet. Matches of a type left out are reported
+         * by [reportUnlisted].
+         */
+        fun presetExtensions(d: Draft, preset: LibraryPreset): List<String> {
+            val base = preset.system.extensions
+            if (base.isEmpty()) return base // lists every type already
+            val have = lowerSet(base)
+            val sheets = d.rootKeys.any { k -> listingByKey.getValue(k).files.any { extensionOf(it) in DISC_SHEETS } }
+            val added = d.extensions.filter { it !in have && !(sheets && it in DISC_TRACKS) }
+            if (added.isNotEmpty()) {
+                notes += "${d.label}: also lists ${added.joinToString()} files, the type${if (added.size == 1) "" else "s"} Cocoon's games there use."
             }
+            return base + added
+        }
+
+        /** A match the index will list: its system lists every type or the file's own. */
+        fun listed(systemId: String, file: File): Boolean {
+            val types = listedTypes[systemId] ?: return true
+            return types.isEmpty() || extensionOf(file.name) in types
+        }
+
+        /** One note per system for matches of a file type it doesn't list; their flags, art and history are not imported. */
+        fun reportUnlisted(unlisted: List<CocoonMatch>) {
+            unlisted.groupBy { it.systemId }.forEach { (systemId, ms) ->
+                val label = drafts[systemId]?.label ?: configuredById[systemId]?.label ?: systemId
+                val types = ms.map { extensionOf(it.file.name) ?: "(no extension)" }.distinct()
+                val why = if (systemId in drafts && types.any { it in DISC_TRACKS }) {
+                    " Its folders hold cue sheets or playlists, which Sortie lists instead so that tracks don't appear twice."
+                } else {
+                    ""
+                }
+                notes += "$label: ${count(ms.size, "matched game")} skipped (${types.joinToString()}): the system doesn't list that file type, so " +
+                    "no flags, artwork or history are imported for ${if (ms.size == 1) "it" else "them"}.$why Add the type in Library setup " +
+                    "and import again if wanted."
+            }
+        }
 
         fun newSystem(d: Draft): NewSystem {
             val rootDirs = d.rootKeys.map { listingByKey.getValue(it).dir }
@@ -418,13 +509,13 @@ class CocoonPlanner(
             val media = names.map { File(cardRoot, "scraped-esde/downloaded_media/$it") }.firstOrNull(isDirectory)
                 ?: File(sortieDir, "media/${d.id}")
             val gamelist = names.map { File(cardRoot, "scraped-esde/gamelists/$it/gamelist.xml") }.firstOrNull(exists)
-            val player = d.player
+            val player = d.player?.profile
             val preset = d.preset
             val (system, profiles) = if (preset != null) {
-                // Cocoon's emulator goes first when the preset lacks it; otherwise the choice alone makes it the default
-                val extra = player?.takeIf { it.id !in preset.system.profiles }
-                val ids = listOfNotNull(extra?.id) + preset.system.profiles
-                preset.system.copy(id = d.id, label = d.label, profiles = ids) to (listOfNotNull(extra) + preset.profiles)
+                // Cocoon's emulator (or its installed equivalent) goes first; the preset's others stay as the launcher's fallbacks
+                val ids = (listOfNotNull(player?.id) + preset.system.profiles).distinct()
+                val extensions = presetExtensions(d, preset)
+                preset.system.copy(id = d.id, label = d.label, extensions = extensions, profiles = ids) to (listOfNotNull(player) + preset.profiles)
             } else {
                 // a profile is required; without Cocoon's emulator the system opens games with Android's chooser
                 val ids = listOf(player?.id ?: LibraryPresets.openWith.id)
@@ -494,26 +585,45 @@ class CocoonPlanner(
             return Triple(copies, unavailable, mediaDirs)
         }
 
-        /** A backup reference → Sortie id: `app:<pkg>` for apps, the matched game id for games; null otherwise. */
+        /** A backup reference → Sortie id: `app:<pkg>` for apps, the matched game id for games the index lists; null otherwise. */
         fun resolve(ref: CocoonRef): String? = when {
             ref.platform == ANDROID_APP -> ref.packageName?.let { LibraryItem.APP_PREFIX + it }
             ref.platform in NON_ROM || ref.file == null -> null
-            else -> (match(ref.platform, ref.file) as? Outcome.Matched)?.gameId
+            else -> (match(ref.platform, ref.file) as? Outcome.Matched)?.takeIf { listed(it.systemId, it.file) }?.gameId
         }
 
-        fun planOverrides(backup: CocoonBackup, known: Map<String, LaunchProfile>): Map<String, String> {
+        /**
+         * Per-game choices resolve like platform defaults ([resolvePlayer]), so a RetroArch core no preset has is imported
+         * too. A profile neither configured nor added with the game's own new system goes to [additional]; an app no profile
+         * describes is dropped and counted.
+         */
+        fun planOverrides(backup: CocoonBackup, newSystems: List<NewSystem>, additional: MutableMap<String, LaunchProfile>): Map<String, String> {
+            val newProfiles = newSystems.associate { s -> s.system.id to s.profiles.mapTo(HashSet()) { it.id } }
             val out = LinkedHashMap<String, String>()
             var unknown = 0
+            var replaced = 0
             for ((ref, raw) in backup.playerOverrides) {
                 val gameId = resolve(ref)?.takeIf { LibraryItem.isGameId(it) } ?: continue
-                val profileId = CocoonAliases.player(raw)?.profileId
-                if (profileId == null || profileId !in known) {
+                val resolved = CocoonAliases.player(raw)?.let { resolvePlayer(it) }
+                if (resolved == null) {
                     unknown++
                     continue
                 }
-                out[gameId] = profileId
+                val profile = resolved.profile
+                if (resolved.requested != null) replaced++
+                val systemId = gameId.substringBefore('/')
+                if (profile.id !in configuredProfiles && profile.id !in newProfiles[systemId].orEmpty()) additional.putIfAbsent(profile.id, profile)
+                out[gameId] = profile.id
             }
-            if (unknown > 0) notes += "${count(unknown, "per-game emulator choice")} use an emulator Sortie has no profile for and are not imported."
+            if (unknown > 0) {
+                notes += "${count(unknown, "per-game emulator choice")} ${if (unknown == 1) "uses an app" else "use apps"} Sortie has no launch profile " +
+                    "for and ${if (unknown == 1) "is" else "are"} not imported."
+            }
+            if (replaced > 0) {
+                val what = if (replaced == 1) "names a RetroArch build that isn't" else "name RetroArch builds that aren't"
+                notes += "${count(replaced, "per-game emulator choice")} $what installed, so the same core in an installed RetroArch build is used " +
+                    "instead. $UNCHECKED_CORE"
+            }
             return out
         }
 
@@ -575,6 +685,17 @@ class CocoonPlanner(
 
         /** Not ROM platforms: Cocoon's own screens and DroidDeck pins (handled as advice). */
         val NON_ROM = setOf(POD, SHORTCUT)
+
+        /** Files describing a disc's tracks (cue sheets, GD-ROM tables, multi-disc playlists, CloneCD/Alcohol sheets). */
+        val DISC_SHEETS = setOf(".cue", ".gdi", ".m3u", ".ccd", ".mds", ".toc")
+
+        /** Track and data files that sit next to such a sheet; listing them as games would show each disc's tracks too. */
+        val DISC_TRACKS = setOf(".bin", ".img", ".iso", ".raw", ".sub", ".mdf", ".wav", ".mp3", ".ogg", ".flac", ".ape")
+
+        const val UNCHECKED_CORE =
+            "Sortie can't check that this RetroArch has the core, BIOS files or saves; download the core in its Online Updater if needed."
+
+        fun lowerSet(extensions: List<String>): Set<String> = extensions.mapTo(HashSet()) { it.lowercase(Locale.ROOT) }
 
         /** LibrarySetupStore's rule for new ids. */
         val NEW_ID = Regex("[a-z0-9][a-z0-9._-]*")

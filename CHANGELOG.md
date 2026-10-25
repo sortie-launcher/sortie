@@ -5,6 +5,19 @@
   list) and adds "Want box art?": the three routes to artwork (Cocoon import, ES-DE's on-device scraper, a computer) and
   that linking scraped folders is still a `systems.json` edit. The manual gains the same precedence note and no longer
   uses angle-bracket placeholders that GitHub strips.
+- Magazine companion gains a bottom-left **+** to open an app on that screen while the article stays on the other.
+  Cancelling its app picker preserves the contents tab and position, and the controls follow a screen swap.
+- Home can open the switcher from a reader even without external apps running, preserving the article and its scroll
+  position. Shizuku authorization and the optional overlay permission are still required for their respective features.
+- Cocoon import preserves existing system emulator defaults and puts a new system's chosen emulator in its manifest order,
+  without pinning redundant user defaults. New preset systems account for matched file types; missing per-game RetroArch
+  profiles are saved before their overrides. An installed equivalent RetroArch build is identified in the preview when
+  the requested package is absent; core/BIOS availability is not assumed.
+- Import previews reject blocking configuration errors, require a fresh review after library changes, and distinguish new
+  favourites, hidden games, overrides, sessions and folder members from entries already present. Media-only updates preserve
+  unrelated configuration, including systems with no launch profiles, and failures report earlier committed work.
+- Open with… remembers only an eligible normal system fallback, never a per-game/one-off choice or a deliberately generic
+  system. Remembered choices preserve the chooser's MIME type and leave manifest order intact; Manifest default undoes them.
 - Cocoon import previews cleanup of redundant legacy default Favourites rules, including imports with no new favourites.
   Cleanup runs only with Favourites enabled, preserves the actual favourites and other configuration, and leaves customized
   reserved-folder definitions untouched. A Cocoon user folder named Favourites remains a separate imported folder.
@@ -12,9 +25,8 @@
   generated at build time from `docs/`, the in-app manual and this changelog; broken links or anchors fail the build, and
   site-only changes skip the Android build and release. The README is trimmed to a front door linking to it.
 - Getting started gains an illustrated "Coming from Cocoon" path (captured on an Android 13 emulator with an invented
-  library). The import, launcher and manual docs now state current behaviour: the import can set Cocoon's emulator as the
-  default of existing systems, hidden games stay in system lists, imported folders show in the Custom sort, and an Open
-  with… pick from a game page changes the whole system's default.
+  library). The import, launcher and manual docs describe hidden-game scope, imported folders in the Custom sort, and the
+  limited rollback of an import.
 - Automatic signed beta releases: after the hosted build passes on a push to `main` (or a manual run on `main`), the
   workflow signs the APK with the permanent release key held as secrets in the `main`-only `release` environment, checks
   its certificate and checksum, and publishes a GitHub release marked Latest, `v0.1.0-beta.<code>` (code = 1000 + build run number),

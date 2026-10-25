@@ -101,6 +101,9 @@ internal object CocoonAliases {
         "ra32" to ("ra32" to "com.retroarch.ra32")
     )
 
+    /** The official RetroArch packages, the device-tested build first: where an installed equivalent of a missing build is looked for. */
+    val RETROARCH_PACKAGES: List<String> = RETROARCH.values.map { it.second }
+
     /** Cocoon core names that differ from libretro's. */
     private val CORE_ALIASES = mapOf("mamearcade" to "mame")
 

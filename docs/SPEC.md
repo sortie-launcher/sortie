@@ -75,8 +75,9 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Launch target display per profile (ActivityOptions.setLaunchDisplayId).
 - Controller anchoring: the controller follows the game's display. Companion screens are touch only and hand the controller
   back to the other screen when they appear or are tapped (`AnchorActivity`).
-- App switcher (Shizuku): Home while something runs shows each screen's running apps on both screens; apps can be raised,
-  moved between screens, swapped or closed. Companion-side carousel is touch, navigation-side is controller.
+- App switcher (Shizuku): Home shows each screen's running apps on both screens, including while reading or when no external
+  app is running; apps can be opened, raised, moved between screens, swapped or closed. Companion-side carousel is touch,
+  navigation-side is controller. Shizuku must authorize the current Sortie installation, not merely be running.
 - Opening the overlay preserves the foreground Sortie surface when Home covers navigation or a companion; otherwise the
   external app is restored beneath it. A primary HOME instance created after X relays to existing navigation rather than
   replacing it, including after swapping back. B leaves that page/display intact.
@@ -109,6 +110,14 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   Bad issues are isolated, missing optional images do not block text, and paths cannot escape an issue. No WebView or remote fetching.
   While an issue is open, the other display shows section jumps/current heading, article selection and previous/next controls.
   The panel follows navigation across X; session-owned actions reject stale taps, and leaving the issue clears the panel.
+  Its bottom-left + opens an app picker for that display; launching returns controller focus to the reader. B or Close
+  cancels without losing the contents tab or list position. This also works with the reader on the bottom display.
+
+  Thor acceptance: opened Prime Video below the article and Clock above it after X; the article remained on its own
+  display. Picker cancellation preserved the Articles tab and scrolled Sections list pixel-for-pixel. Home opened the
+  overlay from both reader placements, and B returned to the article; denying overlay permission used the ordinary
+  switcher page instead. Video playback/DRM was not exercised. Shizuku authorization had to be renewed after an earlier
+  uninstall/reinstall: Android's package-permission listing alone did not establish Shizuku authorization.
 
 ### Library hygiene (M3)
 - Multi-disc grouping (.m3u or disc tags), duplicate-format hiding (PBP next to CHD), hacks
@@ -128,7 +137,7 @@ A select/launch · hold A context sheet (Favourite · Add to / Remove from home 
 Home's systems and folders; Move · Remove on Custom home tiles) · B back · X swap screen roles · Y favourite toggle (detail) /
 search (on Home) / other screen (switcher) · Start search (not available while Sortie is the home app: Android intercepts it) ·
 Select launch-profile sheet (detail) / list↔grid (Home, system and folder lists, search, Apps) / close app (switcher) · L1/R1
-previous/next system · Home (physical) app switcher when something is running. Moving a Custom home tile: D-pad one slot per
+previous/next system · Home (physical) app switcher when Shizuku is available, including while reading. Moving a Custom home tile: D-pad one slot per
 press, A drop, B cancel. Long press = hold A for touch.
 
 ## Implementation notes for contributors

@@ -195,14 +195,16 @@ them; the result lists the DroidDeck games to pin again from DroidDeck.
 4. **Read the preview.** Nothing has been written yet, and **Cancel** changes nothing. It shows how many games matched
    files on this device, a switch for each category, and below them the artwork against free space, the systems to add
    with their folders and emulator (and whether that emulator is installed), and the games that were not found or were
-   ambiguous.
+   ambiguous. Counts distinguish new entries from those already here; repeat imports do not promise to add them again.
 
    ![Preview switches for favourites, hidden games, emulators for 2 systems, 10 artwork files, 1 folder and 4 play sessions, with Cancel](screenshots/cocoon/cocoon-05-preview-options.png)
 
-   Check three switches before importing:
-   - **Choose emulators for *N* systems.** Look at the list under *Emulators for systems you already have*. In this build,
-     each system listed there gets Cocoon's emulator as its default, even if you chose another in Library setup. If you
-     already set up emulators in Sortie, turn this switch off; new systems still list Cocoon's emulator first.
+   These walkthrough captures predate the default-preservation and count fixes: the current preview has no switch to
+   replace existing systems' emulators, and lists already-present entries separately from additions.
+
+   Existing systems keep their emulator defaults. New systems put Cocoon's emulator first; if its RetroArch package is
+   missing and an equivalent build is installed, the preview identifies the substitution. You still need its core and BIOS.
+   Check these switches before importing:
    - **Hide *N* games.** Hidden games stay in their system's list but drop out of folders and shelves, and Sortie has no
      button to unhide them yet ([Troubleshooting](#troubleshooting)). Turn it off if you aren't sure.
    - **Copy *N* artwork files.** Import is not offered while the artwork doesn't fit the free space shown; turn the copy
@@ -210,9 +212,10 @@ them; the result lists the DroidDeck games to pin again from DroidDeck.
 
    ![Import, the artwork block (245 kB to copy, 5.0 GB free, one reference to another device skipped) and two systems to add, one with its emulator installed and one not installed yet](screenshots/cocoon/cocoon-06-preview-artwork-systems.png)
 
-5. **Choose Import.** Sortie first saves a safety copy of your preferences and play history to
-   `sortie/backups/pre-cocoon-import-<date>.json`; if it can't, nothing changes. It then adds systems and re-indexes,
-   saves favourites, hidden games and emulator choices, adds play sessions and folders, and copies artwork last. You can
+5. **Choose Import.** A broken library configuration must be repaired first. If library settings changed since the preview,
+   Sortie asks you to review a fresh plan before anything is written. Otherwise it saves a safety copy of your preferences
+   and play history to `sortie/backups/pre-cocoon-import-<date>.json`; if it can't, nothing changes. It then adds systems,
+   re-indexes, adds missing per-game profiles, saves favourites, hidden games and per-game choices, adds sessions and folders, and copies artwork last. You can
    leave the screen while Sortie keeps running. Only the artwork copy can be stopped (**Stop copying artwork**); files
    already copied stay.
 6. **Read the result.** It lists what was added, where the safety copy is, which DroidDeck games to pin again, and what
@@ -503,13 +506,14 @@ undoing it means editing the `hidden` list in `user.json` ([user.md](formats/use
 so an ES-DE folder isn't offered. Type the folder's path (for example `/storage/emulated/0/Cocoon`) or pick it with the
 file browser.
 
-**A system imported from Cocoon shows no games.** Its **File types** may not include the endings your files use (for
-example `.7z`). Open the system in **Library setup**, add the ending and save. Games the preview listed as *not found* or
-*ambiguous* were skipped; add their folders in Library setup.
+**A system imported from Cocoon shows no games.** New systems include supported file types found in the matched games,
+including archives. Existing systems keep their file-type settings: check **Library setup → File types**. To avoid duplicate
+disc tracks, new track extensions are not added automatically when the same system has cue sheets or playlists; the preview
+reports those skipped matches. Games listed as *not found* or *ambiguous* were skipped; add their folders in Library setup.
 
-**After importing, a system starts a different emulator.** The import's **Emulators for systems you already have**
-switch can replace a system's default with Cocoon's choice. Put yours back in **Settings → Default launcher per system**
-(choose **Manifest default** to use the order from Library setup), or for one game with **Launch with…**.
+**An older import changed a system's emulator.** Current imports leave existing defaults alone. To undo a default saved by
+an older build, use **Settings → Default launcher per system → Manifest default** to restore the order from Library setup.
+For one game's choice, use **Launch with…** on its game page.
 
 ## Going further
 

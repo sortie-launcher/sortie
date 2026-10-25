@@ -34,7 +34,8 @@ import kotlinx.serialization.json.jsonObject
 /**
  * The editable part of the card configuration as last read. [fingerprint] identifies the exact bytes of every manifest; pass
  * the configuration back as `expected` so a save is refused when anything changed in between. [errors] lists files that
- * could not be read (saving is refused while one of device/systems/launchers.json is among them) and interrupted changes.
+ * could not be read and interrupted changes; [blocking] is the part of them that refuses every save (an unreadable or invalid
+ * device/systems/launchers.json, an unfinished interrupted change), so a caller can tell before writing anything else.
  * [exists] is false when there is no device.json, systems.json or launchers.json yet (first setup). [legacyFavourites] counts
  * folders.json entries that only repeat the old default Favourites folder (now built in) and can be removed losslessly with
  * [LibrarySetupStore.removeLegacyFavourites]; customised entries using the reserved id are not counted.
@@ -47,7 +48,8 @@ data class LibraryConfiguration(
     val exists: Boolean,
     val biosDir: String?,
     val saves: List<String>,
-    val legacyFavourites: Int = 0
+    val legacyFavourites: Int = 0,
+    val blocking: List<String> = emptyList()
 )
 
 /** The card configuration changed since it was loaded (desktop edit, another screen): reload, keep the draft, try again. */
@@ -104,7 +106,8 @@ class LibrarySetupStore internal constructor(
             biosDir = device.value?.biosDir,
             saves = device.value?.saves.orEmpty(),
             // folders.obj is set only when the whole file loads as the app reads it
-            legacyFavourites = if (exists) folders.obj?.let { f -> elements(f, "folders").count { isLegacyFavourites(it) } } ?: 0 else 0
+            legacyFavourites = if (exists) folders.obj?.let { f -> elements(f, "folders").count { isLegacyFavourites(it) } } ?: 0 else 0,
+            blocking = blocking
         )
     }
 
@@ -188,17 +191,74 @@ class LibrarySetupStore internal constructor(
             }
             if (isNew && next.order <= 0 && existingSystems.isNotEmpty()) next = next.copy(order = existingSystems.maxOf { it.order } + 1)
 
-            val changedProfiles = profiles.filter { existingProfiles[it.id] != it }
-            if (changedProfiles.isNotEmpty()) {
-                var profilesArray = elements(work.launchers, "profiles")
-                for (p in changedProfiles) profilesArray = upsert(profilesArray, p.id, encode(LaunchProfile.serializer(), p), LaunchProfile.serializer())
-                work.launchers = JsonObject(work.launchers + ("profiles" to JsonArray(profilesArray)))
-            }
+            work.launchers = withProfiles(work.launchers, profiles.filter { existingProfiles[it.id] != it })
             if (existingSystems.firstOrNull { it.id == next.id } != next) {
                 val systemsArray = upsert(elements(work.systems, "systems"), next.id, encode(SystemDef.serializer(), next), SystemDef.serializer())
                 work.systems = JsonObject(work.systems + ("systems" to JsonArray(systemsArray)))
             }
         }
+
+    /**
+     * Adds or replaces each of [profiles] by id in launchers.json (a replaced entry keeps its unknown keys) and writes nothing
+     * else: systems and the other manifests stay as they are. Unchanged definitions write no file. Refused when there is no
+     * launchers.json yet, since a profile alone is no library.
+     */
+    suspend fun saveProfiles(expected: LibraryConfiguration, profiles: List<LaunchProfile>): LibraryConfiguration =
+        mutate(expected, complete = false) { state, work ->
+            val existing = configuredProfiles(state)
+            checkProfiles(profiles, existing)
+            work.launchers = withProfiles(work.launchers, profiles.filter { existing[it.id] != it })
+        }
+
+    /**
+     * Adds each of [profiles] whose id launchers.json doesn't have yet; a configured id keeps its definition, possibly edited by
+     * the user, so an import never retargets an existing launcher. Writes launchers.json only, and only when something is added.
+     * Refused when there is no launchers.json yet.
+     */
+    suspend fun addProfiles(expected: LibraryConfiguration, profiles: List<LaunchProfile>): LibraryConfiguration =
+        mutate(expected, complete = false) { state, work ->
+            val existing = configuredProfiles(state)
+            val missing = profiles.filter { it.id !in existing }
+            require(profiles.distinctBy { it.id }.size == profiles.size) { "An emulator profile is listed twice." }
+            checkProfiles(missing, existing)
+            work.launchers = withProfiles(work.launchers, missing)
+        }
+
+    /**
+     * Sets the media folder of the existing system [systemId] and changes nothing else: its other keys, known or not, stay as
+     * they are and are not re-validated, so an entry Library setup couldn't save as a whole (a computer-prepared system without
+     * emulators yet, for example) still gets its media folder. Only systems.json is written; the same folder writes nothing.
+     */
+    suspend fun setSystemMedia(expected: LibraryConfiguration, systemId: String, media: String): LibraryConfiguration =
+        mutate(expected, complete = false) { state, work ->
+            require(state.systems.value?.systems.orEmpty().any { it.id == systemId }) { "System $systemId is not in the library." }
+            val path = normalisePath(media, "Media folder")
+            val array = elements(work.systems, "systems")
+            val index = array.indexOfFirst { idOf(it) == systemId }
+            val fields = LinkedHashMap(array[index] as JsonObject)
+            fields["media"] = JsonPrimitive(path)
+            work.systems = JsonObject(work.systems + ("systems" to JsonArray(array.toMutableList().also { it[index] = JsonObject(fields) })))
+        }
+
+    private fun configuredProfiles(state: State): Map<String, LaunchProfile> {
+        if (state.launchers.obj == null) throw IOException("There is no $LAUNCHERS in ${directory.path} to add emulator profiles to. Set up a system first.")
+        return state.launchers.value?.profiles.orEmpty().associateBy { it.id }
+    }
+
+    private fun checkProfiles(profiles: List<LaunchProfile>, existing: Map<String, LaunchProfile>) {
+        val ids = HashSet<String>()
+        for (p in profiles) {
+            require(ids.add(p.id)) { "Emulator profile ${p.id} is listed twice." }
+            validateProfile(p, isNew = p.id !in existing)
+        }
+    }
+
+    private fun withProfiles(launchers: JsonObject, changed: List<LaunchProfile>): JsonObject {
+        if (changed.isEmpty()) return launchers
+        var array = elements(launchers, "profiles")
+        for (p in changed) array = upsert(array, p.id, encode(LaunchProfile.serializer(), p), LaunchProfile.serializer())
+        return JsonObject(launchers + ("profiles" to JsonArray(array)))
+    }
 
     /** Removes the library entry of [systemId] only: its profiles, ROM folders, saves and personal records stay. */
     suspend fun removeSystem(expected: LibraryConfiguration, systemId: String): LibraryConfiguration = mutate(expected) { state, work ->

@@ -20,10 +20,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Color
@@ -71,22 +73,31 @@ internal fun PublishMagazineCompanion(
     SideEffect { Selection.magazine.value = panel }
 }
 
-/** A quiet contents desk beside the article; touch returns the controller to the reading screen through CompanionHost. */
+/**
+ * A quiet contents desk beside the article; touch returns the controller to the reading screen through CompanionHost. [leading]
+ * sits bottom-left in its own footer slot, ahead of Previous/Next, so it never covers them or the list.
+ */
 @Composable
-internal fun MagazineCompanion(panel: MagazineCompanionState) {
+internal fun MagazineCompanion(panel: MagazineCompanionState, leading: @Composable () -> Unit) {
     val issue = panel.issue
     val article = issue.article(panel.articleId)
     val articleIndex = issue.articles.indexOfFirst { it.id == panel.articleId }
     var articles by rememberSaveable(issue.id, panel.articleId) { mutableStateOf(article == null) }
     val sectionsState = rememberLazyListState()
     val articlesState = rememberLazyListState()
+    var followedSection by rememberSaveable(issue.id, panel.articleId) { mutableIntStateOf(-1) }
+    var followedArticles by rememberSaveable(issue.id, panel.articleId) { mutableStateOf(articles) }
     fun open(id: String) {
         Selection.magazineActions.tryEmit(MagazineAction.OpenArticle(panel.owner, issue.id, id))
     }
     LaunchedEffect(panel.owner, panel.articleId, panel.activeSection, articles) {
+        // Returning from the app picker restores the user's list position; only a changed reading target or tab recentres it.
+        if (followedSection == panel.activeSection && followedArticles == articles) return@LaunchedEffect
         val state = if (articles) articlesState else sectionsState
         val index = if (articles) articleIndex.coerceAtLeast(0) else panel.activeSection
         if (state.layoutInfo.visibleItemsInfo.none { it.index == index }) state.scrollToItem(index)
+        followedSection = panel.activeSection
+        followedArticles = articles
     }
     Column(Modifier.fillMaxSize().padding(20.dp)) {
         Text(
@@ -123,10 +134,15 @@ internal fun MagazineCompanion(panel: MagazineCompanionState) {
                 }
             }
         }
-        if (article != null) {
-            val previous = issue.articles.getOrNull(articleIndex - 1)
-            val next = issue.articles.getOrNull(articleIndex + 1)
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            leading()
+            if (article != null) {
+                val previous = issue.articles.getOrNull(articleIndex - 1)
+                val next = issue.articles.getOrNull(articleIndex + 1)
                 Box(
                     Modifier.weight(0.32f).heightIn(min = 68.dp)
                         .clickable(enabled = previous != null, role = Role.Button) { previous?.let { open(it.id) } }

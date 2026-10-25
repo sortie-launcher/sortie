@@ -164,8 +164,9 @@ Pictures in issues belong to their rights holders and are credited in each issue
 - On two-screen devices, the other screen becomes a reading companion while an issue is open. **Sections** jumps to a
   heading in the current article and highlights your place; **Articles** opens another article in that issue. **Previous**
   and the folded **Next article** corner turn articles without losing their reading positions. The controls follow an
-  **X** swap and return the controller to the reading screen after a touch. Backing out to the shelf restores the normal
-  companion; single-screen devices keep the controls above.
+  **X** swap and return the controller to the reading screen after a touch. The bottom-left **+** opens an app on the
+  companion's screen, so a video can share the device with your article. Closing the picker returns to the same contents
+  tab and position. Backing out to the shelf restores the normal companion; single-screen devices keep the controls above.
 - Copy a complete extra issue into **sortie/magazines/**, in a folder named after the issue's id, with **issue.json**, **articles/** and **media/** inside.
   Reopen Magazines after copying. One entry is shown per issue ID: the higher revision wins, and your card copy wins a tie.
   Updates never overwrite your card pack. An incomplete or unsupported card issue is explained; a valid built-in edition
@@ -194,7 +195,10 @@ reappear when indexed again. The queue is saved on the card and included in back
 Art, fit stars, hook, description, play time and (when written) control notes. **Play / A** launches with the first working
 launcher; **Select** lets you pick one for this game permanently. The order tried: this game's choice → the system default
 from Settings → the system's emulator list in Library setup. **Open with…** is used only if you explicitly choose it or add it
-to that list. Cancelling Android's app chooser does not start a play session. If nothing starts, a message says why.
+to that list. A per-game or one-off chooser pick never changes the system default. A system whose first configured
+emulator is Open with… keeps asking. Only a normal system launch falling through other configured emulators to the
+chooser can remember its first selection; **Default launcher per system → Manifest default** clears that choice.
+Cancelling Android's app chooser does not start a play session. If nothing starts, a message says why.
 
 **Add notes / Edit notes** opens your own notes and controls:
 - **Where was I?**: save slot, next objective or anything useful when returning.
@@ -270,6 +274,9 @@ Shows what is running on each screen. **A** brings an app to the front, **Y** mo
 switcher on (Settings) it draws over the running games; off, it opens as a normal Sortie screen.
 When opened over Sortie, the overlay leaves your current page or companion underneath; **B** returns there without raising
 an old background app. This also holds after swapping screens: Home does not reset the browsing page or move navigation back.
+With Shizuku available, Home also opens the switcher while reading a magazine or when no external app is running;
+**Open app…** can start the first one. If Home does nothing, check **Settings → Diagnostics → Allow Sortie in Shizuku**;
+reinstalling Sortie can require authorizing it again even while the Shizuku service is running.
 Android Settings and other security-sensitive screens can deliberately hide third-party overlays. Leave that screen with
 **Back** first, or turn off *Overlay switcher* in Sortie's Settings to use the normal-screen version. Sortie respects this
 Android protection; granting overlay permission does not override it.
@@ -293,9 +300,11 @@ aren't installed. **Manifest default** clears the Settings choice so the list or
 favourites, hidden games, emulator choices, artwork, folders and play sessions it would add; nothing changes until you choose
 **Import**, and Cocoon's own files are never modified. Your preferences and play history are saved as a safety copy first;
 restoring it brings the preferences back but does not remove added systems, folders, copied artwork or imported sessions.
-Check two switches first: **Choose emulators** also sets Cocoon's emulator as the default of systems you already have (turn
-it off if you set up emulators in Sortie; undo under **Default launcher per system → Manifest default**), and **Hide** keeps
-games out of folders and shelves with no unhide button yet. Imported folders appear in Home's **Custom** sort.
+Existing systems keep their emulator defaults; new systems start with Cocoon's emulator, or an installed equivalent
+RetroArch build when the requested build is absent (the preview explains the substitution). Installed does not guarantee
+that its core or BIOS is ready. The preview distinguishes additions from entries already here. A changed library requires
+a fresh preview, and a broken library configuration must be repaired before importing.
+**Hide** keeps games out of folders and shelves with no unhide button yet. Imported folders appear in Home's **Custom** sort.
 
 ## Radial keyboard
 
