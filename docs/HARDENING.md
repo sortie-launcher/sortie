@@ -191,6 +191,8 @@ Covered:
   covers the primary display, then closes; the companion returns below; the controller follows navigation; no
   AnchorActivity lingers. Quick presses too: X again the moment the controller has followed navigation, and two presses
   350 ms apart, each ending with one navigation task that holds the controller (keys injected directly, timed in the test).
+  The end state is always checked; when a slow runner spaces the presses too far apart (1.5 s for the first, 500 ms for the
+  pair, which is tried twice) the test is reported as skipped with the measured gap instead of failing.
 - Home from another app (Settings) returns to the same navigation task.
 - Back on Home leaves Sortie in front, both as HOME and in an ordinary task (started from the launcher intent while another
   app is HOME), the case behind "Back on Home sent Sortie away" above.

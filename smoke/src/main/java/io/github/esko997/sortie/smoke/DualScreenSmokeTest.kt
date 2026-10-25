@@ -99,24 +99,34 @@ class DualScreenSmokeTest {
         // past the moment X itself starts navigation below: the companion's hand-off has landed when the focus stays there
         awaitSteady("the controller following navigation to display $second", 300, pollMs = 50) { focusedDisplay() == second }
         val apart = pressX() - first
-        assertTrue("presses $apart ms apart: too slow to land inside the companion's old 1.5 s window", apart < 2_000)
+        // the end state is checked whatever the timing; only a slow runner's press gap makes the run not count as a repeat check
         awaitNavigationOn(PRIMARY)
         await("the controller back with navigation on the primary display (presses $apart ms apart)") { focusedDisplay() == PRIMARY }
+        assumeTrue("presses $apart ms apart: too slow to land inside the companion's old 1.5 s window, not a quick swap", apart < 1_500)
     }
 
-    /** X twice within half a second: wherever navigation ends up, it is alone and has the controller. */
+    /**
+     * X twice within half a second: wherever navigation ends up, it is alone and has the controller. A slow runner can space
+     * the presses further apart; the end state must still be right, the pair is tried once more, and the test is skipped
+     * (not failed) when the runner cannot press twice that fast.
+     */
     @Test
     fun doubleSwapEndsWithTheControllerOnNavigation() {
-        val first = pressX()
-        SystemClock.sleep(350)
-        val apart = pressX() - first
-        assertTrue("presses $apart ms apart", apart <= 500)
-        awaitSteady("one navigation task holding the controller, a companion on the other display (presses $apart ms apart)", 2_000) {
-            val main = mainTasks().singleOrNull()
-            main != null && main.visible && focusedDisplay() == main.display &&
-                tasks().any { (it.component == SECONDARY_HOME || it.component == COMPANION) && it.display != main.display && it.visible }
+        val gaps = mutableListOf<Long>()
+        while (gaps.size < 2) {
+            val first = pressX()
+            SystemClock.sleep(350)
+            val apart = pressX() - first
+            gaps += apart
+            awaitSteady("one navigation task holding the controller, a companion on the other display (presses $apart ms apart)", 2_000) {
+                val main = mainTasks().singleOrNull()
+                main != null && main.visible && focusedDisplay() == main.display &&
+                    tasks().any { (it.component == SECONDARY_HOME || it.component == COMPANION) && it.display != main.display && it.visible }
+            }
+            await("no lingering AnchorActivity") { tasks().none { it.component == ANCHOR } }
+            if (apart <= 500) return
         }
-        await("no lingering AnchorActivity") { tasks().none { it.component == ANCHOR } }
+        assumeTrue("presses ${gaps.joinToString(" and ")} ms apart: this runner cannot press X twice within 500 ms", false)
     }
 
     @Test
