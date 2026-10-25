@@ -9,9 +9,6 @@ on:
 permissions:
   contents: read
   pull-requests: read
-concurrency:
-  group: emulator-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
 env:
   # Keep in step with build.yml: the magazines the release build pins (the reader test opens one of their articles).
   ZINES_COMMIT: 65c179e913b30e643879d59325d676b99459a1a0
@@ -56,6 +53,11 @@ jobs:
     if: needs.decide.outputs.run == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    # On this job, not the workflow: a run whose decide step skips the smoke (another label added, say) never starts this
+    # job, so it cannot cancel a smoke run in progress. A new commit's smoke run does replace the older one.
+    concurrency:
+      group: emulator-smoke-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
