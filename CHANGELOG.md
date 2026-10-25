@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Hosted release codes are now `2000 + build run number` (were `1000 +`), so releases install over the test candidates
+  up to 1110 already on the AYN Thor; pre-merge candidates for everyday devices take their pull request's run number.
+  See docs/RELEASE.md, Versions.
 - Screens off or Sortie out of sight: the companion screen's rotating hero now pauses instead of loading a new picture
   and palette every 20 seconds (and re-tinting the other screen's background) where no one can see it. On the AYN Thor
   with both screens off Sortie's CPU use drops from about 2 % of a core to about 0.2 %; the rotation resumes on wake.
