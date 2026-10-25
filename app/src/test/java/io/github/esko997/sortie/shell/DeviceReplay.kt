@@ -68,21 +68,26 @@ internal fun replayMover(device: String, stackList: String, probes: List<() -> S
 internal data class PanelDumps(val pid: String?, val connectivity: String, val displays: String, val windows: String) {
     /**
      * Runs [ScreenMover.PANEL_PROBE] in `sh` with `pidof` and `dumpsys` replaced by scripts printing these dumps, and replies
-     * as ShellService does (`<exit code>\n<output>`).
+     * as ShellService does (`<exit code>\n<output>`). A probe still running after [timeoutMs] fails the test; it and every
+     * process it started are killed whatever the outcome. [stallMarker] makes `dumpsys connectivity` write its pid there
+     * and hang instead of answering (to test the timeout).
      */
-    fun probe(): String {
+    fun probe(timeoutMs: Long = 30_000, stallMarker: File? = null): String {
         val dir = Files.createTempDirectory("panel-probe").toFile()
+        var process: Process? = null
         try {
             pid?.let { File(dir, "pidof.txt").writeText("$it\n") }
             File(dir, "connectivity.txt").writeText(connectivity)
             File(dir, "displays.txt").writeText(displays)
             File(dir, "windows.txt").writeText(windows)
             script(dir, "pidof", "[ -f \"\$d/pidof.txt\" ] && exec cat \"\$d/pidof.txt\"\nexit 1")
+            val stall = stallMarker?.let { "connectivity) echo \$\$ \$PPID > \"${it.absolutePath}\"; exec sleep 600 ;;" } ?: ""
             script(
                 dir,
                 "dumpsys",
                 """
                 case "${'$'}*" in
+                  $stall
                   connectivity) exec cat "${'$'}d/connectivity.txt" ;;
                   "window displays") exec cat "${'$'}d/displays.txt" ;;
                   "window windows") exec cat "${'$'}d/windows.txt" ;;
@@ -91,15 +96,25 @@ internal data class PanelDumps(val pid: String?, val connectivity: String, val d
                 exit 1
                 """.trimIndent()
             )
-            val process = ProcessBuilder("sh", "-c", ScreenMover.PANEL_PROBE).redirectErrorStream(true).apply {
+            // Output goes to a file, not a pipe: reading a pipe to EOF would block on a hung probe before the bounded wait.
+            val out = File(dir, "probe.out")
+            process = ProcessBuilder("sh", "-c", ScreenMover.PANEL_PROBE).redirectErrorStream(true).redirectOutput(out).apply {
                 environment()["PATH"] = "${dir.absolutePath}${File.pathSeparator}${System.getenv("PATH")}"
             }.start()
-            val out = process.inputStream.bufferedReader().readText()
-            check(process.waitFor(30, TimeUnit.SECONDS)) { "probe timed out" }
-            return "${process.exitValue()}\n$out"
+            check(process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)) { "panel probe still running after $timeoutMs ms: killed" }
+            return "${process.exitValue()}\n${out.readText()}"
         } finally {
+            process?.let(::killTree)
             dir.deleteRecursively()
         }
+    }
+
+    /** Kills [process] and its descendants, collected first: once the shell dies they are reparented out of reach. */
+    private fun killTree(process: Process) {
+        val root = HostProcesses.handle(process)
+        val all = HostProcesses.descendants(root) + root
+        all.forEach(HostProcesses::destroyForcibly)
+        all.forEach(HostProcesses::awaitExit)
     }
 
     private fun script(dir: File, name: String, body: String) {
@@ -117,5 +132,32 @@ internal data class PanelDumps(val pid: String?, val connectivity: String, val d
             DeviceCaptures.text("thor/panel-stuck/displays.txt"),
             DeviceCaptures.text("thor/panel-stuck/windows.txt")
         )
+    }
+}
+
+/**
+ * java.lang.ProcessHandle (JDK 9+) through reflection: unit tests compile against android.jar, which lacks it, but run on
+ * the build's JDK 17.
+ */
+internal object HostProcesses {
+    private val type = Class.forName("java.lang.ProcessHandle")
+
+    fun handle(process: Process): Any = Process::class.java.getMethod("toHandle").invoke(process)!!
+
+    fun descendants(handle: Any): List<Any> = (type.getMethod("descendants").invoke(handle) as java.util.stream.Stream<*>)
+        .toArray().filterNotNull()
+
+    fun destroyForcibly(handle: Any) {
+        type.getMethod("destroyForcibly").invoke(handle)
+    }
+
+    fun awaitExit(handle: Any) {
+        runCatching { (type.getMethod("onExit").invoke(handle) as java.util.concurrent.CompletableFuture<*>).get(5, TimeUnit.SECONDS) }
+    }
+
+    /** Whether the process [pid] is still running. */
+    fun isAlive(pid: Long): Boolean {
+        val found = type.getMethod("of", Long::class.javaPrimitiveType).invoke(null, pid) as java.util.Optional<*>
+        return found.isPresent && type.getMethod("isAlive").invoke(found.get()) as Boolean
     }
 }
