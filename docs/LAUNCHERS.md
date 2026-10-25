@@ -24,14 +24,12 @@ Notes
 - `file://` URIs require the app to relax StrictMode's file-URI check (done once in `SortieApp`).
 - Every attempt and the exact `am start` equivalent are in Diagnostics and in logcat under the `SortieLaunch` tag.
 - Debug builds accept `am start -n io.github.esko997.sortie/.MainActivity --es launch '<systemId>/<file>' [--es profile <id>]`.
-- **Remembered chooser pick:** the first app picked in Open with… becomes the system's default as a `chosen-<package>`
-  profile (explicit component, VIEW, `${uri}` with a read grant; see [formats/launchers.md](formats/launchers.md)), so the
-  chooser is not shown on every launch. Systems with a profile already chosen in Settings → Default launcher per system
-  are left alone. In this build the remembering also applies when Open with… was picked for one game on its game page,
-  and to systems set to Open with… only in Library setup: the picked app becomes the default for the whole system. To
-  undo it, remove or move down the picked app in the system's Library setup emulator list, and choose **Manifest default**
-  under Settings → Default launcher per system. An app that only accepts a file path or its own intent still needs a
-  dedicated profile.
+- **Remembered chooser pick:** only a normal system launch falling through other configured emulators to Open with… may
+  remember its first app selection. Per-game overrides, explicit one-off launches, systems starting with Open with…,
+  and systems with a default already chosen in Settings are left alone. The callback rechecks the configuration before
+  saving. Sortie adds a `chosen-<package>` profile (explicit component, VIEW, `${uri}`, MIME `*/*`, read grant) and selects
+  it in **Default launcher per system**, without reordering the manifest. Choose **Manifest default** there to undo it.
+  An app that only accepts a file path or its own intent still needs a dedicated profile.
 
 ## Fresh beta setup checks — 2026-10-24
 

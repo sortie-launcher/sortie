@@ -44,15 +44,15 @@ filename without extension, `${system}`, `${dir}`. `display` is `top`, `bottom` 
 `same`). A profile with `generic: true` opens the Android chooser only when explicitly selected by a game/system override
 or included in that system's profile list. It is not appended implicitly. Cancelling the chooser does not record a play session.
 
-The first app picked in the Open with… chooser becomes the system's default: Sortie adds a profile
-`chosen-<package>` (the package lower-cased, other characters replaced by `-`) with that app's name as `label`, its
-`package` and chosen `activity`, action VIEW, `data: "${uri}"` and flags `NEW_TASK`, `GRANT_READ_URI_PERMISSION`, puts it
-first in the system's `profiles` and selects it in user.json's `systemProfiles`. This happens only for a `generic`
-profile and only while the system has no `systemProfiles` entry; an existing profile with the same id is reused unchanged.
-In this build that includes a generic profile reached through a per-game override (Open with… chosen on a game page) and
-systems whose `profiles` list is only the generic profile, so such a pick changes the whole system's default. To undo it,
-remove or move down the `chosen-<package>` profile in Library setup and clear the `systemProfiles` entry (Settings →
-Default launcher per system → Manifest default).
+A normal launch that falls through other configured emulators to Open with… may remember its first selection as the
+system's default. Explicit one-off choices, per-game overrides, a system whose first configured profile is generic, and
+systems with an existing `systemProfiles` choice never trigger this. The callback rechecks the original configuration
+before saving, so a choice made while the chooser was open wins.
+
+Sortie adds a `chosen-<package>` profile (the package lower-cased, other characters replaced by `-`) with the app's label,
+`package`, chosen `activity`, action VIEW, `data: "${uri}"`, `mimeType: "*/*"` and flags `NEW_TASK`,
+`GRANT_READ_URI_PERMISSION`. An existing profile with that id is preserved. Only user.json's `systemProfiles` selects it;
+the system's manifest order is unchanged. **Settings → Default launcher per system → Manifest default** undoes the choice.
 
 Nothing in this file is validated against a built-in list of emulators. If a package is not
 installed, the profile is skipped and the next fallback is tried; the diagnostics screen says why.

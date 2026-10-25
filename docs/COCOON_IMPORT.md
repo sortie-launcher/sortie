@@ -27,13 +27,14 @@ Code: `app/src/main/java/io/github/esko997/sortie/data/cocoon/` and `ui/CocoonIm
    location without a usable backup is reported and nothing changes. Only a backup carries your own folders, play sessions
    and per-game emulator choices; anything made in Cocoon after the backup's date is not in it.
 3. **Review the preview.** It lists systems to add (with their folders and emulator, and whether that emulator is installed),
-   existing systems that only get a media folder, favourites, hidden games, emulator choices, artwork to copy against the
-   free space on its volume, and the entries that were not found, ambiguous or skipped. Every category has a switch. Nothing
-   has been written yet; **Cancel** changes nothing. If `folders.json` still holds Sortie's old default Favourites folder
-   (see "Old Favourites folder entry"), the Favourites switch also says it removes that entry, even when there are no
-   favourites to add.
-4. **Import.** Sortie saves a safety copy, then adds systems and re-indexes, saves favourites, hidden games and emulator
-   choices (and, with Favourites on, removes the old default Favourites entry), adds sessions and folders, and copies
+   existing systems that only get a media folder, and additions versus entries already here for favourites, hidden games,
+   per-game emulator choices, folders and sessions. Artwork is checked against free space on its volume. Nothing has been
+   written yet; **Cancel** changes nothing. Broken library configuration must be repaired first. If the configuration changes
+   after this preview, Import refuses it and asks you to review a fresh plan.
+   If `folders.json` still holds Sortie's old default Favourites folder (see "Old Favourites folder entry"), the Favourites
+   switch also removes that entry, even when there are no favourites to add.
+4. **Import.** Sortie saves a safety copy, adds systems and re-indexes, then adds missing per-game launch profiles and saves
+   favourites, hidden games and per-game choices (and, with Favourites on, removes the old default Favourites entry), adds sessions and folders, and copies
    artwork last. Only the artwork copy can be stopped; files already copied stay, and running the import again copies the
    rest. Leaving the screen does not interrupt the import while Sortie keeps running; if Android closes Sortie, run the
    import again and it continues where it stopped.
@@ -45,7 +46,7 @@ Code: `app/src/main/java/io/github/esko997/sortie/data/cocoon/` and `ui/CocoonIm
 | From Cocoon | Becomes in Sortie | Needs a backup |
 |---|---|---|
 | Platforms with ROMs on this device | systems in `systems.json` (from Sortie's preset where one exists, otherwise a custom system), with the ROM folders found | no |
-| Platform emulator (`<cocoon:defaultplayerid>`) | the system's launch profile choice (`systemProfiles`) in `user.json` wherever that system has no entry yet. This includes existing systems, so it can override the emulator order set in Library setup (see "Your existing setup wins") | no |
+| Platform emulator (`<cocoon:defaultplayerid>`) | first in a newly created system's `profiles`; existing systems' defaults and profile order are untouched | no |
 | Favourite / hidden flags | `favourites` / `hidden` in `user.json` (added, never removed). Hidden games stay in their system's game list; `hidden` keeps them out of folders and shelves, and Sortie has no unhide button yet | no |
 | Downloaded box art, logos, gameplay screenshots | copies in the system's media folder as `covers/`, `marquees/`, `screenshots/` | no |
 | User-made folders | `folders.json` entries `cocoon-<n>` with the matched games (a folder named "Favourites" too: it stays a user folder and does not favourite its games) | yes |
@@ -71,16 +72,10 @@ home app.
   The check assumes other processes do not replace destination paths during the import; it is not a filesystem lock.
 - **Cocoon itself is left alone.** No intents are sent to it; it is not started, stopped or reconfigured, and its home or
   notification-listener roles are untouched. Its private app data is never read.
-- **Your existing setup wins, with specific exceptions.** Existing systems are not renamed, extended or re-rooted (one only
-  gains a media folder when it has none and artwork is copied for it). Existing launch profiles keep their definitions,
-  existing artwork is never replaced, and existing sessions and folders are kept. **Exception:** the preview's "Emulators
-  for systems you already have" switch (on by default) writes Cocoon's emulator as the chosen default of every existing
-  system without a Settings → Default launcher per system entry. That choice takes precedence over the order in
-  Library setup, so a system can change emulator (for example DuckStation → SwanStation for PlayStation), and systems whose
-  default was unchanged are pinned to it. Turn the switch off if you set up emulators in Sortie; to undo it, choose
-  **Manifest default** for the system under Settings → Default launcher per system.
-  With Favourites on, the old default Favourites entry is also removed as described below; actual favourite flags and
-  customised folder definitions are preserved.
+- **Your existing setup wins.** Existing systems are not renamed, extended, re-rooted or given a different emulator default.
+  One may gain a media folder when it has none and artwork is copied for it; that targeted edit preserves other fields,
+  including an intentionally empty emulator list. Existing launch profiles, artwork, sessions and customised folders are kept.
+  With Favourites on, the redundant old default Favourites entry is removed as described below; actual favourite flags stay.
 - **Artwork goes to each system's media folder**, which on a card prepared for ES-DE is that system's
   `scraped-esde/downloaded_media/<system>/` tree rather than `sortie/`. Tools that own that tree will see the copies.
 - **No cross-device rewriting.** Cocoon records artwork as storage URIs tied to a device's volumes. A reference to a volume
@@ -196,8 +191,11 @@ least one of its file names, and other directories holding at least 10 % of them
    name (the list in ES-DE's Android `es_systems.xml`). Shared romset names (ZX Spectrum ports of arcade games, Game Gear
    and Genesis titles) therefore cannot hand a whole folder to the wrong system;
 3. creates one system per claimed id: the preset id from the alias table, else the platform id, else `<platform>-cocoon`
-   when that id is taken. Presets keep their profiles with Cocoon's emulator first; custom systems use the matched files'
-   extensions and Cocoon's emulator, or Open with… when there is none. `media` is an existing ES-DE
+   when that id is taken. Presets keep their profiles with Cocoon's emulator first and add matched file extensions, such
+   as `.7z`, so the index can retain those games. To avoid exposing individual disc tracks as games, track types are not
+   added when the system's folders contain disc descriptors or playlists; those skipped matches are listed in the preview.
+   This is a conservative system-wide check, not a parser of each descriptor's references. Custom systems use the matched
+   files' extensions and Cocoon's emulator, or Open with… when there is none. `media` is an existing ES-DE
    `scraped-esde/downloaded_media/<name>` under the card root when present, else `sortie/media/<systemId>`; `gamelist` is
    set only when an ES-DE gamelist exists there (Cocoon's own gamelists are not used as Sortie gamelists);
 4. matches each entry only within its platform's alias group, then by exact case. The platform's own folders and those of
@@ -207,11 +205,16 @@ least one of its file names, and other directories holding at least 10 % of them
 Android apps from a backup become `app:<package>` ids. Ids are checked against Sortie's index after the systems step, so
 Sortie's extension and skip rules apply.
 
+For new systems, the preview reports an installed equivalent RetroArch build when Cocoon's requested package is absent.
+The core name is unchanged, but installed does not prove that the core, BIOS or saves are available in that build.
+Per-game backup choices can add a missing RetroArch profile as well; the definition is saved before the override and only
+when that category is enabled. Existing profile definitions and per-game choices are preserved.
+
 ### Apply order
 
-`CocoonImporter.apply`: write guard → safety copy → systems and media folders (`LibrarySetupStore.saveSystem`, atomic
-`ManifestCommit`) → index → one `user.json` commit (favourites ∪, hidden ∪, emulator choices and per-game overrides only
-where absent, `cocoonDir`) → old default Favourites entries (`LibrarySetupStore.removeLegacyFavourites`, only with
+`CocoonImporter.apply`: configuration fingerprint/blocking check → write guard → safety copy → systems and targeted media
+folders (fingerprint-checked `LibrarySetupStore` edits, atomic `ManifestCommit`) → index → missing per-game profiles →
+one `user.json` commit (favourites ∪, hidden ∪, per-game overrides only where absent, `cocoonDir`) → old default Favourites entries (`LibrarySetupStore.removeLegacyFavourites`, only with
 Favourites on and a count in the preview; a refused save stops the import) → sessions (`planSessionMerge`,
 inserted while the play log is paused) → folders (`LibrarySetupStore.saveFolders`; an existing folder of the same id keeps
 its name and rules and gains members) → artwork copy (temp file then rename per file, existing targets kept, stoppable
@@ -231,3 +234,25 @@ no new favourites: the preview still offered cleanup, opting out left `folders.j
 only the redundant default, and repeating the import made no further folder changes. Existing favourite flags, a custom
 folder, unknown root fields and all source XML/artwork bytes were preserved. The accompanying build passed style checks
 and 261 JVM tests in each variant, including partial configurations, customised entries, concurrent edits and write failures.
+
+The subsequent import-safety fixes passed style checks and 289 JVM tests in each variant. On a single-screen Android
+handheld, an in-place debug upgrade and real-library import/re-import preserved existing system defaults and showed
+already-imported favourites, hidden entries and folders correctly. A separate, disposable library exercised:
+
+- an existing emulator default that differs from Cocoon's, without a new Settings override;
+- a preset N64 `.7z` entry retained by the real index, including its favourite, folder membership and play session;
+- artwork for an existing system with `profiles: []`, preserving that list and unknown manifest fields;
+- a missing per-game RetroArch core profile, and an installed equivalent build for an absent requested package;
+- stale root ownership requiring a fresh preview and explicit confirmation, and malformed launchers blocking the import
+  before preferences or a safety copy were written;
+- accurate first-import and zero-addition repeat counts, with three copied images matching their source bytes;
+- real Android chooser picks for explicit, per-game and deliberately chooser-only launches leaving defaults alone.
+  A fallback through an unavailable emulator saved only a Settings default, preserved the wildcard MIME on relaunch,
+  and was undone through **Manifest default**. A manifest edit while the chooser was open prevented a stale pick from
+  becoming a default.
+
+The chooser recipient was a file manager, not an emulator: these checks prove dispatch and persistence, not game/core
+compatibility. The test library was removed and the original card configuration, preferences and private database restored.
+All 1,338 original Cocoon files remained present; only Cocoon's own database log changed. Real artwork references to an
+absent volume could not be copied, so artwork copying used the isolated fixture. Removable-card mapping and dual-display
+behavior still need a dual-screen device check; the production handheld was not used for this regression round.

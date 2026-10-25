@@ -194,7 +194,10 @@ reappear when indexed again. The queue is saved on the card and included in back
 Art, fit stars, hook, description, play time and (when written) control notes. **Play / A** launches with the first working
 launcher; **Select** lets you pick one for this game permanently. The order tried: this game's choice → the system default
 from Settings → the system's emulator list in Library setup. **Open with…** is used only if you explicitly choose it or add it
-to that list. Cancelling Android's app chooser does not start a play session. If nothing starts, a message says why.
+to that list. A per-game or one-off chooser pick never changes the system default. A system whose first configured
+emulator is Open with… keeps asking. Only a normal system launch falling through other configured emulators to the
+chooser can remember its first selection; **Default launcher per system → Manifest default** clears that choice.
+Cancelling Android's app chooser does not start a play session. If nothing starts, a message says why.
 
 **Add notes / Edit notes** opens your own notes and controls:
 - **Where was I?**: save slot, next objective or anything useful when returning.
@@ -289,9 +292,11 @@ card if you use one.
 favourites, hidden games, emulator choices, artwork, folders and play sessions it would add; nothing changes until you choose
 **Import**, and Cocoon's own files are never modified. Your preferences and play history are saved as a safety copy first;
 restoring it brings the preferences back but does not remove added systems, folders, copied artwork or imported sessions.
-Check two switches first: **Choose emulators** also sets Cocoon's emulator as the default of systems you already have (turn
-it off if you set up emulators in Sortie; undo under **Default launcher per system → Manifest default**), and **Hide** keeps
-games out of folders and shelves with no unhide button yet. Imported folders appear in Home's **Custom** sort.
+Existing systems keep their emulator defaults; new systems start with Cocoon's emulator, or an installed equivalent
+RetroArch build when the requested build is absent (the preview explains the substitution). Installed does not guarantee
+that its core or BIOS is ready. The preview distinguishes additions from entries already here. A changed library requires
+a fresh preview, and a broken library configuration must be repaired before importing.
+**Hide** keeps games out of folders and shelves with no unhide button yet. Imported folders appear in Home's **Custom** sort.
 
 ## Radial keyboard
 

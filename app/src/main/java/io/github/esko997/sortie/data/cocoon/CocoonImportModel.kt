@@ -39,8 +39,19 @@ sealed interface CocoonImportState {
         val backupProblem: String? = null
     ) : CocoonImportState
 
-    /** A complete plan awaiting the user's confirmation; nothing has been written yet. */
-    data class Preview(val plan: CocoonImportPlan, val options: ImportOptions) : CocoonImportState
+    /**
+     * A complete plan awaiting the user's confirmation; nothing has been written yet. [fingerprint] is the library configuration
+     * the plan was made from ([io.github.esko997.sortie.data.setup.LibraryConfiguration.fingerprint]): Import is refused once it
+     * differs. [delta] compares the plan with what Sortie already has. [changed] marks a plan made again because the library
+     * changed after the previous preview.
+     */
+    data class Preview(
+        val plan: CocoonImportPlan,
+        val options: ImportOptions,
+        val fingerprint: String,
+        val delta: ImportDelta,
+        val changed: Boolean = false
+    ) : CocoonImportState
 
     data class Result(val ok: Boolean, val title: String, val lines: List<String>) : CocoonImportState
 }
@@ -54,7 +65,6 @@ data class ImportOptions(
     /** Adds the plan's favourites and removes its [CocoonImportPlan.legacyFavourites] folders.json entries. */
     val favourites: Boolean = true,
     val hidden: Boolean = true,
-    val emulators: Boolean = true,
     val artwork: Boolean = true,
     val folders: Boolean = true,
     val sessions: Boolean = true,
@@ -175,7 +185,7 @@ class CocoonImportModel private constructor(private val graph: SortieApp.Graph) 
         val located = _state.value as? CocoonImportState.Located ?: return
         val cocoonDir = located.chosen ?: return
         launchJob("Reading Cocoon's library…") {
-            withContext(Dispatchers.IO) { plan(cocoonDir, backup) }
+            withContext(Dispatchers.IO) { plan(cocoonDir, backup, ImportOptions(), changed = false) }
         }
     }
 
@@ -184,11 +194,31 @@ class CocoonImportModel private constructor(private val graph: SortieApp.Graph) 
         _state.value = p.copy(options = options)
     }
 
+    /**
+     * Applies the previewed plan if the library configuration is still the one it was made from. A configuration that became
+     * unwritable refuses the import; a changed one (a system added in Library setup meanwhile, a desktop edit) gets a fresh
+     * preview to review instead, since the old plan could add a second system on the same folder.
+     */
     fun confirm() {
         val p = _state.value as? CocoonImportState.Preview ?: return
         launchJob("Starting the import…") {
+            val current = graph.librarySetup.load()
+            when (val check = ConfirmCheck.of(p.fingerprint, current)) {
+                is ConfirmCheck.Blocked -> return@launchJob blocked(check.reasons)
+                ConfirmCheck.Changed -> return@launchJob withContext(Dispatchers.IO) {
+                    plan(p.plan.cocoonDir, p.plan.backup?.dir, p.options, changed = true)
+                }
+                ConfirmCheck.Ready -> Unit
+            }
             try {
-                CocoonImporter.apply(p.plan, p.options, graph, onProgress = { _state.value = it }, onArtworkJob = { artworkJob = it })
+                CocoonImporter.apply(
+                    p.plan,
+                    p.options,
+                    graph,
+                    expectedFingerprint = p.fingerprint,
+                    onProgress = { _state.value = it },
+                    onArtworkJob = { artworkJob = it }
+                )
             } finally {
                 artworkJob = null
             }
@@ -228,7 +258,10 @@ class CocoonImportModel private constructor(private val graph: SortieApp.Graph) 
 
     private fun backupsIn(dir: File): List<BackupChoice> = CocoonBackupReader.findDated(dir).map { (d, at) -> BackupChoice(d, at) }
 
-    private suspend fun plan(cocoonDir: File, backupDir: File?): CocoonImportState {
+    private suspend fun plan(cocoonDir: File, backupDir: File?, options: ImportOptions, changed: Boolean): CocoonImportState {
+        // a configuration Sortie can't write would stop the import after its safety copy: refuse before planning anything
+        val config = graph.librarySetup.load()
+        if (config.blocking.isNotEmpty()) return blocked(config.blocking)
         val library = CocoonGamelistReader.readLibrary(cocoonDir)
         if (library.platforms.isEmpty()) {
             return CocoonImportState.Result(
@@ -252,7 +285,6 @@ class CocoonImportModel private constructor(private val graph: SortieApp.Graph) 
         }
 
         _state.value = CocoonImportState.Working("Looking for ROM folders…")
-        val config = graph.librarySetup.load()
         val volumes = CocoonLocator.volumes()
         val probe = RootProbe(volumes, exclude = listOfNotNull(cocoonDir, backupDir, graph.sortieDir))
         val romPlatforms = library.platforms.filter { it.id !in NOT_ROMS }
@@ -272,10 +304,24 @@ class CocoonImportModel private constructor(private val graph: SortieApp.Graph) 
             existingMedia = { systemId, kind, stem -> media[mediaKey(systemId, kind, stem)] == true }
         )
         val plan = planner.plan(library, backup, roots, probe.listings())
-        // Problems found while reading and an unreadable card configuration belong in the preview, not only in the log.
+        // Problems found while reading and the card configuration's non-blocking problems belong in the preview, not only in the log.
         val notes = (plan.notes + library.problems + config.errors + listOfNotNull(customisedReservedNote(plan))).distinct()
-        return CocoonImportState.Preview(plan.copy(notes = notes), ImportOptions())
+        _state.value = CocoonImportState.Working("Comparing with your library…")
+        val sessions = if (plan.sessions.isEmpty()) emptyList() else graph.db.games().allSessions()
+        val delta = ImportDelta.of(plan, graph.user.data.value, graph.manifests.snapshot.value.folders, sessions)
+        return CocoonImportState.Preview(plan.copy(notes = notes), options, config.fingerprint, delta, changed)
     }
+
+    /** The refusal for a library configuration Sortie can't write ([io.github.esko997.sortie.data.setup.LibraryConfiguration.blocking]). */
+    private fun blocked(reasons: List<String>) = CocoonImportState.Result(
+        false,
+        "Fix the library settings first",
+        reasons + listOf(
+            "The import adds systems and folders to these files, so it can't start while Sortie can't read or safely rewrite them. " +
+                "Library setup shows the same problem: fix or replace the file named above, then start the import again.",
+            "Nothing was changed."
+        )
+    )
 
     /**
      * Entries using a built-in folder's id that are not the old default Favourites the import may remove: the import never

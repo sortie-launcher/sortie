@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -829,5 +830,148 @@ class LibrarySetupStoreTest {
         assertCompleteSet(dir)
         val launchers = json.decodeFromString(LaunchersManifest.serializer(), File(dir, "launchers.json").readText())
         assertEquals(launchers.profiles.map { it.id }.toSet().size, launchers.profiles.size)
+    }
+
+    /** desktopCard plus a computer-prepared system Library setup couldn't save as a whole: no emulators yet, unknown keys. */
+    private fun cardWithUnfinishedSystem(): File {
+        val dir = desktopCard()
+        File(dir, "systems.json").writeText(
+            """{"systems": [
+              |{"id": "snes", "label": "SNES", "generation": "16-bit", "roots": ["roms/snes"], "profiles": ["my-snes", "open-with"],
+              | "colour": "#3b82f6", "order": 31},
+              |{"id": "gbc", "label": "Game Boy Color", "generation": "handheld", "roots": ["roms/gbc"], "profiles": [],
+              | "colour": "bad", "order": 32, "desktopNote": {"keep": [1, 2]}}
+              |], "library": {"skipFiles": ["neogeo.zip"]}, "desktopVersion": 7}
+            """.trimMargin()
+        )
+        return dir
+    }
+
+    @Test
+    fun mediaOnlyUpdateChangesNothingButTheMediaKeyOfAnUnfinishedSystem() = runBlocking {
+        val dir = cardWithUnfinishedSystem()
+        val s = store(dir)
+        val before = s.load()
+        val gbc = before.systems.single { it.id == "gbc" }
+        // the whole-system save the importer used to make is refused for this entry, which aborted the import
+        try {
+            s.saveSystem(before, gbc.copy(media = "media/gbc"), emptyList())
+            fail("an entry without emulators passed whole-system validation")
+        } catch (_: IllegalArgumentException) {
+        }
+        val systemsBefore = obj(File(dir, "systems.json"))
+        val others = bytes(dir) - "systems.json"
+
+        val after = s.setSystemMedia(before, "gbc", "media/gbc/")
+
+        val systemsAfter = obj(File(dir, "systems.json"))
+        assertEquals(systemsBefore - "systems", systemsAfter - "systems")
+        assertEquals(entry(File(dir, "systems.json"), "systems", "snes"), systemsBefore["systems"]!!.jsonArray[0].jsonObject)
+        val gbcBefore = systemsBefore["systems"]!!.jsonArray[1].jsonObject
+        assertEquals(JsonObject(gbcBefore + ("media" to JsonPrimitive("media/gbc"))), entry(File(dir, "systems.json"), "systems", "gbc"))
+        assertEquals(others, bytes(dir) - "systems.json")
+        assertEquals("media/gbc", after.systems.single { it.id == "gbc" }.media)
+        assertEquals(after, s.load())
+    }
+
+    @Test
+    fun mediaOnlyUpdateRefusesAnInterveningEditAndAFailedWriteLeavesTheCard() = runBlocking {
+        val dir = cardWithUnfinishedSystem()
+        val stale = store(dir).load()
+        File(dir, "systems.json").writeText(File(dir, "systems.json").readText().replace("\"Game Boy Color\"", "\"GBC (desktop)\""))
+        val edited = bytes(dir)
+        try {
+            store(dir).setSystemMedia(stale, "gbc", "media/gbc")
+            fail("a stale configuration was saved over a desktop edit")
+        } catch (_: LibraryConflictException) {
+        }
+        assertEquals(edited, bytes(dir))
+
+        val failing = object : CommitIo() {
+            override fun write(file: File, bytes: ByteArray) {
+                throw IOException("card removed")
+            }
+        }
+        try {
+            store(dir, failing).setSystemMedia(store(dir).load(), "gbc", "media/gbc")
+            fail("a failed write reported success")
+        } catch (e: IOException) {
+            assertFalse(e is LibraryConflictException)
+        }
+        assertEquals(edited, bytes(dir))
+        assertNull(store(dir).load().systems.single { it.id == "gbc" }.media)
+    }
+
+    @Test
+    fun addProfilesNeverRetargetsAConfiguredLauncherAndWritesOnlyLaunchers() = runBlocking {
+        val dir = desktopCard()
+        val s = store(dir)
+        val before = s.load()
+        val mySnesBefore = entry(File(dir, "launchers.json"), "profiles", "my-snes")
+        val others = bytes(dir) - "launchers.json"
+        val sameboy = LaunchProfile(id = "ra-sameboy", label = "RetroArch (SameBoy)", `package` = "com.retroarch")
+        val retargeted = LaunchProfile(id = "my-snes", label = "Cocoon's Snes9x", `package` = "com.retroarch.aarch64")
+
+        val after = s.addProfiles(before, listOf(retargeted, sameboy))
+
+        assertEquals(mySnesBefore, entry(File(dir, "launchers.json"), "profiles", "my-snes"))
+        assertEquals(sameboy, after.profiles.single { it.id == "ra-sameboy" })
+        assertEquals(before.profiles.map { it.id } + "ra-sameboy", after.profiles.map { it.id })
+        assertEquals(others, bytes(dir) - "launchers.json")
+
+        // a re-run has nothing to add and writes nothing
+        val settled = bytes(dir)
+        assertEquals(after.fingerprint, s.addProfiles(after, listOf(sameboy, retargeted)).fingerprint)
+        assertEquals(settled, bytes(dir))
+    }
+
+    @Test
+    fun saveProfilesReplacesByIdKeepingUnknownKeysAndNoOtherManifest() = runBlocking {
+        val dir = desktopCard()
+        val s = store(dir)
+        val others = bytes(dir) - "launchers.json"
+        val mySnes = s.load().profiles.single { it.id == "my-snes" }
+        val chosen = LaunchProfile(id = "chosen-org.example.viewer", label = "Viewer", `package` = "org.example.viewer", mimeType = "*/*")
+
+        s.saveProfiles(s.load(), listOf(mySnes.copy(label = "Snes9x, tuned"), chosen))
+
+        val updated = entry(File(dir, "launchers.json"), "profiles", "my-snes")!!
+        assertEquals("Snes9x, tuned", updated["label"]!!.jsonPrimitive.content)
+        assertEquals("desktop note", updated["comment"]!!.jsonPrimitive.content)
+        assertEquals(chosen, s.load().profiles.single { it.id == chosen.id })
+        assertEquals(others, bytes(dir) - "launchers.json")
+    }
+
+    @Test
+    fun profileSavesAreRefusedWithoutLaunchersAndAddNoManifest() = runBlocking {
+        val dir = desktopCard()
+        File(dir, "launchers.json").delete()
+        val s = store(dir)
+        val before = bytes(dir)
+        val sameboy = LaunchProfile(id = "ra-sameboy", label = "RetroArch (SameBoy)", `package` = "com.retroarch")
+        for (save in listOf<suspend () -> Unit>({ s.addProfiles(s.load(), listOf(sameboy)) }, { s.saveProfiles(s.load(), listOf(sameboy)) })) {
+            try {
+                save()
+                fail("a profile was saved with no launchers.json")
+            } catch (e: IOException) {
+                assertFalse(e is LibraryConflictException)
+            }
+            assertEquals(before, bytes(dir))
+        }
+    }
+
+    @Test
+    fun blockingListsOnlyProblemsThatRefuseSaves() = runBlocking {
+        val dir = desktopCard()
+        File(dir, "folders.json").writeText("{ not json")
+        val brokenFolders = store(dir).load()
+        assertTrue(brokenFolders.errors.any { it.startsWith("folders.json") })
+        assertEquals(emptyList<String>(), brokenFolders.blocking)
+
+        File(dir, "launchers.json").writeText("{\"profiles\": [ {\"id\": ")
+        val brokenLaunchers = store(dir).load()
+        assertEquals(1, brokenLaunchers.blocking.size)
+        assertTrue(brokenLaunchers.blocking.single().startsWith("launchers.json"))
+        assertTrue(brokenLaunchers.blocking.all { it in brokenLaunchers.errors })
     }
 }
