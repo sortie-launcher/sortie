@@ -67,7 +67,7 @@ class SortieApp :
         val deviceState = DeviceState(manifests)
         val screenMover = ScreenMover(app)
         val switcher = TaskSwitcher(app, screenMover) { manifests.snapshot.value.device.screens.presentationIndex }
-        val deviceStats = DeviceStatsMonitor(app, screenMover) { user.data.value.deviceStatsInterval }
+        val deviceStats = DeviceStatsMonitor(app, screenMover, { user.data.value.deviceStatsInterval }) { user.data.value.perfInterval }
         val apps = AppsRepository(app)
         val shortcuts = ShortcutsRepository(app)
         val folders = FolderRepository(db, manifests, user.data, apps.apps, shortcuts.shortcuts)

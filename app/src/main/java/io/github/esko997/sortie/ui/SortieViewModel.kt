@@ -23,7 +23,10 @@ import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.LaunchProfile
 import io.github.esko997.sortie.data.manifest.SystemDef
 import io.github.esko997.sortie.launch.IntentBuilder
+import io.github.esko997.sortie.launch.SessionReturn
+import io.github.esko997.sortie.launch.sessionReturn
 import io.github.esko997.sortie.mecha.ui.MechaPresence
+import io.github.esko997.sortie.stats.CompanionView
 import io.github.esko997.sortie.stats.DeviceStatsMode
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -115,6 +118,10 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     fun setDeviceStats(mode: DeviceStatsMode) = graph.user.setDeviceStats(mode.id)
 
     fun setDeviceStatsInterval(seconds: Int) = graph.user.setDeviceStatsInterval(seconds)
+
+    fun setPerfInterval(seconds: Int) = graph.user.setPerfInterval(seconds)
+
+    fun setCompanionView(view: CompanionView) = graph.user.setCompanionView(view.id)
 
     /** Launch profiles a system lists in the manifest, with whether each is installed (for Settings). */
     fun profilesForSystem(systemId: String): List<Pair<LaunchProfile, Boolean>> {
@@ -344,7 +351,10 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     fun profilesFor(game: GameEntity): List<Pair<LaunchProfile, Boolean>> = graph.launcher.profilesFor(game).map { it to graph.launcher.isInstalled(it) }
 
-    fun launch(game: GameEntity, only: LaunchProfile? = null) = viewModelScope.launch { graph.launcher.launch(game, only) }
+    fun launch(game: GameEntity, only: LaunchProfile? = null) = viewModelScope.launch {
+        dismissExitNotice()
+        graph.launcher.launch(game, only)
+    }
 
     /** `adb shell am start -n <pkg>/.MainActivity --es launch "<folder>/<file>" [--es profile <id>]` for reproducible tests. */
     fun launchById(id: String, profileId: String?) = viewModelScope.launch {
@@ -387,12 +397,26 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     fun reloadManifests() = viewModelScope.launch { graph.manifests.reloadNow() }
 
-    /** Back from an emulator: close the open play session. Save and BIOS state stay as scanned until the next re-index. */
+    /** A game page's notice that its emulator closed right after starting ([SessionReturn.QUICK_EXIT]). */
+    data class ExitNotice(val gameId: String, val message: String)
+
+    private val _exitNotice = MutableStateFlow<ExitNotice?>(null)
+    val exitNotice: StateFlow<ExitNotice?> = _exitNotice
+
+    /** The game whose page this activity is showing (set by DetailScreen), where an [ExitNotice] is shown instead of a toast. */
+    var gamePage: String? = null
+
+    fun dismissExitNotice() {
+        _exitNotice.value = null
+    }
+
     /**
      * Back in the foreground. The open play session ends only if its app is gone: Home summons the switcher by resuming this
      * HOME activity while the game keeps running underneath (and is raised again), which must not stop the timer or replace
      * Now playing. The app's package comes from the session's profile (games) or its id (apps); without Shizuku, as before,
-     * resuming ends the session.
+     * resuming ends the session. Save and BIOS state stay as scanned until the next re-index.
+     * A game whose emulator closed within [io.github.esko997.sortie.launch.QUICK_EXIT_MS] without a Home press (see
+     * [sessionReturn]) did not start: its session is dropped and its page (or a toast elsewhere) says so.
      */
     fun onForeground() = viewModelScope.launch {
         val session = graph.playLog.current.value
@@ -402,11 +426,22 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
                 session.gameId.startsWith(LibraryItem.SHORTCUT_PREFIX) -> session.gameId.removePrefix(LibraryItem.SHORTCUT_PREFIX).substringBefore('/')
                 else -> session.profileId?.let { manifests.value.profiles[it]?.`package` }
             }
-            val stillRunning = pkg != null && graph.screenMover.ready && graph.screenMover.appTasks().any { it.pkg == pkg }
-            if (!stillRunning) {
-                // first, so the companion holds the credit message the ended session earns for its greeting
-                MechaPresence.playerReturned()
-                graph.playLog.end()
+            val running = if (pkg != null && graph.screenMover.ready) graph.screenMover.appTasks().any { it.pkg == pkg } else null
+            val outcome = sessionReturn(session.startedAt, System.currentTimeMillis(), running, graph.launcher.homeKeyAt)
+            when {
+                outcome == SessionReturn.RUNNING -> Unit
+                // apps and shortcuts may legitimately finish at once (a toggle, a hand-off to another app): games only
+                outcome == SessionReturn.QUICK_EXIT && HomeIds.isGame(session.gameId) -> {
+                    graph.playLog.endQuickExit()
+                    val message = graph.launcher.quickExit(session.gameId, session.profileId)
+                    if (gamePage == session.gameId) _exitNotice.value = ExitNotice(session.gameId, message) else graph.launcher.notify(message)
+                }
+                else -> {
+                    if (running == false) pkg?.let(graph.launcher::appClosed)
+                    // first, so the companion holds the credit message the ended session earns for its greeting
+                    MechaPresence.playerReturned()
+                    graph.playLog.end()
+                }
             }
         }
         graph.screenMover.sweepStaleLaunchers()

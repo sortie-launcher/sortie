@@ -3,10 +3,11 @@
 Shell output recorded on real hardware, replayed by the tests in `app/src/test/java/io/github/esko997/sortie/shell/Replay*Test.kt`:
 ScreenMover and TaskSwitcher run against it through a fake shell that records the commands they issue.
 
-Devices, both Android 13 (SDK 33):
+Devices, all Android 13 (SDK 33):
 
 - `thor/`: AYN Thor. Display 0 is the top screen (1920×1080), display 4 the bottom one (1240×1080).
 - `dmg/`: AYANEO Pocket DMG, a single 1240×1080 screen (display 0).
+- `nova/`: Retroid Pocket Nova, a single 1280×960 screen (device stats only).
 
 ## Captures
 
@@ -22,8 +23,9 @@ All `stack-list.txt` files are `adb shell cmd activity stack list`, verbatim apa
 | `thor/panel-stuck` | The AYN panel lock-up (docs/HARDENING.md): Sortie's navigation on the bottom with ANRs, Thor button dead. |
 | `thor/release-1033` | `windows.txt` only: a healthy window dump with no panel window (the panel had not been opened). |
 | `dmg/home-app-under-game` | RetroArch running; Sortie and another HOME app's leftover task share the home root task under it. |
-| `thor/device-stats` | `probe-1.txt`, `probe-2.txt`: the device-stats probe (`DeviceStatsProbe.SCRIPT`) run twice, two seconds apart, idle with the fan stopped. |
-| `dmg/device-stats` | `probe.txt`: the same probe on the DMG, which has no fan node. |
+| `thor/device-stats` | `probe-1.txt`, `probe-2.txt`: the device-stats probe (`DeviceStatsProbe.SCRIPT`, before it named the cores) run twice, two seconds apart, idle with the fan stopped. `probe-detail.txt`: the Perf view's probe (`DETAIL_SCRIPT`, every thermal zone), idle, fan at 300. |
+| `dmg/device-stats` | `probe.txt`: the same probe on the DMG, which has no fan node. `probe-detail.txt`: the detail probe. |
+| `nova/device-stats` | `probe-detail.txt`: the detail probe on the Retroid Pocket Nova (Android 13, the Thor's SoC; it has the same fan node, stopped). |
 
 `thor/panel-stuck` also has what the panel probe (`ScreenMover.PANEL_PROBE`) reads:
 

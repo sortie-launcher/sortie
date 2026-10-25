@@ -58,6 +58,28 @@ Fixtures came from [PPSSPP's public demo](https://www.ppsspp.org/legacybuilds) a
 bundled with Sortie. Other presets retain their stated source-checked or device-tested status; an installed package does
 not prove that its core, BIOS, storage permission or game is ready.
 
+## RetroArch content switches and the quick-exit notice — 2026-10-25
+
+On the AYANEO Pocket DMG (Android 13) with **RetroArch 1.22.2**, Sortie's preset (`NEW_TASK|CLEAR_TOP`, no `CLEAR_TASK`):
+
+- Gambatte running *Metal Gear Solid* (GBC), Home, then Play on *F-Zero* (Snes9x): RetroArch's window died about 0.2 s
+  after the start and Sortie came back. A different game on the **same** core (*Moonrise Regalia*, Gambatte) did the same.
+  The next Play started the requested game normally. Same game, same core resumes it, as above.
+- Sortie now tells the player instead of silently showing the game page again. When a game's emulator is gone within
+  3 s of starting and no Home press brought Sortie back, the game's page shows a notice next to Play (a toast when that
+  page is not on screen): *RetroArch closed while switching cores — press Play again*, *… while switching games …*, or
+  the app's name with *closed right after starting* (e.g. *DuckStation closed right after starting*) for any other
+  emulator, or when Sortie did not see what the app held before (it remembers only the libretro core and file it last sent
+  to each RetroArch build in the current process). Sortie never retries by itself. Such a non-start leaves no session in
+  the play history (no time, count or "last played"); the `playlog.jsonl` copy records its `end` with `quickExit: true`.
+- Telling it apart from the player leaving: with Shizuku, an emulator that still has a task means Home only summoned
+  Sortie over it. Without Shizuku (the DMG), the HOME intent of a Home key press carries `FROM_HOME_KEY`, while the one
+  Android sends after an app's last window closes does not; a Home press after the launch makes a quick return a normal
+  session end. On the DMG, Home 2.2 s after starting Gambatte ended the session normally with no notice.
+- Also seen on the DMG: with Snes9x and Genesis Plus GX (Vulkan driver) RetroArch stopped responding about 5 s after Home
+  (ANR waiting for `PointerCaptureChangedEvent`), and a later Play of a different game then did not close it. Gambatte did
+  not hang. Force-stop RetroArch in that state.
+
 ## Beginner-guide walkthrough — 2026-10-24
 
 The [getting-started path](GETTING_STARTED.md) was exercised in a fresh, isolated Android 13/API 33 x86_64 emulator:

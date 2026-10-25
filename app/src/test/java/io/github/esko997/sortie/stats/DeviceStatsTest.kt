@@ -106,6 +106,18 @@ class DeviceStatsTest {
     }
 
     @Test
+    fun perfViewPollsAtItsOwnInterval() {
+        assertEquals(1_000L, nextPollDelayMs(10, cpuPending = false, perfSeconds = 1))
+        assertEquals(2_000L, nextPollDelayMs(10, cpuPending = false, perfSeconds = 2))
+        assertEquals(2_000L, nextPollDelayMs(5, cpuPending = false, perfSeconds = 7)) // unknown reads as the default 2
+        assertEquals(CPU_WARMUP_MS, nextPollDelayMs(10, cpuPending = true, perfSeconds = 2))
+        assertEquals(listOf(2, 1), listOf(1, 2).map(::nextPerfInterval))
+        assertEquals(CompanionView.PERF, CompanionView.of("perf"))
+        assertEquals(CompanionView.COMPANION, CompanionView.of("bogus"))
+        assertEquals(CompanionView.COMPANION, CompanionView.PERF.next())
+    }
+
+    @Test
     fun onlyALitDisplayShowsStats() {
         assertTrue(displayLit(Display.STATE_ON))
         assertTrue(displayLit(Display.STATE_UNKNOWN))

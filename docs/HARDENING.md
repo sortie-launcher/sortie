@@ -23,6 +23,13 @@ Gallery, X while open). Reader and Hangar steps return Sortie to its Home route,
 carousel below, so the harness first taps Home's top-left corner on the top display. `--no-kill` drops the force-stop
 scenarios for single-process leak runs.
 
+Where `uiautomator dump` cannot work, the run logs one `skip` event with reason `uiautomator unavailable` and leaves out
+the reader and Hangar scenarios; the rest run as usual. It is declared on "null root node" or after three dumps in a row
+that produce no hierarchy; a single failed dump is logged as `uiautomator dump failed` and retried later. The Retroid
+Pocket Nova is such a device: every dump, for every app, fails with "null root node returned by UiTestAutomationBridge",
+most likely because Retroid's Game Assistant accessibility service (`com.rp.gameassistant`) is bound. Check the Nova
+with screenshots and key input instead.
+
 Safety: the card's `user.json`, `systems.json`, `launchers.json`, `folders.json` and `device.json` are copied first and
 restored if changed (L1/R1 on Home legitimately changes the saved sort). The harness never presses A in Sortie outside the
 overlay or the reader, never launches games through Sortie (no play-log entries), never edits clippings, never uses care,
@@ -123,7 +130,7 @@ removed them and the next Home created new ones. Any app's window churn can stil
 
 `app/src/testDebug/` runs the real `MainActivity`, `SortieApp` graph, view model, Room database (Robolectric's native
 SQLite), indexer and stores under Robolectric with native graphics, against a fixture card. They are part of
-`testDebugUnitTest`, so `tools/build.sh` and CI run them on every build (27 tests, about 30 s of added test time locally;
+`testDebugUnitTest`, so `tools/build.sh` and CI run them on every build (33 tests, about 30 s of added test time locally;
 release unit tests stay plain JUnit).
 
 - **Fixture** (`testing/FixtureCard.kt`, `resources/fixtures/`): a card with `device.json`, `systems.json` (three systems),
@@ -140,7 +147,9 @@ release unit tests stay plain JUnit).
   A/B return to the same tile; reader position survives activity recreation; R2 opens the picture in view and B closes it
   with the article unmoved; Home's Hangar button opens the Hangar and B puts the focus back on it; reader Select → Visit
   the hangar, B returns to the article.
-- **Screenshots** (Roborazzi): Home, magazine shelf, article at each figure and the Hangar Workshop (from Home's header) on the Thor's top
+- **Screenshots** (Roborazzi): Home, magazine shelf, article at each figure and the Hangar Workshop (from Home's header), and
+  the Perf page with fixed stats (`PerfScreenshotTest`: the overlay page everywhere, plus the companion's Perf mode and the
+  scrolled-down details on the Thor's bottom screen) on the Thor's top
   (`w833dp-h421dp`) and bottom (`w538dp-h444dp`) screens, the DMG (`w480dp-h551dp`) and the Retroid Pocket Nova
   (`w640dp-h480dp`), recorded at half size with no tolerance into `app/src/testDebug/screenshots/<device>/`. A build run
   with `-Proborazzi.test.verify=true` (`tools/build.sh`, CI) fails on any pixel change; CI uploads the diffs as

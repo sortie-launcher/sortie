@@ -17,8 +17,30 @@ data class DeviceStats(
     val gpuTempC: Int? = null,
     val batteryTempC: Int? = null,
     /** The fan's tachometer (AYN Thor); read as RPM, which the device does not label. */
-    val fanRpm: Int? = null
+    val fanRpm: Int? = null,
+    /** Every online core's clock, by core number; read only while a Perf view is shown. */
+    val coreKhz: List<CoreClock>? = null,
+    /** Every thermal zone that reads as a temperature; read only while a Perf view is shown. */
+    val zones: List<ThermalZone>? = null
 )
+
+/** One core's current clock; [core] is the kernel's CPU number (`cpu3` → 3). */
+data class CoreClock(val core: Int, val khz: Long)
+
+/** One thermal zone's reading, by the zone's `type` (`cpuss-0`, `xo-therm`, …). */
+data class ThermalZone(val type: String, val celsius: Int)
+
+/** What the companion screen shows (`user.companionView`, dual-screen devices): its usual panel or the Perf view. */
+enum class CompanionView(val id: String, val label: String) {
+    COMPANION("companion", "Companion"),
+    PERF("perf", "Perf");
+
+    fun next(): CompanionView = entries[(ordinal + 1) % entries.size]
+
+    companion object {
+        fun of(id: String): CompanionView = entries.firstOrNull { it.id == id } ?: COMPANION
+    }
+}
 
 /** Where device stats are shown (`user.deviceStats`). Off by default: the strips narrow the companion panel. */
 enum class DeviceStatsMode(val id: String, val label: String, val companion: Boolean, val overlay: Boolean) {
@@ -42,10 +64,23 @@ fun statsInterval(raw: Int): Int = if (raw in STATS_INTERVALS) raw else DEFAULT_
 
 fun nextStatsInterval(raw: Int): Int = STATS_INTERVALS[(STATS_INTERVALS.indexOf(statsInterval(raw)) + 1) % STATS_INTERVALS.size]
 
+/** Seconds between polls while a Perf view is shown (`user.perfInterval`); anything else reads as the default. */
+val PERF_INTERVALS = listOf(1, 2)
+const val DEFAULT_PERF_INTERVAL = 2
+
+fun perfInterval(raw: Int): Int = if (raw in PERF_INTERVALS) raw else DEFAULT_PERF_INTERVAL
+
+fun nextPerfInterval(raw: Int): Int = PERF_INTERVALS[(PERF_INTERVALS.indexOf(perfInterval(raw)) + 1) % PERF_INTERVALS.size]
+
 /** CPU load needs two samples: right after the first one the next poll comes after [CPU_WARMUP_MS] instead of a full interval. */
 const val CPU_WARMUP_MS = 1_000L
 
-fun nextPollDelayMs(intervalSeconds: Int, cpuPending: Boolean): Long = if (cpuPending) CPU_WARMUP_MS else statsInterval(intervalSeconds) * 1_000L
+/** The wait before the next poll: the Perf interval while a Perf view is shown ([perfSeconds] not null), else the stats interval. */
+fun nextPollDelayMs(intervalSeconds: Int, cpuPending: Boolean, perfSeconds: Int? = null): Long = when {
+    cpuPending -> CPU_WARMUP_MS
+    perfSeconds != null -> perfInterval(perfSeconds) * 1_000L
+    else -> statsInterval(intervalSeconds) * 1_000L
+}
 
 /** One reading in a side strip: a small label, the value and an optional second line. */
 data class StatCell(val label: String, val value: String, val sub: String? = null)

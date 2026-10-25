@@ -3,6 +3,8 @@ package io.github.esko997.sortie.data.backup
 import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.mecha.MechaState
+import io.github.esko997.sortie.stats.CompanionView
+import io.github.esko997.sortie.stats.perfInterval
 import io.github.esko997.sortie.stats.statsInterval
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -138,6 +140,8 @@ private fun UserData.clamped() = copy(
     gridRows = gridRows.coerceIn(2, 6),
     appColumns = appColumns.coerceIn(4, 14),
     deviceStatsInterval = statsInterval(deviceStatsInterval),
+    perfInterval = perfInterval(perfInterval),
+    companionView = CompanionView.of(companionView).id,
     layout = layout.distinct()
 )
 
