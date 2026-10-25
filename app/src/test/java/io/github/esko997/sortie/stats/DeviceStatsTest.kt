@@ -105,12 +105,11 @@ class DeviceStatsTest {
     }
 
     @Test
-    fun pollsOnlyWhileResumedOnALitDisplay() {
-        assertTrue(statsPolling(resumed = true, Display.STATE_ON))
-        assertTrue(statsPolling(resumed = true, Display.STATE_UNKNOWN))
-        assertFalse(statsPolling(resumed = false, Display.STATE_ON))
-        assertFalse(statsPolling(resumed = true, Display.STATE_OFF))
-        assertFalse(statsPolling(resumed = true, Display.STATE_DOZE))
-        assertFalse(statsPolling(resumed = true, Display.STATE_DOZE_SUSPEND))
+    fun onlyALitDisplayShowsStats() {
+        assertTrue(displayLit(Display.STATE_ON))
+        assertTrue(displayLit(Display.STATE_UNKNOWN))
+        assertFalse(displayLit(Display.STATE_OFF))
+        assertFalse(displayLit(Display.STATE_DOZE))
+        assertFalse(displayLit(Display.STATE_DOZE_SUSPEND))
     }
 }

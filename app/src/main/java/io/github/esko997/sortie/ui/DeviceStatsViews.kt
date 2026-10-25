@@ -3,7 +3,7 @@ package io.github.esko997.sortie.ui
 import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
-import android.view.Display
+import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,10 +15,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -34,15 +34,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.currentStateAsState
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.stats.DeviceStats
 import io.github.esko997.sortie.stats.DeviceStatsMode
 import io.github.esko997.sortie.stats.StatCell
 import io.github.esko997.sortie.stats.StatsText
-import io.github.esko997.sortie.stats.statsPolling
+import io.github.esko997.sortie.stats.displayLit
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
@@ -90,40 +91,43 @@ private fun rememberStatsMode(graph: SortieApp.Graph): DeviceStatsMode {
 }
 
 /**
- * The monitor's readings while this surface is resumed on a lit display, else null. Only then is the monitor's flow
- * collected, and the monitor polls only while something collects it.
+ * The monitor's readings while this surface is resumed on a lit display, else null. The collecting coroutine follows the
+ * lifecycle's state flow and the display's callbacks itself ([io.github.esko997.sortie.stats.DeviceStatsMonitor.whileShown]):
+ * a stopped window or a dark screen draws no frames, so nothing may wait for a recomposition to stop the polling.
  */
 @Composable
 private fun liveDeviceStats(graph: SortieApp.Graph): DeviceStats? {
-    val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
-    val display = rememberDisplayState()
-    if (!statsPolling(lifecycle.isAtLeast(Lifecycle.State.RESUMED), display)) return null
-    return graph.deviceStats.stats.collectAsState().value
-}
-
-/** This window's display state (on, off, dozing), followed through display-change callbacks rather than polled. */
-@Composable
-private fun rememberDisplayState(): Int {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val view = LocalView.current
-    var state by remember { mutableIntStateOf(Display.STATE_UNKNOWN) }
-    DisposableEffect(view) {
-        val display = view.display ?: return@DisposableEffect onDispose {}
-        val manager = view.context.getSystemService(DisplayManager::class.java)
-        val listener = object : DisplayManager.DisplayListener {
-            override fun onDisplayAdded(displayId: Int) = Unit
-
-            override fun onDisplayRemoved(displayId: Int) = Unit
-
-            override fun onDisplayChanged(displayId: Int) {
-                if (displayId == display.displayId) state = display.state
-            }
-        }
-        state = display.state
-        manager.registerDisplayListener(listener, Handler(Looper.getMainLooper()))
-        onDispose { manager.unregisterDisplayListener(listener) }
+    var stats by remember { mutableStateOf<DeviceStats?>(null) }
+    LaunchedEffect(lifecycle, view) {
+        graph.deviceStats.whileShown(lifecycle, displayLitFlow(view)).collect { stats = it }
     }
-    return state
+    return stats
 }
+
+/** Whether [view]'s display is on, from display-change callbacks; on (unknown) while the view has no display yet. */
+private fun displayLitFlow(view: View): Flow<Boolean> = callbackFlow {
+    val display = view.display
+    if (display == null) {
+        send(true)
+        awaitClose()
+        return@callbackFlow
+    }
+    val manager = view.context.getSystemService(DisplayManager::class.java)
+    val listener = object : DisplayManager.DisplayListener {
+        override fun onDisplayAdded(displayId: Int) = Unit
+
+        override fun onDisplayRemoved(displayId: Int) = Unit
+
+        override fun onDisplayChanged(displayId: Int) {
+            if (displayId == display.displayId) trySend(displayLit(display.state))
+        }
+    }
+    manager.registerDisplayListener(listener, Handler(Looper.getMainLooper()))
+    send(displayLit(display.state))
+    awaitClose { manager.unregisterDisplayListener(listener) }
+}.distinctUntilChanged()
 
 /** A thin column of [cells], centred vertically, with a hairline on the side facing the panel. */
 @Composable

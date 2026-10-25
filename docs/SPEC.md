@@ -100,8 +100,10 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   and `gpuclk`, the hottest `cpu*`/`gpu*` thermal zone, and the Thor fan tachometer `/sys/class/gpio5_pwm2/speed`
   (unlabelled; 0 when stopped, a few hundred to 3,900 seen; shown as rpm). RAM (ActivityManager) and the battery
   temperature (sticky battery broadcast) need no shell. `DeviceStatsMonitor` polls only while a surface collects it, and
-  surfaces collect only while resumed on a lit display (lifecycle + display-state callback; the overlay window's owner stays
-  resumed while the screen sleeps). Interval 2/5/10 s; the poll after the first comes 1 s later so CPU load shows at once.
+  surfaces collect through `whileShown`: only while resumed (the lifecycle's state flow) on a lit display (display-change
+  callbacks; the overlay window's owner stays resumed while the screen sleeps). The collecting coroutine switches on those
+  events itself, never on recomposition: a stopped window or a dark screen draws no frames, so a gate read in composition
+  would keep polling. Interval 2/5/10 s; the poll after the first comes 1 s later so CPU load shows at once.
 
 ### Home and browse layout (feedback round 3)
 - Home sorts: Alphabetical, Game count and Generation are generated, fixed and systems-only. Custom retains the user's pin

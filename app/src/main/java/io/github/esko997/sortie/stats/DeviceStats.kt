@@ -49,12 +49,10 @@ const val CPU_WARMUP_MS = 1_000L
 fun nextPollDelayMs(intervalSeconds: Int, cpuPending: Boolean): Long = if (cpuPending) CPU_WARMUP_MS else statsInterval(intervalSeconds) * 1_000L
 
 /**
- * A stats surface polls only while it is resumed and its display is lit: a paused activity, a display that is off or dozing
- * (the whole device asleep, or the Thor's bottom screen switched off) and an overlay over a dark screen cost nothing.
+ * Whether a display state draws: a display that is off or dozing (the whole device asleep, or the Thor's bottom screen
+ * switched off) shows no stats, so none are read for it. On, VR and on-suspend draw; unknown (not reported yet) is treated
+ * as on so a surface never stays blank by mistake.
  */
-fun statsPolling(resumed: Boolean, displayState: Int): Boolean = resumed && displayLit(displayState)
-
-/** On, VR and on-suspend draw; unknown (not reported yet) is treated as on so a surface never stays blank by mistake. */
 fun displayLit(state: Int): Boolean = when (state) {
     Display.STATE_OFF, Display.STATE_DOZE, Display.STATE_DOZE_SUSPEND -> false
     else -> true
