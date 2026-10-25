@@ -5,26 +5,162 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  # Update together with app/magazines.lock after reviewing the content change.
+  ZINES_COMMIT: 65c179e913b30e643879d59325d676b99459a1a0
 jobs:
   build-apks:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      code: ${{ steps.version.outputs.code }}
+      name: ${{ steps.version.outputs.name }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: '17' }
-      - uses: android-actions/setup-android@v3
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          packages: 'platform-tools platforms;android-35'
-      - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew --no-daemon --console=plain ktlintCheck testDebugUnitTest testReleaseUnitTest assembleDebug assembleRelease
-      - uses: actions/upload-artifact@v4
+          repository: sortie-launcher/sortie-zines
+          ref: ${{ env.ZINES_COMMIT }}
+          path: release-content
+          persist-credentials: false
+      - name: Assign an increasing Android version
+        id: version
+        shell: bash
+        run: |
+          code=$((1000 + GITHUB_RUN_NUMBER))
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "name=0.1.0-beta.$code" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+      - name: Check, test and build with the pinned magazines
+        env:
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: >-
+          ./gradlew --no-daemon --console=plain ktlintCheck testDebugUnitTest testReleaseUnitTest assembleDebug assembleRelease
+          -PsortieVersionCode="$VERSION_CODE" -PsortieVersionName="$VERSION_NAME"
+          -PsortieMagazinesDir=release-content/issues
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: sortie-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: sortie-release-unsigned-apk
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
+
+  release:
+    needs: build-apks
+    if: github.repository == 'sortie-launcher/sortie' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: write
+    concurrency:
+      group: signed-release
+      cancel-in-progress: false
+    env:
+      VERSION_CODE: ${{ needs.build-apks.outputs.code }}
+      VERSION_NAME: ${{ needs.build-apks.outputs.name }}
+      TAG: v${{ needs.build-apks.outputs.name }}
+    steps:
+      - name: Refuse replacement or an out-of-order release
+        id: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/$GH_REPO/releases?per_page=100" --jq '.[].tag_name' > "$RUNNER_TEMP/release-tags"
+          publish=true
+          while IFS= read -r tag; do
+            if [[ "$tag" == "$TAG" ]]; then
+              metadata=$(gh release view "$TAG" --json isDraft,targetCommitish)
+              if ! jq -e --arg sha "$GITHUB_SHA" '.isDraft == false and .targetCommitish == $sha' <<< "$metadata" >/dev/null; then
+                echo 'Existing release is a draft or belongs to another commit; inspect it before retrying.' >&2
+                exit 1
+              fi
+              publish=false
+            elif [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.([0-9]+)$ ]] && (( BASH_REMATCH[1] > VERSION_CODE )); then
+              echo "A newer release already exists ($tag); not publishing this older run."
+              publish=false
+            fi
+          done < "$RUNNER_TEMP/release-tags"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: steps.publish.outputs.publish == 'true'
+        with: { persist-credentials: false }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: steps.publish.outputs.publish == 'true'
+        with:
+          repository: sortie-launcher/sortie-zines
+          ref: ${{ env.ZINES_COMMIT }}
+          path: release-content
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        if: steps.publish.outputs.publish == 'true'
+        with: { distribution: temurin, java-version: '17' }
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        if: steps.publish.outputs.publish == 'true'
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+      # No Gradle cache action in the signing job: no signing-run state is saved or restored.
+      - name: Build and verify with the permanent release key
+        if: steps.publish.outputs.publish == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SORTIE_RELEASE_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.SORTIE_RELEASE_KEYSTORE_PASSWORD }}
+          SORTIE_SIGNING_DIR: ${{ runner.temp }}/sortie-signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          trap 'rm -rf -- "$SORTIE_SIGNING_DIR"' EXIT
+          [[ -n $KEYSTORE_BASE64 && -n $KEYSTORE_PASSWORD ]]
+          mkdir -m 700 "$SORTIE_SIGNING_DIR"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$SORTIE_SIGNING_DIR/sortie-release.p12"
+          printf '%s\n' "$KEYSTORE_PASSWORD" > "$SORTIE_SIGNING_DIR/store-password"
+          unset KEYSTORE_BASE64 KEYSTORE_PASSWORD
+          tools/release.sh -PsortieVersionCode="$VERSION_CODE" -PsortieVersionName="$VERSION_NAME" \
+            -PsortieMagazinesDir=release-content/issues
+          apk="dist/sortie-$VERSION_NAME-code$VERSION_CODE.apk"
+          certificate=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$apk")
+          grep -qx 'Signer #1 certificate SHA-256 digest: c4fc71bdee0987939c7af166465241c9c1bd3fc6c0a486d9dd76546975414cf4' <<< "$certificate"
+          (cd dist && sha256sum --check "sortie-$VERSION_NAME-code$VERSION_CODE.apk.sha256")
+      - name: Publish APK, checksum and generated release notes
+        if: steps.publish.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="dist/sortie-$VERSION_NAME-code$VERSION_CODE.apk"
+          cat > "$RUNNER_TEMP/release-notes.md" <<EOF
+          Automated beta build from $GITHUB_SHA. Android version code: $VERSION_CODE.
+
+          Download the APK below. For an existing production-signed installation, install it as an update; **do not uninstall**.
+          Debug-signed installations require a separately planned, backed-up signing migration.
+
+          Includes Field Notes magazines from sortie-launcher/sortie-zines@$ZINES_COMMIT, verified against app/magazines.lock.
+          Third-party magazine media retains its original rights and credits; it is not covered by the app's MIT licence.
+
+          Signing certificate SHA-256: \`c4fc71bdee0987939c7af166465241c9c1bd3fc6c0a486d9dd76546975414cf4\`.
+          The attached .sha256 file verifies the APK download. This is an automated prerelease, not a claim of per-build hardware testing.
+          EOF
+          gh release create "$TAG" "$apk" "$apk.sha256" --target "$GITHUB_SHA" \
+            --title "Sortie $VERSION_NAME" --draft --prerelease --generate-notes --notes-file "$RUNNER_TEMP/release-notes.md"
+          gh release edit "$TAG" --draft=false --prerelease --latest=false
+      - name: Remove signing files even after failure
+        if: always()
+        shell: bash
+        run: rm -rf -- "$RUNNER_TEMP/sortie-signing"

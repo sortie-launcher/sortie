@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Automatic signed beta releases: after the hosted build passes on a push to `main` (or a manual run on `main`), the
+  workflow signs the APK with the permanent release key held as secrets in the `main`-only `release` environment, checks
+  its certificate and checksum, and publishes a GitHub prerelease `v0.1.0-beta.<code>` (code = 1000 + build run number)
+  with the APK, its `.sha256` and generated notes. Published releases are never replaced, an older run skips once a newer
+  release exists, and an interrupted draft stops later attempts until inspected. Pull requests never reach signing.
+  Hosted builds and artifacts now bundle Field Notes from a pinned `sortie-zines` commit verified against
+  `app/magazines.lock`. Local build defaults name the last manual signed preview (code 9, `0.1.0-beta.8`); manual codes
+  stay below 1000. Automatic releases are prereleases, not hardware-tested build by build. Procedure and recovery:
+  docs/RELEASE.md.
 - Settings → Import from Cocoon…: reads Cocoon's folder (detected, typed or picked; optionally a backup selected anywhere on the device) without
   changing it, previews systems with found ROM folders and emulators, favourites, hidden games, artwork vs. free space, and
   backup folders/sessions/per-game emulators with per-category switches, then imports. Artwork copy is stoppable and

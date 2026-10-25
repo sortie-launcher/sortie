@@ -8,7 +8,8 @@ internet permission and never downloads games, BIOS files, emulators or artwork.
 > **Sortie is built in collaboration with AI.** The code, this documentation and the optional Field Notes magazine are
 > written with AI assistance. If that's a dealbreaker, better to know now than after setup.
 
-**Beta. No APK has been published yet**; see [Installing](#installing).
+**Beta.** Each merge to `main` that passes CI publishes a signed prerelease APK on
+[GitHub releases](https://github.com/sortie-launcher/sortie/releases); see [Installing](#installing).
 
 <img src="docs/screenshots/readme/home.png" alt="Sortie's Home screen in the Custom sort: a Continue tile for the last game played, pinned games with box art, and buttons for Apps, Library setup, Search, Magazines, Journal and Settings" width="100%">
 
@@ -24,8 +25,8 @@ computer or prior experience needed.
 **Yes, if** you have an Android 11+ handheld and your own game files, use (or will set up) emulators such as RetroArch
 or PPSSPP, and want a controller-driven front end with a backlog, notes and play history, but no accounts, store or sync.
 
-**No, if** you want an app that finds games, BIOS files, emulators or cover art for you; need something to install
-today; or need confirmed support for your exact device and emulators. Only a few combinations are tested
+**No, if** you want an app that finds games, BIOS files, emulators or cover art for you; or need confirmed support for
+your exact device and emulators. Only a few combinations are tested
 ([known limitations](docs/RELEASE.md#known-limitations)).
 
 Built first for the AYN Thor, a dual-screen Android 13 handheld, where the second screen becomes a companion panel. It
@@ -123,13 +124,16 @@ Browsing, setup and launching need none of these. The guide has a
 
 ## Installing
 
-No APK yet. Signed beta APKs are planned for [GitHub releases](https://github.com/sortie-launcher/sortie/releases);
-there is no store listing, account or auto-updater. Watch the repository's releases to hear when one lands.
+Download the newest `.apk` (and its `.sha256`) from [GitHub releases](https://github.com/sortie-launcher/sortie/releases).
+Each merge to `main` that passes CI publishes one automatically as a signed beta prerelease, checked by hosted tests
+and signature verification but not tested on hardware build by build. There is no store listing, account or
+auto-updater; watch the repository's releases to hear about updates, and install a newer APK over the old one.
+**Never uninstall to update.**
 
-[Actions](https://github.com/sortie-launcher/sortie/actions/workflows/build.yml) artifacts are magazine-free test
-builds: a debug-signed APK and an unsigned release APK, which Android won't install. Neither is for daily use, and a
-debug-signed install can't be updated in place to a release. **Never uninstall a daily install to get around a
-signature mismatch**; ask for an APK signed with the right key.
+[Actions](https://github.com/sortie-launcher/sortie/actions/workflows/build.yml) artifacts are test builds with the
+pinned magazines: a debug-signed APK and an unsigned release APK, which Android won't install. Neither is for daily use,
+and a debug-signed install can't be updated in place to a release. **Never uninstall a daily install to get around a
+signature mismatch**; see [signatures](docs/RELEASE.md#debug-and-release-signatures).
 
 With an APK in hand, the guide covers [installing it](docs/GETTING_STARTED.md#install-sortie),
 [setting up an emulator](docs/GETTING_STARTED.md#set-up-and-test-one-emulator),
@@ -156,7 +160,7 @@ Reference:
 - [docs/formats/](docs/formats/): configuration and content formats, including magazine packs
 - [docs/LAUNCHERS.md](docs/LAUNCHERS.md): emulator launch intents and what was verified
 - [docs/COCOON_IMPORT.md](docs/COCOON_IMPORT.md): moving a Cocoon library into Sortie, and what it never changes
-- [docs/RELEASE.md](docs/RELEASE.md): beta status, evidence, known limitations, signing and magazine content
+- [docs/RELEASE.md](docs/RELEASE.md): releases, beta status, evidence, known limitations, signing and magazine content
 - [docs/SPEC.md](docs/SPEC.md): behaviour, controller grammar and implementation notes for contributors
 - [docs/NOW_PLAYING.md](docs/NOW_PLAYING.md): scope note for RetroArch companion controls (not built)
 - [CHANGELOG.md](CHANGELOG.md)
@@ -177,8 +181,9 @@ arguments to Gradle; `tools/dev.sh` reads `SORTIE_SERIAL`, `SORTIE_TOP_DISPLAY` 
 builds accept `am start … --es open <route>` and `--es launch '<system>/<file>'`. Signing, versions and the
 debug/release signature mismatch: [docs/RELEASE.md](docs/RELEASE.md).
 
-**Magazines are opt-in.** Normal builds contain no issues and never download any. To bundle Field Notes, clone
-[sortie-zines](https://github.com/sortie-launcher/sortie-zines) alongside the app and pass its `issues/` folder:
+**Magazines are opt-in locally.** Local builds contain no issues and never download any; hosted CI and releases bundle
+a pinned [sortie-zines](https://github.com/sortie-launcher/sortie-zines) commit. To bundle Field Notes yourself, clone
+it alongside the app and pass its `issues/` folder:
 
 ```
 git clone https://github.com/sortie-launcher/sortie-zines.git ../sortie-zines
