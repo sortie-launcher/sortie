@@ -26,6 +26,7 @@ import io.github.esko997.sortie.launch.IntentBuilder
 import io.github.esko997.sortie.launch.SessionReturn
 import io.github.esko997.sortie.launch.sessionReturn
 import io.github.esko997.sortie.mecha.ui.MechaPresence
+import io.github.esko997.sortie.stats.CompanionView
 import io.github.esko997.sortie.stats.DeviceStatsMode
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -117,6 +118,10 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     fun setDeviceStats(mode: DeviceStatsMode) = graph.user.setDeviceStats(mode.id)
 
     fun setDeviceStatsInterval(seconds: Int) = graph.user.setDeviceStatsInterval(seconds)
+
+    fun setPerfInterval(seconds: Int) = graph.user.setPerfInterval(seconds)
+
+    fun setCompanionView(view: CompanionView) = graph.user.setCompanionView(view.id)
 
     /** Launch profiles a system lists in the manifest, with whether each is installed (for Settings). */
     fun profilesForSystem(systemId: String): List<Pair<LaunchProfile, Boolean>> {

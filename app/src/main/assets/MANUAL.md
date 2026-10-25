@@ -81,7 +81,8 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 - **A** open · **B** back · **X** swap which screen has the controller (dual-screen devices)
 - **Hold A** on anything: the context sheet (favourite, add to home, remove, launch with…)
 - **Hold R1** on a game, app or shortcut: favourite. On a system or folder tile: jump to a random game in it
-- **L1 / R1** (tap): previous / next system in lists; on Home: previous / next sort; in "By Console": previous / next console
+- **L1 / R1** (tap): previous / next system in lists; on Home: previous / next sort; in "By Console": previous / next console;
+  in the switcher overlay: the Perf page and back
 - **R2** on a game (in any list, grid or on Home) or on a game's page: add to / remove from *Want to play*, a queue separate
   from favourites. The *Want to play* folder is always on **Home → Custom**; launching a game keeps it queued
 - **Y** on Home: search. On a game's page: favourite
@@ -308,6 +309,10 @@ The line below a game's title shows its platform, year, developer and genre when
 - **Device stats** (if turned on in Settings): a thin strip down each side. Left: CPU and GPU load with their clocks, and
   RAM in use of the total. Right: CPU, GPU and battery temperatures in °C and the fan speed (AYN Thor; its sensor gives no
   unit, Sortie shows it as rpm). The panel narrows to make room, so nothing is covered.
+- **Perf mode** (Settings → Device stats → *Companion screen shows* → *Perf*): the panel shows the Perf page (see the
+  switcher below) instead of the game, live while you play on the other screen. Battery, bell, dock and **+** stay in their
+  corners; swipe to see the details. The switcher, the app list from **+** and a magazine's contents still take the panel
+  while they are open.
 
 Touching the companion hands the controller back to the other screen a moment later.
 
@@ -329,6 +334,13 @@ do not ask the player to enter PiP again. If you do not want an app to use PiP a
 permission in Android's app settings.
 With **Device stats** set to *Switcher overlay* or *Both*, the overlay's title line also shows the same readings in one row.
 
+**Perf page.** **R1** (or **L1**, or the **Perf** chip on either screen) shows live performance numbers instead of the app
+list: CPU load and clock, GPU load and clock, RAM, CPU, GPU and battery temperatures and the fan, each large with a line of
+the last two minutes, then every core's clock and every thermal zone, grouped. **Up/Down** scrolls; **B**, **R1** or the
+**Apps** chip return to the app list with the same app selected. While a Perf page is shown Sortie reads every 2 seconds
+(or every second, Settings → *Perf view refresh*); readings a device does not offer get no tile, and without Shizuku only
+RAM and the battery temperature show. FPS and power draw are not shown.
+
 ## Settings
 
 **Library and emulators** (systems, game folders, emulators, BIOS/save folders, re-index), **Default home app** (once you
@@ -339,10 +351,11 @@ come from a computer-prepared card if you use one.
 
 **Device stats → Show device stats** puts CPU, GPU, RAM, temperatures and the fan on the companion screen, the switcher
 overlay, both, or nowhere (*Off*, the default); **A** cycles. **Device stats refresh** reads them every 2, 5 or 10
-seconds, only while they are on a screen that is on: hidden, paused or asleep, Sortie reads nothing. CPU and GPU load,
-clocks, temperatures and the fan need Shizuku (Sortie reads them as the shell user, read-only); without it only RAM and
-the battery temperature show. Readings a device does not offer are left out: the AYANEO Pocket DMG, for one, has no fan
-reading.
+seconds, only while they are on a screen that is on: hidden, paused or asleep, Sortie reads nothing. **Perf view refresh**
+(1 or 2 seconds) is the pace while a Perf page is shown, and on two-screen handhelds **Companion screen shows** switches the
+other screen between its usual panel and the Perf page. CPU and GPU load, clocks, temperatures and the fan need Shizuku
+(Sortie reads them as the shell user, read-only); without it only RAM and the battery temperature show. Readings a device
+does not offer are left out: the AYANEO Pocket DMG, for one, has no fan reading.
 
 **Which emulator starts a game.** A per-game **Launch with…** choice first; then the system's **Default launcher per
 system** choice made here; otherwise the system's Emulators list from Library setup, in order, skipping emulators that

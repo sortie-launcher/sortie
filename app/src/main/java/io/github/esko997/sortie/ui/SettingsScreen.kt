@@ -28,8 +28,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import io.github.esko997.sortie.SortieApp
+import io.github.esko997.sortie.stats.CompanionView
 import io.github.esko997.sortie.stats.DeviceStatsMode
+import io.github.esko997.sortie.stats.nextPerfInterval
 import io.github.esko997.sortie.stats.nextStatsInterval
+import io.github.esko997.sortie.stats.perfInterval
 import io.github.esko997.sortie.stats.statsInterval
 
 /** Device preferences and entry points for library management, Android permissions and recovery. */
@@ -46,6 +50,7 @@ fun SettingsScreen(
     val systems by vm.systems.collectAsState()
     val snap by vm.manifests.collectAsState()
     val context = LocalContext.current
+    val dualScreen = remember { (context.applicationContext as SortieApp).graph.switcher.secondaryDisplay() != null }
     var picking by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -106,6 +111,19 @@ fun SettingsScreen(
             item {
                 FocusRow(onClick = { vm.setDeviceStatsInterval(nextStatsInterval(user.deviceStatsInterval)) }) {
                     Line("Device stats refresh", "every ${statsInterval(user.deviceStatsInterval)} s · A cycles 2, 5, 10 s")
+                }
+            }
+            item {
+                FocusRow(onClick = { vm.setPerfInterval(nextPerfInterval(user.perfInterval)) }) {
+                    Line("Perf view refresh", "every ${perfInterval(user.perfInterval)} s while a Perf view is shown · A cycles 1, 2 s")
+                }
+            }
+            if (dualScreen) {
+                item {
+                    val view = CompanionView.of(user.companionView)
+                    FocusRow(onClick = { vm.setCompanionView(view.next()) }) {
+                        Line("Companion screen shows", "${view.label} · A switches between Companion and Perf (live device stats with history)")
+                    }
                 }
             }
             item { SectionTitle("Radial keyboard") }

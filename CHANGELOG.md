@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Perf page: in the switcher overlay, **R1** (or L1, or the new **Perf** chip on either screen) swaps the app list for live
+  performance numbers: CPU load and clock, GPU load and clock, RAM, CPU, GPU and battery temperatures and the fan, each
+  large with a two-minute line, then every core's clock and every thermal zone, grouped. B, R1 or **Apps** go back with
+  the same app selected. On two-screen handhelds, Settings → Device stats → *Companion screen shows* → *Perf* puts the same
+  page on the other screen while you play (battery, bell, dock and + stay in their corners). While a Perf page is shown
+  stats are read every 2 s (or 1 s, *Perf view refresh*); as before, nothing is read while no stats are on a screen that is
+  on, and the history is kept only while they are. Readings a device lacks get no tile; FPS and power are not shown.
 - A game whose emulator closes right after Play (within 3 s, without you pressing Home) no longer just drops you back on
   its page: the page says so next to Play for about ten seconds (a toast if you have left it). RetroArch 1.22 closes
   itself when asked to open a different game while running, so that case reads "RetroArch closed while switching cores —

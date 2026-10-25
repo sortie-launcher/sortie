@@ -195,6 +195,10 @@ data class UserData(
     val deviceStats: String = "off",
     /** Seconds between device-stats polls while a stats surface is shown: 2, 5 or 10. */
     val deviceStatsInterval: Int = 5,
+    /** Seconds between device-stats polls while a Perf view is shown (switcher page or companion screen): 1 or 2. */
+    val perfInterval: Int = 2,
+    /** What the companion screen of a dual-screen device shows: "companion" (its panel) or "perf" (see CompanionView). */
+    val companionView: String = "companion",
     /** Per-game controller requirement, mapping notes and "where was I?" notes (game id → annotation); empty entries are absent. */
     val gameAnnotations: Map<String, GameAnnotation> = emptyMap(),
     /** Independent of favourites and Want to play; a game has at most one personal shelf status. */

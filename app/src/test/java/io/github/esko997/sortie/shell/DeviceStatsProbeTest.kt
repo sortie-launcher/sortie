@@ -2,6 +2,8 @@ package io.github.esko997.sortie.shell
 
 import io.github.esko997.sortie.shell.DeviceStatsProbe.CpuTimes
 import io.github.esko997.sortie.shell.DeviceStatsProbe.Reading
+import io.github.esko997.sortie.stats.CoreClock
+import io.github.esko997.sortie.stats.ThermalZone
 import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
@@ -102,22 +104,8 @@ class DeviceStatsProbeTest {
     /** The script the app runs, in a local `sh`, against a fake tree with the failure cases the device shows. */
     @Test
     fun realScriptReadsWhatExistsAndSkipsWhatFails() {
-        val root = Files.createTempDirectory("stats-probe").toFile()
+        val root = fakeDevice()
         try {
-            root.put("proc/stat", "cpu  70653323 6109927 65843054 792552229 2947521 12621680 3482661 21784 0 0\ncpu0 1 2 3 4 5 6 7 8 0 0\n")
-            root.put("sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", "1555200\n")
-            root.put("sys/devices/system/cpu/cpu7/cpufreq/scaling_cur_freq", "1843200\n")
-            File(root, "sys/devices/system/cpu/cpu3").mkdirs() // an offline core without cpufreq
-            root.put("sys/class/kgsl/kgsl-3d0/gpu_busy_percentage", "1 %\n")
-            root.put("sys/class/kgsl/kgsl-3d0/gpuclk", "401000000\n")
-            root.zone(0, "cpuss-0", "36800")
-            root.zone(1, "gpuss-0", "35500")
-            root.zone(2, "battery", "24000") // not a CPU or GPU zone: not read
-            root.zone(3, "cpu-1-0", null).also { File(root, "sys/class/thermal/thermal_zone3/temp").mkdirs() } // read fails
-            File(root, "sys/class/thermal/thermal_zone4").mkdirs() // no type at all
-            root.zone(5, "xo-therm", "40000")
-            root.put("sys/class/gpio5_pwm2/speed", "3900\n")
-
             val out = run(DeviceStatsProbe.script(root.path))
             assertTrue(out, out.trimEnd().endsWith("end"))
             assertFalse(out, "battery" in out || "xo-therm" in out || "cpu-1-0" in out)
@@ -129,13 +117,77 @@ class DeviceStatsProbeTest {
                     gpuHz = 401_000_000,
                     cpuTempC = 37,
                     gpuTempC = 36,
-                    fanRpm = 3900
+                    fanRpm = 3900,
+                    cores = listOf(CoreClock(0, 1555200), CoreClock(7, 1843200)),
+                    zones = listOf(ThermalZone("cpuss-0", 37), ThermalZone("gpuss-0", 36))
                 ),
                 DeviceStatsProbe.parse(out)
             )
         } finally {
             root.deleteRecursively()
         }
+    }
+
+    /** The Perf view's probe reads every zone that answers, still skipping the failures. */
+    @Test
+    fun realDetailScriptReadsEveryZone() {
+        val root = fakeDevice()
+        try {
+            val r = DeviceStatsProbe.parse(run(DeviceStatsProbe.script(root.path, detail = true)))
+            assertEquals(
+                listOf(ThermalZone("cpuss-0", 37), ThermalZone("gpuss-0", 36), ThermalZone("battery", 24), ThermalZone("xo-therm", 40)),
+                r.zones
+            )
+            assertEquals(37, r.cpuTempC)
+            assertEquals(listOf(CoreClock(0, 1555200), CoreClock(7, 1843200)), r.cores)
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun thorDetailCaptureListsCoresAndTemperatureZonesOnly() {
+        val r = capture("thor/device-stats/probe-detail.txt")
+        assertEquals((0..7).toList(), r.cores.map { it.core })
+        assertEquals(1843200L, r.cores.last().khz)
+        assertEquals(1843200L, r.cpuMaxKhz)
+        val types = r.zones.map { it.type }
+        assertTrue(types.containsAll(listOf("cpuss-0", "gpuss-7", "battery", "xo-therm", "pm8550b_lite_tz", "ddr")))
+        // limits and gauges listed as zones are not temperatures; the unplugged wireless sensors read -40 °C or less
+        assertTrue(types.none { "bcl" in it || "ibat" in it || it == "vbat" || it == "socd" || it == "wireless" || it == "wls-therm" })
+        assertEquals(26, r.zones.first { it.type == "battery" }.celsius)
+        assertEquals(300, r.fanRpm)
+    }
+
+    @Test
+    fun dmgAndNovaDetailCapturesParse() {
+        val dmg = capture("dmg/device-stats/probe-detail.txt")
+        assertEquals(8, dmg.cores.size)
+        assertNull(dmg.fanRpm)
+        assertTrue(dmg.zones.any { it.type == "skin-msm-therm" })
+        val nova = capture("nova/device-stats/probe-detail.txt")
+        assertEquals(8, nova.cores.size)
+        assertEquals(0, nova.fanRpm) // the Nova has the same fan node, stopped
+        assertTrue(nova.zones.isNotEmpty())
+    }
+
+    /** A fake `/proc` + `/sys` with the failure cases the devices show. */
+    private fun fakeDevice(): File {
+        val root = Files.createTempDirectory("stats-probe").toFile()
+        root.put("proc/stat", "cpu  70653323 6109927 65843054 792552229 2947521 12621680 3482661 21784 0 0\ncpu0 1 2 3 4 5 6 7 8 0 0\n")
+        root.put("sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", "1555200\n")
+        root.put("sys/devices/system/cpu/cpu7/cpufreq/scaling_cur_freq", "1843200\n")
+        File(root, "sys/devices/system/cpu/cpu3").mkdirs() // an offline core without cpufreq
+        root.put("sys/class/kgsl/kgsl-3d0/gpu_busy_percentage", "1 %\n")
+        root.put("sys/class/kgsl/kgsl-3d0/gpuclk", "401000000\n")
+        root.zone(0, "cpuss-0", "36800")
+        root.zone(1, "gpuss-0", "35500")
+        root.zone(2, "battery", "24000") // not a CPU or GPU zone: only the detail probe reads it
+        root.zone(3, "cpu-1-0", null).also { File(root, "sys/class/thermal/thermal_zone3/temp").mkdirs() } // read fails
+        File(root, "sys/class/thermal/thermal_zone4").mkdirs() // no type at all
+        root.zone(5, "xo-therm", "40000")
+        root.put("sys/class/gpio5_pwm2/speed", "3900\n")
+        return root
     }
 
     @Test
@@ -154,6 +206,8 @@ class DeviceStatsProbeTest {
     fun appScriptReadsTheRealPaths() {
         assertTrue(DeviceStatsProbe.SCRIPT.startsWith("{ read -r l < /proc/stat"))
         assertTrue("/sys/class/gpio5_pwm2/speed" in DeviceStatsProbe.SCRIPT)
+        assertTrue("case \$t in cpu*|gpu*)" in DeviceStatsProbe.SCRIPT)
+        assertFalse("case \$t in" in DeviceStatsProbe.DETAIL_SCRIPT)
     }
 
     private fun File.put(path: String, text: String) {
