@@ -268,6 +268,7 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
         val intent = Intent(context, AnchorActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or Intent.FLAG_ACTIVITY_NO_USER_ACTION)
         lastAnchorAt = System.currentTimeMillis()
+        anchorGuard.anchored(displayId)
         context.startActivity(intent, options.toBundle())
         true
     }.getOrElse {
@@ -275,12 +276,20 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
         false
     }
 
-    /** When the last anchor was started; a companion resumed by our own anchor must not anchor back (two screens would ping-pong). */
+    /** When the last anchor was started: a launch from a companion skips its own hand-off when one just happened. */
     @Volatile
     var lastAnchorAt = 0L
         private set
 
     fun anchoredRecently(): Boolean = System.currentTimeMillis() - lastAnchorAt < 1500
+
+    private val anchorGuard = AnchorGuard(System::currentTimeMillis)
+
+    /** Navigation resumed on [displayId] (see [AnchorGuard.navigationResumed]). */
+    fun navigationResumed(displayId: Int) = anchorGuard.navigationResumed(displayId)
+
+    /** A companion resumed on [displayId]: whether it hands the controller back, or the resume was our own anchor's (see [AnchorGuard]). */
+    fun companionShouldHandOff(displayId: Int): Boolean = anchorGuard.companionResumed(displayId)
 
     /** A companion screen giving the controller back to the other screen; nothing to do on a single-screen device. */
     fun handOff(fromDisplay: Int) {

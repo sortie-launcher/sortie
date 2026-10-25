@@ -15,6 +15,9 @@
   battery temperatures and the fan speed, as thin strips down both sides of the companion screen, one line at the top of
   the switcher overlay, or both. They refresh every 2, 5 or 10 seconds, only while shown on a screen that is on. Without
   Shizuku only RAM and the battery temperature show; anything a device does not report is left out.
+- Two screens: pressing X twice in quick succession (within about a second and a half) no longer leaves the controller on
+  the companion screen while navigation is on the other one. The companion skipped handing the controller back because
+  the previous swap had just moved it; now only the one resume an anchor causes on its own screen is skipped.
 - AYN Thor: pressing Home again while the app switcher is up keeps its windows instead of rebuilding them. Rebuilding both
   on every press could crash the Thor's system UI (a firmware race), restarting it and turning off wireless debugging.
   The Thor-panel guard now acts only on a complete system probe, never on partial output.
