@@ -1,7 +1,6 @@
 package io.github.esko997.sortie.mecha.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -271,6 +270,7 @@ private fun Rename(store: MechaStore, state: MechaState) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Care(store: MechaStore, state: MechaState) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -282,7 +282,8 @@ private fun Care(store: MechaStore, state: MechaState) {
             style = MaterialTheme.typography.bodySmall,
             color = Muted
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // wraps rather than clipping on narrow screens (the Hangar's left column is ~250dp on a 640dp-wide display)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             MechaButton("Tune up", onClick = { store.care(MechaCare.TUNE) }, enabled = !state.sleeping)
             MechaButton("Charge", onClick = { store.care(MechaCare.CHARGE) }, enabled = !state.sleeping)
             MechaButton(if (state.sleeping) "Wake up" else "Rest", onClick = { store.care(MechaCare.REST) })
@@ -393,6 +394,7 @@ private fun Parts(store: MechaStore, view: MechaView, state: MechaState) {
     FamilySets(store, view, state)
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Salvage(store: MechaStore, state: MechaState, slot: MechaSlot, leftHere: Int, leftAll: Int) {
     Column(
@@ -412,7 +414,7 @@ private fun Salvage(store: MechaStore, state: MechaState, slot: MechaSlot, leftH
             style = MaterialTheme.typography.bodySmall,
             color = Muted
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             MechaButton(
                 "Salvage ${slot.label().lowercase()} (1 credit)",
                 onClick = { store.salvage(slot) },
@@ -430,11 +432,12 @@ private fun Salvage(store: MechaStore, state: MechaState, slot: MechaSlot, leftH
 }
 
 /** Each family's parts that are already in the hangar, as one outfit: wearing a set is four ordinary equips. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FamilySets(store: MechaStore, view: MechaView, state: MechaState) {
     Text("Family sets", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
     Text("Built from parts you own. Mixing families slot by slot works too.", style = MaterialTheme.typography.bodySmall, color = Muted)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         MECHA_FAMILIES.forEach { family ->
             val set = remember(view.parts, state.owned, family) { ownedSet(view.parts, state, family) }
             val wearing = set != null && set.all { (s, id) -> state.equipped[s] == id }
@@ -549,7 +552,7 @@ private fun ColumnScope.FamilyGrid(view: MechaView, state: MechaState, pose: Mec
         MechaPose.entries.forEach { p -> MechaChip(p.label(), p == pose, { onPose(p) }) }
     }
     MECHA_FAMILIES.forEach { family ->
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(1, 2).forEach { variant ->
                 val pieces = view.parts.filter { it.family == family && it.variant == variant }
                 val set = pieces.associate { it.slot to it.id }
