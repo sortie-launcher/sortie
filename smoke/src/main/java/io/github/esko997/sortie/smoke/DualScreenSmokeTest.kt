@@ -3,6 +3,9 @@ package io.github.esko997.sortie.smoke
 import android.hardware.display.DisplayManager
 import android.os.SystemClock
 import android.view.Display
+import android.view.InputDevice
+import android.view.KeyCharacterMap
+import android.view.KeyEvent
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
@@ -74,9 +77,6 @@ class DualScreenSmokeTest {
             tasks().any { it.component == COMPANION && it.display == PRIMARY && it.visible } && device.hasObject(By.pkg(PKG).displayId(PRIMARY))
         }
         await("the controller following navigation to display $second") { focusedDisplay() == second }
-        // Paced like a person: a second X within 1.5 s of the companion's hand-off leaves the controller on the companion's
-        // screen (TaskSwitcher.anchoredRecently suppresses the returning companion's hand-off; see docs/HARDENING.md, Testing).
-        SystemClock.sleep(SETTLE_MS)
 
         shell("input keyevent KEYCODE_BUTTON_X")
         awaitNavigationOn(PRIMARY)
@@ -85,6 +85,41 @@ class DualScreenSmokeTest {
             tasks().any { it.component == SECONDARY_HOME && it.display == second && it.visible } && !device.hasObject(homeHeader(second))
         }
         await("the controller back on the primary display") { focusedDisplay() == PRIMARY }
+        await("no lingering AnchorActivity") { tasks().none { it.component == ANCHOR } }
+    }
+
+    /**
+     * X again as soon as the controller has followed navigation down: the companion that comes back below must hand it up
+     * again. It used to skip that for 1.5 s after any hand-off (meant only for the resume its own anchor causes), so the
+     * controller stayed on the companion's screen and further presses went nowhere.
+     */
+    @Test
+    fun quickSecondSwapLeavesTheControllerWithNavigation() {
+        val start = SystemClock.uptimeMillis()
+        pressX()
+        // past the moment X itself starts navigation below: the companion's hand-off has landed when the focus stays there
+        awaitSteady("the controller following navigation to display $second", 300, pollMs = 50) { focusedDisplay() == second }
+        pressX()
+        val apart = SystemClock.uptimeMillis() - start
+        assertTrue("presses $apart ms apart: too slow to land inside the companion's old 1.5 s window", apart < 2_000)
+        awaitNavigationOn(PRIMARY)
+        await("the controller back with navigation on the primary display (presses $apart ms apart)") { focusedDisplay() == PRIMARY }
+    }
+
+    /** X twice within half a second: wherever navigation ends up, it is alone and has the controller. */
+    @Test
+    fun doubleSwapEndsWithTheControllerOnNavigation() {
+        val start = SystemClock.uptimeMillis()
+        pressX()
+        SystemClock.sleep(350)
+        pressX()
+        val apart = SystemClock.uptimeMillis() - start
+        assertTrue("presses $apart ms apart", apart <= 500)
+        awaitSteady("one navigation task holding the controller, a companion on the other display (presses $apart ms apart)", 2_000) {
+            val main = mainTasks().singleOrNull()
+            main != null && main.visible && focusedDisplay() == main.display &&
+                tasks().any { (it.component == SECONDARY_HOME || it.component == COMPANION) && it.display != main.display && it.visible }
+        }
         await("no lingering AnchorActivity") { tasks().none { it.component == ANCHOR } }
     }
 
@@ -238,6 +273,33 @@ class DualScreenSmokeTest {
         while (!condition()) {
             if (SystemClock.uptimeMillis() > end) fail("Timed out after $timeoutMs ms waiting for $what; ${detail()}")
             SystemClock.sleep(250)
+        }
+    }
+
+    /** Like [await], but [condition] must hold on every poll for [steadyMs]: transient states mid-transition do not count. */
+    private fun awaitSteady(what: String, steadyMs: Long, timeoutMs: Long = 20_000, pollMs: Long = 250, condition: () -> Boolean) {
+        val end = SystemClock.uptimeMillis() + timeoutMs
+        var since: Long? = null
+        while (true) {
+            val now = SystemClock.uptimeMillis()
+            since = if (condition()) since ?: now else null
+            if (since != null && now - since >= steadyMs) return
+            if (now > end) fail("Timed out after $timeoutMs ms waiting for $what to hold for $steadyMs ms; ${describe()}")
+            SystemClock.sleep(pollMs)
+        }
+    }
+
+    /**
+     * X, straight to the focused display as the controller would send it. Injected directly (no shell `input` process, no
+     * UiAutomator idle wait) so presses can be timed to a few milliseconds.
+     */
+    private fun pressX() {
+        val automation = instrumentation.getUiAutomation(Configurator.getInstance().uiAutomationFlags) // UiDevice's connection
+        val t = SystemClock.uptimeMillis()
+        for (action in intArrayOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) {
+            val event = KeyEvent(t, t, action, KeyEvent.KEYCODE_BUTTON_X, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_KEYBOARD)
+            // not synchronous: during a swap the focused display may wait seconds for its window, which would skew the timing
+            assertTrue("X was not injected", automation.injectInputEvent(event, false))
         }
     }
 

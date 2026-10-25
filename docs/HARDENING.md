@@ -189,7 +189,8 @@ Covered:
   becomes HOME), and the companion, not Home, is drawn there.
 - X and X again: navigation moves to the second display and back, a single MainActivity task each time; CompanionActivity
   covers the primary display, then closes; the companion returns below; the controller follows navigation; no
-  AnchorActivity lingers.
+  AnchorActivity lingers. Quick presses too: X again the moment the controller has followed navigation, and two presses
+  350 ms apart, each ending with one navigation task that holds the controller (keys injected directly, timed in the test).
 - Home from another app (Settings) returns to the same navigation task.
 - Back on Home leaves Sortie in front, both as HOME and in an ordinary task (started from the launcher intent while another
   app is HOME), the case behind "Back on Home sent Sortie away" above.
@@ -221,6 +222,7 @@ primary display); CI uploads them as the `emulator-smoke` artifact. The fixture 
 systems and three placeholder files that are not ROMs. Home is recognised by its "3 games" header, so adding a file means
 changing `GAME_COUNT` in the test. `ZINES_COMMIT` in emulator.yml follows build.yml.
 
-Found while building it: pressing X again within 1.5 s of a swap leaves the controller on the companion's screen. The
-returning companion skips its hand-off because `TaskSwitcher.anchoredRecently()` still counts the previous swap's anchor,
-and the new navigation instance's `showCompanion` has just moved focus to that display. The test paces its swaps (2 s).
+Found while building it (fixed by `AnchorGuard`): X again within 1.5 s of a swap's hand-off left the controller on the
+companion's screen. Companions skipped their resume hand-off for 1.5 s after any anchor, to stop two companions anchoring
+back at each other, so the companion returning under the second swap kept the controller. Now only the one resume an anchor
+causes on its own display is skipped, and navigation resuming there retires the anchor.
