@@ -68,9 +68,11 @@ on every press, again after restarting it.
 
 Sortie's guard (`ScreenMover.guardVendorPanel`, Shizuku only, at most once a minute when the shell connects and when Sortie
 returns) restarts the panel at 150 held requests while no panel window has a surface, or after seeing its focused,
-surfaceless window twice 1.5 s apart. The panel's button broadcast (`action.tcc.button.key.event`) is protected, so the
-leak itself cannot be reproduced from adb; the decision logic is unit-tested and the probe was checked against the live
-panel and the captured stuck state.
+surfaceless window twice 1.5 s apart. It acts only on a complete probe: exit status 0, each dump's header and closing
+field present, one surface line per counted panel window and a final `end`; anything partial does nothing, since restarting
+an open panel is worse than waiting a minute. The panel's button broadcast (`action.tcc.button.key.event`) is protected, so
+the leak itself cannot be reproduced from adb; the decision logic is unit-tested (including truncated replies) and the probe
+was run on the live panel and replayed against the dumps captured in the stuck state.
 
 ### Back on Home sent Sortie away (fixed)
 
@@ -90,9 +92,9 @@ millisecond), and the vendor code read one whose surface had just been released.
 reboot), which switched wireless debugging off.
 
 The race is in the firmware, but Sortie made it likely: `SwitcherOverlay.show()` removed and re-added both windows on
-every Home press, even while the same overlay was already up. A pending change (draft PR "Switcher overlay: reuse
-windows on repeated Home") keeps them when displays and controller screen are unchanged; it needs a Thor run before
-release. Any app's window churn can still trigger the vendor bug.
+every Home press, even while the same overlay was already up. It now keeps them when displays and controller screen are
+unchanged. Checked on the Thor: across Home, Home and five rapid Home presses the two overlay windows kept their ids; B
+removed them and the next Home created new ones. Any app's window churn can still trigger the vendor bug.
 
 ### Seen under stress but not Sortie's
 
