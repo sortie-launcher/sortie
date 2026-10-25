@@ -10,6 +10,7 @@ account, an AI service or any other launcher to follow it.
 2. [Install one emulator and check that it runs a game by itself](#set-up-and-test-one-emulator).
 3. [Allow *All files access*](#first-start-all-files-access) when Sortie asks.
 4. [Add one system in Library setup](#add-your-first-system): what kind of games, which folder, which emulator.
+   **Coming from Cocoon?** [Import your Cocoon library](#coming-from-cocoon) instead.
 5. [Start a game, then come back](#launch-play-and-come-back).
 
 Everything after that is optional. The [full manual](../app/src/main/assets/MANUAL.md) is also built into the app: the
@@ -32,6 +33,7 @@ screens vary by device. [Capture details and image credits](screenshots/readme/P
 | **Sideloading** | Installing an APK yourself instead of through an app store. |
 | **Signature / signer** | Every APK is signed with its maker's key. Android installs an update only if it has the same signature as the installed app. |
 | **Special app access** | Android permissions you switch on in Settings instead of answering a pop-up, such as *All files access*, *Display over other apps* or the default Home app. |
+| **Cocoon** | Another Android launcher for handhelds. Sortie can [import a Cocoon library](#coming-from-cocoon); you don't need Cocoon otherwise. |
 | **Shizuku** | A separate, optional app that lets apps such as Sortie run a small set of system commands. Sortie uses it only for its app switcher (listing, moving and closing running apps) and the companion's notification bell. See [optional features](#optional-features-and-what-they-need). |
 
 ## What you need
@@ -140,7 +142,105 @@ comes back.
 
 **Checkpoint:** you see Sortie's Home screen with **Set up your library** and a **Set up library** button. If you already
 have a library prepared on a computer, you might see systems straight away instead; skip to
-[Launch, play and come back](#launch-play-and-come-back).
+[Launch, play and come back](#launch-play-and-come-back). If your games are already set up in Cocoon, go to
+[Coming from Cocoon](#coming-from-cocoon).
+
+## Coming from Cocoon
+
+If your games are already set up in the Cocoon launcher, Sortie can import that library instead of you adding each
+system by hand. Cocoon's files are only read: nothing in its folder is created, changed or deleted, and Cocoon itself is
+not started, stopped or reconfigured. Cocoon doesn't need to be running, and no root or computer is needed.
+
+**What comes over**
+
+| From Cocoon | In Sortie | Needs a Cocoon backup |
+|---|---|---|
+| Platforms with games on this device | Systems, with the game folders Sortie found | No |
+| Each platform's emulator | The system's emulator (see the caution in step 4) | No |
+| Favourites and hidden games | Favourites, and hidden games (kept out of folders and shelves), added to any you have | No |
+| Downloaded box art, logos and gameplay screenshots | Copies in each system's media folder, only where Sortie has no art | No |
+| Your own folders | Folders listing the same games | Yes |
+| Play sessions | Play history with the real dates and times | Yes |
+| Per-game emulator choices | Per-game emulators, only where you haven't set one | Yes |
+
+Not imported: lifetime play counts and play time (shown in the preview only), themes, wallpapers, widgets, grid
+placement, custom game names and per-game "launch on external display". DroidDeck pins belong to the launcher that made
+them; the result lists the DroidDeck games to pin again from DroidDeck.
+
+**Before you start**
+
+- **Make a Cocoon backup** in Cocoon → Settings if you want your own folders, play history and per-game emulators. Only a
+  backup carries them, and anything you do in Cocoon after making it is not included.
+- **Keep Cocoon and its folder** until you've checked the result. Sortie copies artwork but needs Cocoon's files to run
+  the import again.
+- **For a complete undo, copy the `sortie` folder first** (its location is under **Library setup → Where these settings
+  live**; on a new install it has little in it yet). Sortie's own safety copy is only partial; see step 5.
+
+**Import**
+
+1. **Settings → Import from Cocoon…**
+2. **Check Cocoon's folder.** Sortie looks for folders holding a Cocoon library on every storage it can read and selects
+   the one it finds (or the one used last time); the **Cocoon folder** section further down shows it and lists any
+   others. If yours isn't found, type its path there or pick it with the file browser. A folder without a Cocoon library
+   is refused and nothing changes.
+3. **Choose a backup, or continue without one.** Backups in Cocoon's folder are listed newest first. **Another backup…**
+   accepts one anywhere on the device, for example a copy in Download or on a memory card.
+
+   ![The Import from Cocoon screen with Cocoon's folder detected: the Backup (optional) step, a detected backup focused, Continue without a backup, and a field for another backup](screenshots/cocoon/cocoon-02-backup.png)
+
+4. **Read the preview.** Nothing has been written yet, and **Cancel** changes nothing. It shows how many games matched
+   files on this device, a switch for each category, and below them the artwork against free space, the systems to add
+   with their folders and emulator (and whether that emulator is installed), and the games that were not found or were
+   ambiguous.
+
+   ![Preview switches for favourites, hidden games, emulators for 2 systems, 10 artwork files, 1 folder and 4 play sessions, with Cancel](screenshots/cocoon/cocoon-05-preview-options.png)
+
+   Check three switches before importing:
+   - **Choose emulators for *N* systems.** Look at the list under *Emulators for systems you already have*. In this build,
+     each system listed there gets Cocoon's emulator as its default, even if you chose another in Library setup. If you
+     already set up emulators in Sortie, turn this switch off; new systems still list Cocoon's emulator first.
+   - **Hide *N* games.** Hidden games stay in their system's list but drop out of folders and shelves, and Sortie has no
+     button to unhide them yet ([Troubleshooting](#troubleshooting)). Turn it off if you aren't sure.
+   - **Copy *N* artwork files.** Import is not offered while the artwork doesn't fit the free space shown; turn the copy
+     off or free some space. On a card set up for ES-DE, artwork goes into that system's existing ES-DE media folder.
+
+   ![Import, the artwork block (245 kB to copy, 5.0 GB free, one reference to another device skipped) and two systems to add, one with its emulator installed and one not installed yet](screenshots/cocoon/cocoon-06-preview-artwork-systems.png)
+
+5. **Choose Import.** Sortie first saves a safety copy of your preferences and play history to
+   `sortie/backups/pre-cocoon-import-<date>.json`; if it can't, nothing changes. It then adds systems and re-indexes,
+   saves favourites, hidden games and emulator choices, adds play sessions and folders, and copies artwork last. You can
+   leave the screen while Sortie keeps running. Only the artwork copy can be stopped (**Stop copying artwork**); files
+   already copied stay.
+6. **Read the result.** It lists what was added, where the safety copy is, which DroidDeck games to pin again, and what
+   stays only in Cocoon.
+
+   ![Import complete: 2 systems, 4 favourites, 1 hidden game, emulators for 2 systems, 4 play sessions, 1 folder and 10 artwork files, the safety-copy path, a DroidDeck game to re-pin and a reminder before uninstalling Cocoon](screenshots/cocoon/cocoon-10-result.png)
+
+**Checkpoint:** your Cocoon systems are on Home with their artwork. Press **L1/R1** to the **Custom** sort to see
+**Continue**, **Favourites** and your imported folders; **Alphabetical**, **Game count** and **Generation** show systems
+only.
+
+![Home in the Custom sort after importing: a Continue tile from an imported play session, the imported folder Pocket Picks with 3 games, and Favourites with 3](screenshots/cocoon/cocoon-12-home-grid.png)
+
+Then open **Library setup** and check each new system: install any emulator marked *not installed*, and if a system
+indexed no games, compare its **File types** with your files (for example `.7z` or `.zip`) and add the missing ending.
+Finally [start one game per system](#launch-play-and-come-back): the emulators' own settings, cores and BIOS files are
+untouched, but only playing proves a game runs. The pictures above come from an Android 13 emulator with an invented
+library ([capture details](screenshots/cocoon/PROVENANCE.md)).
+
+**Running it again is safe.** It adds nothing twice and picks up artwork a stopped copy left behind. If Android closes
+Sortie during the import, open it and run the import again.
+
+**What undo can and can't do.** Restoring the safety copy (**Settings → Backup and restore**) brings back your
+preferences from before the import: favourites, hidden games and emulator choices. Added systems, folders, copied
+artwork and imported play sessions stay; remove systems in Library setup, or put back your copy of the `sortie` folder.
+
+**Before uninstalling Cocoon**, check in Sortie that your games, favourites, folders and play history came over. Games
+that weren't found or were ambiguous, custom names, themes, skipped artwork and anything played after the backup stay
+only in Cocoon. To make Sortie the Home screen instead of Cocoon, see
+[Finding your way around](#finding-your-way-around).
+
+The full reference, including how folders and emulators are matched: [Import from Cocoon](COCOON_IMPORT.md).
 
 ## Add your first system
 
@@ -218,7 +318,8 @@ Sortie, choose the game again.
 
 **Your first library will look plain.** Without extra files, games appear with tidied-up file names (`ucity` in this
 example), no box art, no descriptions and no ratings. That is expected: Sortie has no internet access and does not fetch
-any of these. Adding them is an [advanced, optional step](#going-further).
+any of these. [Importing from Cocoon](#coming-from-cocoon) brings over the artwork Cocoon downloaded; other extras are an
+[advanced, optional step](#going-further).
 
 ## Finding your way around
 
@@ -264,7 +365,7 @@ enable only the extras you want. No Shizuku, Home role, overlay permission or se
 | **Switcher drawn over a running game** | Shizuku, plus *Display over other apps* | **Settings → Overlay over running games (optional)** |
 | **Companion bell** (opens the notification shade) | Shizuku | — |
 | **Radial keyboard** for typing with the sticks | Enabling it as an Android keyboard | **Settings → Enable radial keyboard…**, then **Choose keyboard…** |
-| **Box art, screenshots, game descriptions** | ES-DE-style `gamelist.xml` and media folders on storage, linked by hand in `systems.json` | Prepared files: [systems.md](formats/systems.md) |
+| **Box art, screenshots, game descriptions** | ES-DE-style `gamelist.xml` and media folders on storage, linked by hand in `systems.json`; or artwork copied by **Import from Cocoon** | Prepared files: [systems.md](formats/systems.md), or [Coming from Cocoon](#coming-from-cocoon) |
 | **Fit stars, hooks, cautions, tags, control notes** | A `guide.json` file | Prepared file: [guide.md](formats/guide.md) |
 | **Smart folders** (rule-based shelves such as "added this month, never played") | A `folders.json` file | Prepared file: [folders.md](formats/folders.md) |
 | **System logos** on Home tiles | PNG files in `sortie/logos/` | Prepared files: [formats](formats/README.md) |
@@ -276,10 +377,11 @@ On a device without root it is started through Android's *Wireless debugging* (S
 debugging** opens that page) and usually has to be started again after every reboot. If you skip it, everything except the
 switcher, moving other apps between screens and the bell still works. **X** still swaps Sortie's own screens without it.
 
-**"Prepared files" means exactly that.** Today there is no in-app editor or download for artwork, guides, smart folders,
-logos or custom emulators. Someone has to create those files, on a computer or by hand, and copy them into the `sortie`
-folder or point Sortie at them. Library setup leaves such files and fields alone when you change a system, so a prepared
-library and on-device setup can be used together.
+**"Prepared files" means exactly that.** Apart from what [Import from Cocoon](#coming-from-cocoon) brings over (artwork,
+and folders from a Cocoon backup), there is no in-app editor or download for artwork, guides, smart folders, logos or
+custom emulators. Someone has to create those files, on a computer or by hand, and copy them into the `sortie` folder or
+point Sortie at them. Library setup leaves such files and fields alone when you change a system, so a prepared library
+and on-device setup can be used together.
 
 ## How Sortie thinks
 
@@ -314,10 +416,9 @@ just leaves that part empty.
 
 **Your state and shared content are kept apart.** Your favourites, queue, shelves, notes, reference cards, journal and
 play history are yours (`user.json` and Sortie's own database; export them with **Backup and restore**). Shared content
-such as guides, magazines and logos is read, never rewritten with your personal data. Coming from Cocoon?
-**Settings → Import from Cocoon…** brings over its systems, favourites and artwork, and from a Cocoon backup your folders
-and play sessions, without changing Cocoon's files ([details](COCOON_IMPORT.md)). Other launchers are not imported; your
-game files can stay where they are and be used by several apps at once.
+such as guides, magazines and logos is read, never rewritten with your personal data. A Cocoon library can be
+[imported](#coming-from-cocoon) without changing Cocoon's files; other launchers are not imported. Your game files can
+stay where they are and be used by several apps at once.
 
 ## Troubleshooting
 
@@ -364,9 +465,21 @@ never uninstall Sortie for this.
 
 **Android refuses to update Sortie.** See [Updating safely](#updating-safely). Do not uninstall.
 
-**Careful with "Hide this game from folders".** It is under **Launch with…** on a game page and keeps the game out of
-folders and shelves. There is currently no button to undo it inside Sortie; undoing it means editing the `hidden` list in
-`user.json` ([user.md](formats/user.md)).
+**Careful with hiding games.** **Hide this game from folders** (under **Launch with…** on a game page) and the import's
+**Hide *N* games** switch keep games out of folders and shelves. There is currently no button to undo it inside Sortie;
+undoing it means editing the `hidden` list in `user.json` ([user.md](formats/user.md)).
+
+**Import from Cocoon doesn't list my Cocoon folder.** Sortie only offers folders whose gamelists carry Cocoon's own tags,
+so an ES-DE folder isn't offered. Type the folder's path (for example `/storage/emulated/0/Cocoon`) or pick it with the
+file browser.
+
+**A system imported from Cocoon shows no games.** Its **File types** may not include the endings your files use (for
+example `.7z`). Open the system in **Library setup**, add the ending and save. Games the preview listed as *not found* or
+*ambiguous* were skipped; add their folders in Library setup.
+
+**After importing, a system starts a different emulator.** The import's **Emulators for systems you already have**
+switch can replace a system's default with Cocoon's choice. Put yours back in **Settings → Default launcher per system**
+(choose **Manifest default** to use the order from Library setup), or for one game with **Launch with…**.
 
 ## Going further
 

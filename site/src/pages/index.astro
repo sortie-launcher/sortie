@@ -1,0 +1,944 @@
+---
+import '@fontsource/lato/400.css';
+import '@fontsource/lato/400-italic.css';
+import '@fontsource/lato/700.css';
+import '@fontsource/lato/900-italic.css';
+import { Image } from 'astro:assets';
+import { getEntry, render } from 'astro:content';
+import mark from '../assets/brand/mark.svg?raw';
+import companionBottom from '../assets/hero/companion-bottom.png';
+import companionTop from '../assets/hero/companion-top.png';
+import gameDetail from '../assets/repo/docs/screenshots/readme/game-detail.png';
+import home from '../assets/repo/docs/screenshots/readme/home.png';
+import library from '../assets/repo/docs/screenshots/readme/library.png';
+import magazine from '../assets/repo/docs/screenshots/readme/magazine.png';
+import setup from '../assets/repo/docs/screenshots/readme/setup.png';
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const RELEASES = 'https://github.com/sortie-launcher/sortie/releases';
+const REPO = 'https://github.com/sortie-launcher/sortie';
+const ZINES = 'https://sortie-launcher.github.io/sortie-zines/';
+const page = (slug: string) => `${base}${slug}/`;
+
+// Links into the guide are checked against its real headings, so a renamed section fails the build.
+const guide = await getEntry('docs', 'getting-started');
+if (!guide) throw new Error('The getting-started page was not generated');
+const { headings } = await render(guide);
+const guideSection = (slug: string) => {
+	if (!headings.some((h) => h.slug === slug)) {
+		throw new Error(`index.astro links to #${slug}, which docs/GETTING_STARTED.md no longer has`);
+	}
+	return `${page('getting-started')}#${slug}`;
+};
+// The Cocoon feature points at the guide's "Coming from Cocoon" section once it exists.
+const cocoonHref = headings.some((h) => h.slug === 'coming-from-cocoon')
+	? guideSection('coming-from-cocoon')
+	: page('cocoon-import');
+
+const steps = [
+	{ text: 'Get a correctly signed Sortie APK and install it (Android 11 or newer).', href: guideSection('install-sortie') },
+	{ text: 'Install one emulator and check that it runs a game by itself.', href: guideSection('set-up-and-test-one-emulator') },
+	{ text: 'Allow All files access when Sortie asks.', href: guideSection('first-start-all-files-access') },
+	{ text: 'Add one system in Library setup: what kind of games, which folder, which emulator.', href: guideSection('add-your-first-system') },
+	{ text: 'Start a game, then come back.', href: guideSection('launch-play-and-come-back') },
+];
+const optionalFeaturesHref = guideSection('optional-features-and-what-they-need');
+const provenanceHref = page('project/screenshots');
+
+const title = 'Sortie: an offline, controller-first game launcher for Android handhelds';
+const description =
+	'Sortie lists the games already on your Android handheld, starts them in the emulators you installed, and keeps notes, backlog and play history beside them. No internet permission.';
+const canonical = new URL(base, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en" dir="ltr">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<link rel="canonical" href={canonical} />
+		<link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" />
+		<link rel="sitemap" href={`${base}sitemap-index.xml`} />
+		<meta name="theme-color" content="#101418" />
+		<meta property="og:type" content="website" />
+		<meta property="og:title" content="Sortie" />
+		<meta property="og:description" content={description} />
+		<meta property="og:url" content={canonical} />
+		<meta property="og:image" content={new URL('social-preview.png', canonical).href} />
+		<meta property="og:image:alt" content="Sortie: the amber Split-S mark" />
+		<meta name="twitter:card" content="summary_large_image" />
+	</head>
+	<body>
+		<a class="skip" href="#main">Skip to content</a>
+		<header class="top">
+			<a class="brand" href={base} aria-label="Sortie home">
+				<span class="brand-mark" set:html={mark} aria-hidden="true" />
+				<span class="brand-word">Sortie</span>
+			</a>
+			<nav aria-label="Site">
+				<a href={page('getting-started')}>Guide</a>
+				<a href={page('manual')}>Manual</a>
+				<a class="zines-link" href={ZINES}>Field Notes</a>
+				<a href={REPO}>GitHub</a>
+			</nav>
+		</header>
+
+		<main id="main">
+			<section class="hero" aria-labelledby="hero-title">
+				<div class="hero-copy">
+					<h1 id="hero-title">An offline, controller-first game launcher for Android handhelds.</h1>
+					<p class="lede">
+						Sortie lists the games already on your device, starts them in the emulators you've installed, and keeps
+						notes, backlog and play history beside them. It has no internet permission and never downloads games, BIOS
+						files, emulators or artwork.
+					</p>
+					<div class="actions">
+						<a class="button primary" href={RELEASES}>Get the beta on GitHub Releases</a>
+						<a class="button" href={page('getting-started')}>Read the getting started guide</a>
+					</div>
+					<p class="disclosure">
+						<strong>Sortie is built in collaboration with AI.</strong> The code, documentation and the optional Field
+						Notes magazine are written with AI assistance.
+					</p>
+				</div>
+
+				<figure class="device-figure">
+					<div class="device">
+						<div class="lid">
+							<div class="screen screen-top">
+								<Image
+									src={companionTop}
+									widths={[480, 720, 960, 1280]}
+									sizes="(min-width: 64rem) 34rem, 92vw"
+									alt="Top screen: a PlayStation 2 grid of box art with Armored Core 3 focused, filter buttons above and controller hints below"
+									loading="eager"
+									fetchpriority="high"
+								/>
+							</div>
+						</div>
+						<div class="hinge" aria-hidden="true"></div>
+						<div class="deck">
+							<div class="controls left" aria-hidden="true"><span class="stick"></span><span class="dpad"></span></div>
+							<div class="screen screen-bottom">
+								<Image
+									src={companionBottom}
+									widths={[400, 640, 960, 1280]}
+									sizes="(min-width: 64rem) 22rem, 60vw"
+									alt="Bottom screen at the same moment: the companion panel showing Armored Core 3's art, platform, year, developer, a Want to play button and its description"
+									loading="eager"
+								/>
+							</div>
+							<div class="controls right" aria-hidden="true"><span class="face"></span><span class="stick"></span></div>
+						</div>
+					</div>
+					<figcaption>
+						One moment on both screens of a dual-screen setup: the controller browses on top, the companion follows below.
+					</figcaption>
+				</figure>
+			</section>
+
+			<section class="home-shot" aria-labelledby="home-title">
+				<div class="home-head">
+					<h2 id="home-title">Home is yours to arrange</h2>
+					<p>
+						Pin systems, games, apps and shelves where you want them, with a Continue tile for the last game you played.
+						Every action has a button, and the bar along the bottom says which.
+					</p>
+				</div>
+				<figure>
+					<Image
+						src={home}
+						widths={[640, 960, 1280]}
+						sizes="(min-width: 80rem) 76rem, 96vw"
+						alt="Sortie's Home screen in the Custom sort: a Continue tile for uCity, pinned games with box art, and Favourites, Want to play, Finished, Shelved and Apps tiles, with controller hints along the bottom"
+					/>
+					<figcaption>
+						Real app screens with illustrative demo entries, captured on an Android 13 emulator rather than a tested
+						library or handheld. Artwork and magazines were set up for these captures; a fresh library starts without
+						artwork. <a href={provenanceHref}>Capture notes and image credits</a>.
+					</figcaption>
+				</figure>
+			</section>
+
+			<section class="tour" aria-labelledby="tour-title">
+				<h2 id="tour-title" class="section-title">A look around</h2>
+
+				<article class="feature">
+					<div class="feature-text">
+						<h3>Find something to play</h3>
+						<p>
+							<kbd>L1</kbd>/<kbd>R1</kbd> cycle Home's sort: A–Z, game count, generation, or Custom, your own layout.
+							Systems open as a list or grid with filters, and <strong>Pick one</strong> chooses a random game. Search
+							needs no typing: pick a system, tag or genre.
+						</p>
+						<p>On Home, hold <kbd>R1</kbd> on a system for a random game from it.</p>
+					</div>
+					<Image
+						class="shot"
+						src={library}
+						widths={[640, 960, 1280]}
+						sizes="(min-width: 64rem) 42rem, 96vw"
+						alt="A PlayStation 2 grid of box art with Pick one, Fit 4+, notes, started and on device filters, and controller hints along the bottom"
+					/>
+				</article>
+
+				<article class="feature">
+					<div class="feature-text">
+						<h3>Keep track of a game</h3>
+						<p>
+							<strong>Play</strong> uses the system's emulator; <strong>Launch with…</strong> picks another for that
+							game only. Every session is recorded, so play time adds up on the game page and in a weekly journal of
+							dated notes and pictures.
+						</p>
+						<p>
+							<kbd>R2</kbd> adds a game to <em>Want to play</em>; hold <kbd>A</kbd> to favourite or pin it. Mark games
+							Finished or Shelved with a short verdict, and keep reference cards: controls, a move list, a photo of a map.
+							It all stays on the device.
+						</p>
+					</div>
+					<Image
+						class="shot"
+						src={gameDetail}
+						widths={[640, 960, 1280]}
+						sizes="(min-width: 64rem) 42rem, 96vw"
+						alt="The Armored Core 3 game page: cover art, Play, Launch with…, Add notes, Reference cards, a favourite star, Want to play, Mark finished or shelved, and a Featured in link to a magazine article"
+					/>
+				</article>
+
+				<article class="feature feature-split">
+					<div class="feature-text">
+						<h3>Use the second screen</h3>
+						<p>
+							On a dual-screen handheld the second screen follows what you're doing, as pictured at the top of this
+							page. <kbd>X</kbd> moves the controller between screens; touch works on either. Single-screen devices get a
+							single-screen layout.
+						</p>
+					</div>
+					<dl class="modes">
+						<div>
+							<dt>While you browse</dt>
+							<dd>The focused game's art, description and your notes.</dd>
+						</div>
+						<div>
+							<dt>While you play</dt>
+							<dd>
+								A timer, your <em>Where was I?</em> reminder, control notes and reference cards, all by touch so the
+								controller stays in the game.
+							</dd>
+						</div>
+						<div>
+							<dt>Any time</dt>
+							<dd>A five-slot app dock and a launcher.</dd>
+						</div>
+					</dl>
+				</article>
+
+				<article class="feature">
+					<div class="feature-text">
+						<h3>Read about games</h3>
+						<p>
+							<strong>Field Notes</strong> is an optional offline games magazine, published separately. Sortie
+							remembers your place, shows which featured games are on your device and links to their pages. Highlight a
+							passage, add a note, keep it in your scrapbook.
+						</p>
+						<p><a class="zines-link" href={ZINES}>Read Field Notes in your browser</a></p>
+					</div>
+					<Image
+						class="shot"
+						src={magazine}
+						widths={[640, 960, 1280]}
+						sizes="(min-width: 64rem) 42rem, 96vw"
+						alt="A Field Notes article titled Armored Core 3: Weight, Wages and the Repair Bill, with a credited game screenshot, a standfirst and controller hints for paging, highlighting and clipping"
+					/>
+				</article>
+
+				<article class="feature">
+					<div class="feature-text">
+						<h3>Set up on the handheld</h3>
+						<p>
+							<strong>Library setup</strong> adds systems from a built-in list or your own, points them at your game
+							folders and puts installed emulators in fallback order. Each system says what its emulators need before the
+							first game. No JSON, computer or terminal.
+						</p>
+						<p><a href={page('getting-started')}>The guide walks through it</a></p>
+					</div>
+					<Image
+						class="shot"
+						src={setup}
+						widths={[640, 960, 1280]}
+						sizes="(min-width: 64rem) 42rem, 96vw"
+						alt="Library setup editing a Game Boy Color system: the chosen game folder with one game file found, file types gbc, zip and 7z, and an emulator list where RetroArch with Gambatte shows as installed"
+					/>
+				</article>
+
+				<article class="feature feature-split">
+					<div class="feature-text">
+						<h3>Coming from Cocoon</h3>
+						<p>
+							Settings → <strong>Import from Cocoon…</strong> brings a Cocoon library across: systems and their ROM
+							folders, emulators, favourites, hidden games and downloaded artwork, plus your folders, real play sessions
+							and per-game emulator choices from a Cocoon backup if you pick one.
+						</p>
+					</div>
+					<div class="feature-aside">
+						<p>
+							Cocoon's folder and the chosen backup are only read: artwork is copied, never moved, and Sortie saves a
+							safety copy of its preferences and play sessions before writing. Cocoon doesn't have to be installed or
+							running.
+						</p>
+						<p><a href={cocoonHref}>Moving from Cocoon</a></p>
+					</div>
+				</article>
+			</section>
+
+			<section class="needs" aria-labelledby="needs-title">
+				<h2 id="needs-title" class="section-title">What you need</h2>
+				<div class="needs-grid">
+					<div>
+						<h3>Required</h3>
+						<ul>
+							<li><strong>Android 11 or newer.</strong></li>
+							<li><strong>Your own game files</strong>, on internal storage or a memory card. Sortie supplies none.</li>
+							<li>
+								<strong>Emulators, installed and set up.</strong> First-run setup, RetroArch cores and BIOS files happen
+								inside each emulator; Sortie only starts what's already installed.
+							</li>
+							<li>
+								<strong>All files access</strong>, so Sortie can read your game folders and keep its settings. It explains
+								and opens the switch on first start.
+							</li>
+						</ul>
+						<p class="note">A controller is recommended; touch works too.</p>
+					</div>
+					<div>
+						<h3>Optional, one feature each</h3>
+						<ul>
+							<li><strong>A second screen</strong> for the companion panel.</li>
+							<li><strong>Sortie as default Home app</strong>: Home returns to Sortie or its switcher.</li>
+							<li>
+								<strong>Shizuku</strong> for the switcher, which shows what's running and moves apps between screens, and
+								the companion's notification bell.
+							</li>
+							<li><strong>Display over other apps</strong>: the switcher appears over a running game.</li>
+							<li><strong>Radial keyboard</strong>: a controller-friendly Android keyboard.</li>
+							<li>
+								<strong>A computer</strong> for cover art, descriptions, curator notes, smart folders and system logos.
+							</li>
+						</ul>
+						<p class="note">
+							Browsing, setup and launching need none of these.{' '}
+							<a href={optionalFeaturesHref}>What each feature needs</a>
+						</p>
+					</div>
+				</div>
+			</section>
+
+			<section class="get" aria-labelledby="get-title">
+				<div class="get-cta">
+					<h2 id="get-title">Get Sortie</h2>
+					<p>
+						Signed beta APKs are published on GitHub Releases when a change to the main branch passes its checks. There
+						is no store, account or auto-updater: install a newer APK over the old one, and never uninstall to update.
+					</p>
+					<div class="actions">
+						<a class="button primary" href={RELEASES}>Get the beta on GitHub Releases</a>
+						<a class="button" href={page('project/release')}>Releases and beta status</a>
+					</div>
+				</div>
+				<div class="get-steps">
+					<h3>From nothing to a running game</h3>
+					<ol>
+						{steps.map((s) => (
+							<li>
+								<a href={s.href}>{s.text}</a>
+							</li>
+						))}
+					</ol>
+				</div>
+			</section>
+		</main>
+
+		<footer class="foot">
+			<div class="foot-brand">
+				<span class="brand-mark" set:html={mark} aria-hidden="true" />
+				<p>
+					Sortie is MIT-licensed. Screenshots include third-party game art and descriptions, which belong to their rights
+					holders; see the <a href={provenanceHref}>capture notes</a>.
+				</p>
+			</div>
+			<nav aria-label="More">
+				<a href={page('getting-started')}>Getting started</a>
+				<a href={page('manual')}>Manual</a>
+				<a href={page('reference/formats')}>File formats</a>
+				<a href={page('project/changelog')}>Changelog</a>
+				<a class="zines-link" href={ZINES}>Field Notes reader</a>
+				<a href={REPO}>Source on GitHub</a>
+			</nav>
+		</footer>
+	</body>
+</html>
+
+<style is:global>
+	:root {
+		--ink: #101418;
+		--surface: #171d23;
+		--raised: #1e252c;
+		--line: #2b333c;
+		--light: #e6e8eb;
+		--muted: #9aa7b4;
+		--amber: #f2b134;
+		--zines: #b6cbdc;
+		--measure: 34rem;
+		color-scheme: dark;
+	}
+	*,
+	*::before,
+	*::after {
+		box-sizing: border-box;
+	}
+	html {
+		background: var(--ink);
+		color: var(--light);
+		font-family: 'Lato', system-ui, sans-serif;
+		font-size: 100%;
+		-webkit-text-size-adjust: 100%;
+	}
+	body {
+		margin: 0;
+		font-size: 1.0625rem;
+		line-height: 1.6;
+		overflow-x: clip;
+	}
+	img {
+		max-width: 100%;
+		height: auto;
+		display: block;
+	}
+	a {
+		color: var(--light);
+		text-underline-offset: 0.2em;
+		text-decoration-thickness: 1px;
+	}
+	a:hover {
+		color: var(--amber);
+	}
+	a.zines-link {
+		color: var(--zines);
+	}
+	a.zines-link:hover {
+		color: #dbe6ef;
+	}
+	:focus-visible {
+		outline: 2px solid var(--amber);
+		outline-offset: 3px;
+		border-radius: 2px;
+	}
+	kbd {
+		font: 700 0.85em/1 'Lato', system-ui, sans-serif;
+		display: inline-block;
+		padding: 0.2em 0.45em 0.25em;
+		border-radius: 0.3em;
+		background: #3a434d;
+		color: var(--light);
+		box-shadow: inset 0 -1px 0 #252c33;
+		vertical-align: 0.05em;
+	}
+	.skip {
+		position: absolute;
+		left: 1rem;
+		top: -3rem;
+		padding: 0.5rem 1rem;
+		background: var(--amber);
+		color: var(--ink);
+		z-index: 10;
+	}
+	.skip:focus {
+		top: 1rem;
+	}
+</style>
+
+<style>
+	/* Header */
+	.top {
+		max-width: 80rem;
+		margin: 0 auto;
+		padding: 1.25rem clamp(1rem, 4vw, 2.5rem);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem 2rem;
+		flex-wrap: wrap;
+	}
+	.brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.6rem;
+		text-decoration: none;
+	}
+	.brand-mark {
+		display: block;
+		width: 2.1rem;
+		line-height: 0;
+	}
+	.brand-mark :global(svg) {
+		width: 100%;
+		height: auto;
+	}
+	.brand-word {
+		font-weight: 900;
+		font-style: italic;
+		font-size: 1.6rem;
+		letter-spacing: -0.01em;
+	}
+	.top nav {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 1.5rem;
+		font-weight: 700;
+		font-size: 0.975rem;
+	}
+	.top nav a {
+		text-decoration: none;
+		padding: 0.35rem 0;
+	}
+
+	/* Hero */
+	.hero {
+		position: relative;
+		max-width: 80rem;
+		margin: 0 auto;
+		padding: clamp(1.5rem, 5vw, 4rem) clamp(1rem, 4vw, 2.5rem) clamp(3rem, 7vw, 6rem);
+		display: grid;
+		grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+		gap: clamp(2rem, 5vw, 4.5rem);
+		align-items: center;
+	}
+	h1 {
+		margin: 0;
+		font-weight: 900;
+		font-style: italic;
+		font-size: clamp(2.5rem, 1.2rem + 4.6vw, 5rem);
+		line-height: 0.98;
+		letter-spacing: -0.025em;
+		text-wrap: balance;
+	}
+	.lede {
+		max-width: var(--measure);
+		margin: 1.75rem 0 0;
+		font-size: 1.1875rem;
+		color: #cdd3d9;
+	}
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem 1rem;
+		margin-top: 2rem;
+	}
+	.button {
+		display: inline-flex;
+		align-items: center;
+		min-height: 3rem;
+		padding: 0.7rem 1.4rem;
+		border: 2px solid var(--line);
+		border-radius: 999px;
+		font-weight: 700;
+		text-decoration: none;
+		line-height: 1.2;
+	}
+	.button:hover {
+		border-color: var(--amber);
+		color: var(--light);
+	}
+	.button.primary {
+		background: var(--amber);
+		border-color: var(--amber);
+		color: var(--ink);
+		font-weight: 900;
+		font-style: italic;
+	}
+	.button.primary:hover {
+		background: #f6c865;
+		border-color: #f6c865;
+		color: var(--ink);
+	}
+	.disclosure {
+		max-width: var(--measure);
+		margin: 2.25rem 0 0;
+		padding: 0.9rem 1.1rem;
+		border-left: 0.3rem solid var(--amber);
+		background: var(--surface);
+		color: #cdd3d9;
+		font-size: 0.975rem;
+	}
+	.disclosure strong {
+		color: var(--light);
+	}
+
+	/* The handheld */
+	.device-figure {
+		margin: 0;
+	}
+	.device {
+		width: min(100%, 34rem);
+		margin-inline: auto;
+		filter: drop-shadow(0 1.5rem 2.5rem rgb(0 0 0 / 0.55));
+	}
+	.lid,
+	.deck {
+		background: linear-gradient(160deg, #2a323a, #1b2127 60%);
+		border: 1px solid #343e48;
+	}
+	.lid {
+		padding: 4.5% 4.5% 5%;
+		border-radius: 1.4rem 1.4rem 0.7rem 0.7rem;
+	}
+	.hinge {
+		height: 0.8rem;
+		margin: 0 10%;
+		background: linear-gradient(#0c0f12, #262e36 70%, #0c0f12);
+		border-radius: 0 0 0.3rem 0.3rem;
+	}
+	.deck {
+		display: grid;
+		grid-template-columns: 1fr 3.4fr 1fr;
+		align-items: center;
+		gap: 3%;
+		padding: 4% 3.5% 7%;
+		border-radius: 0.7rem 0.7rem 2.4rem 2.4rem;
+	}
+	.screen {
+		overflow: hidden;
+		border-radius: 0.35rem;
+		background: #000;
+		box-shadow: 0 0 0 0.35rem #0b0e11;
+	}
+	.screen img {
+		width: 100%;
+		animation: power-on 0.9s ease-out both;
+	}
+	.screen-bottom img {
+		animation-delay: 0.45s;
+	}
+	@keyframes power-on {
+		from {
+			opacity: 0;
+			filter: brightness(2.2) saturate(0);
+		}
+		35% {
+			opacity: 1;
+		}
+		to {
+			opacity: 1;
+			filter: none;
+		}
+	}
+	.controls {
+		display: grid;
+		justify-items: center;
+		gap: 1.2rem;
+	}
+	.stick {
+		width: 72%;
+		aspect-ratio: 1;
+		border-radius: 50%;
+		background: radial-gradient(circle at 40% 35%, #3b4550, #14191e 70%);
+		box-shadow: 0 0 0 0.25rem #0e1215;
+	}
+	.dpad,
+	.face {
+		position: relative;
+		width: 78%;
+		aspect-ratio: 1;
+	}
+	.dpad {
+		background:
+			linear-gradient(#0e1215, #0e1215) center / 34% 100% no-repeat,
+			linear-gradient(#0e1215, #0e1215) center / 100% 34% no-repeat;
+	}
+	.face {
+		background:
+			radial-gradient(circle, #0e1215 60%, transparent 62%) 50% 0 / 34% 34% no-repeat,
+			radial-gradient(circle, #0e1215 60%, transparent 62%) 50% 100% / 34% 34% no-repeat,
+			radial-gradient(circle, #0e1215 60%, transparent 62%) 0 50% / 34% 34% no-repeat,
+			radial-gradient(circle, #0e1215 60%, transparent 62%) 100% 50% / 34% 34% no-repeat;
+	}
+	.right .face {
+		order: -1;
+	}
+	.device-figure figcaption {
+		max-width: 30rem;
+		margin: 1.25rem auto 0;
+		font-size: 0.875rem;
+		color: var(--muted);
+		text-align: center;
+	}
+
+	/* Home screenshot */
+	.home-shot {
+		max-width: 80rem;
+		margin: 0 auto;
+		padding: 0 clamp(1rem, 4vw, 2.5rem);
+	}
+	.home-head {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: 1rem 3rem;
+		align-items: end;
+		margin-bottom: 1.75rem;
+	}
+	.home-head p {
+		margin: 0;
+		max-width: var(--measure);
+		color: #cdd3d9;
+	}
+	h2,
+	.section-title {
+		margin: 0;
+		font-weight: 900;
+		font-style: italic;
+		font-size: clamp(2rem, 1.3rem + 2.4vw, 3.1rem);
+		line-height: 1.02;
+		letter-spacing: -0.02em;
+		text-wrap: balance;
+	}
+	.home-shot figure {
+		margin: 0;
+	}
+	.home-shot img,
+	.shot {
+		border-radius: 0.6rem;
+		border: 1px solid var(--line);
+		box-shadow: 0 0 0 0.45rem #0b0e11;
+	}
+	.home-shot figcaption {
+		max-width: 46rem;
+		margin-top: 1.25rem;
+		font-size: 0.875rem;
+		color: var(--muted);
+	}
+	.home-shot figcaption a,
+	.foot a,
+	.note a {
+		color: inherit;
+	}
+
+	/* Tour */
+	.tour {
+		max-width: 80rem;
+		margin: 0 auto;
+		padding: clamp(4rem, 9vw, 7rem) clamp(1rem, 4vw, 2.5rem) 0;
+	}
+	.feature {
+		display: grid;
+		grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+		gap: 1.5rem clamp(2rem, 5vw, 4.5rem);
+		align-items: start;
+		padding: clamp(2.5rem, 5vw, 4rem) 0;
+		border-top: 1px solid var(--line);
+	}
+	.tour .section-title + .feature {
+		margin-top: 2rem;
+	}
+	.feature h3 {
+		margin: 0 0 1rem;
+		font-size: 1.6rem;
+		font-weight: 900;
+		font-style: italic;
+		line-height: 1.15;
+		letter-spacing: -0.01em;
+	}
+	.feature-text p,
+	.feature-aside p {
+		margin: 0 0 1rem;
+		max-width: var(--measure);
+	}
+	.feature-text p {
+		color: #cdd3d9;
+	}
+	.feature a {
+		font-weight: 700;
+	}
+	.modes {
+		margin: 0;
+		display: grid;
+		gap: 1.25rem;
+	}
+	.modes div {
+		padding-left: 1.1rem;
+		border-left: 0.3rem solid var(--line);
+	}
+	.modes dt {
+		font-weight: 900;
+		font-style: italic;
+		font-size: 1.15rem;
+	}
+	.modes dd {
+		margin: 0.2rem 0 0;
+		color: #cdd3d9;
+	}
+	.feature-aside {
+		color: #cdd3d9;
+	}
+
+	/* What you need */
+	.needs {
+		max-width: 80rem;
+		margin: 0 auto;
+		padding: clamp(4rem, 9vw, 7rem) clamp(1rem, 4vw, 2.5rem) 0;
+	}
+	.needs-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 2rem clamp(2rem, 5vw, 4.5rem);
+		margin-top: 2.25rem;
+	}
+	.needs h3 {
+		margin: 0 0 1rem;
+		font-size: 1.25rem;
+		font-weight: 900;
+		font-style: italic;
+		color: var(--amber);
+	}
+	.needs ul {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.needs li {
+		position: relative;
+		padding: 0.8rem 0 0.8rem 1.6rem;
+		border-top: 1px solid var(--line);
+		color: #cdd3d9;
+	}
+	.needs li strong {
+		color: var(--light);
+	}
+	.needs li::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 1.35rem;
+		width: 0.7rem;
+		height: 0.32rem;
+		background: var(--amber);
+		transform: skewX(-38deg);
+	}
+	.needs .note {
+		margin: 1rem 0 0;
+		color: var(--muted);
+		font-size: 0.95rem;
+	}
+
+	/* Get it */
+	.get {
+		max-width: 80rem;
+		margin: clamp(4rem, 9vw, 7rem) auto 0;
+		padding: clamp(2rem, 5vw, 3.5rem) clamp(1rem, 4vw, 2.5rem);
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: 2.5rem clamp(2rem, 5vw, 4.5rem);
+		background: var(--surface);
+		border-top: 0.35rem solid var(--amber);
+	}
+	.get-cta p {
+		max-width: var(--measure);
+		margin: 1.25rem 0 0;
+		color: #cdd3d9;
+	}
+	.get-steps h3 {
+		margin: 0 0 1rem;
+		font-size: 1.25rem;
+		font-weight: 900;
+		font-style: italic;
+	}
+	.get-steps ol {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		counter-reset: step;
+	}
+	.get-steps li {
+		counter-increment: step;
+		display: grid;
+		grid-template-columns: 2.2rem 1fr;
+		padding: 0.7rem 0;
+		border-top: 1px solid var(--line);
+	}
+	.get-steps li::before {
+		content: counter(step);
+		font-weight: 900;
+		font-style: italic;
+		font-size: 1.25rem;
+		line-height: 1.3;
+		color: var(--amber);
+	}
+
+	/* Footer */
+	.foot {
+		max-width: 80rem;
+		margin: 0 auto;
+		padding: 3rem clamp(1rem, 4vw, 2.5rem) 4rem;
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 2rem;
+		font-size: 0.9rem;
+		color: var(--muted);
+	}
+	.foot-brand {
+		display: flex;
+		gap: 1rem;
+		align-items: flex-start;
+		max-width: 30rem;
+	}
+	.foot-brand p {
+		margin: 0;
+	}
+	.foot-brand .brand-mark {
+		flex: none;
+		width: 1.8rem;
+	}
+	.foot nav {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.5rem;
+		align-content: flex-start;
+		max-width: 34rem;
+	}
+	.foot nav a {
+		color: var(--light);
+	}
+	.foot nav a.zines-link {
+		color: var(--zines);
+	}
+
+	@media (max-width: 64rem) {
+		.hero {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.home-head,
+		.feature,
+		.needs-grid,
+		.get {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+	@media (max-width: 30rem) {
+		.top nav {
+			gap: 0.25rem 1.1rem;
+		}
+		.deck {
+			grid-template-columns: 1fr 4.2fr 1fr;
+		}
+		.controls {
+			gap: 0.6rem;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.screen img {
+			animation: none;
+		}
+	}
+</style>
