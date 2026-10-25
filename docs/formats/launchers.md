@@ -44,5 +44,12 @@ filename without extension, `${system}`, `${dir}`. `display` is `top`, `bottom` 
 `same`). A profile with `generic: true` opens the Android chooser only when explicitly selected by a game/system override
 or included in that system's profile list. It is not appended implicitly. Cancelling the chooser does not record a play session.
 
+The first app picked in the Open with… chooser becomes the system's default: Sortie adds a profile
+`chosen-<package>` (the package lower-cased, other characters replaced by `-`) with that app's name as `label`, its
+`package` and chosen `activity`, action VIEW, `data: "${uri}"` and flags `NEW_TASK`, `GRANT_READ_URI_PERMISSION`, puts it
+first in the system's `profiles` and selects it in user.json's `systemProfiles`. This happens only for a `generic`
+profile and only while the system has no `systemProfiles` entry, so a choice made in Library setup or on the game page is
+never replaced; an existing profile with the same id is reused unchanged. Change it in Library setup or on the game page.
+
 Nothing in this file is validated against a built-in list of emulators. If a package is not
 installed, the profile is skipped and the next fallback is tried; the diagnostics screen says why.

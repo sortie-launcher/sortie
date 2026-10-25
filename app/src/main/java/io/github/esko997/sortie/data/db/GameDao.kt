@@ -18,6 +18,9 @@ data class TileCover(val systemId: String, val cover: String, val fit: Int)
 
 data class NameRow(val id: String, val fileName: String, val placeholder: Boolean)
 
+/** The art a game row already has, keyed by where [io.github.esko997.sortie.data.index.Indexer] looks for it (system + file stem). */
+data class MediaRow(val systemId: String, val fileName: String, val cover: String?, val screenshot: String?, val marquee: String?)
+
 /** What the indexer compares to decide whether a row is current: the file's identity, where it lives and how it is grouped. */
 data class Signature(val id: String, val path: String, val folder: String, val mtime: Long, val size: Long, val addedAt: Long, val arriving: Boolean)
 
@@ -114,6 +117,14 @@ interface GameDao {
 
     @Query("SELECT * FROM games WHERE placeholder = 0 AND variantOf IS NULL")
     suspend fun allPlayable(): List<GameEntity>
+
+    /** Every indexed id, placeholders and variants included: an import resolves its references against the whole index. */
+    @Query("SELECT id FROM games")
+    suspend fun allIds(): List<String>
+
+    /** Narrow rows for "does Sortie already have art for this game" without loading descriptions. */
+    @Query("SELECT systemId, fileName, cover, screenshot, marquee FROM games")
+    suspend fun mediaRows(): List<MediaRow>
 
     @Query("SELECT * FROM games WHERE placeholder = 0 AND variantOf IS NULL AND fit >= 4 AND screenshot IS NOT NULL ORDER BY RANDOM() LIMIT 120")
     suspend fun heroes(): List<GameEntity>

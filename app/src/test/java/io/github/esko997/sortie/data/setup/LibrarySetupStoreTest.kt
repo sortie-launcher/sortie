@@ -1,6 +1,8 @@
 package io.github.esko997.sortie.data.setup
 
 import io.github.esko997.sortie.data.manifest.DeviceManifest
+import io.github.esko997.sortie.data.manifest.FAVOURITES_FOLDER_ID
+import io.github.esko997.sortie.data.manifest.FolderDef
 import io.github.esko997.sortie.data.manifest.FoldersManifest
 import io.github.esko997.sortie.data.manifest.GuideFile
 import io.github.esko997.sortie.data.manifest.LaunchProfile
@@ -8,6 +10,9 @@ import io.github.esko997.sortie.data.manifest.LaunchersManifest
 import io.github.esko997.sortie.data.manifest.ManifestStore
 import io.github.esko997.sortie.data.manifest.SystemDef
 import io.github.esko997.sortie.data.manifest.SystemsManifest
+import io.github.esko997.sortie.data.manifest.WANT_TO_PLAY_FOLDER_ID
+import io.github.esko997.sortie.data.user.FINISHED_FOLDER_ID
+import io.github.esko997.sortie.data.user.SHELVED_FOLDER_ID
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -264,6 +269,81 @@ class LibrarySetupStoreTest {
         s.saveSystem(config, gba, listOf(mgba))
         assertEquals(listOf("ra-mgba"), json.decodeFromString(LaunchersManifest.serializer(), File(dir, "launchers.json").readText()).profiles.map { it.id })
         assertCompleteSet(dir)
+    }
+
+    @Test
+    fun savingFoldersUpsertsByIdAndKeepsEverythingElse() = runBlocking {
+        val dir = desktopCard()
+        File(dir, "folders.json").writeText(
+            """{"folders": [{"id": "shmups", "label": "Shmups", "include": ["snes/a.sfc"], "note": "desktop"},
+              |{"id": "rpgs", "label": "RPGs", "sort": "title:asc", "colour": "#ff0000"}], "version": 2}
+            """.trimMargin()
+        )
+        val folders = File(dir, "folders.json")
+        val shmupsBefore = entry(folders, "folders", "shmups")
+        val others = bytes(dir) - "folders.json"
+        val s = store(dir)
+        val saved = s.saveFolders(
+            s.load(),
+            listOf(
+                FolderDef("rpgs", "Role-playing", include = listOf("snes/b.sfc")),
+                FolderDef("cocoon-1", "From Cocoon", include = listOf("ps2/x.iso"))
+            )
+        )
+        assertEquals(shmupsBefore, entry(folders, "folders", "shmups")) // untouched, unknown key included
+        val rpgs = entry(folders, "folders", "rpgs")!!
+        assertEquals("Role-playing", rpgs["label"]!!.jsonPrimitive.content)
+        assertEquals("#ff0000", rpgs["colour"]!!.jsonPrimitive.content) // unknown key of an edited entry kept
+        assertEquals(listOf("shmups", "rpgs", "cocoon-1"), obj(folders)["folders"]!!.jsonArray.map { it.jsonObject["id"]!!.jsonPrimitive.content })
+        assertEquals("2", obj(folders)["version"].toString())
+        assertEquals(listOf("ps2/x.iso"), json.decodeFromString(FoldersManifest.serializer(), folders.readText()).folders.first { it.id == "cocoon-1" }.include)
+        assertEquals(others, bytes(dir) - "folders.json")
+        assertCompleteSet(dir)
+
+        // the same folders again change nothing
+        val again = bytes(dir)
+        assertEquals(saved, s.saveFolders(saved, listOf(FolderDef("cocoon-1", "From Cocoon", include = listOf("ps2/x.iso")))))
+        assertEquals(again, bytes(dir))
+    }
+
+    @Test
+    fun reservedOrInvalidFolderIdsAreRejectedWithoutWriting() = runBlocking {
+        val dir = desktopCard()
+        val before = bytes(dir)
+        val s = store(dir)
+        val config = s.load()
+        for (id in listOf(FAVOURITES_FOLDER_ID, WANT_TO_PLAY_FOLDER_ID, FINISHED_FOLDER_ID, SHELVED_FOLDER_ID, "Bad Id")) {
+            try {
+                s.saveFolders(config, listOf(FolderDef("cocoon-1", "Fine"), FolderDef(id, "Clash")))
+                fail("accepted folder id $id")
+            } catch (e: IllegalArgumentException) {
+            }
+        }
+        assertEquals(before, bytes(dir))
+    }
+
+    @Test
+    fun aMissingFoldersFileIsScaffoldedAndABrokenOneNeverOverwritten() = runBlocking {
+        val dir = desktopCard()
+        File(dir, "folders.json").delete()
+        val s = store(dir)
+        s.saveFolders(s.load(), listOf(FolderDef("cocoon-1", "From Cocoon", include = listOf("snes/a.sfc"))))
+        assertEquals(
+            listOf(FolderDef("cocoon-1", "From Cocoon", include = listOf("snes/a.sfc"))),
+            json.decodeFromString(FoldersManifest.serializer(), File(dir, "folders.json").readText()).folders
+        )
+        assertCompleteSet(dir)
+
+        File(dir, "folders.json").writeText("{\"folders\": [ {\"id\": ")
+        val before = bytes(dir)
+        val config = s.load()
+        try {
+            s.saveFolders(config, listOf(FolderDef("cocoon-2", "More")))
+            fail("saved over a broken folders.json")
+        } catch (e: IOException) {
+        }
+        s.saveSystem(config, gba, listOf(mgba)) // other edits still work and leave it alone
+        assertEquals(before["folders.json"], File(dir, "folders.json").readText())
     }
 
     @Test

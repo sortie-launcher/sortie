@@ -29,6 +29,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed interface BackupState {
     data object Idle : BackupState
@@ -73,8 +74,20 @@ class BackupManager(
     private val _state = MutableStateFlow<BackupState>(BackupState.Idle)
     val state: StateFlow<BackupState> = _state
 
-    /** Where the pre-restore safety copies go; user-visible on the card, outside the files the desktop deploys. */
+    /** Where the pre-restore (and other pre-change) safety copies go; user-visible on the card, outside the files the desktop deploys. */
     val safetyDir = File(sortieDir, "backups")
+
+    /**
+     * Writes the current preferences and all recorded sessions to `<safetyDir>/<prefix>-<time>.json` in the backup format and
+     * returns the file, so any bulk change (a restore, an import) can be undone by restoring it. Throws when it cannot be
+     * written; callers must then not make their change.
+     */
+    suspend fun writeSafetyCopy(prefix: String): File = writeSafetyCopy(prefix, user.data.value, dao.allSessions())
+
+    /** Writes exactly [prefs] and [sessions], for callers that must know what the copy holds (restore compares it with user.json). */
+    private suspend fun writeSafetyCopy(prefix: String, prefs: UserData, sessions: List<SessionEntity>): File = withContext(Dispatchers.IO) {
+        File(safetyDir, "$prefix-${stamp()}.json").also { writeSafety(it, prefs, sessions) }
+    }
 
     fun suggestedName(): String {
         val device = deviceName().replace(Regex("[^A-Za-z0-9._-]"), "_").ifBlank { "device" }
@@ -196,15 +209,14 @@ class BackupManager(
         val merge = planSessionMerge(preview.backup.sessions, existing)
         val next = preview.backup.user
         var before = user.data.value
-        val safety = File(safetyDir, "pre-restore-${stamp()}.json")
-        try {
-            writeSafety(safety, before, existing)
+        val safety = try {
+            writeSafetyCopy("pre-restore", before, existing)
         } catch (e: Exception) {
             Log.w(TAG, "safety copy", e)
             return BackupState.Result(
                 false,
                 "Restore not started",
-                listOf("Couldn't save a safety copy of the current state to ${safety.path}: ${describe(e)}", "Nothing was changed.")
+                listOf("Couldn't save a safety copy of the current state to ${safetyDir.path}: ${describe(e)}", "Nothing was changed.")
             )
         }
         val inserted = try {

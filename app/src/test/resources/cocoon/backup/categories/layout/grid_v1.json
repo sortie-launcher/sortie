@@ -1,0 +1,22 @@
+{
+  "created_at": 1791000000100,
+  "db_schema_version": 47,
+  "grid_format_version": 3,
+  "folders": [
+    {"id": 3, "name": "Nintendo 64", "is_smart_folder": true, "parent_id": null, "smart_folder_query": "n64", "smart_folder_type": "BY_PLATFORM", "sort_order": 0, "view_mode": "GRID"},
+    {"id": 7, "name": "Weekend Picks", "is_smart_folder": false, "parent_id": null, "smart_folder_query": null, "smart_folder_type": null, "sort_order": 0, "view_mode": "GRID", "icon_type": "coral"}
+  ],
+  "membership": [
+    {"item_type": "FOLDER", "ref": {"backup_id": 7, "path": null, "package": null, "type": "FOLDER", "uri": null}, "screen": "home", "sort_order": 8},
+    {"item_type": "GAME", "ref": {"backup_id": null, "path": "cps2/skyfleet.7z", "package": null, "type": "GAME", "uri": "content://com.android.externalstorage.documents/tree/ABCD-1234%3Aroms%2Fcps2/document/ABCD-1234%3Aroms%2Fcps2%2Fskyfleet.7z"}, "screen": "folder_7", "sort_order": 1},
+    {"item_type": "GAME", "ref": {"backup_id": null, "path": "tg16/Star Patrol (USA).pce", "package": null, "type": "GAME", "uri": "content://com.android.externalstorage.documents/tree/ABCD-1234%3Aroms%2Ftg16/document/ABCD-1234%3Aroms%2Ftg16%2FStar%20Patrol%20(USA).pce"}, "screen": "folder_7", "sort_order": 0},
+    {"item_type": "GAME", "ref": {"backup_id": null, "path": "shortcut/Example Quest", "package": null, "type": "GAME", "uri": "shortcut_intent:pinned:com.droiddeck.launcher/game:100001"}, "screen": "folder_7", "sort_order": 2},
+    {"item_type": "GAME", "ref": {"backup_id": null, "path": "android_app/com.example.shmup", "package": "com.example.shmup", "type": "GAME", "uri": "package:com.example.shmup"}, "screen": "folder_7", "sort_order": 3},
+    {"item_type": "GAME", "ref": {"backup_id": null, "path": "n64/Star Fox 64 (USA).z64", "package": null, "type": "GAME", "uri": null}, "screen": "folder_3", "sort_order": 0}
+  ],
+  "game_flags": [
+    {"folder_backup_id": null, "is_hidden": true, "ref": {"backup_id": null, "path": "android_app/com.example.reader", "package": "com.example.reader", "type": "GAME", "uri": "package:com.example.reader"}},
+    {"folder_backup_id": null, "is_hidden": false, "ref": {"backup_id": null, "path": "pod/Silk", "package": null, "type": "GAME", "uri": "cocoon://pod/silk"}},
+    {"folder_backup_id": null, "is_hidden": true, "ref": {"backup_id": null, "path": "gba/Pairs 1 & 2 (USA).gba", "package": null, "type": "GAME", "uri": null}}
+  ]
+}

@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<gameList>
+	<cocoon:defaultplayerid>gba.ra.mgba</cocoon:defaultplayerid>
+	<game>
+		<path>./Bits, Inc. - Micro Games$! (USA).gba</path>
+		<name>Bits, Inc.: Micro Games$!</name>
+		<favorite>true</favorite>
+		<hidden>false</hidden>
+		<playcount>3</playcount>
+		<lastplayed>20260901T120000</lastplayed>
+		<cocoon:playtime>12</cocoon:playtime>
+		<cocoon:displayname>Bits, Inc.: Micro Games$!</cocoon:displayname>
+		<cocoon:boxartlocal>content://com.android.externalstorage.documents/tree/primary%3ACocoon/document/primary%3ACocoon%2Fdownloaded_media%2Fgba%2Ficon%2FBits%2C%20Inc.%20-%20Micro%20Games%24!%20(USA)__cocoon_edit_1_aaaa01.jpg</cocoon:boxartlocal>
+		<cocoon:logolocal>content://com.android.externalstorage.documents/tree/primary%3ACocoon/document/primary%3ACocoon%2Fdownloaded_media%2Fgba%2Flogo%2FBits%2C%20Inc.%20-%20Micro%20Games%24!%20(USA)__cocoon_edit_1_aaaa02.png</cocoon:logolocal>
+		<cocoon:screenshotgameplaylocal>content://com.android.externalstorage.documents/tree/primary%3ACocoon/document/primary%3ACocoon%2Fdownloaded_media%2Fgba%2Fscreenshot_gameplay%2FBits%2C%20Inc.%20-%20Micro%20Games%24!%20(USA)__cocoon_edit_1_aaaa03.jpg</cocoon:screenshotgameplaylocal>
+		<cocoon:launchonexternaldisplay>false</cocoon:launchonexternaldisplay>
+		<cocoon:dateadded>1790000000000</cocoon:dateadded>
+	</game>
+	<game>
+		<path>./Pairs 1 & 2 (USA).gba</path>
+		<name>Pairs 1 &amp; 2</name>
+		<favorite>false</favorite>
+		<hidden>false</hidden>
+		<playcount>0</playcount>
+		<cocoon:playtime>0</cocoon:playtime>
+	</game>
+	<game>
+		<path>./hacks/Café_ Test Version (1.0.2).gba</path>
+		<name>Café Test Version</name>
+		<favorite>false</favorite>
+		<hidden>true</hidden>
+	</game>
+</gameList>

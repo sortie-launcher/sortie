@@ -133,11 +133,13 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
                 onDiagnostics = { nav.navigate("diagnostics") },
                 onManual = { nav.navigate("manual") },
                 onBackup = { nav.navigate("backup") },
-                onLibrary = { nav.navigate("library") }
+                onLibrary = { nav.navigate("library") },
+                onImportCocoon = { nav.navigate("cocoon-import") }
             )
         }
         composable("library") { LibrarySetupScreen(graph, onDone = { nav.popBackStack() }, onGame = openIndexedGame) }
         composable("backup") { BackupScreen(vm) }
+        composable("cocoon-import") { CocoonImportScreen(graph) }
         composable("manual") { ManualScreen() }
         composable("magazines") {
             MagazineScreen(graph, onGame = openIndexedGame)

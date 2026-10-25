@@ -155,6 +155,7 @@ Reference:
 - [Manual](app/src/main/assets/MANUAL.md): every screen and control, as bundled in the app
 - [docs/formats/](docs/formats/): configuration and content formats, including magazine packs
 - [docs/LAUNCHERS.md](docs/LAUNCHERS.md): emulator launch intents and what was verified
+- [docs/COCOON_IMPORT.md](docs/COCOON_IMPORT.md): moving a Cocoon library into Sortie, and what it never changes
 - [docs/RELEASE.md](docs/RELEASE.md): beta status, evidence, known limitations, signing and magazine content
 - [docs/SPEC.md](docs/SPEC.md): behaviour, controller grammar and implementation notes for contributors
 - [docs/NOW_PLAYING.md](docs/NOW_PLAYING.md): scope note for RetroArch companion controls (not built)

@@ -1,6 +1,22 @@
 # Changelog
 
 ## Unreleased
+- Settings → Import from Cocoon…: reads Cocoon's folder (detected, typed or picked; optionally a backup selected anywhere on the device) without
+  changing it, previews systems with found ROM folders and emulators, favourites, hidden games, artwork vs. free space, and
+  backup folders/sessions/per-game emulators with per-category switches, then imports. Artwork copy is stoppable and
+  resumable; re-runs add nothing twice; a destination inside Cocoon's folder refuses the import. Play counts are shown,
+  never turned into sessions. The safety copy written first holds preferences and play sessions only: restoring it does not
+  remove added systems, folders, copied artwork or imported sessions. Guide: `docs/COCOON_IMPORT.md`.
+  XML is parsed as written first, with an in-memory fallback for broken ampersands. Fresh-system discovery refuses folders
+  named for another system; write guards also reject unsafe temporary-file links.
+- Library setup storage can add or update `folders.json` entries by id through the same atomic, fingerprint-checked commit
+  (other folders and unknown keys kept; built-in folder ids refused; a broken `folders.json` is never overwritten).
+- Built-in presets expose RetroArch profiles for each official build and a by-package profile lookup for importers.
+- user.json gains `cocoonDir`, the Cocoon directory last imported from, so a re-run starts there.
+- Safety copies are reusable: restore and Import from Cocoon write preferences and sessions to
+  `<card>/sortie/backups/<prefix>-<time>.json` (`pre-restore-`, `pre-cocoon-import-`).
+- The first app picked in Open with… becomes the system's default (`chosen-<package>` profile first in its list and selected
+  in `systemProfiles`) unless a default was already chosen on the device; change it in Library setup or on the game page.
 - Rework the README around the Split-S branding, a real screenshot tour and an immediate AI-collaboration disclosure.
   Add an illustrated beginner guide covering first-game setup, required versus optional features, emulator prerequisites,
   safe updates and recovery. Its Game Boy Color/uCity setup-to-launch path was exercised on an isolated Android 13

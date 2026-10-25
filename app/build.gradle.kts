@@ -320,4 +320,5 @@ dependencies {
     implementation(libs.shizuku.provider)
     testImplementation(libs.junit)
     testImplementation(libs.sqlite.jdbc) // runs Search's SQL against a real SQLite in plain JUnit
+    testImplementation(libs.kxml2) // XmlPullParser on the JVM for the Cocoon gamelist reader (android.jar only has stubs)
 }

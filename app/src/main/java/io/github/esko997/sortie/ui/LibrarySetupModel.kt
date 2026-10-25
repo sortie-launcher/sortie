@@ -7,7 +7,6 @@ import io.github.esko997.sortie.data.manifest.LaunchProfile
 import io.github.esko997.sortie.data.manifest.SystemDef
 import io.github.esko997.sortie.data.setup.LibraryConfiguration
 import io.github.esko997.sortie.data.setup.LibraryConflictException
-import io.github.esko997.sortie.data.setup.LibrarySetupStore
 import java.io.File
 import java.io.IOException
 import java.util.Locale
@@ -71,7 +70,7 @@ internal data class SetupResult(
  * only shows [work] and [config]. One change at a time.
  */
 internal class LibrarySetupModel private constructor(private val graph: SortieApp.Graph) {
-    private val store = LibrarySetupStore(graph.sortieDir, graph.manifests)
+    private val store = graph.librarySetup
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val _config = MutableStateFlow<SetupConfig>(SetupConfig.Loading)
     val config: StateFlow<SetupConfig> = _config

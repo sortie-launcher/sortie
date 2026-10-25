@@ -200,5 +200,7 @@ data class UserData(
     /** Locally authored/imported reference cards keyed by exact library game id. */
     val referenceCards: Map<String, List<ReferenceCard>> = emptyMap(),
     /** Dated personal journal entries; recorded sessions remain in the play-history database. */
-    val journalEntries: List<JournalEntry> = emptyList()
+    val journalEntries: List<JournalEntry> = emptyList(),
+    /** Cocoon directory last imported from, for re-runs: offered first next time "Import from Cocoon…" opens; null = never. */
+    val cocoonDir: String? = null
 )

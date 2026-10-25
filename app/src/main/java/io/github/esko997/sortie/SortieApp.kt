@@ -23,6 +23,7 @@ import io.github.esko997.sortie.data.magazine.BundledMagazines
 import io.github.esko997.sortie.data.magazine.MagazineGames
 import io.github.esko997.sortie.data.magazine.MagazineRepository
 import io.github.esko997.sortie.data.manifest.ManifestStore
+import io.github.esko997.sortie.data.setup.LibrarySetupStore
 import io.github.esko997.sortie.data.user.PlayLog
 import io.github.esko997.sortie.data.user.UserStore
 import io.github.esko997.sortie.launch.LaunchManager
@@ -52,7 +53,10 @@ class SortieApp :
         val indexer = Indexer(db.games(), manifests)
         val magazines = MagazineRepository(sortieDir, BundledMagazines.forApp(app))
         val magazineGames = MagazineGames(db.games()) { manifests.snapshot.value.systems }
-        val launcher = LaunchManager(app, manifests, user, playLog)
+
+        /** Editor of the card's library manifests, shared by Library setup, imports and the launcher's remembered Open with… choice. */
+        val librarySetup = LibrarySetupStore(sortieDir, manifests)
+        val launcher = LaunchManager(app, manifests, user, playLog, librarySetup)
         val deviceState = DeviceState(manifests)
         val screenMover = ScreenMover(app)
         val switcher = TaskSwitcher(app, screenMover) { manifests.snapshot.value.device.screens.presentationIndex }
