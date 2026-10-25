@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Hangar companion: the footer strip is gone; the mech now lives behind Home's interface and roams its margins (beside
+  the clock, the end of the sort chips, peeking over the first row of tiles, on the hint bar, at the screen edges), and on
+  dual-screen handhelds the other screen's panel too, walking off one screen and onto the other. Controls and text always
+  stay in front of him. He strolls every 45–90 s, greets you after a game with what it earned, shows Hangar news in a
+  speech bubble where there is room, dozes after three quiet minutes, and draws no frames while standing still or while a
+  game is in front. **Hangar** in Home's header (or a tap on him) opens the Hangar; Show/Hide companion lives there.
+  Browse screens no longer show him; reader Select → Visit the hangar is unchanged.
 - AYN Thor: pressing Home again while the app switcher is up keeps its windows instead of rebuilding them. Rebuilding both
   on every press could crash the Thor's system UI (a firmware race), restarting it and turning off wireless debugging.
   The Thor-panel guard now acts only on a complete system probe, never on partial output.
@@ -24,7 +31,7 @@
   give an optional positive `number`; otherwise it comes from the issue id's trailing digits (none without digits). The
   publisher rejects malformed or duplicate numbers. The shelf stays newest-date first, with the number ordering issues of
   the same day (rather than number first), so an old high-numbered card pack never displaces the latest issue.
-- Hangar companion (experimental): an optional pixel-art mecha hangs out below Home, browsing and zine pages. Its
+- Hangar companion (experimental): an optional pixel-art mecha that lives on Home (see above). Its
   Workshop supports naming, care, mixing owned parts and salvage from new completed game sessions; Gallery compares three
   original art families and four animated poses without unlocking preview parts. Motion can be disabled and the companion
   hidden. Reader Select → Visit the hangar preserves the article underneath. Its save is not yet part of Backup.

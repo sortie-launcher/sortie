@@ -70,6 +70,10 @@ import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import io.github.esko997.sortie.mecha.MechaSpotKind
+import io.github.esko997.sortie.mecha.ui.LocalMechaStage
+import io.github.esko997.sortie.mecha.ui.mechaObstacle
+import io.github.esko997.sortie.mecha.ui.mechaSpot
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -372,8 +376,24 @@ fun HomeScreen(
             memory.focusRemembered(gridState, gridKeys)
         }
     }
+    val stage = LocalMechaStage.current
+    // A controller user lands back on the Hangar button once the Hangar's window is gone; touch keeps touch mode.
+    val hangarButton = remember { FocusRequester() }
+    val hangarOpen = stage?.hangarOpen == true
+    var hangarWasOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(hangarOpen) {
+        if (hangarOpen) {
+            hangarWasOpen = true
+            return@LaunchedEffect
+        }
+        if (!hangarWasOpen) return@LaunchedEffect
+        hangarWasOpen = false
+        delay(60)
+        if (inputModes.inputMode == InputMode.Keyboard) runCatching { hangarButton.requestFocus() }
+    }
     val identity: @Composable () -> Unit = {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // the companion may stand just after the clock and game count when the header leaves room there
+        Row(Modifier.mechaSpot("home:identity", MechaSpotKind.BESIDE_END), verticalAlignment = Alignment.CenterVertically) {
             Text("Sortie", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.width(12.dp))
             Clock()
@@ -387,6 +407,7 @@ fun HomeScreen(
     }
     val actions: @Composable () -> Unit = {
         HeaderButton("Apps", onApps)
+        if (stage != null) HeaderButton("Hangar", stage::openHangar, Modifier.focusRequester(hangarButton))
         HeaderButton("Library setup", onLibrary)
         HeaderButton("Search", onSearch)
         HeaderButton("Magazines", onMagazines)
@@ -402,15 +423,20 @@ fun HomeScreen(
 
     Column(Modifier.fillMaxSize()) {
         val header = Modifier.fillMaxWidth()
+        // the actions block is a control the companion keeps clear of; when it wraps below the title he may stand on it
+        val actionSpot = Modifier.mechaSpot("home:actions", MechaSpotKind.LEDGE, interactive = true)
         when {
             narrow -> Column(header.padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 identity()
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { actions() }
+                Row(
+                    actionSpot.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) { actions() }
             }
             short -> Row(header.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 identity()
                 Row(
-                    Modifier.padding(start = 12.dp).weight(1f).horizontalScroll(rememberScrollState()),
+                    actionSpot.padding(start = 12.dp).weight(1f).horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
                 ) { actions() }
             }
@@ -420,7 +446,7 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 identity()
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { actions() }
+                FlowRow(actionSpot, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { actions() }
             }
         }
 
@@ -450,7 +476,9 @@ fun HomeScreen(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(horizontal = 12.dp).horizontalScroll(rememberScrollState())
+            modifier = Modifier.padding(horizontal = 12.dp)
+                .mechaSpot("home:sorts", MechaSpotKind.BESIDE_END, interactive = true)
+                .horizontalScroll(rememberScrollState())
         ) {
             Text("Sort", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             SORTS.forEach { (id, label) -> SortChip(label, selected = sort == id) { vm.setHomeSort(id) } }
@@ -499,53 +527,72 @@ fun HomeScreen(
             tiles.forEach { t ->
                 if (headers && t.section != section) {
                     val s = t.section
-                    fullItem("h:$s") { SectionTitle(s) }
+                    fullItem("h:$s") { Box(Modifier.mechaObstacle("section:$s")) { SectionTitle(s) } }
                 }
                 section = t.section
                 item(key = t.id) {
-                    RememberedItem(memory, t.id) {
-                        HomeTileView(
-                            t,
-                            grid,
-                            vm,
-                            lifted = lifted == t.id,
-                            favourite = (t.item?.id ?: t.id) in user.favourites,
-                            minutes = stats[t.item?.id ?: t.id]?.minutes,
-                            annotation = t.item?.id?.let { user.gameAnnotations[it] },
-                            onClick = {
-                                if (lifted != null) {
-                                    placeAt(t.id)
-                                    drop()
-                                } else {
-                                    t.onClick()
-                                }
-                            },
-                            onLongClick = { if (lifted == null) sheet = t },
-                            onFavourite = t.item?.let { item ->
-                                {
-                                    val now = vm.toggleFavourite(item.id)
-                                    Toast.makeText(context, if (now) "Added to favourites" else "Removed from favourites", Toast.LENGTH_SHORT).show()
-                                }
-                            } ?: t.random?.let { pick ->
-                                {
-                                    scope.launch {
-                                        val g = pick()
-                                        if (g != null) onGame(g.id) else Toast.makeText(context, "Nothing playable in ${t.title}", Toast.LENGTH_SHORT).show()
+                    // grid: every laid-out tile is a place to peek over (it counts only where his head is clear) and a
+                    // control he must not cover. List: a system/folder row is transparent beside its text, so only the
+                    // text keeps him away; other rows (covers, badges) count whole.
+                    val tileSpot = if (grid) {
+                        Modifier.mechaSpot("tile:${t.id}", MechaSpotKind.PEEK, interactive = true)
+                    } else {
+                        Modifier.mechaObstacle("tile:${t.id}", interactive = true, solid = t.item != null)
+                    }
+                    Box(tileSpot, propagateMinConstraints = true) {
+                        RememberedItem(memory, t.id) {
+                            HomeTileView(
+                                t,
+                                grid,
+                                vm,
+                                lifted = lifted == t.id,
+                                favourite = (t.item?.id ?: t.id) in user.favourites,
+                                minutes = stats[t.item?.id ?: t.id]?.minutes,
+                                annotation = t.item?.id?.let { user.gameAnnotations[it] },
+                                onClick = {
+                                    if (lifted != null) {
+                                        placeAt(t.id)
+                                        drop()
+                                    } else {
+                                        t.onClick()
                                     }
-                                }
-                            },
-                            // not while a tile is lifted: the grid holds the focus then, and R2 must not edit the queue mid-move
-                            onWantToPlay = (t.item as? LibraryItem.Game)?.takeIf { lifted == null }?.let { g -> { toggleWantToPlay(vm, g.id, context) } },
-                            platform = (t.item as? LibraryItem.Game)?.game?.systemId?.let { systemLabels[it]?.takeIf(String::isNotBlank) ?: it }
-                        )
+                                },
+                                onLongClick = { if (lifted == null) sheet = t },
+                                onFavourite = t.item?.let { item ->
+                                    {
+                                        val now = vm.toggleFavourite(item.id)
+                                        Toast.makeText(context, if (now) "Added to favourites" else "Removed from favourites", Toast.LENGTH_SHORT).show()
+                                    }
+                                } ?: t.random?.let { pick ->
+                                    {
+                                        scope.launch {
+                                            val g = pick()
+                                            if (g != null) {
+                                                onGame(g.id)
+                                            } else {
+                                                Toast.makeText(context, "Nothing playable in ${t.title}", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
+                                },
+                                // not while a tile is lifted: the grid holds the focus then, and R2 must not edit the queue mid-move
+                                onWantToPlay = (t.item as? LibraryItem.Game)?.takeIf { lifted == null }?.let { g -> { toggleWantToPlay(vm, g.id, context) } },
+                                platform = (t.item as? LibraryItem.Game)?.game?.systemId?.let { systemLabels[it]?.takeIf(String::isNotBlank) ?: it }
+                            )
+                        }
                     }
                 }
             }
         }
         val layoutHint = "Select" to if (grid) "list view" else "grid view"
         val swapHint = ("X" to "swap screens").takeIf { canSwap }
+        // he stands on the hint bar, and comes and goes at the screen's edges along it
+        val hintSpots = Modifier
+            .mechaSpot("home:hints", MechaSpotKind.LEDGE)
+            .mechaSpot("home:edge-start", MechaSpotKind.EDGE_START)
+            .mechaSpot("home:edge-end", MechaSpotKind.EDGE_END)
         when {
-            lifted != null -> HintBar("D-pad" to "move", "A" to "drop here", "B" to "cancel")
+            lifted != null -> HintBar("D-pad" to "move", "A" to "drop here", "B" to "cancel", modifier = hintSpots)
             custom -> HintBar(
                 *listOfNotNull(
                     "A" to "open",
@@ -555,7 +602,8 @@ fun HomeScreen(
                     layoutHint,
                     "L1/R1" to "systems",
                     swapHint
-                ).toTypedArray()
+                ).toTypedArray(),
+                modifier = hintSpots
             )
             else -> HintBar(
                 *listOfNotNull(
@@ -566,7 +614,8 @@ fun HomeScreen(
                     layoutHint,
                     "L1/R1" to "systems",
                     swapHint
-                ).toTypedArray()
+                ).toTypedArray(),
+                modifier = hintSpots
             )
         }
     }
@@ -689,7 +738,7 @@ private fun HomeTileView(
                         onLongClick = onLongClick,
                         colour = colour,
                         onFavourite = onFavourite
-                    ) { FolderLine(t.title, t.subtitle, colour) }
+                    ) { FolderLine(t.title, t.subtitle, colour, Modifier.mechaObstacle("line:${t.id}")) }
                 }
                 is LibraryItem.Game -> GameRow(
                     item.game,
@@ -715,8 +764,8 @@ private fun HomeTileView(
 }
 
 @Composable
-private fun FolderLine(title: String, subtitle: String, colour: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+private fun FolderLine(title: String, subtitle: String, colour: Color, modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         ColourChip(colour)
         Column(Modifier.padding(start = 12.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)

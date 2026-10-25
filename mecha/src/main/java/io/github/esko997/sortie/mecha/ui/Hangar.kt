@@ -74,6 +74,27 @@ import kotlinx.coroutines.delay
 
 private enum class HangarTab { WORKSHOP, GALLERY }
 
+/** How long a reaction (new part, care, rename) shows in the bay. */
+private const val CHEER_MS = 2_400L
+
+/** True for [CHEER_MS] after the mech found a part, was cared for or renamed (compared with the state it had before). */
+@Composable
+private fun rememberCheer(state: MechaState): Boolean {
+    var cheering by remember { mutableStateOf(false) }
+    var last by remember { mutableStateOf(state) }
+    LaunchedEffect(state) {
+        val before = last
+        last = state
+        if (before === state) return@LaunchedEffect
+        val reacted = state.owned.size > before.owned.size || state.bond > before.bond || state.name != before.name
+        if (!reacted) return@LaunchedEffect
+        cheering = true
+        delay(CHEER_MS)
+        cheering = false
+    }
+    return cheering
+}
+
 /**
  * The companion's hangar, over whatever screen opened it (that screen stays composed underneath, so a reader keeps its page).
  * Workshop is the real, saved hangar: every change goes through [MechaStore]. Gallery previews all the art and never changes
@@ -288,12 +309,21 @@ private fun Settings(store: MechaStore, state: MechaState, onHide: () -> Unit) {
             }
         }
         FocusRow(onClick = {
-            store.setEnabled(false)
-            onHide()
+            store.setEnabled(!state.enabled)
+            if (state.enabled) onHide()
         }) {
             Column {
-                Text("Hide companion", style = MaterialTheme.typography.titleSmall)
-                Text("Show it again from the bottom of Home. Parts and credits stay.", style = MaterialTheme.typography.bodySmall, color = Muted)
+                if (state.enabled) {
+                    Text("Hide companion", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "${state.name} stops roaming the screens. Show it again here (Hangar on Home). Parts and credits stay.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Muted
+                    )
+                } else {
+                    Text("Show companion", style = MaterialTheme.typography.titleSmall)
+                    Text("${state.name} is hidden and goes nowhere.", style = MaterialTheme.typography.bodySmall, color = Muted)
+                }
             }
         }
     }

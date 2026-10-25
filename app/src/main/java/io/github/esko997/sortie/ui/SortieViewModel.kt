@@ -23,6 +23,7 @@ import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.LaunchProfile
 import io.github.esko997.sortie.data.manifest.SystemDef
 import io.github.esko997.sortie.launch.IntentBuilder
+import io.github.esko997.sortie.mecha.ui.MechaPresence
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -397,7 +398,11 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
                 else -> session.profileId?.let { manifests.value.profiles[it]?.`package` }
             }
             val stillRunning = pkg != null && graph.screenMover.ready && graph.screenMover.appTasks().any { it.pkg == pkg }
-            if (!stillRunning) graph.playLog.end()
+            if (!stillRunning) {
+                // first, so the companion holds the credit message the ended session earns for its greeting
+                MechaPresence.playerReturned()
+                graph.playLog.end()
+            }
         }
         graph.screenMover.sweepStaleLaunchers()
         graph.screenMover.guardVendorPanel()
