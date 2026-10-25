@@ -119,7 +119,7 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   switcher page instead. Video playback/DRM was not exercised. Shizuku authorization had to be renewed after an earlier
   uninstall/reinstall: Android's package-permission listing alone did not establish Shizuku authorization.
 
-### Hangar experiment (local prototype)
+### Hangar companion (experimental)
 
 - A measured footer on Home, systems, folders, Apps, Search and magazines; never drawn over article text or launch controls.
   Hidden while typing, absent from settings/editors/switcher. The Hangar dialog stays mounted while its rename field uses
@@ -139,16 +139,16 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - State, inventory and credited-session identities are atomically saved together in app-private `files/mecha/state.json`.
   Failed writes leave the prior state intact; unreadable saves require explicit recovery and are preserved before starting
   fresh. No writes to Cocoon, library manifests, user preferences or play log come from the companion.
-- Prototype limits: a finite authored collection, not arbitrary generated artwork or statistical part affixes; no combat or
-  test-course simulation. The existing preference/history backup does **not** include this app-private experiment yet.
-  Preserve app data; do not uninstall to change builds. No dual-display hardware acceptance is claimed for the experiment.
+- Limits: a finite authored collection, not arbitrary generated artwork or statistical part affixes; no combat or
+  test-course simulation. The existing preference/history backup does **not** include the companion save yet.
+  Preserve app data; do not uninstall to change builds.
 - DMG acceptance for `0.1.0-mecha-lab.2`: rename/care/salvage/equipment, unowned-part preview restrictions, four animated
   poses, hide/show persistence, and Home/system/folder/Apps placement exercised on device. Controller-only Home → Hangar
   and reader Select → Hangar → Gallery → B → B preserve the article position and resume D-pad scrolling.
   A real 310-second game session earned exactly one credit; process restart and in-place upgrade preserved inventory and
   did not repeat the reward. Background frame count stayed fixed with motion enabled. Motion-off sprites stayed still.
   Both JVM variants passed 308 tests. Original card configuration/preferences, all 10,154 game/path rows and 130 history
-  rows were preserved; the three smoke sessions were the only appended history. Thor was not used for this experiment.
+  rows were preserved; the three smoke sessions were the only appended history.
 
 ### Library hygiene (M3)
 - Multi-disc grouping (.m3u or disc tags), duplicate-format hiding (PBP next to CHD), hacks
