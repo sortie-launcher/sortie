@@ -1,7 +1,11 @@
 package io.github.esko997.sortie.shell
 
+import java.nio.file.Files
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 /**
@@ -112,5 +116,27 @@ class ReplayPanelGuardTest {
         val noPanel = PanelDumps.stuck().copy(pid = null)
         assertEquals("0\npid=\nend\n", noPanel.probe())
         assertEquals(emptyList<String>(), guard(noPanel).actions)
+    }
+
+    @Test
+    fun aHungProbeFailsWithinItsBoundAndLeavesNothingRunning() {
+        val marker = Files.createTempFile("stalled-dumpsys", ".pid").toFile()
+        try {
+            val started = System.nanoTime()
+            try {
+                PanelDumps.stuck().probe(timeoutMs = 500, stallMarker = marker)
+                fail("a hung probe must not return")
+            } catch (e: IllegalStateException) {
+                assertTrue(e.message, "still running after 500 ms" in e.message.orEmpty())
+            }
+            val elapsedMs = (System.nanoTime() - started) / 1_000_000
+            assertTrue("probe took $elapsedMs ms", elapsedMs < 5_000)
+            // the stalled dumpsys and its parent (sh's command substitution) were killed, not orphaned to run on
+            val stalled = marker.readText().trim().split(' ').map { it.toLong() }
+            assertEquals(2, stalled.size)
+            for (pid in stalled) assertFalse("process $pid still running", HostProcesses.isAlive(pid))
+        } finally {
+            marker.delete()
+        }
     }
 }
