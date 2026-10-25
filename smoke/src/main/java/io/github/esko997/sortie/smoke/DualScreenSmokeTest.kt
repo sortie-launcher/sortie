@@ -95,12 +95,10 @@ class DualScreenSmokeTest {
      */
     @Test
     fun quickSecondSwapLeavesTheControllerWithNavigation() {
-        val start = SystemClock.uptimeMillis()
-        pressX()
+        val first = pressX()
         // past the moment X itself starts navigation below: the companion's hand-off has landed when the focus stays there
         awaitSteady("the controller following navigation to display $second", 300, pollMs = 50) { focusedDisplay() == second }
-        pressX()
-        val apart = SystemClock.uptimeMillis() - start
+        val apart = pressX() - first
         assertTrue("presses $apart ms apart: too slow to land inside the companion's old 1.5 s window", apart < 2_000)
         awaitNavigationOn(PRIMARY)
         await("the controller back with navigation on the primary display (presses $apart ms apart)") { focusedDisplay() == PRIMARY }
@@ -109,11 +107,9 @@ class DualScreenSmokeTest {
     /** X twice within half a second: wherever navigation ends up, it is alone and has the controller. */
     @Test
     fun doubleSwapEndsWithTheControllerOnNavigation() {
-        val start = SystemClock.uptimeMillis()
-        pressX()
+        val first = pressX()
         SystemClock.sleep(350)
-        pressX()
-        val apart = SystemClock.uptimeMillis() - start
+        val apart = pressX() - first
         assertTrue("presses $apart ms apart", apart <= 500)
         awaitSteady("one navigation task holding the controller, a companion on the other display (presses $apart ms apart)", 2_000) {
             val main = mainTasks().singleOrNull()
@@ -290,10 +286,10 @@ class DualScreenSmokeTest {
     }
 
     /**
-     * X, straight to the focused display as the controller would send it. Injected directly (no shell `input` process, no
-     * UiAutomator idle wait) so presses can be timed to a few milliseconds.
+     * X, straight to the focused display as the controller would send it; returns the press's event time. Injected directly
+     * (no shell `input` process, no UiAutomator idle wait) so presses can be timed to a few milliseconds.
      */
-    private fun pressX() {
+    private fun pressX(): Long {
         val automation = instrumentation.getUiAutomation(Configurator.getInstance().uiAutomationFlags) // UiDevice's connection
         val t = SystemClock.uptimeMillis()
         for (action in intArrayOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP)) {
@@ -301,6 +297,7 @@ class DualScreenSmokeTest {
             // not synchronous: during a swap the focused display may wait seconds for its window, which would skew the timing
             assertTrue("X was not injected", automation.injectInputEvent(event, false))
         }
+        return t
     }
 
     private fun shell(command: String): String = device.executeShellCommand(command)
