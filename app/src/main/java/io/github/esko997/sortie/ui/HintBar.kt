@@ -45,6 +45,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,15 +55,28 @@ import io.github.esko997.sortie.mecha.ui.mechaObstacle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** Controller hints wrap as whole button/action pairs, never as narrow columns of letters. */
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * Controller hints wrap as whole button/action pairs, never as narrow columns of letters. In a built-in app's own window
+ * ([LocalWindowActions]; not in its dialogs) the bar ends with that window's Other screen and Close, for touch.
+ */
 @Composable
 fun HintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modifier) {
-    FlowRow(
-        modifier.fillMaxWidth().background(Color(0xFF0B0D10)).padding(horizontal = 14.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
+    val window = LocalWindowActions.current?.takeIf { it.root === LocalView.current.rootView }
+    val bar = modifier.fillMaxWidth().background(Color(0xFF0B0D10)).padding(horizontal = 14.dp, vertical = 6.dp)
+    if (window == null) {
+        Hints(hints, bar)
+        return
+    }
+    Row(bar, horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Hints(hints, Modifier.weight(1f))
+        WindowActionChips(window)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Hints(hints: Array<out Pair<String, String>>, modifier: Modifier) {
+    FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         hints.forEach { (button, action) ->
             Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(

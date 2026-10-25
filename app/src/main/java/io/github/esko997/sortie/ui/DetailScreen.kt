@@ -86,14 +86,15 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
         if (!editing) runCatching { (if (fromEditor) notesFocus else launchFocus).requestFocus() }
     }
     // Y favourites and R2 toggles Want to play only outside the editor: there the claims are dropped, so R2 reaches nothing
-    androidx.compose.runtime.DisposableEffect(editing) {
+    val hotkeys = LocalHotkeys.current
+    androidx.compose.runtime.DisposableEffect(hotkeys, editing) {
         val claims = !editing
         val keys = setOf(Hotkeys.Key.FAVOURITE, Hotkeys.Key.WANT_TO_PLAY)
-        if (claims) Hotkeys.handle(keys)
-        onDispose { if (claims) Hotkeys.release(keys) }
+        if (claims) hotkeys.handle(keys)
+        onDispose { if (claims) hotkeys.release(keys) }
     }
-    LaunchedEffect(game.id) {
-        Hotkeys.events.collect {
+    LaunchedEffect(hotkeys, game.id) {
+        hotkeys.events.collect {
             if (editing) return@collect
             when (it) {
                 Hotkeys.Key.FAVOURITE -> vm.toggleFavourite(game.id)

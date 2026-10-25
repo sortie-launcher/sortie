@@ -53,10 +53,13 @@ class LaunchManager(
 
     data class LogEntry(val at: String, val gameId: String, val attempts: List<Attempt>, val launched: Boolean)
 
-    /** Supplied by the activity: which display Sortie itself is on right now. */
+    /** Supplied by the navigation activity: which display Sortie's navigation is on right now. */
     var currentDisplayId: (() -> Int)? = null
 
-    /** Called right after an emulator was started, with the display it was sent to (or null for "wherever the system put it"). */
+    /**
+     * Supplied by the navigation activity, called right after an emulator was started from it, with the display it was sent to
+     * (or null for "wherever the system put it"). Never for a launch [from] another window (a built-in app; see [launch]).
+     */
     var afterLaunch: ((displayId: Int?) -> Unit)? = null
 
     private val _log = MutableStateFlow<List<LogEntry>>(emptyList())
@@ -95,7 +98,13 @@ class LaunchManager(
         return runCatching { context.packageManager.getPackageInfo(pkg, 0) }.isSuccess
     }
 
-    suspend fun launch(game: GameEntity, only: LaunchProfile? = null): Boolean {
+    /**
+     * Starts [game] with its first profile that starts ([only]: just that one). [from] is the display of the window that asked
+     * when that is not Sortie's navigation (a built-in app such as Magazines): it stands in for the navigation's display in the
+     * "same" display rule and for a failure message, and [afterLaunch] is not called, because the navigation launched nothing
+     * and must stay where it is. The play session opens either way: a game did start.
+     */
+    suspend fun launch(game: GameEntity, only: LaunchProfile? = null, from: Int? = null): Boolean {
         val file = File(game.path)
         val attempts = mutableListOf<Attempt>()
         val snap = manifests.snapshot.value
@@ -122,10 +131,10 @@ class LaunchManager(
             try {
                 val uri = runCatching { FileProvider.getUriForFile(context, "${context.packageName}.files", file) }.getOrNull()
                 val titleId = sidecarTitleId(file)
-                val (options, displayId, displayNote) = displayOptions(profile.display)
+                val (options, displayId, displayNote) = displayOptions(profile.display, from)
                 val intent = if (profile.generic) {
                     val origin = chooserOrigin(game.id, game.systemId, userData, systemProfiles, snap.profiles, profile, explicit = only != null)
-                    openWith(file, uri, game.id, profile, displayId, origin)
+                    openWith(file, uri, game.id, profile, displayId, origin, scoped = from != null)
                 } else {
                     IntentBuilder.build(profile, IntentBuilder.vars(file, game.systemId, uri, titleId))
                 }
@@ -151,7 +160,7 @@ class LaunchManager(
         attempts.forEach { Log.i("SortieLaunch", "${game.id} via ${it.profileId}: ${it.outcome} | ${it.command}") }
         if (started == null) {
             val system = manifests.snapshot.value.systems.firstOrNull { it.id == game.systemId }?.label ?: game.systemId
-            notify(gameFailureMessage(game.title, system, attempts, candidates.associate { it.id to it.label }), sortieDisplay())
+            notify(gameFailureMessage(game.title, system, attempts, candidates.associate { it.id to it.label }), from ?: sortieDisplay())
         }
         // A chooser opening is not a game starting. Its private sender records only an actual selection.
         started?.takeUnless { it.generic }?.let {
@@ -161,7 +170,7 @@ class LaunchManager(
             if (pkg != null && content != null) libretroContent[pkg] = content
             lastStarted = Started(game.id, pkg, switch)
             runCatching { playLog.start(game.id, it.id, it.display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
-            afterLaunch?.invoke(startedDisplay) // last: the activity may finish itself here
+            if (from == null) afterLaunch?.invoke(startedDisplay) // last: the activity may finish itself here
         }
         return started != null
     }
@@ -170,16 +179,25 @@ class LaunchManager(
      * The user picked [chosen] in the Open with… chooser: logs it and opens the play session. [origin] (see [chooserOrigin])
      * is non-null only when the chooser was the system's fallback after its emulators; then the pick also becomes that
      * system's default (see [rememberChoice]), so the chooser is not asked again on every launch. A one-off, per-game or
-     * deliberately configured Open with… never changes the system.
+     * deliberately configured Open with… never changes the system. [scoped]: the launch came from a built-in app's window
+     * (see [launch]'s `from`), so the navigation's [afterLaunch] does not apply.
      */
-    internal suspend fun chooserSelected(gameId: String, profileId: String, display: String, target: Int?, chosen: ComponentName, origin: List<String>?) {
+    internal suspend fun chooserSelected(
+        gameId: String,
+        profileId: String,
+        display: String,
+        target: Int?,
+        chosen: ComponentName,
+        origin: List<String>?,
+        scoped: Boolean
+    ) {
         val attempt = Attempt(profileId, chosen.flattenToShortString(), "app selected")
         _log.update { (listOf(LogEntry(LocalTime.now().format(TS), gameId, listOf(attempt), true)) + it).take(50) }
         Log.i("SortieLaunch", "$gameId via $profileId: app selected | ${attempt.command}")
         lastStarted = Started(gameId, chosen.packageName, ContentSwitch.NONE)
         runCatching { playLog.start(gameId, profileId, display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
         origin?.let { background.launch { rememberChoice(gameId, profileId, chosen, it) } }
-        afterLaunch?.invoke(target)
+        if (!scoped) afterLaunch?.invoke(target)
     }
 
     /**
@@ -340,10 +358,10 @@ class LaunchManager(
         null
     }
 
-    private fun openWith(file: File, uri: Uri?, gameId: String, profile: LaunchProfile, displayId: Int?, origin: List<String>?): Intent {
+    private fun openWith(file: File, uri: Uri?, gameId: String, profile: LaunchProfile, displayId: Int?, origin: List<String>?, scoped: Boolean): Intent {
         val target = uri ?: Uri.fromFile(file)
         val view = Intent(Intent.ACTION_VIEW).setDataAndType(target, "*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        return Intent.createChooser(view, file.name, ChooserLaunchReceiver.sender(context, gameId, profile, displayId, origin))
+        return Intent.createChooser(view, file.name, ChooserLaunchReceiver.sender(context, gameId, profile, displayId, origin, scoped))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
@@ -355,17 +373,18 @@ class LaunchManager(
     /**
      * The display an emulator is sent to. "same" always resolves to an explicit id: without one Android reuses the emulator's
      * existing task wherever it is (after a switcher move, on the other screen) instead of the screen the user is looking at.
-     * On a dual-screen device whose navigation lives on the bottom, "same" means the top screen.
+     * For navigation launches on a dual-screen device configured with navigation on the bottom, "same" means the top screen.
+     * A built-in's explicit [from] instead means that window's screen; explicit top/bottom profiles still take precedence.
      */
-    private fun displayOptions(display: String): Triple<ActivityOptions?, Int?, String?> {
+    private fun displayOptions(display: String, from: Int? = null): Triple<ActivityOptions?, Int?, String?> {
         val dm = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
         val screens = manifests.snapshot.value.device.screens
         val secondary = dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).getOrNull(screens.presentationIndex)
-        val current = currentDisplayId?.invoke() ?: Display.DEFAULT_DISPLAY
+        val current = from ?: currentDisplayId?.invoke() ?: Display.DEFAULT_DISPLAY
         val id = when (display) {
             "top" -> Display.DEFAULT_DISPLAY
             "bottom" -> secondary?.displayId ?: return Triple(null, null, "no secondary display, launched on the current one")
-            else -> if (secondary != null && screens.navigation == "bottom") Display.DEFAULT_DISPLAY else current
+            else -> if (from == null && secondary != null && screens.navigation == "bottom") Display.DEFAULT_DISPLAY else current
         }
         return Triple(ActivityOptions.makeBasic().setLaunchDisplayId(id), id, null)
     }

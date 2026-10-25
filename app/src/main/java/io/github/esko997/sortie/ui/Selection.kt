@@ -38,9 +38,28 @@ object Selection {
      */
     val navigationVisible = MutableStateFlow(false)
 
-    /** Reader navigation for the other display; cleared when its owning magazine screen leaves composition. */
-    internal val magazine = MutableStateFlow<MagazineCompanionState?>(null)
+    /**
+     * Reader navigation for the other display: the panel of the reader started most recently, while it stays started. Readers
+     * publish and withdraw through [publishMagazine] / [withdrawMagazine] ([PublishMagazineCompanion]); a stopped reader (a game
+     * in front of it, or its window closed) never covers what a visible one shows.
+     */
+    internal val magazine: StateFlow<MagazineCompanionState?> get() = _magazine
+    private val _magazine = MutableStateFlow<MagazineCompanionState?>(null)
+
+    // owner → panel, oldest start first; the last entry is the one shown
+    private val magazines = LinkedHashMap<Any, MagazineCompanionState>()
     internal val magazineActions = MutableSharedFlow<MagazineAction>(extraBufferCapacity = 16)
+
+    /** Updates [panel]'s reader in place, or (a reader that just started) makes it the newest. */
+    internal fun publishMagazine(panel: MagazineCompanionState) = synchronized(magazines) {
+        magazines[panel.owner] = panel
+        _magazine.value = magazines.values.last()
+    }
+
+    /** Removes [owner]'s panel (its reader stopped or left); the reader started before it, if still started, shows again. */
+    internal fun withdrawMagazine(owner: Any) = synchronized(magazines) {
+        if (magazines.remove(owner) != null) _magazine.value = magazines.values.lastOrNull()
+    }
 
     fun set(game: GameEntity?) {
         _current.value = game

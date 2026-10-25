@@ -61,7 +61,7 @@ data class SearchOption(val value: String, val label: String, val n: Int, val ca
 
 data class SearchFacets(val systems: List<SearchOption>, val tags: List<SearchOption>, val genres: List<SearchOption>)
 
-/** One view model for the whole app; screens are thin. */
+/** One view model per activity (the navigation, each built-in app); the state they share lives in the graph. Screens are thin. */
 class SortieViewModel(app: Application, private val saved: SavedStateHandle) : AndroidViewModel(app) {
     private val graph = (app as SortieApp).graph
     private val dao = graph.db.games()
@@ -76,12 +76,29 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     val storageGranted: StateFlow<Boolean> = _storageGranted
 
     private var deviceScanned = false
+    private var watchingManifests = false
 
     /**
-     * Activity start: re-check the all-files permission and recover manifests after a grant. The library is NOT re-walked here:
-     * the index is fixed until the first run (empty table), a manifest deploy (hot reload) or an explicit re-index in Diagnostics.
+     * Set by a built-in app's activity (Magazines, Performance) on its own view model: the display of that window. Launches
+     * made from it resolve against it and leave Sortie's navigation alone (see [io.github.esko997.sortie.launch.LaunchManager.launch]).
+     * Null in the navigation activity, whose launches use the launcher's own hooks.
+     */
+    var launchOrigin: (() -> Int)? = null
+
+    private fun origin(): Int? = runCatching { launchOrigin?.invoke() }.getOrNull()
+
+    /**
+     * Navigation activity start: re-check the all-files permission and recover manifests after a grant. The library is NOT
+     * re-walked here: the index is fixed until the first run (empty table), a manifest deploy (hot reload) or an explicit
+     * re-index in Diagnostics. Built-in apps' activities never call this: one window owns the library's upkeep.
      */
     fun onStart(granted: Boolean) {
+        // A manifest deploy from the desktop is the explicit signal that the card changed; watched from the navigation's view
+        // model only, so a built-in app open at the same time does not walk the library a second time.
+        if (!watchingManifests) {
+            watchingManifests = true
+            viewModelScope.launch { manifests.map { it.loadedAt }.drop(1).distinctUntilChanged().collect { reindex() } }
+        }
         _storageGranted.value = granted
         if (!granted) return
         if (manifests.value.errors.isNotEmpty()) graph.manifests.reload()
@@ -95,8 +112,6 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     }
 
     init {
-        // A manifest deploy from the desktop is the explicit signal that the card changed.
-        viewModelScope.launch { manifests.map { it.loadedAt }.drop(1).distinctUntilChanged().collect { reindex() } }
         viewModelScope.launch { user.map { it.heroRotation }.distinctUntilChanged().collect { Selection.heroRotation.value = it } }
     }
 
@@ -145,13 +160,14 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     /** The shortcut's own icon, else its publishing app's icon. */
     fun shortcutIcon(s: ShortcutEntry): Drawable? = graph.shortcuts.icon(s) ?: graph.apps.icon(s.pkg)
 
+    /** From a built-in app's window ([launchOrigin]) an app opens next to it like a companion side launch: no play session. */
     fun launchApp(app: AppEntry) = viewModelScope.launch {
         val intent = graph.apps.launchIntent(app)
-        graph.launcher.launchExternal(app.id, IntentBuilder.describe(intent)) { opts -> getApplication<Application>().startActivity(intent, opts) }
+        graph.launcher.launchExternal(app.id, IntentBuilder.describe(intent), origin()) { opts -> getApplication<Application>().startActivity(intent, opts) }
     }
 
     fun launchShortcut(s: ShortcutEntry) = viewModelScope.launch {
-        graph.launcher.launchExternal(s.id, "startShortcut ${s.pkg}/${s.shortcutId}") { opts -> graph.shortcuts.launch(s, opts) }
+        graph.launcher.launchExternal(s.id, "startShortcut ${s.pkg}/${s.shortcutId}", origin()) { opts -> graph.shortcuts.launch(s, opts) }
     }
 
     /** Apps and shortcuts launch straight away; games return false so the caller opens their detail screen instead. */
@@ -357,7 +373,7 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     fun launch(game: GameEntity, only: LaunchProfile? = null) = viewModelScope.launch {
         dismissExitNotice()
-        graph.launcher.launch(game, only)
+        graph.launcher.launch(game, only, origin())
     }
 
     /** `adb shell am start -n <pkg>/.MainActivity --es launch "<folder>/<file>" [--es profile <id>]` for reproducible tests. */

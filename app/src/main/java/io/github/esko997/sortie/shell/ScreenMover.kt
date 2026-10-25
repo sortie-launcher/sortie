@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.os.IBinder
 import android.os.SystemClock
 import android.util.Log
+import io.github.esko997.sortie.BuiltinApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -130,9 +131,16 @@ class ScreenMover internal constructor(
     /** Parses `cmd activity stack list`: a RootTask line, then one `taskId=` line per leaf task in it (top-most first). */
     suspend fun rootTasks(): List<RootTask> = parseRootTasks(exec("cmd activity stack list"))
 
-    /** Tasks that are apps the user can switch to: not Sortie, not a launcher, not a placeholder. Top-most first per display. */
-    suspend fun appTasks(): List<RootTask> =
-        if (!ready) emptyList() else rootTasks().filter { !it.component.startsWith(context.packageName) && !isLauncher(it.component) && '/' in it.component }
+    /**
+     * Tasks that are apps the user can switch to: not a launcher, not a placeholder, and of Sortie's own tasks only its built-in
+     * apps ([BuiltinApp]); its navigation, companions, anchor, restart and pin surfaces never are. Top-most first per display.
+     */
+    suspend fun appTasks(): List<RootTask> = if (!ready) emptyList() else rootTasks().filter { switchable(it.component) }
+
+    private fun switchable(component: String): Boolean {
+        if ('/' !in component || isLauncher(component)) return false
+        return !component.startsWith(context.packageName) || BuiltinApp.of(context.packageName, component) != null
+    }
 
     /** Moves a whole root task (display move-stack works on root tasks only). */
     suspend fun moveTask(task: RootTask, toDisplay: Int): Boolean =

@@ -31,6 +31,25 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <!-- Built-in apps (BuiltinApps.kt): ordinary app tasks, never HOME. One task each (singleTask, own affinity) so a reopen
+             resumes it; Sortie's switcher names, raises, moves and closes them like any app. Not exported: only Sortie starts
+             them. Closing one (B at the top, Close) removes just its task. -->
+        <activity
+            android:name=".MagazinesActivity"
+            android:label="@string/builtin_magazines"
+            android:icon="@drawable/ic_builtin_magazines"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity="${applicationId}.magazines"
+            android:autoRemoveFromRecents="true" />
+        <activity
+            android:name=".PerformanceActivity"
+            android:label="@string/builtin_performance"
+            android:icon="@drawable/ic_builtin_performance"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity="${applicationId}.performance"
+            android:autoRemoveFromRecents="true" />
         <activity
             android:name=".CompanionActivity"
             android:exported="false"

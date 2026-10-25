@@ -1,26 +1,32 @@
 package io.github.esko997.sortie.ui
 
 import android.net.Uri
+import android.view.Display
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import io.github.esko997.sortie.BuiltinApp
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.magazine.ReaderLocation
 import io.github.esko997.sortie.mecha.ui.MechaStageHost
 import io.github.esko997.sortie.mecha.ui.rememberMechaStage
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -28,22 +34,17 @@ import kotlinx.coroutines.launch
  * [nav] is owned by MainActivity, which reads its back stack when X hands the whole saved state (back stack, each screen's
  * filters, search text and grid position) to the instance on the other screen.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
     val enc = { s: String -> Uri.encode(s) }
     val systems by vm.systems.collectAsState()
     val context = LocalContext.current
+    val view = LocalView.current
     val graph = (context.applicationContext as SortieApp).graph
-    val scope = rememberCoroutineScope()
-    val openIndexedGame: (String) -> Unit = { id ->
-        scope.launch {
-            if (vm.game(id).first() != null) {
-                nav.navigate("game/${enc(id)}")
-            } else {
-                Toast.makeText(context, "This game is not indexed on this device.", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
+    val hotkeys = LocalHotkeys.current
+    val openIndexedGame = rememberIndexedGameOpener(vm) { nav.navigate("game/${enc(it)}") }
+    val openApp = rememberBuiltinOpener()
     LaunchedEffect(graph.user) {
         graph.user.writeError.collect { error ->
             if (error != null) {
@@ -57,9 +58,13 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
             Selection.openRoute.resetReplayCache()
         }
     }
-    LaunchedEffect(Unit) {
-        Hotkeys.handle(setOf(Hotkeys.Key.SEARCH, Hotkeys.Key.PREV_FOLDER, Hotkeys.Key.NEXT_FOLDER))
-        Hotkeys.events.collect { key ->
+    DisposableEffect(hotkeys) {
+        val keys = setOf(Hotkeys.Key.SEARCH, Hotkeys.Key.PREV_FOLDER, Hotkeys.Key.NEXT_FOLDER)
+        hotkeys.handle(keys)
+        onDispose { hotkeys.release(keys) }
+    }
+    LaunchedEffect(hotkeys) {
+        hotkeys.events.collect { key ->
             val route = nav.currentBackStackEntry?.destination?.route ?: ""
             when (key) {
                 Hotkeys.Key.SEARCH -> if (route != "search" && route != "library") nav.navigate("search") { launchSingleTop = true }
@@ -67,10 +72,7 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
                     // on Home L1/R1 page the sort modes, or the consoles while "By Console" is the sort
                     val delta = if (key == Hotkeys.Key.NEXT_FOLDER) 1 else -1
                     if (vm.user.value.homeSort == "console") vm.cycleHomeConsole(delta) else vm.cycleHomeSort(delta, SORTS.map { it.first })
-                } else if (
-                    route != "library" && route != "magazines" && route != MAGAZINE_ARTICLE_ROUTE &&
-                    route != "journal" && route != "reference/{id}" && systems.isNotEmpty()
-                ) {
+                } else if (route != "library" && route != "journal" && route != "reference/{id}" && systems.isNotEmpty()) {
                     val cur = nav.currentBackStackEntry?.arguments?.getString("id")
                     val i = systems.indexOfFirst { it.def.id == cur }
                     val next = when {
@@ -110,7 +112,7 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
                     onDiagnostics = { nav.navigate("settings") },
                     onApps = { nav.navigate("apps") },
                     onManual = { nav.navigate("manual") },
-                    onMagazines = { nav.navigate("magazines") },
+                    onMagazines = { openApp(BuiltinApp.MAGAZINES) },
                     onJournal = { nav.navigate("journal") },
                     onLibrary = { nav.navigate("library") }
                 )
@@ -133,7 +135,10 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
                         it,
                         vm,
                         onReference = { nav.navigate("reference/${enc(id)}") },
-                        onArticle = { issue, article -> nav.navigate("magazines/${enc(issue)}/${enc(article)}") }
+                        // the Magazines app opens on this screen at the article; B from it closes the reader back to this page
+                        onArticle = { issue, article ->
+                            openBuiltin(context, BuiltinApp.MAGAZINES, view.display?.displayId ?: Display.DEFAULT_DISPLAY, ReaderLocation(issue, article))
+                        }
                     )
                 }
             }
@@ -153,18 +158,6 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
             composable("backup") { BackupScreen(vm) }
             composable("cocoon-import") { CocoonImportScreen(graph) }
             composable("manual") { ManualScreen() }
-            composable("magazines") {
-                MagazineScreen(graph, onGame = openIndexedGame)
-            }
-            // an article opened from a game page's "Featured in": B from the article returns to that page
-            composable(
-                MAGAZINE_ARTICLE_ROUTE,
-                arguments = listOf(navArgument("issue") { type = NavType.StringType }, navArgument("article") { type = NavType.StringType })
-            ) { entry ->
-                val issue = entry.arguments?.getString("issue") ?: return@composable
-                val article = entry.arguments?.getString("article") ?: return@composable
-                MagazineScreen(graph, onGame = openIndexedGame, opened = ReaderLocation(issue, article))
-            }
             composable("journal") { JournalScreen(graph, onGame = openIndexedGame) }
             composable("reference/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
                 val id = entry.arguments?.getString("id") ?: return@composable
@@ -176,4 +169,21 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
     }
 }
 
-private const val MAGAZINE_ARTICLE_ROUTE = "magazines/{issue}/{article}"
+/** Opens Sortie's page for game id through [open] when the game is indexed on this device; says so when it is not. */
+@Composable
+internal fun rememberIndexedGameOpener(vm: SortieViewModel, open: (String) -> Unit): (String) -> Unit {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val latest by rememberUpdatedState(open)
+    return remember<(String) -> Unit>(vm, context, scope) {
+        { id ->
+            scope.launch {
+                if (vm.game(id).first() != null) {
+                    latest(id)
+                } else {
+                    Toast.makeText(context, "This game is not indexed on this device.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+}

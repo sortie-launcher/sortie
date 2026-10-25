@@ -44,6 +44,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
@@ -176,19 +177,26 @@ private val Warning = Color(0xFFF87171)
 private class Loaded(val shelf: MagazineShelf, val store: MagazineReadingStore)
 
 /**
+ * Where the reader should go now. [handsBack]: it was sent there from outside (a game page's "Featured in"), so B from the
+ * article closes the reader instead of climbing to the contents. [serial] tells two requests for the same place apart.
+ */
+@Immutable
+data class ReaderRequest(val location: ReaderLocation, val handsBack: Boolean, val serial: Long)
+
+/**
  * Offline magazines (format and sources in data/magazine: issues bundled with Sortie plus packs on the card): a shelf of issues,
- * an issue's editorial, contents and games mentioned, and a long-form article reader. B climbs one level at a time (article →
- * contents → shelf) and only the shelf hands B to the navigation; opened at an article ([opened], a game page's "Featured in"),
- * B from the article hands back straight away. The open issue/article and the article's scroll position are saved state
- * (recreation, the X swap); [MagazineReadingStore] keeps reading positions and focus for when the magazines are left and
- * opened again. [onGame] opens Sortie's page for a local game an article's references resolve to; a reference never claims
- * a game is on the device unless a readable file matched it.
+ * an issue's editorial, contents and games mentioned, and a long-form article reader; the Magazines built-in app's content.
+ * B climbs one level at a time (article → contents → shelf) and only the shelf hands B to the window, which closes; an
+ * article [request]ed with [ReaderRequest.handsBack] hands B back straight away. The open issue/article and the article's
+ * scroll position are saved state (recreation, a move to the other screen); [MagazineReadingStore] keeps reading positions
+ * and focus for when the magazines are closed and opened again. [onGame] opens Sortie's page for a local game an article's
+ * references resolve to; a reference never claims a game is on the device unless a readable file matched it.
  *
  * The scrapbook (Select on the shelf or in the reader) holds the user's highlights and clipped articles from user.json
  * ([MagazineClipping]); B closes it back to where it was opened, and opening a clipping goes to its article and passage.
  */
 @Composable
-fun MagazineScreen(graph: SortieApp.Graph, onGame: (String) -> Unit, opened: ReaderLocation? = null) {
+fun MagazineScreen(graph: SortieApp.Graph, onGame: (String) -> Unit, request: ReaderRequest? = null) {
     val context = LocalContext.current
     val repo = graph.magazines
     val games = graph.magazineGames
@@ -196,18 +204,17 @@ fun MagazineScreen(graph: SortieApp.Graph, onGame: (String) -> Unit, opened: Rea
     val clippings by remember(user) { user.data.map { it.magazineClippings }.distinctUntilChanged() }
         .collectAsState(user.data.value.magazineClippings)
     val readerOwner = remember { Any() }
-    DisposableEffect(readerOwner) {
-        onDispose {
-            // A newly composed reader on the other screen may have already published its own panel.
-            if (Selection.magazine.value?.owner === readerOwner) Selection.magazine.value = null
-        }
-    }
+    // A newly composed reader on the other screen may have already published its own panel: only this reader's goes.
+    DisposableEffect(readerOwner) { onDispose { Selection.withdrawMagazine(readerOwner) } }
     val loaded by produceState<Loaded?>(null, repo) {
         val store = withContext(Dispatchers.IO) { MagazineReadingStore.open(context) }
         value = Loaded(repo.shelf(), store)
     }
-    var issueId by rememberSaveable { mutableStateOf(opened?.issue) }
-    var articleId by rememberSaveable { mutableStateOf(opened?.article) }
+    var issueId by rememberSaveable { mutableStateOf(request?.location?.issue) }
+    var articleId by rememberSaveable { mutableStateOf(request?.location?.article) }
+    // the last request followed, so recreation never re-applies it over where the reader went since; and whether B hands back
+    var followed by rememberSaveable { mutableStateOf(request?.serial) }
+    var external by rememberSaveable { mutableStateOf(request?.handsBack == true) }
     var scrapbook by rememberSaveable { mutableStateOf(false) }
     // a clipping whose passage the reader should show once its article is open
     var jumpTo by rememberSaveable { mutableStateOf<String?>(null) }
@@ -220,8 +227,18 @@ fun MagazineScreen(graph: SortieApp.Graph, onGame: (String) -> Unit, opened: Rea
         issueId = to.issue
         articleId = to.article
     }
-    // opened at an article from elsewhere: B from an article goes back there rather than to the contents
-    val handsBack = opened != null && articleId != null
+    LaunchedEffect(request) {
+        val r = request ?: return@LaunchedEffect
+        if (r.serial == followed) return@LaunchedEffect
+        followed = r.serial
+        scrapbook = false
+        jumpTo = null
+        external = r.handsBack
+        go(loaded?.let { r.location.reconcile(it.shelf) } ?: r.location)
+    }
+    // left the article level: a later article is opened from inside and B climbs again
+    LaunchedEffect(articleId) { if (articleId == null) external = false }
+    val handsBack = external && articleId != null
     BackHandler(enabled = issueId != null && !handsBack) { ReaderLocation(issueId, articleId).back()?.let { go(it) } }
     // registered after the level handler, so it wins while the scrapbook is open: B returns to where it was opened
     BackHandler(enabled = scrapbook) { scrapbook = false }
@@ -236,11 +253,7 @@ fun MagazineScreen(graph: SortieApp.Graph, onGame: (String) -> Unit, opened: Rea
         value = issue?.issue?.let { games.resolve(it.games) }
     }
     if (!scrapbook && issue != null && article == null) PublishMagazineCompanion(readerOwner, issue.issue, null)
-    if (issue == null || scrapbook) {
-        SideEffect {
-            if (Selection.magazine.value?.owner === readerOwner) Selection.magazine.value = null
-        }
-    }
+    if (issue == null || scrapbook) SideEffect { Selection.withdrawMagazine(readerOwner) }
     LaunchedEffect(readerOwner, issue?.issue) {
         Selection.magazineActions.collect { action ->
             if (issue != null && action.owner === readerOwner && action.issueId == issue.issue.id && action is MagazineAction.OpenArticle) {
@@ -307,7 +320,7 @@ fun MagazineScreen(graph: SortieApp.Graph, onGame: (String) -> Unit, opened: Rea
                     onJumped = { jumpTo = null },
                     onScrapbook = { scrapbook = true },
                     contentsKey = if (handsBack) null else contentsReturn?.takeIf { contentsReturnArticle == article.id } ?: "article:${article.id}",
-                    backLabel = if (handsBack) "back" else "contents"
+                    backLabel = if (handsBack) "close" else "contents"
                 )
             }
             issue != null -> key(issue.issue.id) {
@@ -561,7 +574,7 @@ private fun ShelfView(shelf: MagazineShelf, store: MagazineReadingStore, clipCou
                 }
             }
         }
-        HintBar("A" to "open", "Select" to "scrapbook", "B" to "back")
+        HintBar("A" to "open", "Select" to "scrapbook", "B" to "close")
     }
 }
 

@@ -3,6 +3,7 @@ package io.github.esko997.sortie.shell
 import android.app.Activity
 import android.app.ActivityManager
 import android.app.ActivityOptions
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Drawable
@@ -10,6 +11,7 @@ import android.hardware.display.DisplayManager
 import android.util.Log
 import android.view.Display
 import io.github.esko997.sortie.AnchorActivity
+import io.github.esko997.sortie.BuiltinApp
 import io.github.esko997.sortie.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -313,8 +315,12 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
         val tasks = if (ready) mover.appTasks() else emptyList()
         val pm = context.packageManager
         val entries = tasks.map { t ->
-            val label = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(t.pkg, 0)).toString() }.getOrDefault(t.pkg)
-            val icon = runCatching { pm.getApplicationIcon(t.pkg) }.getOrNull()
+            // a built-in app is a task of Sortie's package: its own name and icon, not "Sortie"
+            val builtin = BuiltinApp.of(context.packageName, t.component)
+            val label = builtin?.label ?: runCatching { pm.getApplicationLabel(pm.getApplicationInfo(t.pkg, 0)).toString() }.getOrDefault(t.pkg)
+            val icon = runCatching {
+                if (builtin != null) pm.getActivityIcon(ComponentName(t.pkg, builtin.activity.name)) else pm.getApplicationIcon(t.pkg)
+            }.getOrNull()
             Entry(t, label, icon)
         }
         _state.update { it.copy(entries = entries, busy = false, ready = ready) }

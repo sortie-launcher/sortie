@@ -220,13 +220,14 @@ fun HomeScreen(
     BackHandler(enabled = lifted != null) { cancelMove() }
     BackHandler(enabled = console && lifted == null) { vm.leaveConsoleSort() }
     // Y opens search from Home (Start is intercepted by Android while Sortie is the home app); Select toggles list/grid.
-    DisposableEffect(Unit) {
+    val hotkeys = LocalHotkeys.current
+    DisposableEffect(hotkeys) {
         val keys = setOf(Hotkeys.Key.FAVOURITE, Hotkeys.Key.CONTEXT)
-        Hotkeys.handle(keys)
-        onDispose { Hotkeys.release(keys) }
+        hotkeys.handle(keys)
+        onDispose { hotkeys.release(keys) }
     }
-    LaunchedEffect(Unit) {
-        Hotkeys.events.collect {
+    LaunchedEffect(hotkeys) {
+        hotkeys.events.collect {
             if (lifted != null) return@collect
             when (it) {
                 Hotkeys.Key.FAVOURITE -> {

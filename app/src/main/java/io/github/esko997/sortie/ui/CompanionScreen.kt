@@ -164,7 +164,8 @@ fun CompanionScreen(displayId: Int) {
                     graph.user.setDockSlot(dockSlot, it.id)
                     dockSlot = -1
                 }
-                navigationVisible && magazine != null -> {
+                // a started reader (in the navigation or the Magazines app), never one stopped behind a game
+                magazine != null -> {
                     val panel = magazine!!
                     val contentsKey = remember(panel.issue.id, panel.articleId) { "${panel.issue.id}/${panel.articleId.orEmpty()}" }
                     contents.SaveableStateProvider(contentsKey) {
@@ -638,14 +639,25 @@ private fun CornerPlus(modifier: Modifier, onClick: () -> Unit) {
 private fun TouchLauncher(graph: SortieApp.Graph, displayId: Int, scope: CoroutineScope, onClose: () -> Unit) {
     val context = LocalContext.current
     val view = LocalView.current
-    AppPicker(graph, "Open on this screen", onClose = onClose) { item ->
+
+    // like an app started here: once it is up, the controller goes back to the other screen, which the player was using
+    fun started(here: Int) = scope.launch {
+        delay(HAND_OFF_DELAY_MS)
+        if (!graph.switcher.anchoredRecently()) graph.switcher.handOff(here)
+    }
+    AppPicker(
+        graph,
+        "Open on this screen",
+        onClose = onClose,
+        onBuiltin = { app ->
+            val here = view.display?.displayId ?: displayId
+            onClose()
+            if (openBuiltin(context, app, here)) started(here)
+        }
+    ) { item ->
         val here = view.display?.displayId ?: displayId
         onClose()
-        scope.launch {
-            if (!launchOn(context, graph, item, here)) return@launch
-            delay(HAND_OFF_DELAY_MS)
-            if (!graph.switcher.anchoredRecently()) graph.switcher.handOff(here)
-        }
+        scope.launch { if (launchOn(context, graph, item, here)) started(here) }
     }
 }
 
@@ -670,7 +682,12 @@ fun TouchSwitcher(switcher: TaskSwitcher, state: TaskSwitcher.State, displayId: 
         val context = LocalContext.current
         val graph = (context.applicationContext as SortieApp).graph
         val scope = rememberCoroutineScope()
-        AppPicker(graph, "Open on this screen", onClose = switcher::stopPicking) { item ->
+        AppPicker(
+            graph,
+            "Open on this screen",
+            onClose = switcher::stopPicking,
+            onBuiltin = { app -> if (openBuiltin(context, app, displayId)) switcher.picked(displayId) else switcher.stopPicking() }
+        ) { item ->
             scope.launch { if (launchOn(context, graph, item, displayId)) switcher.picked(displayId) else switcher.stopPicking() }
         }
         return

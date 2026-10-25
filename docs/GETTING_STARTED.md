@@ -409,7 +409,8 @@ enable only the extras you want. No Shizuku, Home role, overlay permission or se
 | **Fit stars, hooks, cautions, tags, control notes** | A `guide.json` file | Prepared file: [guide.md](formats/guide.md) |
 | **Smart folders** (rule-based shelves such as "added this month, never played") | A `folders.json` file | Prepared file: [folders.md](formats/folders.md) |
 | **System logos** on Home tiles | PNG files in `sortie/logos/` | Prepared files: [formats](formats/README.md) |
-| **Magazines** | Included in the signed releases; extra issue packs can be copied into `sortie/magazines/` | **Home → Magazines**; packs: [formats](formats/README.md#magazine-packs-version-2) |
+| **Magazines** | Included in the signed releases; extra issue packs can be copied into `sortie/magazines/` | **Home → Magazines** or **Apps → Magazines**; opens as its own app on either screen; packs: [formats](formats/README.md#magazine-packs-version-2) |
+| **Performance app** | No extra permission to open; Shizuku supplies additional hardware readings | **Apps → Performance**, or **Open app…** on the chosen screen; B/Close closes only this window |
 | **Custom emulators** not in Sortie's list | A launch profile in `launchers.json` | Prepared file: [launchers.md](formats/launchers.md), [LAUNCHERS.md](LAUNCHERS.md) |
 
 **Shizuku in brief.** Shizuku is a separate app with its own setup guide at [shizuku.rikka.app](https://shizuku.rikka.app/).
