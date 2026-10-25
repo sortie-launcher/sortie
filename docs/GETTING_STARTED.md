@@ -173,8 +173,10 @@ them; the result lists the DroidDeck games to pin again from DroidDeck.
   backup carries them, and anything you do in Cocoon after making it is not included.
 - **Keep Cocoon and its folder** until you've checked the result. Sortie copies artwork but needs Cocoon's files to run
   the import again.
-- **For a complete undo, copy the `sortie` folder first** (its location is under **Library setup → Where these settings
-  live**; on a new install it has little in it yet). Sortie's own safety copy is only partial; see step 5.
+- **There is no complete undo.** Preferences and library settings can be put back (see *What undo can and can't do*
+  below), but imported play sessions and copied artwork stay. To keep those out, turn off **Add *N* play sessions** and
+  **Copy *N* artwork files** in the preview. Copying the `sortie` folder first (its location is under **Library setup →
+  Where these settings live**) lets you put your library settings back.
 
 **Import**
 
@@ -231,9 +233,16 @@ library ([capture details](screenshots/cocoon/PROVENANCE.md)).
 **Running it again is safe.** It adds nothing twice and picks up artwork a stopped copy left behind. If Android closes
 Sortie during the import, open it and run the import again.
 
-**What undo can and can't do.** Restoring the safety copy (**Settings → Backup and restore**) brings back your
-preferences from before the import: favourites, hidden games and emulator choices. Added systems, folders, copied
-artwork and imported play sessions stay; remove systems in Library setup, or put back your copy of the `sortie` folder.
+**What undo can and can't do.** There is no complete rollback:
+
+- **Preferences:** restoring the safety copy (**Settings → Backup and restore**) brings back favourites, hidden games and
+  emulator choices from before the import.
+- **Library settings:** systems, folders and launch profiles added by the import stay. Remove them in Library setup, or put
+  back a copy of the `sortie` folder made before importing and use **Library setup → Re-index every system**.
+- **Play sessions stay.** They live in Sortie's private database, not the `sortie` folder, and restoring a backup only adds
+  sessions, never removes them.
+- **Copied artwork stays** in each system's media folder, which on a card set up for ES-DE is outside the `sortie` folder.
+  Restoring files or a backup doesn't remove it.
 
 **Before uninstalling Cocoon**, check in Sortie that your games, favourites, folders and play history came over. Games
 that weren't found or were ambiguous, custom names, themes, skipped artwork and anything played after the backup stay

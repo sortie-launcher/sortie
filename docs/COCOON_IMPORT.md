@@ -114,8 +114,11 @@ emulator choices and per-game overrides. It is not a full rollback:
 - copied artwork stays in the media folders;
 - imported play sessions stay, because a restore only adds sessions and never deletes existing ones.
 
-For a complete undo, keep your own copy of the card's `sortie/` configuration (and Backup and restore export) from before
-the import.
+There is no complete rollback. A copy of the card's `sortie/` folder made before the import restores configuration
+(`systems.json`, `launchers.json`, `folders.json`, `user.json`; re-index afterwards), but imported sessions are stored in
+Sortie's app-private play database (Room, `sortie.db`) and copied artwork may sit outside `sortie/` (for example in an
+ES-DE `downloaded_media` tree). Neither is removed by restoring files or a backup. To keep those irreversible parts out,
+turn off the preview's play-session and artwork switches.
 
 ## Cocoon's folder after importing
 
