@@ -256,3 +256,10 @@ compatibility. The test library was removed and the original card configuration,
 All 1,338 original Cocoon files remained present; only Cocoon's own database log changed. Real artwork references to an
 absent volume could not be copied, so artwork copying used the isolated fixture. Removable-card mapping and dual-display
 behavior still need a dual-screen device check; the production handheld was not used for this regression round.
+
+A later Thor follow-up exercised the signed in-place upgrade and two imports against a removable-card library. All 26,486
+Cocoon source files remained byte-identical, as did the library configuration and preferences; the safety snapshots retained
+all prior sessions unchanged. Existing favourites, hidden entries, folders and sessions were reported as already present.
+Eight artwork references were skipped because their games were not indexed; the result explained that no copy occurred,
+and the media file set stayed unchanged. This verifies safe repeat-import behavior on that layout, not emulator compatibility
+or successful copying of those eight references.

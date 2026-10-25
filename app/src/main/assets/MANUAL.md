@@ -164,8 +164,9 @@ Pictures in issues belong to their rights holders and are credited in each issue
 - On two-screen devices, the other screen becomes a reading companion while an issue is open. **Sections** jumps to a
   heading in the current article and highlights your place; **Articles** opens another article in that issue. **Previous**
   and the folded **Next article** corner turn articles without losing their reading positions. The controls follow an
-  **X** swap and return the controller to the reading screen after a touch. Backing out to the shelf restores the normal
-  companion; single-screen devices keep the controls above.
+  **X** swap and return the controller to the reading screen after a touch. The bottom-left **+** opens an app on the
+  companion's screen, so a video can share the device with your article. Closing the picker returns to the same contents
+  tab and position. Backing out to the shelf restores the normal companion; single-screen devices keep the controls above.
 - Copy a complete extra issue to **sortie/magazines/<issue-id>/** with **issue.json**, **articles/** and **media/** inside.
   Reopen Magazines after copying. One entry is shown per issue ID: the higher revision wins, and your card copy wins a tie.
   Updates never overwrite your card pack. An incomplete or unsupported card issue is explained; a valid built-in edition
@@ -273,6 +274,9 @@ Shows what is running on each screen. **A** brings an app to the front, **Y** mo
 switcher on (Settings) it draws over the running games; off, it opens as a normal Sortie screen.
 When opened over Sortie, the overlay leaves your current page or companion underneath; **B** returns there without raising
 an old background app. This also holds after swapping screens: Home does not reset the browsing page or move navigation back.
+With Shizuku available, Home also opens the switcher while reading a magazine or when no external app is running;
+**Open app…** can start the first one. If Home does nothing, check **Settings → Diagnostics → Allow Sortie in Shizuku**;
+reinstalling Sortie can require authorizing it again even while the Shizuku service is running.
 Android Settings and other security-sensitive screens can deliberately hide third-party overlays. Leave that screen with
 **Back** first, or turn off *Overlay switcher* in Sortie's Settings to use the normal-screen version. Sortie respects this
 Android protection; granting overlay permission does not override it.

@@ -1,6 +1,5 @@
 package io.github.esko997.sortie
 
-import android.app.ActivityManager
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
@@ -54,8 +53,8 @@ class MainActivity : ComponentActivity() {
             // Focus a real surface BEFORE removing this temporary HOME. Removing the focused Home task while its
             // replacement is still queued makes Android repeatedly launch Home to fill the empty display.
             val restored = when {
-                underlay != null -> revealOwnTask(underlay)
-                existing.myDisplayId() == myDisplayId() -> revealOwnTask(existing.taskId)
+                underlay != null -> switcher.raiseOwnTask(underlay)
+                existing.myDisplayId() == myDisplayId() -> switcher.raiseOwnTask(existing.taskId)
                 else -> existing.startCompanion(myDisplayId())
             }
             if (restored) {
@@ -122,9 +121,10 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * The Home button lands on the switcher when something is running: Sortie is HOME, so the system delivers the HOME intent
-     * here when the top screen had the controller; the secondary home summons us with [TaskSwitcher.EXTRA_SWITCHER] when the
-     * bottom screen had it. Debug builds also accept `--es launch <id> [--es profile <id>]` / `--es open <route>` from adb.
+     * The Home button lands on the switcher whenever Shizuku is ready (see [TaskSwitcher.summonable]): Sortie is HOME, so the
+     * system delivers the HOME intent here when the top screen had the controller; the secondary home summons us with
+     * [TaskSwitcher.EXTRA_SWITCHER] when the bottom screen had it and there is no overlay. Debug builds also accept
+     * `--es launch <id> [--es profile <id>]` / `--es open <route>` from adb.
      */
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
@@ -159,13 +159,11 @@ class MainActivity : ComponentActivity() {
 
     private fun showHomeSwitcher(focusDisplay: Int, homeTask: Int?) {
         val switcher = (application as SortieApp).graph.switcher
-        lifecycleScope.launch {
-            if (!switcher.anyRunning()) return@launch
-            if (switcher.presenter?.invoke(focusDisplay, homeTask) == true) return@launch
-            switcher.open()
-            Selection.openRoute.tryEmit("switcher")
-            if (focusDisplay != myDisplayId()) switcher.anchor(myDisplayId())
-        }
+        if (!switcher.summonable) return
+        if (switcher.presenter?.invoke(focusDisplay, homeTask) == true) return
+        switcher.open()
+        Selection.openRoute.tryEmit("switcher")
+        if (focusDisplay != myDisplayId()) switcher.anchor(myDisplayId())
     }
 
     override fun onStart() {
@@ -234,12 +232,6 @@ class MainActivity : ComponentActivity() {
         val target = otherDisplay() ?: return
         companionShown = true
         startCompanion(target.displayId)
-    }
-
-    /** AppTask can raise our own navigation/companion without Shizuku or creating another activity instance. */
-    private fun revealOwnTask(id: Int): Boolean {
-        val task = getSystemService(ActivityManager::class.java).appTasks.firstOrNull { it.taskInfo.taskId == id } ?: return false
-        return runCatching { task.moveToFront() }.isSuccess
     }
 
     private fun startCompanion(displayId: Int): Boolean {

@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Magazine companion gains a bottom-left **+** to open an app on that screen while the article stays on the other.
+  Cancelling its app picker preserves the contents tab and position, and the controls follow a screen swap.
+- Home can open the switcher from a reader even without external apps running, preserving the article and its scroll
+  position. Shizuku authorization and the optional overlay permission are still required for their respective features.
 - Cocoon import preserves existing system emulator defaults and puts a new system's chosen emulator in its manifest order,
   without pinning redundant user defaults. New preset systems account for matched file types; missing per-game RetroArch
   profiles are saved before their overrides. An installed equivalent RetroArch build is identified in the preview when
