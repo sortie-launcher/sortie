@@ -152,7 +152,7 @@ internal fun FolderBrowser(
         Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                SetupButton("Cancel", onClose)
+                GlowButton("Cancel", onClick = onClose)
             }
             Text(
                 explanation,

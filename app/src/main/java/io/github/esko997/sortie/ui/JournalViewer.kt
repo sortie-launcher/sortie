@@ -79,7 +79,7 @@ internal fun AttachmentThumb(attachment: JournalAttachment, media: JournalMedia,
             .focusGlow(focused, shape)
             .clip(shape)
             .background(Slate)
-            .clickable(interactionSource = interaction, indication = null, role = Role.Image, onClick = onOpen)
+            .clickable(interactionSource = interaction, indication = PressVeil, role = Role.Image, onClick = onOpen)
             .semantics { contentDescription = "Screenshot ${attachment.name}".trim() },
         contentAlignment = Alignment.Center
     ) {
@@ -171,7 +171,8 @@ internal fun JournalViewer(attachments: List<JournalAttachment>, start: Int, med
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.align(Alignment.CenterVertically)
             )
             val touchOnly = Modifier.focusProperties { canFocus = false }
             OutlinedButton(onClick = { page(-1) }, enabled = index > 0, modifier = touchOnly) { Text("Previous") }

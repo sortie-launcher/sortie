@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,7 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -37,6 +38,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.InputMode
@@ -58,6 +60,7 @@ import kotlinx.coroutines.launch
  * its screen (or brings it to a free screen), Y sends it to the other screen, Select closes it. Reached from the Home button
  * while something is running, or from the home screen. The companion screen mirrors its own carousel for touch.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SwitcherScreen(
     keys: Flow<Hotkeys.Key> = Hotkeys.events,
@@ -164,17 +167,16 @@ fun SwitcherScreen(
             val spot = restore
             ScreenRow("Top screen", TaskSwitcher.TOP, state, switcher, requesters[TaskSwitcher.TOP], spot, returning, onFocus, onBlur)
             if (secondary != null) ScreenRow("Bottom screen", secondary, state, switcher, requesters[secondary], spot, returning, onFocus, onBlur)
-            Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { switcher.goHome(focusedScreen) }, enabled = !state.busy) { Text("Sortie") }
-                OutlinedButton(onClick = { switcher.startPicking(state.freed ?: focusedScreen) }, enabled = !state.busy) { Text("Open app…") }
+            // wraps instead of running off the right edge of a narrow screen
+            FlowRow(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                GlowButton("Sortie", enabled = !state.busy) { switcher.goHome(focusedScreen) }
+                GlowButton("Open app…", enabled = !state.busy) { switcher.startPicking(state.freed ?: focusedScreen) }
                 if (secondary != null) {
-                    OutlinedButton(onClick = { switcher.quickSwap(TaskSwitcher.TOP, secondary) }, enabled = !state.busy && state.entries.isNotEmpty()) {
-                        Text("Quick swap")
-                    }
-                    OutlinedButton(onClick = { switcher.anchor(secondary) }, enabled = state.on(secondary).isNotEmpty()) { Text("Controller → bottom") }
+                    GlowButton("Quick swap", enabled = !state.busy && state.entries.isNotEmpty()) { switcher.quickSwap(TaskSwitcher.TOP, secondary) }
+                    GlowButton("Controller → bottom", enabled = state.on(secondary).isNotEmpty()) { switcher.anchor(secondary) }
                 }
-                OutlinedButton(onClick = { switcher.anchor(TaskSwitcher.TOP) }, enabled = state.on(TaskSwitcher.TOP).isNotEmpty()) { Text("Controller → top") }
-                OutlinedButton(onClick = { switcher.refresh() }, enabled = !state.busy) { Text("Refresh") }
+                GlowButton("Controller → top", enabled = state.on(TaskSwitcher.TOP).isNotEmpty()) { switcher.anchor(TaskSwitcher.TOP) }
+                GlowButton("Refresh", enabled = !state.busy) { switcher.refresh() }
             }
         }
         val cur = current()
@@ -243,9 +245,9 @@ private fun ScreenRow(
                         "✕",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.align(
-                            Alignment.TopEnd
-                        ).clip(CircleShape).clickable(onClickLabel = "Close app") { switcher.closeApp(e) }.padding(4.dp)
+                        // touch only: the controller closes the focused card with Select, so focus never lands on this mark
+                        modifier = Modifier.align(Alignment.TopEnd).focusProperties { canFocus = false }
+                            .clip(CircleShape).clickable(onClickLabel = "Close app") { switcher.closeApp(e) }.padding(4.dp)
                     )
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                         AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(56.dp)) { it.setImageDrawable(e.icon) }

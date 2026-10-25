@@ -9,6 +9,9 @@ val Amber = Color(0xFFF2B134)
 val Ink = Color(0xFF101418)
 val Slate = Color(0xFF1B2129)
 
+/** Rules and quiet outlines: a step above Slate, so a 1dp line still reads on Ink and on Slate panels. */
+val Hairline = Color(0xFF2A323C)
+
 @Composable
 fun SortieTheme(content: @Composable () -> Unit) {
     MaterialTheme(

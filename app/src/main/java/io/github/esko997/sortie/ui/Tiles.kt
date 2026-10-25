@@ -111,7 +111,7 @@ fun SquareTile(
             .clip(shape)
             .background(colour?.copy(alpha = 0.22f) ?: Slate)
             .keyLongPress(onLongClick, onFavourite)
-            .combinedClickable(interactionSource = interaction, indication = null, onClick = onClick, onLongClick = onLongClick)
+            .combinedClickable(interactionSource = interaction, indication = PressVeil, onClick = onClick, onLongClick = onLongClick)
     ) {
         if (icon != null) {
             BoxWithConstraints(Modifier.fillMaxSize().padding(10.dp)) {
@@ -225,10 +225,6 @@ fun LazyGridScope.fullItem(key: String, content: @Composable LazyGridItemScope.(
 class SheetAction(val label: String, val run: () -> Unit)
 
 /**
- * Small controller-first context menu (hold A / long press): a dialog with one row per action plus Cancel; the first action takes
- * focus, A picks, B or a tap outside cancels. The dialog closes before the action runs.
- */
-/**
  * A tile title in at most two lines that wraps between words, never inside one: when the longest word is wider than the tile
  * the text shrinks until it fits (to [MIN_TITLE_SCALE] of [style]); a word too long even then keeps the title on one line,
  * ellipsized. Compose would otherwise split it ("PlayStatio / n") on narrow tiles.
@@ -267,6 +263,10 @@ private fun TileTitle(title: String, style: TextStyle, modifier: Modifier = Modi
 
 private const val MIN_TITLE_SCALE = 0.75f
 
+/**
+ * Small controller-first context menu (hold A / long press): a dialog with one row per action plus Cancel; the first action takes
+ * focus, A picks, B or a tap outside cancels. The dialog closes before the action runs.
+ */
 @Composable
 fun ContextSheet(title: String, actions: List<SheetAction>, onDismiss: () -> Unit) {
     val first = remember { FocusRequester() }

@@ -2,6 +2,7 @@ package io.github.esko997.sortie.ui
 
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -115,11 +116,12 @@ fun GameRow(
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = FontWeight.SemiBold
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // the gap follows the stars only when there are any, so an unrated game's line starts under the title
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Stars(game.fit)
                     val meta = listOfNotNull(platform, game.year?.toString(), game.players?.let { "$it P" }, game.genre?.substringBefore(',')?.take(24))
                     Text(
-                        "  " + meta.joinToString(" · "),
+                        meta.joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

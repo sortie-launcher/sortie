@@ -146,7 +146,8 @@ internal fun FigureViewer(figures: List<ArticleFigure>, start: String, onClose: 
                 Text(
                     "${index + 1} of ${figures.size}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.CenterVertically)
                 )
                 // touch twins of the controller keys; never focused, so the D-pad stays on the picture
                 val touchOnly = Modifier.focusProperties { canFocus = false }

@@ -171,7 +171,6 @@ private const val HERO_KEY = "hero"
 private val NarrowWidth = 560.dp
 
 private val Muted = Color(0xFF9AA3AD)
-private val Hairline = Color(0xFF2A323C)
 private val Warning = Color(0xFFF87171)
 
 private class Loaded(val shelf: MagazineShelf, val store: MagazineReadingStore)
@@ -441,7 +440,7 @@ private fun Entry(focus: ListFocus, key: String, index: Int, onClick: (() -> Uni
             .background(if (focused) Slate else Color.Transparent)
             .then(
                 if (onClick != null) {
-                    Modifier.clickable(interactionSource = interaction, indication = null) {
+                    Modifier.clickable(interactionSource = interaction, indication = PressVeil) {
                         inputMode.requestInputMode(InputMode.Keyboard)
                         focus.requester(key).requestFocus()
                         onClick()
