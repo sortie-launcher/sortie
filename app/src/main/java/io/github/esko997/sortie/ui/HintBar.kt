@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-/** Controller hints wrap as whole button/action pairs, never as narrow columns of letters. */
+/** Controller hints wrap as whole button/action pairs, never as narrow columns of letters. (Throwaway: emulator trigger proof.) */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modifier) {
