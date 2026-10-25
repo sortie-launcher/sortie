@@ -12,10 +12,10 @@
   give an optional positive `number`; otherwise it comes from the issue id's trailing digits (none without digits). The
   publisher rejects malformed or duplicate numbers. The shelf stays newest-date first, with the number ordering issues of
   the same day (rather than number first), so an old high-numbered card pack never displaces the latest issue.
-- Local Hangar experiment (not a production release): an optional pixel-art mecha hangs out below Home, browsing and
-  zine pages. Its Workshop supports naming, care, mixing owned parts and salvage from new completed game sessions;
-  Gallery compares three original art families and four animated poses without unlocking preview parts.
-  Motion can be disabled and the companion hidden. Reader Select → Visit the hangar preserves the article underneath.
+- Hangar companion (experimental): an optional pixel-art mecha hangs out below Home, browsing and zine pages. Its
+  Workshop supports naming, care, mixing owned parts and salvage from new completed game sessions; Gallery compares three
+  original art families and four animated poses without unlocking preview parts. Motion can be disabled and the companion
+  hidden. Reader Select → Visit the hangar preserves the article underneath. Its save is not yet part of Backup.
 - Getting started explains which emulator starts a game (per-game choice, then Settings default, then the Library setup
   list) and adds "Want box art?": the three routes to artwork (Cocoon import, ES-DE's on-device scraper, a computer) and
   that linking scraped folders is still a `systems.json` edit. The manual gains the same precedence note and no longer

@@ -145,10 +145,10 @@ In multiline note, verdict and reference-card editors, controller Up/Down moves 
 the text caret. Down from the last field goes to **Save** when there are changes; Cancel and Clear remain deliberate choices.
 Touch and keyboard arrows still position the caret, and **A** on a text field brings up the keyboard.
 
-## Hangar companion (experimental build)
+## Hangar companion (experimental)
 
-The little mech below Home, your library and magazines is a local experiment, not part of the production release.
-It has its own space below the controls and dozes while you read.
+The little mech below Home, your library and magazines is an optional, experimental companion. It has its own space below
+the controls and dozes while you read.
 
 - Tap the mech or **Hangar** to visit. In an article, **Select → Visit the hangar** also works with the controller.
   **B** returns from Gallery to Workshop, then closes the Hangar without losing your article.
@@ -163,8 +163,8 @@ It has its own space below the controls and dozes while you read.
 - At the bottom of Workshop, turn **Animate companion** off for a still sprite, or **Hide companion**.
   **Show companion** at the bottom of Home brings it back without losing parts.
 
-Your companion survives app restarts and in-place updates. Its experimental save is app-private and is **not included in
-the existing preference/history backup**. Do not uninstall the app to switch builds if you want to keep it.
+Your companion survives app restarts and in-place updates. Its save is app-private and is **not included in the existing
+preference/history backup** yet. Do not uninstall the app if you want to keep it.
 
 ## Offline magazines
 
