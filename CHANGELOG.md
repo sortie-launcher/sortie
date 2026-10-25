@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- AYN Thor: pressing Home again while the app switcher is up keeps its windows instead of rebuilding them. Rebuilding both
+  on every press could crash the Thor's system UI (a firmware race), restarting it and turning off wireless debugging.
+  The Thor-panel guard now acts only on a complete system probe, never on partial output.
 - AYN Thor: Sortie now keeps the Thor button's panel (`com.odin.dualscreen.assistant`) healthy. The panel leaks a network
   callback every time it opens; after a few hundred openings Android refuses more, the panel crashes while opening but stays
   alive, and its invisible window steals the bottom screen's input. The button then does nothing and the app on that screen
