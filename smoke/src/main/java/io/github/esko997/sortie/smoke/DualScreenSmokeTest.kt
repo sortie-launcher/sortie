@@ -149,15 +149,17 @@ class DualScreenSmokeTest {
         awaitText("scrapbook", "the magazine shelf") // shelf hints: A open · Select scrapbook · B back
         shell("input keyevent KEYCODE_BUTTON_A")
         awaitText("shelf", "an issue's contents") // contents hints: A open · B shelf
-        // Contents open on the masthead, then the editor's note (neither opens anything), then the articles.
-        val article = By.pkg(PKG).text("reader menu").displayId(PRIMARY) // article hints: … Select reader menu · B contents
+        // Contents open on the masthead, then the editor's note: passages the D-pad scrolls through 72 dp at a time and that
+        // open nothing. Down walks to the first entry that is a button, the first article.
+        val focusedButton = By.pkg(PKG).displayId(PRIMARY).focused(true).clickable(true)
         var downs = 0
-        while (downs++ < 4 && !device.hasObject(article)) {
+        while (downs++ < 40 && !device.hasObject(focusedButton)) {
             shell("input keyevent KEYCODE_DPAD_DOWN")
-            shell("input keyevent KEYCODE_BUTTON_A")
-            SystemClock.sleep(1_500)
+            SystemClock.sleep(300)
         }
-        awaitText("reader menu", "an article")
+        await("the first article focused in the contents", detail = { "it shows ${texts(PRIMARY)}" }) { device.hasObject(focusedButton) }
+        shell("input keyevent KEYCODE_BUTTON_A")
+        awaitText("reader menu", "an article") // article hints: … Select reader menu · B contents
         assertEquals(PRIMARY, mainTasks().single().display)
     }
 
@@ -184,7 +186,13 @@ class DualScreenSmokeTest {
     private fun homeHeader(display: Int): BySelector = By.pkg(PKG).text(GAME_COUNT).displayId(display)
 
     private fun awaitText(text: String, what: String) =
-        await("$what (\"$text\") on the primary display") { device.hasObject(By.pkg(PKG).text(text).displayId(PRIMARY)) }
+        await("$what (\"$text\") on the primary display", detail = { "it shows ${texts(PRIMARY)}; ${describe()}" }) {
+            device.hasObject(By.pkg(PKG).text(text).displayId(PRIMARY))
+        }
+
+    /** Sortie's texts on [display], for failure messages. */
+    private fun texts(display: Int): List<String> =
+        device.findObjects(By.pkg(PKG).displayId(display)).mapNotNull { it.text?.takeIf(String::isNotBlank) }.take(30)
 
     /** Every leaf task, top-most first; components in short form (`pkg/.Activity`) whichever form the shell printed. */
     private fun tasks(): List<Task> {
@@ -225,10 +233,10 @@ class DualScreenSmokeTest {
     private fun describe(): String = "tasks=" + tasks().joinToString { "${it.id}:${it.component}@${it.display}${if (it.visible) "+" else ""}" } +
         " focusedDisplay=${focusedDisplay()}"
 
-    private fun await(what: String, timeoutMs: Long = 20_000, condition: () -> Boolean) {
+    private fun await(what: String, timeoutMs: Long = 20_000, detail: () -> String = ::describe, condition: () -> Boolean) {
         val end = SystemClock.uptimeMillis() + timeoutMs
         while (!condition()) {
-            if (SystemClock.uptimeMillis() > end) fail("Timed out after $timeoutMs ms waiting for $what; ${describe()}")
+            if (SystemClock.uptimeMillis() > end) fail("Timed out after $timeoutMs ms waiting for $what; ${detail()}")
             SystemClock.sleep(250)
         }
     }
