@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Getting started explains which emulator starts a game (per-game choice, then Settings default, then the Library setup
+  list) and adds "Want box art?": the three routes to artwork (Cocoon import, ES-DE's on-device scraper, a computer) and
+  that linking scraped folders is still a `systems.json` edit. The manual gains the same precedence note and no longer
+  uses angle-bracket placeholders that GitHub strips.
 - Cocoon import previews cleanup of redundant legacy default Favourites rules, including imports with no new favourites.
   Cleanup runs only with Favourites enabled, preserves the actual favourites and other configuration, and leaves customized
   reserved-folder definitions untouched. A Cocoon user folder named Favourites remains a separate imported folder.
