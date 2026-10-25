@@ -30,6 +30,9 @@
   screen swaps, moving and closing apps across screens, Recents, force-stops, sleep, reader and Hangar), with crash, ANR,
   stuck-focus, task, overlay, memory and callback-leak monitors and a guard that restores the card's settings. See
   docs/HARDENING.md.
+- Emulator smoke tests (`.github/workflows/emulator.yml`, `tools/emulator/smoke.sh`): Sortie as HOME on an Android 13
+  emulator with a simulated second screen; checks Home, the companion, X swaps, Home from another app, Back on Home and
+  opening a magazine article. Runs on demand, on pull requests labelled `emulator` and on display or task code changes.
 - Magazine pictures are sized from their real shape instead of a fixed-height slate box: portrait frames stand at up to 70%
   of the screen, wide diagrams and 16:9 shots may use the full reading width, captions sit under the picture at its width,
   and small pixel art is enlarged by whole steps without smoothing. Placeholders already have the final size, so a restored
