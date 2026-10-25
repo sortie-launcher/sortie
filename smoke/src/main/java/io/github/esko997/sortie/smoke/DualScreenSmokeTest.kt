@@ -45,9 +45,12 @@ class DualScreenSmokeTest {
     fun backToHome() {
         Configurator.getInstance().waitForIdleTimeout = 1_000 // Home's ambient background never goes idle for long
         shell("input keyevent KEYCODE_WAKEUP")
-        // A failed test may leave navigation below: X there brings it back up (keys sent to that display explicitly).
+        // A test may leave navigation below (a double X can end there): X brings it back up. Sent to the focused display, as a
+        // controller does: forced onto the second display, the key's release arrived after the swap had moved focus away,
+        // waited for a window there and became an ANR that a later key dismissed by closing Sortie.
         if (mainTasks().any { it.display == second && it.visible }) {
-            shell("input -d $second keyevent KEYCODE_BUTTON_X")
+            await("the controller with navigation on display $second") { focusedDisplay() == second }
+            pressX()
             await("navigation back on the primary display") { mainTasks().any { it.display == PRIMARY && it.visible } }
         }
         shell("input -d $PRIMARY keyevent KEYCODE_HOME")
