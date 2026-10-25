@@ -8,9 +8,9 @@ internet permission and never downloads games, BIOS files, emulators or artwork.
 > **Sortie is built in collaboration with AI.** The code, the documentation and the optional Field Notes magazine are
 > written with AI assistance. If that's a dealbreaker, better to know now than after setup.
 
-<img src="docs/screenshots/readme/home.png" alt="Sortie's Home screen in the Custom sort: a Continue tile for the last game played, pinned games with box art, and buttons for Apps, Library setup, Search, Magazines, Journal and Settings" width="100%">
+<img src="docs/screenshots/readme/home.png" alt="Sortie on a Retroid Pocket Nova: Home in By Console mode, a PlayStation 2 game grid with Armored Core 3 focused, the folded header and compact controller hints with a Controls button" width="100%">
 
-<sub>Real app UI with illustrative demo entries, captured on an Android 13 emulator.
+<sub>Captured on a Retroid Pocket Nova running signed beta 2115, with an existing library and artwork.
 [Capture notes and image credits](docs/screenshots/readme/PROVENANCE.md).</sub>
 
 ### **[Documentation → sortie-launcher.github.io/sortie](https://sortie-launcher.github.io/sortie/)**
@@ -74,7 +74,7 @@ Code and original text are MIT-licensed ([LICENSE](LICENSE)). Third-party materi
   notice and credits every picture in `sources.json`.
 - **System logos**, for example rendered from the CC-BY-NC-SA [slate-es-de](https://gitlab.com/es-de/themes/slate-es-de)
   theme, aren't in this repository; they live only on a user's card.
-- **Documentation screenshots** include third-party game art and descriptions, excluded from MIT; capture notes separate
-  illustrative entries from tested homebrew. Game-art packs and gamelists are not distributed with the source.
+- **Documentation screenshots** include third-party game art and descriptions, excluded from MIT; capture notes distinguish
+  the Nova's library, illustrative entries and tested homebrew. Game-art packs and gamelists are not distributed with the source.
 
 Branding (the amber Split-S): [branding/](branding/README.md).

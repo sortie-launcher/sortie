@@ -144,7 +144,7 @@ const canonical = new URL(base, Astro.site).href;
 					<h2 id="home-title">Home is yours to arrange</h2>
 					<p>
 						Pin systems, games, apps and shelves where you want them, with a Continue tile for the last game you played.
-						Every action has a button, and the bar along the bottom says which.
+						Compact headers leave room for games; <strong>Controls</strong> lists the commands hidden from the light footer.
 					</p>
 				</div>
 				<figure>
@@ -152,11 +152,11 @@ const canonical = new URL(base, Astro.site).href;
 						src={home}
 						widths={[640, 960, 1280]}
 						sizes="(min-width: 80rem) 76rem, 96vw"
-						alt="Sortie's Home screen in the Custom sort: a Continue tile for uCity, pinned games with box art, and Favourites, Want to play, Finished, Shelved and Apps tiles, with controller hints along the bottom"
+						alt="Sortie on a Retroid Pocket Nova: Home in By Console mode, a PlayStation 2 grid with Armored Core 3 focused, a folded header and compact controller hints"
 					/>
 					<figcaption>
-						Real app screens with illustrative demo entries, captured on an Android 13 emulator rather than a tested
-						library or handheld. Artwork and magazines were set up for these captures; a fresh library starts without
+						Home on a Retroid Pocket Nova running signed beta 2115, with an existing library and artwork. The other
+						tour images are earlier emulator captures with illustrative entries. A fresh library starts without
 						artwork. <a href={provenanceHref}>Capture notes and image credits</a>.
 					</figcaption>
 				</figure>
@@ -188,9 +188,9 @@ const canonical = new URL(base, Astro.site).href;
 					<div class="feature-text">
 						<h3>Keep track of a game</h3>
 						<p>
-							<strong>Play</strong> uses the system's emulator; <strong>Launch with…</strong> picks another for that
-							game only. Every session is recorded, so play time adds up on the game page and in a weekly journal of
-							dated notes and pictures.
+							<strong>Play</strong> follows your game's emulator choice, then the system default and fallback list.
+							<strong>Launch with…</strong> picks one for that game. Play time adds up on the game page; the weekly
+							journal keeps dated notes and pictures.
 						</p>
 						<p>
 							<kbd>R2</kbd> adds a game to <em>Want to play</em>; hold <kbd>A</kbd> to favourite or pin it. Mark games
@@ -212,8 +212,8 @@ const canonical = new URL(base, Astro.site).href;
 						<h3>Use the second screen</h3>
 						<p>
 							On a dual-screen handheld the second screen follows what you're doing, as pictured at the top of this
-							page. <kbd>X</kbd> moves the controller between screens; touch works on either. Single-screen devices get a
-							single-screen layout.
+							page. <kbd>X</kbd> swaps navigation between screens; touch works on either. In the independent Magazines
+							and Performance apps, X moves only that window. Single-screen devices get a single-screen layout.
 						</p>
 					</div>
 					<dl class="modes">
@@ -230,7 +230,10 @@ const canonical = new URL(base, Astro.site).href;
 						</div>
 						<div>
 							<dt>Any time</dt>
-							<dd>A five-slot app dock and a launcher.</dd>
+							<dd>
+								A five-slot app dock and launcher. <strong>Apps → Performance</strong> opens live stats on either
+								screen; the companion and switcher also have optional Perf views.
+							</dd>
 						</div>
 					</dl>
 				</article>
@@ -241,7 +244,11 @@ const canonical = new URL(base, Astro.site).href;
 						<p>
 							<strong>Field Notes</strong> is an optional offline games magazine, published separately. Sortie
 							remembers your place, shows which featured games are on your device and links to their pages. Highlight a
-							passage, add a note, keep it in your scrapbook.
+							passage, add a note, keep it in your scrapbook. Tap a picture or press <kbd>R2</kbd> to zoom it full screen.
+						</p>
+						<p>
+							<strong>Home → Magazines</strong> or <strong>Apps → Magazines</strong> opens a separate reader window.
+							On two screens, choose where it goes without replacing the app on the other screen.
 						</p>
 						<p><a class="zines-link" href={ZINES}>Read Field Notes in your browser</a></p>
 					</div>
@@ -291,6 +298,22 @@ const canonical = new URL(base, Astro.site).href;
 						<p><a href={cocoonHref}>Moving from Cocoon</a></p>
 					</div>
 				</article>
+				<article class="feature feature-split">
+					<div class="feature-text">
+						<h3>A little company</h3>
+						<p>
+							The optional <strong>Hangar companion</strong> roams Home's margins. Pet him, carry him, mix parts and
+							spend salvage earned from completed play sessions. He asks for no daily check-in.
+						</p>
+					</div>
+					<div class="feature-aside">
+						<p>
+							Open <strong>Hangar</strong> to change his parts, stop his animations or hide him. Backups include his
+							name, parts and progress.
+						</p>
+						<p><a href={page('manual') + '#hangar-companion-experimental'}>Hangar controls</a></p>
+					</div>
+				</article>
 			</section>
 
 			<section class="needs" aria-labelledby="needs-title">
@@ -313,18 +336,18 @@ const canonical = new URL(base, Astro.site).href;
 						<p class="note">A controller is recommended; touch works too.</p>
 					</div>
 					<div>
-						<h3>Optional, one feature each</h3>
+						<h3>Optional</h3>
 						<ul>
 							<li><strong>A second screen</strong> for the companion panel.</li>
 							<li><strong>Sortie as default Home app</strong>: Home returns to Sortie or its switcher.</li>
 							<li>
-								<strong>Shizuku</strong> for the switcher, which shows what's running and moves apps between screens, and
-								the companion's notification bell.
+								<strong>Shizuku</strong> for app-switching controls, the notification bell and detailed device stats.
+								Without it, stats show RAM and battery temperature only.
 							</li>
 							<li><strong>Display over other apps</strong>: the switcher appears over a running game.</li>
 							<li><strong>Radial keyboard</strong>: a controller-friendly Android keyboard.</li>
 							<li>
-								<strong>A computer</strong> for cover art, descriptions, curator notes, smart folders and system logos.
+								<strong>Artwork and descriptions</strong>: import from Cocoon or bring scraped files; Sortie has no scraper.
 							</li>
 						</ul>
 						<p class="note">

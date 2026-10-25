@@ -1,16 +1,29 @@
 # Screenshot provenance
 
-These are real Android screen captures of Sortie and, in `first-game-running.png`, the game opened in RetroArch.
-Presentation changes are downscaling to 1280 px wide, palette compression and, for `companion.png`, stacking two displays
-from one moment. No interface elements are drawn or retouched.
+`home.png` is a current physical-device capture. The other images are earlier Android-emulator captures, retained for the
+setup walkthrough and feature tour. No interface elements are drawn or retouched.
 
-## Build and device
+## Home: Retroid Pocket Nova, 25 October 2026
+
+- **App:** official signed Sortie `0.1.0-beta.2115` (versionCode 2115), from commit
+  `060690c75231be0070736da1fbe6a17b2a811f49`.
+- **APK SHA-256:** `f36ef849db858247fdbb324fec3083566a92cb1dbef061c60299364e3c676014`.
+  The downloaded checksum passed; its signer matched the permanent release certificate documented in
+  [Releases](../../RELEASE.md#one-permanent-release-key). It was installed as an in-place update, never uninstalled.
+- **Device:** Retroid Pocket Nova, Android 13, landscape 1280×960 at 320 dpi. Captured through Android's
+  `screencap` over USB ADB; the PNG is unedited at native resolution.
+- **Shows:** Home → By Console → PS2, with Armored Core 3 focused, the compact folded header and **Controls** footer.
+  This is the device's existing library and artwork, not a synthetic library. No game was launched for this capture;
+  it is UI evidence, not an emulator-compatibility test.
+- Only the Nova was used. Its original Generation sort and sleeping state were restored after capture.
+
+## Earlier captures: build and device
 
 - **App:** Sortie `0.1.0-beta.6` (versionCode 7), an existing debug APK with the optional Field Notes content.
   It came from the clean `main` checkout at `dbde916` and its build timestamp follows that commit. This source association
   is inferred from the checkout and timestamp, not an embedded revision; the capture session did not rebuild it.
   APK SHA-256: `b60adc2c7a1a85407fc1dc97adb8858db59dfaa5c6d78744bcd9338c94d3a60b`.
-  Normal builds and CI artifacts contain no magazines.
+  This particular capture build bundled magazines; ordinary local builds do not. Current hosted builds do.
 - **Device:** an Android Emulator (Android 13, API 33, Google APIs x86_64 image). The top screen is 1920×1080 at 360 dpi,
   and a second emulator display at 1240×1080 stands in for a dual-screen handheld's bottom panel. This is not an AYN Thor or
   any other physical handheld, and the captures say nothing about performance or compatibility on real hardware.
@@ -26,7 +39,7 @@ from one moment. No interface elements are drawn or retouched.
   [uCity](https://hh.gbdev.io/game/ucity/) by AntonioND (GPL-3.0-or-later), from Homebrew Hub. RetroArch 1.22.2
   opened it with the Gambatte core. The core file was copied in before the launch instead of being downloaded through
   RetroArch's Online Updater. Sortie shows the title as `ucity` because it comes from the file name; no gamelist was used.
-- **Demo library** (`home`, `library`, `game-detail`, `companion`, `magazine`): the other 37 games are illustrative
+- **Demo library** (`library`, `game-detail`, `companion`, `magazine`): the other 37 games are illustrative
   stand-in files carrying real names. They are not games, cannot be played, and none was launched. Titles, descriptions
   and art come from ES-DE-style gamelists and scraped media, and the systems were added through Library setup. The pins,
   favourites and Want to play entry are sample actions. Before the Home capture, uCity was given a short gamelist entry
@@ -36,7 +49,7 @@ from one moment. No interface elements are drawn or retouched.
 
 | File | Size | Shows |
 |---|---|---|
-| `home.png` | 1280×720 | Home, Custom sort, with Settings → Grid columns (downward) set to 7: Continue (uCity, focused), pinned games, and the Favourites, Want to play, Finished, Shelved and Apps tiles |
+| `home.png` | 1280×960 | Current Nova capture described above: Home in By Console mode, PS2 grid, Armored Core 3 focused |
 | `library.png` | 1280×720 | A system grid (PlayStation 2) with filters and the controller focus on one game |
 | `companion.png` | 1280×1432 | The same moment on both screens: the grid on top, the companion's art and description for the focused game below |
 | `game-detail.png` | 1280×720 | A game page: cover, Play / Launch with…, notes, reference cards, Want to play, and a *Featured in* magazine link |
