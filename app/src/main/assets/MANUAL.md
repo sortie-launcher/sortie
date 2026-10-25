@@ -42,8 +42,9 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
   **.elf** or **.prx** may not start from Sortie; start such homebrew from inside PPSSPP.
 - After copying new games, use **Library setup → Re-index every system** (or **Settings → Diagnostics → Re-index everything**).
 - After downloading RetroArch cores, use RetroArch's **Quit** action before starting a game here. Save before changing games.
-  RetroArch 1.22 may close itself on the first attempt to open different content; if you return to Sortie, choose the game
-  again. Sortie does not force-close a running game when you switch away to read or use another app.
+  RetroArch 1.22 closes itself when asked to open a different game while it is running, whether on the same core or
+  another. Sortie then says so on the game's page, e.g. *RetroArch closed while switching cores — press Play again*: press
+  **Play** again and it starts. Sortie does not force-close a running game when you switch away to read or use another app.
 
 ### Maintaining your library
 
@@ -156,12 +157,21 @@ On a dual-screen handheld he also roams the other screen (near the battery and b
 the game's picture, by the **+**, with his base under the bell) and can walk off one screen and onto the other. There is
 only one of him.
 
-- Every minute or so he strolls to another spot. When you come back from a game he waves and says what the session earned;
-  news from the Hangar shows in a speech bubble where there is empty space. After a few quiet minutes he dozes until you
-  press something. He never moves while a game is in front, and stands still while nothing happens.
-- **Hangar** in Home's header opens the Hangar with the controller; tapping the mech where he shows does too. In an article,
-  **Select → Visit the hangar** also works. **B** returns from Gallery to Workshop, then closes the Hangar without losing
-  your place.
+- While you can see him he is alive: he breathes, blinks and glances about, and every minute or so he strolls to another
+  spot. Now and then he does something instead: naps on top of something, sits on an edge with his legs dangling over it,
+  pokes the battery (or the clock on Home), or stands under the battery and lifts it a few pixels, straining. Any button or
+  touch stops that at once and puts the battery back. When you come back from a game he waves and says what the session
+  earned; news from the Hangar shows in a speech bubble where there is empty space. After a few quiet minutes he dozes
+  until you press something. On a dual-screen handheld he keeps living on the other screen while you play (hide him in the
+  Hangar if you would rather he didn't). Whenever his screen is off, or Sortie is behind a game or in the background, he
+  does nothing at all.
+- Touch him: a **tap** pets him (a happy bounce and a little heart; it wakes him if he dozed off, and adds a little bond
+  at most once every few minutes). **Hold still** for half a second and let go to open the Hangar. **Hold, then move** to
+  pick him up and carry him: he dangles from your finger, and when you let go he drops to the nearest place he can stand,
+  with a little hop. On a dual-screen handheld, let go near the edge that faces the other screen and he goes across to it.
+  A quick swipe that starts on him still scrolls whatever is under him.
+- **Hangar** in Home's header opens the Hangar with the controller. In an article, **Select → Visit the hangar** also works.
+  **B** returns from Gallery to Workshop, then closes the Hangar without losing your place.
 - **Workshop** lets you name your companion, tune it, charge it, or put it to sleep. Charge and condition never run down
   while you are away, and neither can stop you playing or using the companion.
 - Choose a part slot and **Equip** an owned part, or wear a complete family set. Mixing families is encouraged.
@@ -173,8 +183,9 @@ only one of him.
 - At the bottom of Workshop, turn **Animate companion** off and he stays put at one spot, or **Hide companion** and he
   goes away entirely. **Show companion** in the Hangar brings him back without losing parts.
 
-Your companion survives app restarts and in-place updates. Its save is app-private and is **not included in the existing
-preference/history backup** yet. Do not uninstall the app if you want to keep it.
+Your companion survives app restarts and in-place updates. Its save is app-private and is included in **Backup and
+restore**: restoring a backup brings back his name, parts, salvage and bond, and play he was already credited for never
+pays twice.
 
 ## Offline magazines
 
@@ -238,6 +249,8 @@ to that list. A per-game or one-off chooser pick never changes the system defaul
 emulator is Open with… keeps asking. Only a normal system launch falling through other configured emulators to the
 chooser can remember its first selection; **Default launcher per system → Manifest default** clears that choice.
 Cancelling Android's app chooser does not start a play session. If nothing starts, a message says why.
+If the emulator closes within about three seconds of starting and you did not press Home, the page says so next to
+**Play** for about ten seconds (a short message elsewhere if you have left the page); Sortie does not retry by itself.
 
 **Add notes / Edit notes** opens your own notes and controls:
 - **Where was I?**: save slot, next objective or anything useful when returning.
@@ -400,13 +413,15 @@ permission. For other languages or a conventional layout, tap **Switch keyboard*
 ## Backup and restore
 
 In Settings, **Export backup…** saves your preferences, favourites, Want to play queue, Finished/Shelved status and verdicts,
-custom home, dock, game notes, reference-card text, magazine clippings, journal entries and completed play history to a JSON
-file in a location you choose. An unfinished session is not included.
+custom home, dock, game notes, reference-card text, magazine clippings, journal entries, completed play history and the Hangar
+companion (name, parts, salvage, bond) to a JSON file in a location you choose. An unfinished session is not included.
 
 **Restore from backup…** previews the contents before asking for confirmation. Quit any running game and return to Sortie first.
-Restoring replaces preferences, but merges history: newer sessions stay, and restoring the same file twice does not duplicate them.
-A safety copy is saved first under **sortie/backups/** on the card. Restoring that copy recovers your previous preferences;
-it cannot remove history merged by a restore.
+Restoring replaces preferences and the companion, but merges history: newer sessions stay, and restoring the same file twice does
+not duplicate them. No play session earns the companion salvage twice, whichever device it was credited on. A backup made by an
+older Sortie has no companion in it and leaves yours as it is.
+A safety copy is saved first under **sortie/backups/** on the card. Restoring that copy recovers your previous preferences and
+companion; it cannot remove history merged by a restore.
 
 Reference images and journal screenshots are **not embedded in the JSON backup**. Copy **sortie/reference/** and
 **sortie/journal/media/** alongside it to preserve those attachments. Restoring the JSON alone keeps the text and metadata,
@@ -432,5 +447,6 @@ refuses an update: ask whoever sent you the APK.
 ## Play log and saves
 
 An emulator/app launch starts a session; opening and cancelling the app chooser does not. Sessions end when the game's
-window is gone. Minutes, session counts and "last played" feed the *Continue* tile and personal history. The **💾 started**
+window is gone. A game whose emulator closed right after starting (see A game's page) is not recorded as played.
+Minutes, session counts and "last played" feed the *Continue* tile and personal history. The **💾 started**
 chip reads the save folders set in **Library setup → BIOS and save folders**, or on a computer-prepared card.

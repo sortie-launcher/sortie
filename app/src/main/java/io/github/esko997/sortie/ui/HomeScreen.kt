@@ -71,6 +71,7 @@ import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import io.github.esko997.sortie.mecha.MechaProp
 import io.github.esko997.sortie.mecha.MechaSpotKind
 import io.github.esko997.sortie.mecha.ui.LocalMechaStage
 import io.github.esko997.sortie.mecha.ui.mechaBaseSize
@@ -395,8 +396,8 @@ fun HomeScreen(
         if (inputModes.inputMode == InputMode.Keyboard) runCatching { hangarButton.requestFocus() }
     }
     val identity: @Composable () -> Unit = {
-        // the companion may stand just after the clock and game count when the header leaves room there
-        Row(Modifier.mechaSpot("home:identity", MechaSpotKind.BESIDE_END), verticalAlignment = Alignment.CenterVertically) {
+        // the companion may stand just after the clock and game count when the header leaves room there, and poke them
+        Row(Modifier.mechaSpot("home:identity", MechaSpotKind.BESIDE_END, props = setOf(MechaProp.POKE)), verticalAlignment = Alignment.CenterVertically) {
             Text("Sortie", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.width(12.dp))
             Clock()

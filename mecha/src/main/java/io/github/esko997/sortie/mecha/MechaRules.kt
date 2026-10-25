@@ -110,6 +110,34 @@ internal fun mechaStateProblem(state: MechaState, parts: List<MechaPart>): Strin
     }
 }
 
+/**
+ * Whether a pet (a tap on him) at [now] counts toward bond, the last one that did having counted at [lastPetAt] (0: never):
+ * at most once per [MECHA_PET_BOND_MS] however often he is tapped. A clock that went backwards (now before [lastPetAt]) does
+ * not lock pets out.
+ */
+internal fun mechaPetCounts(now: Long, lastPetAt: Long): Boolean = lastPetAt <= 0 || now - lastPetAt !in 0 until MECHA_PET_BOND_MS
+
+/** A pet that counts: a little bond. No message: the mech's own reaction is the feedback. */
+internal fun MechaState.petted(): MechaResult = MechaResult(copy(bond = bondPlus(1)))
+
+/**
+ * This hangar (from a backup) restored over the device's own hangar [current] (null: none open): every session either one
+ * already credited stays credited, so play that earned salvage on either side never earns it again here. Play the backup's
+ * hangar had not got to yet still counts, once.
+ */
+internal fun MechaState.restoredOver(current: MechaState?): MechaState =
+    if (current == null) this else copy(processedSessions = LinkedHashSet(processedSessions).apply { addAll(current.processedSessions) })
+
+/**
+ * [sessions] counted as already credited without earning anything: play a restore merges in from a backup that carries no
+ * hangar was played (and paid for) on another hangar, so it must not pay again here.
+ */
+internal fun MechaState.creditedElsewhere(sessions: Collection<PlaySession>): MechaResult {
+    val processed = LinkedHashSet(processedSessions)
+    sessions.mapTo(processed, ::mechaSessionKey)
+    return if (processed.size == processedSessions.size) MechaResult(this) else MechaResult(copy(processedSessions = processed))
+}
+
 /** Parts not yet in the hangar, of [slot] (any when null), sorted by id. */
 internal fun MechaState.unownedIn(parts: List<MechaPart>, slot: MechaSlot? = null): List<MechaPart> =
     parts.filter { it.id !in owned && (slot == null || it.slot == slot) }.sortedBy { it.id }

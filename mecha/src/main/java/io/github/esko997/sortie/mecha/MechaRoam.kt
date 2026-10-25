@@ -57,6 +57,7 @@ internal data class MechaRect(val left: Int, val top: Int, val right: Int, val b
  * A declared element as last laid out: [bounds] unclipped, [visible] after its ancestors' clipping (a scrolled-away tile is
  * empty). [kind] null: only an obstacle. [interactive]: a control, which a tap target must never cover. [solid]: something
  * drawn over its whole bounds, which the mech and his bubbles keep clear of; a transparent row that only takes taps is not.
+ * [props]: what he may do with it besides standing by it ([MechaPlay]).
  */
 internal class MechaElement(
     val id: String,
@@ -64,7 +65,8 @@ internal class MechaElement(
     val bounds: MechaRect,
     val visible: MechaRect,
     val interactive: Boolean,
-    val solid: Boolean = true
+    val solid: Boolean = true,
+    val props: Set<MechaProp> = emptySet()
 ) {
     val wholeOnScreen: Boolean get() = !visible.isEmpty && visible == bounds
 }

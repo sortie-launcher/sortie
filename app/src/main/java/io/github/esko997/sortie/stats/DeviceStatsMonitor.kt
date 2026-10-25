@@ -9,6 +9,7 @@ import android.os.SystemClock
 import androidx.lifecycle.Lifecycle
 import io.github.esko997.sortie.shell.DeviceStatsProbe
 import io.github.esko997.sortie.shell.ScreenMover
+import io.github.esko997.sortie.ui.shownFlow
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

@@ -1,15 +1,22 @@
 package io.github.esko997.sortie.mecha.ui
 
 import android.os.SystemClock
+import android.util.Log
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.unit.IntSize
 import io.github.esko997.sortie.mecha.MechaBody
+import io.github.esko997.sortie.mecha.MechaDo
+import io.github.esko997.sortie.mecha.MechaDrop
+import io.github.esko997.sortie.mecha.MechaEdge
 import io.github.esko997.sortie.mecha.MechaMove
 import io.github.esko997.sortie.mecha.MechaPlacement
+import io.github.esko997.sortie.mecha.MechaPlay
 import io.github.esko997.sortie.mecha.MechaRect
 import io.github.esko997.sortie.mecha.MechaRoam
 import io.github.esko997.sortie.mecha.MechaSpotKind
 import io.github.esko997.sortie.mecha.MechaState
+import io.github.esko997.sortie.mecha.MechaTouch
+import io.github.esko997.sortie.mecha.MechaVignette
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -17,15 +24,19 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** A stroll now and then while the stage is up (the dock's old cadence). */
+private const val TAG = "MechaDirector"
+
+/** A stroll (or, now and then, a vignette) every so often while the stage is up. */
 private const val STROLL_MIN_MS = 45_000L
 private const val STROLL_MAX_MS = 90_000L
 
-/** No key or touch for this long and he dozes off (still, no frames) until the next one. */
+/** One time in this many a due stroll is a vignette instead, when one fits. */
+private const val VIGNETTE_ODDS = 3
+
+/** No key or touch for this long and he dozes off (asleep, breathing slowly) until the next one. */
 private const val DOZE_MS = 180_000L
 
 /** Layout must stay put this long before an off-screen mech comes back (not mid-scroll). */
@@ -48,13 +59,25 @@ private const val HOP_HEIGHT = 14
 private const val SINK_PX = 8
 private const val SINK_STEP_MS = 60L
 
+/** In hand: the legs swing a pixel each step. */
+private const val SWING_MS = 180L
+
+/** Let go: a short glide down to the nearest place with this little hop. */
+private const val LAND_STEPS = 8
+private const val LAND_STEP_MS = 45L
+private const val LAND_HOP = 6
+private const val PET_STEP_MS = 130L
+private const val PET_STEPS = 8
+
 /**
- * Drives one stage's mech: while [MechaPresence] gives it the mech he is placed at a spot that fits, strolls between spots
- * now and then, reacts to returns from play and to the Hangar's news with a cheer and a bubble, dozes when nobody is around,
- * and may cross to the other screen. Everything waits on timers or the stage's signal, so a mech standing still costs no frames.
+ * Drives one stage's mech: while [MechaPresence] gives it the mech he is placed at a spot that fits, breathes and glances
+ * about while he stands, strolls between spots now and then or plays a short vignette (a nap, a sit on an edge, a poke or a
+ * lift of an element the host allows), reacts to pets, holds and carries, to returns from play and to the Hangar's news,
+ * dozes when nobody is around, and may cross to the other screen. Everything waits on timers or the stage's signal, and the
+ * whole loop exists only while this stage owns the mech, which needs its window resumed on a lit display.
  */
 internal class MechaDirector(private val stage: MechaStage, private val measure: (String) -> IntSize, private val random: Random = Random.Default) {
-    /** Where he stands; null while off screen. */
+    /** Where he stands; null while off screen or in hand. */
     private var at: MechaPlacement? = null
 
     /** His x relative to his spot's element, to follow it when it moves (a scrolled grid). */
@@ -67,20 +90,20 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
     private var bubbleUntil = 0L
     private var pendingMessage: String? = null
     private var pendingCheer = false
+    private val idle = MechaIdle(random)
+    private var nextIdle = 0L
+    private var swing = 0
 
     private val state: MechaState? get() = stage.store.view.value.state
     private val motion: Boolean get() = state?.motion == true
     private val resting: Boolean get() = state?.sleeping == true
 
+    private fun now(): Long = SystemClock.uptimeMillis()
+
     suspend fun run() {
-        while (true) {
-            snapshotFlow { MechaPresence.owner === stage }.first { it }
+        whileShown(snapshotFlow { MechaPresence.owner === stage }) {
             try {
-                coroutineScope {
-                    val loop = launch { live() }
-                    snapshotFlow { MechaPresence.owner === stage }.first { !it }
-                    loop.cancel()
-                }
+                live()
             } finally {
                 lastSpot = at?.spotId ?: lastSpot
                 offstage()
@@ -110,23 +133,30 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
                 stage.signal.trySend(Unit)
             }
         }
-        val now = SystemClock.uptimeMillis()
+        val now = now()
         nextStroll = now + strollDelay()
         stage.lastInput = now
         stage.layoutChanged = false
+        stage.gestures.clear()
         arrive()
         while (true) {
             tick()
-            withTimeoutOrNull(nextWake() - SystemClock.uptimeMillis()) { stage.signal.receive() }
+            withTimeoutOrNull(nextWake() - now()) { stage.signal.receive() }
         }
     }
 
     private fun strollDelay(): Long = random.nextLong(STROLL_MIN_MS, STROLL_MAX_MS)
 
+    /** Idle life runs while he stands still in view with motion on and nothing else going on. */
+    private val idling: Boolean get() = at != null && stage.shown && motion && !stage.hangarOpen && !stage.carried
+
     private fun nextWake(): Long {
-        val now = SystemClock.uptimeMillis()
+        val now = now()
+        if (stage.carried) return now + SWING_MS
+        if (stage.gestures.isNotEmpty()) return now
         var t = now + STROLL_MAX_MS
         if (stage.bubble != null) t = min(t, bubbleUntil)
+        if (idling) t = min(t, nextIdle)
         // with the Hangar open nothing else happens until it closes (which signals)
         if (!stage.hangarOpen) {
             t = min(t, nextStroll)
@@ -139,12 +169,18 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
     }
 
     private suspend fun tick() {
-        val now = SystemClock.uptimeMillis()
+        val now = now()
         val b = stage.bounds
         if (b == null || state == null) {
             hide()
             return
         }
+        if (stage.carried) {
+            // in the player's hand: the pointer watcher moves him; he only swings his legs
+            if (motion) stage.rig = MechaRigs.swing(swing++)
+            return
+        }
+        while (stage.gestures.isNotEmpty()) gesture(stage.gestures.removeFirst(), b)
         if (stage.layoutChanged) {
             stage.layoutChanged = false
             settle()
@@ -185,7 +221,12 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         }
         if (now >= nextStroll) {
             nextStroll = now + strollDelay()
-            if (!stage.dozing) stroll()
+            if (!stage.dozing && !(random.nextInt(VIGNETTE_ODDS) == 0 && vignette())) stroll()
+        }
+        if (idling && now() >= nextIdle) {
+            val (rig, ms) = idle.next(asleep = resting || stage.dozing)
+            stage.rig = rig
+            nextIdle = now() + ms
         }
     }
 
@@ -206,12 +247,19 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
     private fun pick(opts: List<MechaPlacement>, from: MechaPlacement?, b: MechaRect): MechaPlacement? =
         if (!motion) opts.firstOrNull() else MechaRoam.chooseNext(opts, null, previous, from, b.width, random)
 
-    /** Becoming the owner: walk in after a hand-off, else stand where he was (or anywhere that qualifies) at once. */
+    /** Becoming the owner: dropped in or walking in after a hand-off, else standing where he was (or anywhere that qualifies). */
     private suspend fun arrive() {
         val b = stage.bounds ?: return
         rescale(b)
+        val dropped = MechaPresence.droppedIn
+        MechaPresence.droppedIn = null
         val side = MechaPresence.arriving
         MechaPresence.arriving = null
+        if (dropped != null) {
+            strollsHere = 0
+            dropIn(dropped, b)
+            return
+        }
         if (side != null && motion && !resting) {
             strollsHere = 0
             enterFrom(side, b)
@@ -220,7 +268,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         val opts = options(stage.scale, b, spread = false)
         val p = opts.firstOrNull { it.spotId == lastSpot } ?: pick(opts, null, b)
         if (p == null) {
-            settleAt = SystemClock.uptimeMillis() + SETTLE_MS
+            settleAt = now() + SETTLE_MS
             return
         }
         place(p)
@@ -240,7 +288,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         val b = stage.bounds ?: return
         val cur = at
         if (cur == null) {
-            settleAt = SystemClock.uptimeMillis() + SETTLE_MS
+            settleAt = now() + SETTLE_MS
             return
         }
         val spot = stage.elements[cur.spotId]
@@ -258,7 +306,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         if (motion && !resting && stage.elements.containsKey(cur.spotId)) sink(cur)
         lastSpot = cur.spotId
         hide()
-        settleAt = SystemClock.uptimeMillis() + SETTLE_MS
+        settleAt = now() + SETTLE_MS
     }
 
     /** Stands at [p] still: position, pose, tap target. */
@@ -269,14 +317,18 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         stage.floor = p.floor
         stage.clip = p.clip
         stage.bob = 0
+        stage.front = false
         still()
         stage.shown = true
         stage.stand(p)
     }
 
+    /** The still pose (awake or asleep); idle life picks up from it a beat later. */
     private fun still() {
-        stage.frame = if (resting || stage.dozing) MechaPose.SLEEP.stillFrame else MechaPose.IDLE.stillFrame
+        stage.rig = if (resting || stage.dozing) MechaRigs.ASLEEP else MechaRigs.STAND
         stage.bob = 0
+        idle.reset()
+        nextIdle = now() + MechaIdle.BEAT_MS
     }
 
     private fun hide() {
@@ -284,11 +336,122 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         stage.shown = false
         stage.stand(null)
         stage.bubble = null
+        stage.front = false
+        stage.heart = -1
+        stage.snore = -1
+        stage.nudge = null
     }
 
     private fun offstage() {
         hide()
         stage.dozing = false
+        stage.carried = false
+        stage.busy = false
+        stage.interrupted = false
+        stage.gestures.clear()
+    }
+
+    // ---- gestures ----
+
+    private suspend fun gesture(touch: MechaTouch, b: MechaRect) {
+        when (touch) {
+            MechaTouch.PET -> pet()
+            MechaTouch.HANGAR -> {
+                // put down where he was picked up, and the Hangar opens over the window
+                val p = at
+                if (p != null) place(p) else comeBack()
+                stage.openHangar()
+            }
+            MechaTouch.DROP -> {
+                val (fx, fy) = stage.dropAt ?: (stage.x.toFloat() to stage.floor.toFloat())
+                stage.dropAt = null
+                drop(fx, fy, b)
+            }
+            else -> Unit
+        }
+    }
+
+    /** A tap on him: wakes him from a doze, a happy bounce with a heart, and a little bond (rate-limited by the store). */
+    private suspend fun pet() {
+        stage.store.pet()
+        stage.lastInput = now()
+        if (stage.dozing) {
+            stage.dozing = false
+            stage.wakeRequested = false
+        }
+        if (at == null) return
+        if (!motion) {
+            stage.heart = 0
+            pause(PET_STEP_MS * PET_STEPS)
+            stage.heart = -1
+            return
+        }
+        if (!resting) stage.bob = 0
+        for (i in 0 until PET_STEPS) {
+            if (!resting) stage.rig = MechaRigs.pet(i)
+            stage.heart = i
+            if (!pause(PET_STEP_MS)) break
+        }
+        stage.heart = -1
+        if (!stage.carried) still()
+    }
+
+    /** Let go with the finger at ([fx], [fy]): across to the other display, down to the nearest place, or out of sight. */
+    private suspend fun drop(fx: Float, fy: Float, b: MechaRect) {
+        at = null
+        stage.stand(null)
+        stage.front = false
+        rescale(b)
+        val other = MechaPresence.otherWithRoom(stage)
+        val places = options(stage.scale, b, spread = false)
+        val d = MechaPlay.drop(fx, fy, stage.x, stage.floor, places, b, stage.toward, stage.edgeZone, other != null)
+        Log.i(TAG, "display ${stage.displayId}: dropped at ${fx.roundToInt()},${fy.roundToInt()} -> $d")
+        when (d) {
+            is MechaDrop.Across -> {
+                if (motion) {
+                    // out through the edge that faces the other screen
+                    val s = stage.scale
+                    val out = if (stage.toward == MechaEdge.BOTTOM) b.bottom + MechaBody.FRAME * s else b.top - s
+                    glide(stage.x, out, 0)
+                }
+                lastSpot = null
+                hide()
+                strollsHere = 0
+                MechaPresence.handOffDrop(other!!, d.fraction)
+            }
+            is MechaDrop.Land -> {
+                if (motion) glide(d.at.x, d.at.floor, LAND_HOP)
+                previous = lastSpot
+                place(d.at)
+            }
+            MechaDrop.Nowhere -> {
+                hide()
+                settleAt = now() + SETTLE_MS
+            }
+        }
+    }
+
+    /** Dropped in from the other screen at [fraction] of the width: in through the edge facing it, onto the nearest place. */
+    private suspend fun dropIn(fraction: Float, b: MechaRect) {
+        val s = stage.scale
+        val w = MechaBody.width(s)
+        val x = b.left + (fraction * b.width).roundToInt() - w / 2
+        val floor = if (stage.toward == MechaEdge.TOP) b.top else b.bottom + MechaBody.FRAME * s
+        val target = MechaPlay.drop(0f, 0f, x, floor, options(s, b, spread = false), b, null, 0, false)
+        if (target !is MechaDrop.Land) {
+            settleAt = now() + SETTLE_MS
+            return
+        }
+        if (motion) {
+            stage.x = x
+            stage.floor = floor
+            stage.clip = Int.MAX_VALUE
+            stage.front = false
+            still()
+            stage.shown = true
+            glide(target.at.x, target.at.floor, LAND_HOP)
+        }
+        place(target.at)
     }
 
     // ---- behaviour ----
@@ -314,7 +477,159 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         }
     }
 
+    /**
+     * A short vignette instead of a stroll, when one fits ([MechaPlay.vignettes]): he goes there, plays it and comes back
+     * to a spot. Any key or touch ends it at once (the element he holds is back in place before the input is handled).
+     * Returns false when none fits.
+     */
+    private suspend fun vignette(): Boolean {
+        val b = stage.bounds ?: return false
+        val cur = at ?: return false
+        if (!motion || resting) return false
+        val v = MechaPlay.choose(
+            MechaPlay.vignettes(cur, options(stage.scale, b, spread = false), stage.elements, stage.scale, b, stage.focused, stage.touches.values),
+            random
+        ) ?: return false
+        Log.i(TAG, "display ${stage.displayId}: ${v.kind} ${v.prop ?: v.spot.spotId}")
+        stage.interrupted = false
+        stage.busy = true
+        try {
+            if (v.spot != cur) {
+                travel(cur, v.spot, b)
+                previous = cur.spotId
+            }
+            if (stage.interrupted || stage.carried) return true
+            if (v.kind == MechaDo.LIFT) {
+                at = v.spot
+                stage.x = v.spot.x
+                stage.floor = v.spot.floor
+                stage.clip = Int.MAX_VALUE
+                stage.shown = true
+            } else {
+                place(v.spot)
+            }
+            when (v.kind) {
+                MechaDo.NAP -> nap()
+                MechaDo.SIT -> sit(v)
+                MechaDo.POKE -> poke(v)
+                MechaDo.LIFT -> lift(v)
+            }
+        } finally {
+            stage.busy = false
+            stage.interrupted = false
+            stage.nudge = null
+            stage.snore = -1
+            stage.front = false
+        }
+        if (stage.carried) return true
+        if (v.kind == MechaDo.LIFT) {
+            // under an element is no spot: back to the nearest place that qualifies
+            val from = at ?: return true
+            val back = (MechaPlay.drop(0f, 0f, from.x, from.floor, options(stage.scale, b, spread = false), b, null, 0, false) as? MechaDrop.Land)?.at
+            if (back == null) {
+                pushedOff(from)
+            } else {
+                travel(from, back, b)
+                place(back)
+            }
+        } else {
+            place(v.spot)
+        }
+        return true
+    }
+
+    /** Waits [ms] unless any input ends the vignette (or he is picked up) first: false then. */
+    private suspend fun pause(ms: Long): Boolean {
+        val end = now() + ms
+        while (true) {
+            if (stage.interrupted || stage.carried) return false
+            val left = end - now()
+            if (left <= 0) return true
+            withTimeoutOrNull(left) { stage.signal.receive() }
+        }
+    }
+
+    /** A nap where he stands: asleep, breathing, a Z rising now and then; then a blink awake. */
+    private suspend fun nap() {
+        val beats = 8 + random.nextInt(5)
+        for (i in 0 until beats) {
+            stage.rig = MechaRigs.ASLEEP.upper(0, if (i % 2 == 0) 0 else -1)
+            stage.snore = if (i % 3 == 2) -1 else i % 3
+            if (!pause(900)) return
+        }
+        stage.snore = -1
+        stage.rig = MechaRigs.BLINK
+        pause(200)
+    }
+
+    /** Sits on the edge with his legs dangling over the element's face (drawn over it), kicking now and then. */
+    private suspend fun sit(v: MechaVignette) {
+        val s = stage.scale
+        // down in two steps, then seated
+        stage.front = true
+        stage.clip = Int.MAX_VALUE
+        stage.floor = v.spot.floor.coerceAtMost(v.pose.floor - MechaPlay.SIT_DROP / 2 * s)
+        stage.x = v.pose.x
+        if (!pause(120)) return
+        stage.floor = v.pose.floor
+        val beats = 16 + random.nextInt(8)
+        for (i in 0 until beats) {
+            stage.rig = MechaRigs.sit(i, blink = random.nextInt(8) == 0)
+            if (!pause(450)) return
+        }
+    }
+
+    /** Pokes the element beside him three times; it jiggles away a pixel each time. */
+    private suspend fun poke(v: MechaVignette) {
+        val id = v.prop ?: return
+        val s = stage.scale
+        repeat(3) {
+            stage.rig = MechaRigs.poke(v.toward, out = true)
+            stage.nudge = MechaNudge(id, v.toward * s, 0)
+            if (!pause(150)) return
+            stage.rig = MechaRigs.poke(v.toward, out = false)
+            stage.nudge = null
+            if (!pause(320)) return
+        }
+        stage.rig = MechaRigs.BLINK
+        pause(200)
+    }
+
+    /** Under the element: squats, pushes it up a few pixels, strains (wobbling), and lets it down again. */
+    private suspend fun lift(v: MechaVignette) {
+        val id = v.prop ?: return
+        val s = stage.scale
+        stage.rig = MechaRigs.strain(-1, 0)
+        if (!pause(350)) return
+        for (h in 1..MechaPlay.LIFT_HEIGHT) {
+            stage.rig = MechaRigs.strain(h, h)
+            stage.nudge = MechaNudge(id, 0, -h * s)
+            if (!pause(160)) return
+        }
+        for (i in 0 until 12) {
+            stage.rig = MechaRigs.strain(MechaPlay.LIFT_HEIGHT - i % 2, i)
+            stage.nudge = MechaNudge(id, 0, -(MechaPlay.LIFT_HEIGHT - i % 2) * s)
+            if (!pause(130)) return
+        }
+        for (h in MechaPlay.LIFT_HEIGHT - 1 downTo 0) {
+            stage.rig = MechaRigs.strain(h, h)
+            stage.nudge = if (h == 0) null else MechaNudge(id, 0, -h * s)
+            if (!pause(120)) return
+        }
+        stage.rig = MechaRigs.STAND
+    }
+
     private suspend fun moveTo(from: MechaPlacement, to: MechaPlacement, b: MechaRect) {
+        travel(from, to, b)
+        previous = from.spotId
+        // the layout may have moved while he walked: stand where the spot is now
+        val spot = stage.elements[to.spotId]
+        val now = spot?.let { MechaRoam.place(it, stage.scale, b, elements(), to.x, stage.minTap) }
+        if (now != null) place(now) else pushedOff(to)
+    }
+
+    /** The way from [from] to [to]: a walk, a hop or a sink and rise ([MechaRoam.planMove]). */
+    private suspend fun travel(from: MechaPlacement, to: MechaPlacement, b: MechaRect) {
         stage.bubble = null
         stage.stand(null)
         when (MechaRoam.planMove(from, to, stage.scale, b.width)) {
@@ -325,11 +640,6 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
                 rise(to)
             }
         }
-        previous = from.spotId
-        // the layout may have moved while he walked: stand where the spot is now
-        val spot = stage.elements[to.spotId]
-        val now = spot?.let { MechaRoam.place(it, stage.scale, b, elements(), to.x, stage.minTap) }
-        if (now != null) place(now) else pushedOff(to)
     }
 
     /** Off this screen by its nearest edge and onto [other]. */
@@ -366,7 +676,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         val next = MechaRoam.chooseNext(options(stage.scale, b, spread = true), null, null, e, b.width, random)
         if (e == null) {
             if (next == null) {
-                settleAt = SystemClock.uptimeMillis() + SETTLE_MS
+                settleAt = now() + SETTLE_MS
                 return
             }
             rise(next)
@@ -380,7 +690,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
             stage.stand(null)
             walk(MechaRoam.offstageX(e.kind, b, stage.scale))
             hide()
-            settleAt = SystemClock.uptimeMillis() + SETTLE_MS
+            settleAt = now() + SETTLE_MS
             return
         }
         delay(400)
@@ -394,7 +704,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
     private suspend fun react(text: String, cheer: Boolean) {
         val b = stage.bounds ?: return
         stage.dozing = false
-        stage.lastInput = SystemClock.uptimeMillis()
+        stage.lastInput = now()
         val size = measure(text)
         val gap = 2 * stage.scale
         var cur = at
@@ -420,7 +730,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         }
         if (rect != null && at != null) {
             stage.bubble = MechaBubble(text, rect)
-            bubbleUntil = SystemClock.uptimeMillis() + BUBBLE_MS
+            bubbleUntil = now() + BUBBLE_MS
         }
         if (cheer && at != null && motion && !resting) celebrate()
         still()
@@ -431,7 +741,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
     private suspend fun celebrate() {
         val pose = MechaPose.CELEBRATE
         repeat(pose.steps * 2) { i ->
-            stage.frame = pose.frameAt(i)
+            stage.rig = MechaRig(pose.frameAt(i))
             stage.bob = pose.bobAt(i)
             delay(pose.stepMs)
         }
@@ -444,7 +754,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         var i = 0
         while (abs(target - stage.x) >= abs(stride)) {
             if (!motion) break
-            stage.frame = MechaPose.WALK.frameAt(i)
+            stage.rig = MechaRig(MechaPose.WALK.frameAt(i))
             stage.bob = MechaPose.WALK.bobAt(i)
             delay(WALK_STEP_MS)
             stage.x += stride
@@ -459,7 +769,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         val x0 = stage.x
         val f0 = stage.floor
         stage.clip = Int.MAX_VALUE
-        stage.frame = MechaPose.CELEBRATE.stillFrame
+        stage.rig = MechaRig(MechaPose.CELEBRATE.stillFrame)
         for (k in 1..HOP_STEPS) {
             delay(HOP_STEP_MS)
             val t = k.toFloat() / HOP_STEPS
@@ -469,6 +779,24 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         }
         stage.x = to.x
         stage.floor = to.floor
+        still()
+    }
+
+    /** From where he is to ([toX], [toFloor]) in a few quick steps, arcing [arc] sprite pixels up on the way (whole pixels). */
+    private suspend fun glide(toX: Int, toFloor: Int, arc: Int) {
+        val s = stage.scale
+        val x0 = stage.x
+        val f0 = stage.floor
+        stage.clip = Int.MAX_VALUE
+        for (k in 1..LAND_STEPS) {
+            delay(LAND_STEP_MS)
+            val t = k.toFloat() / LAND_STEPS
+            stage.x = x0 + ((toX - x0) * t / s).roundToInt() * s
+            val up = (4 * t * (1 - t) * arc).roundToInt()
+            stage.floor = f0 + ((toFloor - f0) * t / s).roundToInt() * s - up * s
+        }
+        stage.x = toX
+        stage.floor = toFloor
         still()
     }
 

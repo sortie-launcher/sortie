@@ -4,6 +4,16 @@
 - Screens off or Sortie out of sight: the companion screen's rotating hero now pauses instead of loading a new picture
   and palette every 20 seconds (and re-tinting the other screen's background) where no one can see it. On the AYN Thor
   with both screens off Sortie's CPU use drops from about 2 % of a core to about 0.2 %; the rotation resumes on wake.
+- Hangar companion, playful: tap him to pet him (a bounce and a little heart; a little bond at most once every five
+  minutes), hold still for half a second and let go to open the Hangar, or hold and move to pick him up and carry him: he
+  dangles from your finger and drops to the nearest place he can stand with a hop; on a dual-screen handheld, let go near
+  the edge facing the other screen and he goes across. A quick swipe starting on him still scrolls. While you can see him
+  he breathes, blinks and glances about, and now and then naps, sits on an edge with his legs dangling, pokes the battery
+  (or Home's clock), or lifts the battery a few pixels, straining; any button or touch puts it back at once. New poses are
+  made by moving the existing part layers by whole pixels, no new art. He keeps living on the other screen while a game
+  runs (hide him in the Hangar if you prefer) and does nothing at all when Sortie is in the background or the screen is off.
+- Backup format 2: exports include the Hangar companion (name, parts, salvage, bond); a restore brings him back and no play
+  session ever earns salvage twice. Older backups still restore and leave the companion as it is.
 - Perf page: in the switcher overlay, **R1** (or L1, or the new **Perf** chip on either screen) swaps the app list for live
   performance numbers: CPU load and clock, GPU load and clock, RAM, CPU, GPU and battery temperatures and the fan, each
   large with a two-minute line, then every core's clock and every thermal zone, grouped. B, R1 or **Apps** go back with
@@ -11,6 +21,15 @@
   page on the other screen while you play (battery, bell, dock and + stay in their corners). While a Perf page is shown
   stats are read every 2 s (or 1 s, *Perf view refresh*); as before, nothing is read while no stats are on a screen that is
   on, and the history is kept only while they are. Readings a device lacks get no tile; FPS and power are not shown.
+- A game whose emulator closes right after Play (within 3 s, without you pressing Home) no longer just drops you back on
+  its page: the page says so next to Play for about ten seconds (a toast if you have left it). RetroArch 1.22 closes
+  itself when asked to open a different game while running, so that case reads "RetroArch closed while switching cores —
+  press Play again" (or "switching games" on the same core); other emulators get "… closed right after starting". Sortie
+  does not retry by itself. Such a non-start is no longer recorded as a play session; `playlog.jsonl` marks its `end`
+  with `quickExit: true`. Home pressed quickly over a running game ends or keeps the session as before, with no notice.
+- `tools/stress/ui-stress.py`: on devices where `uiautomator dump` never works (the Retroid Pocket Nova's Game Assistant
+  accessibility service makes it fail with "null root node"), the run logs one `skip` with reason "uiautomator
+  unavailable" and leaves out the reader and Hangar scenarios instead of reporting a missing control each time.
 - Narrow screens: grid tile titles no longer split a word across lines ("PlayStatio / n" on the Thor's bottom screen);
   a word wider than the tile shrinks the title slightly instead. The Hangar's salvage, care, family-set and Gallery rows wrap
   instead of running off the edge ("Any slot" was cut off on 640 dp-wide screens such as the Retroid Pocket Nova).

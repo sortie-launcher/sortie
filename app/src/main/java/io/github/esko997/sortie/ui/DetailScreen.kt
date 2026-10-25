@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +41,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +53,7 @@ import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.magazine.MagazineFeature
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -73,6 +77,11 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
     var editing by rememberSaveable(game.id) { mutableStateOf(false) }
     var fromEditor by remember(game.id) { mutableStateOf(false) }
     LaunchedEffect(game.id) { Selection.set(game) }
+    androidx.compose.runtime.DisposableEffect(game.id) {
+        vm.gamePage = game.id
+        onDispose { if (vm.gamePage == game.id) vm.gamePage = null }
+    }
+    val exitNotice by vm.exitNotice.collectAsState()
     LaunchedEffect(game.id, editing) {
         if (!editing) runCatching { (if (fromEditor) notesFocus else launchFocus).requestFocus() }
     }
@@ -207,6 +216,23 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
                         interactionSource = queueInteraction
                     ) { Text(if (queued) "✓ Want to play" else "+ Want to play", maxLines = 1) }
                 }
+                // the emulator closed right after Play: said here, next to Play, and gone after a while or the next launch
+                exitNotice?.takeIf { it.gameId == game.id }?.let { notice ->
+                    LaunchedEffect(notice) {
+                        delay(EXIT_NOTICE_MS)
+                        vm.dismissExitNotice()
+                    }
+                    Text(
+                        notice.message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier
+                            .padding(bottom = 12.dp)
+                            .border(1.dp, accent, RoundedCornerShape(8.dp))
+                            .background(accent.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .semantics { liveRegion = LiveRegionMode.Polite }
+                    )
+                }
                 GameProgressSection(graph, game.id, accent = accent)
                 FeaturedIn(graph, game, accent, onArticle)
                 if (showProfiles) {
@@ -256,6 +282,9 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
         HintBar("A" to "play", "Y" to "favourite", "R2" to "want to play", "Select" to "launch with…", "B" to "back")
     }
 }
+
+/** How long a game page keeps saying its emulator closed right after starting. */
+private const val EXIT_NOTICE_MS = 12_000L
 
 /**
  * Magazine articles that discuss this game, matched by the same title/system rules as an article's library lookup. Each opens

@@ -1,9 +1,5 @@
 package io.github.esko997.sortie.ui
 
-import android.hardware.display.DisplayManager
-import android.os.Handler
-import android.os.Looper
-import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,11 +38,7 @@ import io.github.esko997.sortie.stats.DeviceStatsMode
 import io.github.esko997.sortie.stats.PerfFrame
 import io.github.esko997.sortie.stats.StatCell
 import io.github.esko997.sortie.stats.StatsText
-import io.github.esko997.sortie.stats.displayLit
-import io.github.esko997.sortie.stats.shownFlow
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
@@ -142,29 +134,6 @@ fun rememberShown(): Flow<Boolean> {
     val view = LocalView.current
     return remember(lifecycle, view) { shownFlow(lifecycle, displayLitFlow(view)) }
 }
-
-/** Whether [view]'s display is on, from display-change callbacks; on (unknown) while the view has no display yet. */
-private fun displayLitFlow(view: View): Flow<Boolean> = callbackFlow {
-    val display = view.display
-    if (display == null) {
-        send(true)
-        awaitClose()
-        return@callbackFlow
-    }
-    val manager = view.context.getSystemService(DisplayManager::class.java)
-    val listener = object : DisplayManager.DisplayListener {
-        override fun onDisplayAdded(displayId: Int) = Unit
-
-        override fun onDisplayRemoved(displayId: Int) = Unit
-
-        override fun onDisplayChanged(displayId: Int) {
-            if (displayId == display.displayId) trySend(displayLit(display.state))
-        }
-    }
-    manager.registerDisplayListener(listener, Handler(Looper.getMainLooper()))
-    send(displayLit(display.state))
-    awaitClose { manager.unregisterDisplayListener(listener) }
-}.distinctUntilChanged()
 
 /** A thin column of [cells], centred vertically, with a hairline on the side facing the panel. */
 @Composable

@@ -23,6 +23,13 @@ Gallery, X while open). Reader and Hangar steps return Sortie to its Home route,
 carousel below, so the harness first taps Home's top-left corner on the top display. `--no-kill` drops the force-stop
 scenarios for single-process leak runs.
 
+Where `uiautomator dump` cannot work, the run logs one `skip` event with reason `uiautomator unavailable` and leaves out
+the reader and Hangar scenarios; the rest run as usual. It is declared on "null root node" or after three dumps in a row
+that produce no hierarchy; a single failed dump is logged as `uiautomator dump failed` and retried later. The Retroid
+Pocket Nova is such a device: every dump, for every app, fails with "null root node returned by UiTestAutomationBridge",
+most likely because Retroid's Game Assistant accessibility service (`com.rp.gameassistant`) is bound. Check the Nova
+with screenshots and key input instead.
+
 Safety: the card's `user.json`, `systems.json`, `launchers.json`, `folders.json` and `device.json` are copied first and
 restored if changed (L1/R1 on Home legitimately changes the saved sort). The harness never presses A in Sortie outside the
 overlay or the reader, never launches games through Sortie (no play-log entries), never edits clippings, never uses care,
@@ -147,6 +154,12 @@ release unit tests stay plain JUnit).
   (`w640dp-h480dp`), recorded at half size with no tolerance into `app/src/testDebug/screenshots/<device>/`. A build run
   with `-Proborazzi.test.verify=true` (`tools/build.sh`, CI) fails on any pixel change; CI uploads the diffs as
   `screenshot-diffs`, locally they are in `app/build/outputs/roborazzi/`.
+- **Companion** (`mecha/src/test/`, plain JVM): Home goldens keep him hidden, so his behaviour is tested as pure decisions
+  instead: touch classification (pet, hold, carry, swipe, slop and hold thresholds by event time), the pet bond rate limit,
+  drop to the nearest place and the hand-off at the edge facing the other display, sit and lift geometry, lift eligibility
+  (never a control, a focused element or one under a finger), the lifecycle gate (`MechaLifeTest`: a ticker under
+  `whileShown(mechaShown(...))` on virtual time does nothing while paused, stopped or on a dark display, without any Compose
+  frame) and the backup round trip of the save without double credit (`MechaStoreTest`).
 
 Re-record after an intended visual change, look at every changed image, and commit them with the change:
 

@@ -27,5 +27,6 @@ kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarg
 dependencies {
     api(platform(libs.androidx.compose.bom))
     api(libs.androidx.compose.ui)
+    api(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.compose.material3)
 }

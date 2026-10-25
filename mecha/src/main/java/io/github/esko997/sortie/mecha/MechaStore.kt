@@ -58,6 +58,9 @@ class MechaStore internal constructor(
     /** Resolved on the worker: Context.getFilesDir may touch the disk. */
     private val file: File by lazy(locate)
 
+    /** When the last pet that counted toward bond was, beside the save ([pet]). */
+    private val petFile: File by lazy { File(file.parentFile, "pet.txt") }
+
     private val _view = MutableStateFlow(MechaView())
     val view: StateFlow<MechaView> = _view
 
@@ -68,6 +71,7 @@ class MechaStore internal constructor(
     private var state: MechaState? = null
     private var damaged = false
     private var observer: Job? = null
+    private var lastPetAt: Long? = null
 
     init {
         scope.launch {
@@ -96,6 +100,78 @@ class MechaStore internal constructor(
     internal fun setEnabled(enabled: Boolean) = change { it.withEnabled(enabled) }
 
     internal fun setMotion(enabled: Boolean) = change { it.withMotion(enabled) }
+
+    /**
+     * A tap on him: a little bond at most once per [MECHA_PET_BOND_MS] ([mechaPetCounts]). When the last counted pet was is
+     * kept beside the save in `pet.txt` (written first, so a crash between the two can only lose a point, never allow an
+     * extra one), not in state.json, so the save format stays readable by every build. Pets inside the window write nothing.
+     */
+    internal fun pet() = enqueue {
+        val current = state ?: return@enqueue
+        val now = clock()
+        val last = lastPetAt ?: readPetTime().also { lastPetAt = it }
+        if (!mechaPetCounts(now, last)) return@enqueue
+        // the window must be on disk before the bond is: a pet that can't be recorded earns nothing
+        if (writeAtomically(petFile, now.toString().toByteArray()) != null) return@enqueue
+        lastPetAt = now
+        commit(current, current.petted())
+    }
+
+    /** The hangar as saved now, for a backup; null while none is open (loading, or the save is unreadable). */
+    suspend fun backupSave(): MechaState? = onWorker { state }
+
+    /** Why [backup] (a companion save from a backup) can't be restored by this build, or null when it can. */
+    suspend fun restoreProblem(backup: MechaState): String? = onWorker {
+        if (parts.isEmpty()) {
+            "this build's mecha parts catalog is incomplete"
+        } else {
+            mechaStateProblem(backup, parts)?.let { "the companion save in it can't be used: $it" }
+        }
+    }
+
+    /**
+     * Restores from a backup, before its play history is merged in: [backup] replaces this hangar (play either hangar already
+     * credited stays credited, [restoredOver]); with no [backup] save this hangar stays and [merged], the sessions the
+     * restore is about to add, count as credited elsewhere ([creditedElsewhere]). An unreadable save is set aside first, as
+     * [startFresh] does. Throws when [backup] is invalid or nothing could be written (then nothing changed). The result undoes
+     * it with [undoRestore] if the rest of the restore fails.
+     */
+    suspend fun restore(backup: MechaState?, merged: List<PlaySession>): MechaRestore = onWorker {
+        val before = state
+        if (backup == null) {
+            if (before != null) commitOrThrow(before, before.creditedElsewhere(merged))
+            return@onWorker MechaRestore(before, replaced = false)
+        }
+        require(parts.isNotEmpty()) { "this build's mecha parts catalog is incomplete" }
+        mechaStateProblem(backup, parts)?.let { throw IllegalArgumentException("the companion save in it can't be used: $it") }
+        if (before == null && damaged) {
+            val kept = File(file.parentFile, "state.damaged-${clock()}.json")
+            Files.move(file.toPath(), kept.toPath(), StandardCopyOption.ATOMIC_MOVE)
+            damaged = false
+        }
+        val next = backup.restoredOver(before)
+        save(next)?.let { throw it }
+        state = next
+        _view.value = MechaView(next, parts, message = "${next.name} is back from the backup.")
+        observe(next.initializedAt)
+        MechaRestore(before, replaced = true)
+    }
+
+    /** Puts back what [restore] replaced, when the rest of a restore failed. Throws when it can't be written. */
+    suspend fun undoRestore(done: MechaRestore) = onWorker {
+        val previous = done.previous ?: return@onWorker
+        save(previous)?.let { throw it }
+        state = previous
+        _view.value = MechaView(previous, parts)
+        observe(previous.initializedAt)
+    }
+
+    private fun commitOrThrow(current: MechaState, result: MechaResult) {
+        if (result.state == current) return
+        save(result.state)?.let { throw it }
+        state = result.state
+        _view.value = MechaView(result.state, parts)
+    }
 
     /** Re-reads completed sessions now (e.g. when Sortie comes back to the foreground); already credited ones are skipped. */
     internal fun refreshSessions() = enqueue {
@@ -150,6 +226,19 @@ class MechaStore internal constructor(
             }
         }
         done.await()
+    }
+
+    /** Runs [job] on the worker after everything queued before it and returns its result (or throws its failure). */
+    private suspend fun <T> onWorker(job: suspend () -> T): T {
+        val done = CompletableDeferred<T>()
+        enqueue {
+            try {
+                done.complete(job())
+            } catch (e: Throwable) {
+                done.completeExceptionally(e)
+            }
+        }
+        return done.await()
     }
 
     private fun change(rule: (MechaState) -> MechaResult) = enqueue {
@@ -238,23 +327,34 @@ class MechaStore internal constructor(
     }
 
     /** Writes [next] to state.json via an fsynced temp file and an atomic move; returns the failure, or null. */
-    private fun save(next: MechaState): Exception? {
-        val dir = file.parentFile ?: return IOException("${file.path} has no folder")
-        val tmp = File(dir, "${file.name}.tmp")
+    private fun save(next: MechaState): Exception? = writeAtomically(file, json.encodeToString(MechaState.serializer(), next).toByteArray())
+
+    /** Writes [bytes] to [target] via an fsynced temp file and an atomic move; returns the failure, or null. */
+    private fun writeAtomically(target: File, bytes: ByteArray): Exception? {
+        val dir = target.parentFile ?: return IOException("${target.path} has no folder")
+        val tmp = File(dir, "${target.name}.tmp")
         return try {
             if (!dir.isDirectory && !dir.mkdirs()) throw IOException("can't create ${dir.path}")
             FileOutputStream(tmp).use { out ->
-                out.write(json.encodeToString(MechaState.serializer(), next).toByteArray())
+                out.write(bytes)
                 out.flush()
                 out.fd.sync()
             }
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+            Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
             null
         } catch (e: Exception) {
-            Log.w(TAG, "save ${file.path}", e)
+            Log.w(TAG, "save ${target.path}", e)
             if (tmp.isFile) tmp.delete()
             e
         }
+    }
+
+    /** When the last counted pet was (0: never, or the file is missing or unreadable: a pet then simply counts). */
+    private fun readPetTime(): Long = try {
+        if (petFile.isFile) petFile.readText().trim().toLongOrNull()?.coerceAtLeast(0) ?: 0 else 0
+    } catch (e: IOException) {
+        Log.w(TAG, "read ${petFile.path}", e)
+        0
     }
 
     private companion object {
@@ -287,3 +387,6 @@ class MechaStore internal constructor(
         }
     }
 }
+
+/** What [MechaStore.restore] replaced, for [MechaStore.undoRestore]. [replaced]: the backup brought its own hangar. */
+class MechaRestore internal constructor(internal val previous: MechaState?, val replaced: Boolean)
