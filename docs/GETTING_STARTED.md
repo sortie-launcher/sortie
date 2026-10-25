@@ -49,8 +49,10 @@ screens vary by device. [Capture details and image credits](screenshots/readme/P
 - **BIOS files**, only if the emulator for that system needs them, installed the way that emulator says.
 - **All files access** for Sortie, granted once on first start.
 
-**Not required:** a computer, a terminal or ADB, Cocoon, ES-DE or any other launcher, an account, an internet connection
-for Sortie, an AI assistant, Shizuku, making Sortie your Home screen, a dual screen, a memory card, artwork, or any JSON editing.
+**Not required for the basics:** a computer, a terminal or ADB, Cocoon, ES-DE or any other launcher, an account, an
+internet connection for Sortie, an AI assistant, Shizuku, making Sortie your Home screen, a dual screen, a memory card,
+artwork, or any JSON editing. (Adding artwork later does need one of the routes under
+[Want box art?](#want-box-art) below.)
 
 Sortie has no internet permission. It cannot download anything, including updates, artwork or descriptions. Initial
 downloads of APKs, emulators or RetroArch cores may need a connection in those other apps; Sortie itself never does.
@@ -325,10 +327,28 @@ just played.
 changing games. RetroArch 1.22 may close itself on the first attempt to open a *different* game; if you land back in
 Sortie, choose the game again.
 
+**Which emulator starts a game?** Sortie checks three places, in this order: a per-game choice made with **Launch with…**
+on the game's page; the system's choice under **Settings → Default launcher per system**; otherwise the system's
+**Emulators** list in Library setup, in order, skipping entries that aren't installed. A Settings choice therefore wins over
+reordering in Library setup; pick **Manifest default** there to go back to the list order.
+
 **Your first library will look plain.** Without extra files, games appear with tidied-up file names (`ucity` in this
 example), no box art, no descriptions and no ratings. That is expected: Sortie has no internet access and does not fetch
-any of these. [Importing from Cocoon](#coming-from-cocoon) brings over the artwork Cocoon downloaded; other extras are an
-[advanced, optional step](#going-further).
+any of these.
+
+### Want box art?
+
+Sortie never downloads artwork, but it reads what these leave behind:
+
+- **Coming from Cocoon:** [Import from Cocoon](#coming-from-cocoon) copies the art Cocoon downloaded. Nothing else needed.
+- **On the device, without a computer:** [ES-DE](https://es-de.org/) (a paid Android frontend) has a built-in scraper
+  that writes gamelists and media in the exact layout Sortie reads. Run its scraper once, then link each system's
+  `gamelist` and `media` folders in `systems.json` ([systems.md](formats/systems.md)); by default they are under the
+  `ES-DE` folder on internal storage (`ES-DE/gamelists/<system>/gamelist.xml`, `ES-DE/downloaded_media/<system>/`). Sortie
+  has no on-device setting for these folders yet, so this step is a one-off JSON edit, for example in a text editor app.
+- **On a computer:** [Skyscraper](https://gemba.github.io/skyscraper/) or ES-DE's desktop version produce the same files;
+  copy them to the card and link them the same way. Everything else under [Going further](#going-further) (guides, smart
+  folders, logos) is also made this way.
 
 ## Finding your way around
 
@@ -378,7 +398,7 @@ enable only the extras you want. No Shizuku, Home role, overlay permission or se
 | **Fit stars, hooks, cautions, tags, control notes** | A `guide.json` file | Prepared file: [guide.md](formats/guide.md) |
 | **Smart folders** (rule-based shelves such as "added this month, never played") | A `folders.json` file | Prepared file: [folders.md](formats/folders.md) |
 | **System logos** on Home tiles | PNG files in `sortie/logos/` | Prepared files: [formats](formats/README.md) |
-| **Magazines** | A build that includes issues, or issue packs copied into `sortie/magazines/` | **Home → Magazines**; packs: [formats](formats/README.md#magazine-packs-version-2) |
+| **Magazines** | Included in the signed releases; extra issue packs can be copied into `sortie/magazines/` | **Home → Magazines**; packs: [formats](formats/README.md#magazine-packs-version-2) |
 | **Custom emulators** not in Sortie's list | A launch profile in `launchers.json` | Prepared file: [launchers.md](formats/launchers.md), [LAUNCHERS.md](LAUNCHERS.md) |
 
 **Shizuku in brief.** Shizuku is a separate app with its own setup guide at [shizuku.rikka.app](https://shizuku.rikka.app/).
@@ -388,9 +408,10 @@ switcher, moving other apps between screens and the bell still works. **X** stil
 
 **"Prepared files" means exactly that.** Apart from what [Import from Cocoon](#coming-from-cocoon) brings over (artwork,
 and folders from a Cocoon backup), there is no in-app editor or download for artwork, guides, smart folders, logos or
-custom emulators. Someone has to create those files, on a computer or by hand, and copy them into the `sortie` folder or
-point Sortie at them. Library setup leaves such files and fields alone when you change a system, so a prepared library
-and on-device setup can be used together.
+custom emulators. Tools such as ES-DE's scraper or Skyscraper make the artwork files ([Want box art?](#want-box-art));
+guides, smart folders, logos and launch profiles are written by hand or by your own scripts. Copy them into the `sortie`
+folder or point Sortie at them. Library setup leaves such files and fields alone when you change a system, so a prepared
+library and on-device setup can be used together.
 
 ## How Sortie thinks
 

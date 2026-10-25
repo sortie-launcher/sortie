@@ -38,7 +38,7 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
   The folder check tells you when subfolders hold matching files the list will miss.
 - Files must end in one of the system's file types. Two files with the same name in different folders of one system appear
   as a single game.
-- PSP: Sortie hands disc images (ISO, CSO, CHD) to PPSSPP. Homebrew kept as **<name>/EBOOT.PBP** is not found, and a loose
+- PSP: Sortie hands disc images (ISO, CSO, CHD) to PPSSPP. Homebrew kept as an **EBOOT.PBP** inside its own folder is not found, and a loose
   **.elf** or **.prx** may not start from Sortie; start such homebrew from inside PPSSPP.
 - After copying new games, use **Library setup → Re-index every system** (or **Settings → Diagnostics → Re-index everything**).
 - After downloading RetroArch cores, use RetroArch's **Quit** action before starting a game here. Save before changing games.
@@ -166,7 +166,7 @@ Pictures in issues belong to their rights holders and are credited in each issue
   and the folded **Next article** corner turn articles without losing their reading positions. The controls follow an
   **X** swap and return the controller to the reading screen after a touch. Backing out to the shelf restores the normal
   companion; single-screen devices keep the controls above.
-- Copy a complete extra issue to **sortie/magazines/<issue-id>/** with **issue.json**, **articles/** and **media/** inside.
+- Copy a complete extra issue into **sortie/magazines/**, in a folder named after the issue's id, with **issue.json**, **articles/** and **media/** inside.
   Reopen Magazines after copying. One entry is shown per issue ID: the higher revision wins, and your card copy wins a tie.
   Updates never overwrite your card pack. An incomplete or unsupported card issue is explained; a valid built-in edition
   remains readable instead of being hidden.
@@ -284,6 +284,10 @@ have games), layouts (home/browse grid, sideways grids, rows and columns, app ti
 switcher, a default launcher per system, the optional **Radial keyboard**, **Backup and restore**, **Import from Cocoon…**,
 Diagnostics and this manual. Smart folders, guide notes, logos and custom launch profiles still come from a computer-prepared
 card if you use one.
+
+**Which emulator starts a game.** A per-game **Launch with…** choice first; then the system's **Default launcher per
+system** choice made here; otherwise the system's Emulators list from Library setup, in order, skipping emulators that
+aren't installed. **Manifest default** clears the Settings choice so the list order applies again.
 
 **Import from Cocoon…** reads the Cocoon launcher's folder (and, if you pick one, a Cocoon backup) and previews the systems,
 favourites, hidden games, emulator choices, artwork, folders and play sessions it would add; nothing changes until you choose
