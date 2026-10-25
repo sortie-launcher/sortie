@@ -60,21 +60,22 @@ downloads of APKs, emulators or RetroArch cores may need a connection in those o
 
 ### Getting the APK
 
-**No signed Sortie APK has been published yet.** The [Releases page](https://github.com/sortie-launcher/sortie/releases)
-is currently empty. For now, request a signed APK directly from the maintainer, ideally with its SHA-256 checksum
-(a fingerprint you can compare with a checksum app to check that the file is the one that was sent).
+Download the APK attached to the newest beta on the [Releases page](https://github.com/sortie-launcher/sortie/releases).
+These automated prereleases include the Field Notes magazines and use the permanent release signing key. Each includes a
+`.sha256` checksum file you can compare with a checksum app. A beta passing automated checks is not a guarantee that every
+emulator or device has been tested.
 
 Do not use a random re-upload. Also be aware:
 
-- The **GitHub Actions build artifacts** of this repository are test builds: one is signed with a throwaway debug key, the
-  other is unsigned (Android cannot install it). Neither contains magazines. A debug build cannot later be updated by an
-  official signed release without uninstalling first, so do not use one as your everyday copy.
+- The **GitHub Actions build artifacts** are test builds: one is signed with a throwaway debug key, the other is unsigned
+  (Android cannot install it). They include the pinned magazines but are not the signed release download. A debug build
+  cannot later be updated by an official signed release without uninstalling first, so do not use one as your everyday copy.
 - Building Sortie from source is possible ([README](../README.md)) but is not needed to use it. A self-signed copy uses
   your key, not the maintainer's, so it has a separate update path.
 
 ### Installing (sideloading)
 
-1. Copy the APK onto the device, or download it from the message you were sent.
+1. Download the release APK on the device, or copy it there from your computer.
 2. Open it from your Files app or browser.
 3. Android asks whether that app may *install unknown apps*. Allow it only for the trusted app you are using to open the
    APK, then go back and choose **Install**. Read any Play Protect warning rather than bypassing it automatically; if
@@ -83,7 +84,7 @@ Do not use a random re-upload. Also be aware:
 
 ### Updating safely
 
-- To update, open the **newer APK from the same sender** and choose **Update**. Android keeps Sortie's data.
+- To update, open the **newer APK from the official Releases page** and choose **Update**. Android keeps Sortie's data.
 - If Android refuses ("App not installed", "package conflicts with an existing package" or similar), **stop**. That
   usually means the new APK is signed by someone else, or is a debug build. **Do not uninstall Sortie to get past it.**
   Ask the person who sent the APK for a correctly signed one.
