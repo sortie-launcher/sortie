@@ -223,26 +223,41 @@ class ScreenMover(private val context: Context) {
         /** Requests held at which the panel is restarted: well under the 250 shared with system_server (~40). */
         internal const val PANEL_REQUEST_LIMIT = 150
 
-        /** pid, network requests held by it, whether its window holds display focus, and each panel window's surface state. */
-        private const val PANEL_PROBE = "p=\$(pidof $VENDOR_PANEL) || { echo pid=; exit 0; }; echo pid=\$p; " +
-            "echo requests=\$(dumpsys connectivity | grep -oE 'uid/pid:1000/[0-9]+' | grep -cx \"uid/pid:1000/\$p\"); " +
-            "echo focused=\$(dumpsys window displays | grep -c 'mCurrentFocus=Window{[0-9a-f]* u0 $VENDOR_PANEL}'); " +
-            "dumpsys window windows | awk '/Window #[0-9]+ Window[{]/ { w = index(\$0, \"u0 $VENDOR_PANEL}\") > 0 } w' | " +
-            "grep -oE 'mHasSurface=(true|false)'"
+        /**
+         * pid, network requests held by it, whether its window holds display focus, how many panel windows there are and
+         * each one's surface state, then `end`. Each dump is taken once and must be complete (its header and closing field
+         * present) or the probe exits non-zero: a truncated window dump would otherwise read as "panel closed".
+         */
+        private const val PANEL_PROBE = "p=\$(pidof $VENDOR_PANEL) || { echo pid=; echo end; exit 0; }; " +
+            "c=\$(dumpsys connectivity) && echo \"\$c\" | grep -q 'NetworkRequestInfo' || exit 2; " +
+            "d=\$(dumpsys window displays) && echo \"\$d\" | grep -q 'mCurrentFocus=' || exit 3; " +
+            "w=\$(dumpsys window windows) && echo \"\$w\" | grep -q 'WINDOW MANAGER WINDOWS' && " +
+            "echo \"\$w\" | grep -q 'mTopFocusedDisplayId=' || exit 4; " +
+            "echo pid=\$p; " +
+            "echo requests=\$(echo \"\$c\" | grep -oE 'uid/pid:1000/[0-9]+' | grep -cx \"uid/pid:1000/\$p\"); " +
+            "echo focused=\$(echo \"\$d\" | grep -c 'mCurrentFocus=Window{[0-9a-f]* u0 $VENDOR_PANEL}'); " +
+            "echo windows=\$(echo \"\$w\" | grep -cE 'Window #[0-9]+ Window[{][0-9a-f]+ u0 $VENDOR_PANEL[}]:'); " +
+            "echo \"\$w\" | awk '/Window #[0-9]+ Window[{]/ { w = index(\$0, \"u0 $VENDOR_PANEL}\") > 0 } w' | " +
+            "grep -oE 'mHasSurface=(true|false)'; echo end"
 
         /**
-         * Decides from [PANEL_PROBE]'s reply (`<exit>\n` then `pid=`, `requests=`, `focused=`, `mHasSurface=` lines).
+         * Decides from [PANEL_PROBE]'s reply (`<exit>\n` then `pid=`, `requests=`, `focused=`, `windows=`, one
+         * `mHasSurface=` per window, `end`). Anything incomplete — a non-zero exit, a missing field or `end`, a surface
+         * count that differs from the window count — does nothing: restarting an open panel is worse than waiting a minute.
          * Leak: restart only while no panel window has a surface (the user is not looking at it). Zombie: a panel window
          * holds focus without ever having drawn; the caller confirms it once more before restarting.
          */
         internal fun vendorPanelAction(reply: String): PanelAction {
-            val lines = reply.lineSequence().map { it.trim() }.toList()
+            val lines = reply.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
+            if (lines.firstOrNull() != "0" || lines.lastOrNull() != "end") return PanelAction.NONE
             fun value(key: String) = lines.firstOrNull { it.startsWith("$key=") }?.substringAfter('=')
             if (value("pid").isNullOrEmpty()) return PanelAction.NONE
-            val surfaces = lines.filter { it.startsWith("mHasSurface=") }.map { it.endsWith("true") }
-            val focused = (value("focused")?.toIntOrNull() ?: 0) > 0
-            if (focused && surfaces.isNotEmpty() && surfaces.none { it }) return PanelAction.CONFIRM_ZOMBIE
             val requests = value("requests")?.toIntOrNull() ?: return PanelAction.NONE
+            val focused = (value("focused")?.toIntOrNull() ?: return PanelAction.NONE) > 0
+            val windows = value("windows")?.toIntOrNull() ?: return PanelAction.NONE
+            val surfaces = lines.filter { it.startsWith("mHasSurface=") }.map { it.endsWith("true") }
+            if (surfaces.size != windows) return PanelAction.NONE
+            if (focused && windows > 0 && surfaces.none { it }) return PanelAction.CONFIRM_ZOMBIE
             return if (requests >= PANEL_REQUEST_LIMIT && surfaces.none { it }) PanelAction.RESTART_LEAK else PanelAction.NONE
         }
 

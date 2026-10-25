@@ -32,9 +32,13 @@ class ScreenMoverTest {
         )
     }
 
-    /** Decision for a probe reply: pid, leaked request count, whether a panel window has focus, each window's surface. */
+    /** A complete probe reply: pid, leaked request count, whether a panel window has focus, then each window's surface. */
+    private fun reply(requests: Int, focused: Int, vararg surfaces: Boolean, pid: String = "2841") =
+        "0\npid=$pid\nrequests=$requests\nfocused=$focused\nwindows=${surfaces.size}\n" +
+            surfaces.joinToString("") { "mHasSurface=$it\n" } + "end\n"
+
     private fun action(requests: Int = 0, focused: Int = 0, vararg surfaces: Boolean, pid: String = "2841") =
-        ScreenMover.vendorPanelAction("0\npid=$pid\nrequests=$requests\nfocused=$focused\n" + surfaces.joinToString("") { "mHasSurface=$it\n" })
+        ScreenMover.vendorPanelAction(reply(requests, focused, *surfaces, pid = pid))
 
     @Test
     fun vendorPanelIsRestartedBeforeTheCapOnlyWhileClosed() {
@@ -55,7 +59,21 @@ class ScreenMoverTest {
 
     @Test
     fun devicesWithoutThePanelOrAFailedProbeDoNothing() {
-        assertEquals(PanelAction.NONE, action(requests = 400, pid = ""))
+        assertEquals(PanelAction.NONE, ScreenMover.vendorPanelAction("0\npid=\nend\n"))
         assertEquals(PanelAction.NONE, ScreenMover.vendorPanelAction("-1\nshell service not bound"))
+    }
+
+    @Test
+    fun incompleteProbesNeverRestartThePanel() {
+        val leak = reply(213, 1, true)
+        // window section missing entirely: unknown surfaces must not read as "closed"
+        assertEquals(PanelAction.NONE, ScreenMover.vendorPanelAction("1\npid=2841\nrequests=213\nfocused=1\n"))
+        assertEquals(PanelAction.NONE, ScreenMover.vendorPanelAction("0\npid=2841\nrequests=213\nfocused=0\nend\n"))
+        // a dump that failed partway: non-zero exit, or cut off before `end`
+        assertEquals(PanelAction.NONE, ScreenMover.vendorPanelAction("4\n"))
+        assertEquals(PanelAction.NONE, ScreenMover.vendorPanelAction(leak.removeSuffix("end\n")))
+        // the open panel's surface line lost: one window counted, none described
+        assertEquals(PanelAction.NONE, ScreenMover.vendorPanelAction(leak.replace("mHasSurface=true\n", "")))
+        assertEquals(PanelAction.NONE, ScreenMover.vendorPanelAction(leak.replace("requests=213", "requests=")))
     }
 }
