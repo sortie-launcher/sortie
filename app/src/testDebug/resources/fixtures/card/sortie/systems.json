@@ -1,0 +1,62 @@
+{
+ "systems": [
+  {
+   "id": "genesis",
+   "folder": "genesis",
+   "label": "Mega Drive",
+   "generation": "16-bit",
+   "roots": [
+    "roms/genesis"
+   ],
+   "extensions": [
+    ".md"
+   ],
+   "media": "media/genesis",
+   "profiles": [
+    "open-with"
+   ],
+   "colour": "#ef4444",
+   "order": 0
+  },
+  {
+   "id": "snes",
+   "folder": "snes",
+   "label": "Super NES",
+   "generation": "16-bit",
+   "roots": [
+    "roms/snes"
+   ],
+   "extensions": [
+    ".sfc"
+   ],
+   "media": "media/snes",
+   "profiles": [
+    "open-with"
+   ],
+   "colour": "#3b82f6",
+   "order": 1
+  },
+  {
+   "id": "psx",
+   "folder": "psx",
+   "label": "PlayStation",
+   "generation": "32-bit",
+   "roots": [
+    "roms/psx"
+   ],
+   "extensions": [
+    ".chd"
+   ],
+   "media": "media/psx",
+   "profiles": [
+    "open-with"
+   ],
+   "colour": "#a855f7",
+   "order": 2
+  }
+ ],
+ "library": {
+  "skipFiles": [],
+  "hackRegex": null
+ }
+}

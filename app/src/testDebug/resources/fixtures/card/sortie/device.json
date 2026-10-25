@@ -1,0 +1,12 @@
+{
+ "device": "fixture",
+ "root": "@CARD_ROOT@",
+ "screens": {
+  "count": 1,
+  "navigation": "bottom",
+  "presentationIndex": 0
+ },
+ "shizuku": false,
+ "saves": [],
+ "biosDir": null
+}

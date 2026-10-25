@@ -1,0 +1,41 @@
+{
+ "schemaVersion": 2,
+ "id": "fixture-special",
+ "revision": 1,
+ "number": 12,
+ "title": "The Long Read",
+ "subtitle": "Field Notes No. 012 · Pictures of every shape",
+ "published": "2026-10-01",
+ "cover": "media/cover.png",
+ "editorial": "The newest fixture issue: a long article with a lead image, a portrait figure and a wide figure.",
+ "rightsNotice": "All pictures in this issue are generated test patterns.",
+ "articles": [
+  {
+   "id": "long-read",
+   "title": "Pictures of Every Shape",
+   "gameTitle": "Ace Sortie",
+   "system": "Mega Drive",
+   "games": [
+    {
+     "id": "genesis-ace-sortie",
+     "title": "Ace Sortie",
+     "systemId": "genesis",
+     "matchNames": [
+      "Ace Sortie"
+     ]
+    }
+   ],
+   "deck": "How a reader should lay out tall plates, wide panoramas and everything between.",
+   "body": "articles/long-read.md",
+   "image": "media/lead.png",
+   "imageCaption": "The lead image: a generated 960 by 400 test pattern.",
+   "readingMinutes": 6
+  },
+  {
+   "id": "short-note",
+   "title": "A Short Note",
+   "body": "articles/short-note.md",
+   "readingMinutes": 1
+  }
+ ]
+}

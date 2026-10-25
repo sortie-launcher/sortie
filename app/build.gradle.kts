@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.roborazzi)
 }
 
 // Defaults identify the last manually installed preview; hosted releases override both with their workflow version.
@@ -121,7 +122,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    testOptions.unitTests.isReturnDefaultValues = true // android.util.Log in UserStore under plain JUnit
+    testOptions.unitTests {
+        isReturnDefaultValues = true // android.util.Log in UserStore under plain JUnit
+        isIncludeAndroidResources = true // Robolectric UI tests (src/testDebug) run against the merged manifest, resources and assets
+    }
     buildFeatures {
         compose = true
         buildConfig = true
@@ -130,6 +134,13 @@ android {
 }
 
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
+
+// Screenshot goldens (src/testDebug/screenshots) are recorded with recordRoborazziDebug and checked by every testDebugUnitTest run
+// that passes -Proborazzi.test.verify=true (tools/build.sh, CI). See docs/HARDENING.md, Testing.
+roborazzi {
+    outputDir.set(layout.projectDirectory.dir("src/testDebug/screenshots"))
+    compare { outputDir.set(layout.buildDirectory.dir("outputs/roborazzi")) } // diff images of a failed verify
+}
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
@@ -323,4 +334,10 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.sqlite.jdbc) // runs Search's SQL against a real SQLite in plain JUnit
     testImplementation(libs.kxml2) // XmlPullParser on the JVM for the Cocoon gamelist reader (android.jar only has stubs)
+    // Robolectric UI and screenshot tests: debug unit tests only (src/testDebug), so release unit tests stay plain JUnit
+    testDebugImplementation(platform(libs.androidx.compose.bom))
+    testDebugImplementation(libs.androidx.compose.ui.test.junit4)
+    testDebugImplementation(libs.robolectric)
+    testDebugImplementation(libs.roborazzi)
+    testDebugImplementation(libs.roborazzi.compose)
 }

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Non-mutating debug/release builds, style checks and unit tests. Formatting is an explicit developer action.
+# Non-mutating debug/release builds, style checks and unit tests, including the Robolectric UI tests and a verify of the
+# screenshot goldens (docs/HARDENING.md, Testing). Formatting and re-recording goldens are explicit developer actions.
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
-tasks=(--console=plain ktlintCheck testDebugUnitTest testReleaseUnitTest assembleDebug assembleRelease)
+tasks=(--console=plain -Proborazzi.test.verify=true ktlintCheck testDebugUnitTest testReleaseUnitTest assembleDebug assembleRelease)
 if command -v java >/dev/null 2>&1; then
   exec ./gradlew "${tasks[@]}" "$@"
 fi

@@ -1,0 +1,17 @@
+{
+ "homeLayout": "grid",
+ "gridColumns": 5,
+ "homeSort": "custom",
+ "layout": [
+  "system:psx",
+  "genesis/Ace Sortie (World).md",
+  "system:genesis",
+  "folder:shooters",
+  "system:snes"
+ ],
+ "favourites": [
+  "genesis/Ace Sortie (World).md"
+ ],
+ "heroRotation": false,
+ "overlaySwitcher": false
+}

@@ -1,0 +1,21 @@
+{
+ "schemaVersion": 2,
+ "id": "field-notes-007",
+ "revision": 1,
+ "title": "Garage Days",
+ "subtitle": "Field Notes No. 007 · Workshops, loadouts and the joy of tinkering",
+ "published": "2026-09-01",
+ "cover": "media/cover.png",
+ "editorial": "A fixture issue for Sortie's UI tests: every word here is test data.",
+ "articles": [
+  {
+   "id": "bolt-and-wrench",
+   "title": "Bolt and Wrench",
+   "gameTitle": "Bolt Runner",
+   "system": "Mega Drive",
+   "deck": "A short article so the shelf has an older issue.",
+   "body": "articles/bolt-and-wrench.md",
+   "readingMinutes": 2
+  }
+ ]
+}
