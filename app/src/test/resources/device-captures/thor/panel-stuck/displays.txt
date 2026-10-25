@@ -1,0 +1,7 @@
+WINDOW MANAGER DISPLAY CONTENTS (dumpsys window displays)
+  Display: mDisplayId=4 (organized)
+  mCurrentFocus=Window{4dbb146 u0 com.odin.dualscreen.assistant}
+  mFocusedApp=ActivityRecord{600abe0 u0 io.github.esko997.sortie/.MainActivity} t5502}
+  Display: mDisplayId=0 (organized)
+  mCurrentFocus=Window{cb9b901 u0 Application Not Responding: io.github.esko997.sortie}
+  mFocusedApp=ActivityRecord{e941a6c u0 io.github.esko997.sortie/.CompanionActivity} t5503}

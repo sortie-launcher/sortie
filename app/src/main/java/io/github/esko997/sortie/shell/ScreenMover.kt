@@ -18,12 +18,26 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 
+/** The shell-user operations [ShellService] offers; every reply is `<exit code>\n<output>`. */
+internal interface ShellExec {
+    fun exec(cmd: String): String
+    fun restorePinnedTask(rootTaskId: Int): String
+}
+
 /**
  * Running-task operations as the shell user through Shizuku: list root tasks per display (`cmd activity stack list`), move one
  * between displays (`cmd activity display move-stack`), raise it on its display (`am task focus`) or close it (`am stack remove`).
  * Everything is capability-gated: without Shizuku running and permitted, [status] says so and nothing else happens.
  */
-class ScreenMover(private val context: Context) {
+class ScreenMover internal constructor(
+    private val context: Context,
+    /** Null in the app: commands go to Shizuku's [ShellService] once bound. Tests replay recorded device output through it. */
+    replay: ShellExec?,
+    /** HOME and SECONDARY_HOME activities (`package/class`); null in the app, where the package manager is asked. */
+    private val homeActivities: Set<String>?
+) {
+    constructor(context: Context) : this(context, null, null)
+
     enum class Status { UNAVAILABLE, NOT_RUNNING, PERMISSION_NEEDED, READY }
 
     /** One leaf task: [id] is the task id, [rootId] the root task it lives in (the unit `display move-stack` moves). */
@@ -39,6 +53,10 @@ class ScreenMover(private val context: Context) {
     val lastResult: StateFlow<String> = _lastResult
 
     private var service: IShellService? = null
+    private val shell: ShellExec = replay ?: object : ShellExec {
+        override fun exec(cmd: String): String = service?.exec(cmd) ?: NOT_BOUND
+        override fun restorePinnedTask(rootTaskId: Int): String = service?.restorePinnedTask(rootTaskId) ?: NOT_BOUND
+    }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val args = Shizuku.UserServiceArgs(ComponentName(context.packageName, ShellService::class.java.name))
         .daemon(false).processNameSuffix("shell").version(2)
@@ -57,18 +75,22 @@ class ScreenMover(private val context: Context) {
     }
 
     init {
-        runCatching {
-            Shizuku.addBinderReceivedListenerSticky { refresh() }
-            Shizuku.addBinderDeadListener {
-                _status.value = Status.NOT_RUNNING
-                service = null
-            }
-            Shizuku.addRequestPermissionResultListener { _, result ->
-                _status.value = if (result == PackageManager.PERMISSION_GRANTED) Status.READY else Status.PERMISSION_NEEDED
-                if (result == PackageManager.PERMISSION_GRANTED) bind()
-            }
-        }.onFailure { Log.w(TAG, "shizuku listeners", it) }
-        refresh()
+        if (replay != null) {
+            _status.value = Status.READY
+        } else {
+            runCatching {
+                Shizuku.addBinderReceivedListenerSticky { refresh() }
+                Shizuku.addBinderDeadListener {
+                    _status.value = Status.NOT_RUNNING
+                    service = null
+                }
+                Shizuku.addRequestPermissionResultListener { _, result ->
+                    _status.value = if (result == PackageManager.PERMISSION_GRANTED) Status.READY else Status.PERMISSION_NEEDED
+                    if (result == PackageManager.PERMISSION_GRANTED) bind()
+                }
+            }.onFailure { Log.w(TAG, "shizuku listeners", it) }
+            refresh()
+        }
     }
 
     fun refresh() {
@@ -95,8 +117,7 @@ class ScreenMover(private val context: Context) {
     }
 
     private suspend fun exec(cmd: String): String = withContext(Dispatchers.IO) {
-        val svc = service ?: return@withContext "-1\nshell service not bound"
-        runCatching { svc.exec(cmd) }.getOrElse { "-1\n${it.message}" }
+        runCatching { shell.exec(cmd) }.getOrElse { "-1\n${it.message}" }
     }
 
     /** Parses `cmd activity stack list`: a RootTask line, then one `taskId=` line per leaf task in it (top-most first). */
@@ -116,7 +137,7 @@ class ScreenMover(private val context: Context) {
     private suspend fun restorePinnedTask(task: RootTask): Boolean {
         if (!task.pinned) return true
         val reply = withContext(Dispatchers.IO) {
-            runCatching { service?.restorePinnedTask(task.rootId) ?: "-1\nshell service not bound" }.getOrElse { "-1\n${it.message}" }
+            runCatching { shell.restorePinnedTask(task.rootId) }.getOrElse { "-1\n${it.message}" }
         }
         return ok(reply, "restore PiP ${task.id}")
     }
@@ -202,6 +223,7 @@ class ScreenMover(private val context: Context) {
      * quickstep recents overlay. Matched by component: Settings also offers a home activity but its other screens are apps.
      */
     private val launcherComponents: Set<String> by lazy {
+        homeActivities?.let { return@lazy it }
         val pm = context.packageManager
         listOf(Intent.CATEGORY_HOME, Intent.CATEGORY_SECONDARY_HOME).flatMap { cat ->
             pm.queryIntentActivities(
@@ -218,6 +240,7 @@ class ScreenMover(private val context: Context) {
         private const val TAG = "ScreenMover"
         private const val REQUEST_CODE = 7001
         internal const val VENDOR_PANEL = "com.odin.dualscreen.assistant"
+        private const val NOT_BOUND = "-1\nshell service not bound"
         private const val PANEL_CHECK_INTERVAL_MS = 60_000L
 
         /** Requests held at which the panel is restarted: well under the 250 shared with system_server (~40). */
@@ -228,7 +251,7 @@ class ScreenMover(private val context: Context) {
          * each one's surface state, then `end`. Each dump is taken once and must be complete (its header and closing field
          * present) or the probe exits non-zero: a truncated window dump would otherwise read as "panel closed".
          */
-        private const val PANEL_PROBE = "p=\$(pidof $VENDOR_PANEL) || { echo pid=; echo end; exit 0; }; " +
+        internal const val PANEL_PROBE = "p=\$(pidof $VENDOR_PANEL) || { echo pid=; echo end; exit 0; }; " +
             "c=\$(dumpsys connectivity) && echo \"\$c\" | grep -q 'NetworkRequestInfo' || exit 2; " +
             "d=\$(dumpsys window displays) && echo \"\$d\" | grep -q 'mCurrentFocus=' || exit 3; " +
             "w=\$(dumpsys window windows) && echo \"\$w\" | grep -q 'WINDOW MANAGER WINDOWS' && " +
