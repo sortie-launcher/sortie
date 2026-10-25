@@ -90,7 +90,9 @@ Both helpers forward extra arguments to Gradle, so a release that bundles magazi
 Without it, the APK contains no magazine issues.
 
 `tools/release.sh` reads the key from the default signing directory (or `SORTIE_SIGNING_DIR`, or all three of
-`SORTIE_RELEASE_KEYSTORE`, `SORTIE_RELEASE_KEYSTORE_PASSWORD_FILE`, `SORTIE_RELEASE_KEY_ALIAS`). It:
+`SORTIE_RELEASE_KEYSTORE`, `SORTIE_RELEASE_KEYSTORE_PASSWORD_FILE`, `SORTIE_RELEASE_KEY_ALIAS`). Verification requires Android
+**build-tools 35.0.0**, matching the workflow's explicit installation; newer SDK tools on the same host do not silently
+replace `apksigner` or `aapt2`. The helper:
 
 - refuses signing files that are missing, inside the repository or readable by other users;
 - builds `assembleRelease` without the Gradle daemon, configuration cache or build cache;

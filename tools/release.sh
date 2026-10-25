@@ -59,7 +59,7 @@ else
   exit 127
 fi
 
-# Runs a command in the repository with ANDROID_HOME set and the newest build-tools (apksigner, aapt2) on PATH.
+# Pin verifier output/behavior to the build-tools version installed by .github/workflows/build.yml.
 in_sdk() {
   "${launcher[@]}" bash -c '
     set -euo pipefail
@@ -71,11 +71,10 @@ in_sdk() {
       ANDROID_HOME=${ANDROID_HOME:-$HOME/Android/Sdk}
     fi
     export ANDROID_HOME
-    shopt -s nullglob
-    versions=("$ANDROID_HOME"/build-tools/*/)
-    tools=$(printf "%s\n" "${versions[@]}" | sort -V | tail -n 1)
-    [ -n "$tools" ] || { printf "release: no Android build-tools under %s\n" "$ANDROID_HOME" >&2; exit 127; }
-    PATH=${tools%/}:$PATH
+    tools=$ANDROID_HOME/build-tools/35.0.0
+    [ -x "$tools/apksigner" ] && [ -x "$tools/aapt2" ] ||
+      { printf "release: install Android build-tools;35.0.0 under %s\n" "$ANDROID_HOME" >&2; exit 127; }
+    PATH=$tools:$PATH
     exec "$@"' sortie-release "$repo" "$@"
 }
 
