@@ -248,7 +248,8 @@ ANDROID_SERIAL=emulator-5554 tools/emulator/smoke.sh
 Results land in `smoke/build/emulator-smoke/` (test output, logcat, task, display and input dumps, a screenshot of the
 primary display); CI uploads them as the `emulator-smoke` artifact. The fixture card is `tools/emulator/card/`: two
 systems and three placeholder files that are not ROMs. Home is recognised by its "3 games" header, so adding a file means
-changing `GAME_COUNT` in the test. `ZINES_COMMIT` in emulator.yml follows build.yml.
+changing `GAME_COUNT` in the test. The emulator workflow resolves zines `main` once per run and pins that snapshot;
+it does not share the release workflow's snapshot when the two runs start at different times.
 
 Found while building it (fixed by `AnchorGuard`): X again within 1.5 s of a swap's hand-off left the controller on the
 companion's screen. Companions skipped their resume hand-off for 1.5 s after any anchor, to stop two companions anchoring

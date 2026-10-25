@@ -1,3 +1,3 @@
-# The only magazine catalog (catalog.json "digest") a -PsortieMagazinesDir build accepts; see app/build.gradle.kts.
-# Changed only by an explicit author action after reviewing new content: tools/publish-magazines.py SOURCE --out DIR --pin
-aacc00fc7f6bc8bcf44f9f68475fbd7f24e4de2e6c5ec61ecedb94c3c382975c
+# Local magazine catalog baseline; hosted CI creates its own per-run snapshot. See docs/RELEASE.md.
+# Update deliberately after reviewing content; tools/publish-magazines.py SOURCE --out DIR --pin
+2b64815c7386da22e38901361dadaf2df5b5765042dd27a5fee515e003356353

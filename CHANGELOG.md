@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Hosted builds now bundle zines `main` as resolved once per build, rather than a manually advanced content commit.
+  Tests, APK assembly and signing use the same commit and catalog digest, recorded in release notes. New issues reach
+  the next app build automatically; local builds remain offline and opt-in. The local baseline now includes issue 010.
 - Roomier Home and browsing: Settings → *Header and hints (Home and browse)* cycles Auto, Expanded and Compact
   (`user.browseChrome`, default Auto). Auto goes compact when the window is short or narrow, whatever the device.
   Compact folds Home's and the browse screens' header into a strip while you browse (tap or pull it down, or press Up on

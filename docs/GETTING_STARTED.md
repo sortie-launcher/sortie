@@ -72,7 +72,7 @@ emulator or device has been tested.
 Do not use a random re-upload. Also be aware:
 
 - The **GitHub Actions build artifacts** are test builds: one is signed with a throwaway debug key, the other is unsigned
-  (Android cannot install it). They include the pinned magazines but are not the signed release download. A debug build
+  (Android cannot install it). They include that build's magazine snapshot but are not the signed release download. A debug build
   cannot later be updated by an official signed release without uninstalling first, so do not use one as your everyday copy.
 - Building Sortie from source is possible ([README](../README.md)) but is not needed to use it. A self-signed copy uses
   your key, not the maintainer's, so it has a separate update path.

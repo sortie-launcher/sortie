@@ -54,12 +54,13 @@ arguments to Gradle; `tools/dev.sh` reads `SORTIE_SERIAL`, `SORTIE_TOP_DISPLAY` 
 builds accept `am start … --es open <route>` and `--es launch '<system>/<file>'`. Releases, signing and versions:
 [docs/RELEASE.md](docs/RELEASE.md).
 
-**Magazines are opt-in locally.** Local builds contain no issues and never download any; hosted CI and releases bundle
-a pinned [sortie-zines](https://github.com/sortie-launcher/sortie-zines) commit, verified against the catalog digest in
-`app/magazines.lock`. To bundle them yourself:
+**Magazines are opt-in locally.** Local builds contain no issues and never download any; hosted CI resolves
+[sortie-zines](https://github.com/sortie-launcher/sortie-zines) `main` once per build and uses that exact commit and
+catalog digest for testing and signing. To bundle a reviewed content checkout yourself:
 
 ```
 git clone https://github.com/sortie-launcher/sortie-zines.git ../sortie-zines
+tools/pin-zines-snapshot.py ../sortie-zines  # build-local lock; do not commit this generated snapshot
 tools/build.sh -PsortieMagazinesDir=../sortie-zines/issues
 ```
 
