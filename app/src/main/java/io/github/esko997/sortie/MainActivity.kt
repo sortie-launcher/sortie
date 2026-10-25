@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
         // view-model state) as if this were a recreation.
         val state = savedInstanceState ?: takeHandoff(intent)
         super.onCreate(state)
+        if (state == null && isHomeKey(intent)) (application as SortieApp).graph.launcher.homeKeyPressed()
         val existing = instances.firstOrNull { it !== this && !it.isFinishing }
         val homeIntent = intent.hasCategory(Intent.CATEGORY_HOME) && !intent.hasExtra("open") && !intent.hasExtra("launch")
         if (state == null && existing != null && (homeIntent || intent.hasExtra(TaskSwitcher.EXTRA_SWITCHER))) {
@@ -116,6 +117,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (isHomeKey(intent)) (application as SortieApp).graph.launcher.homeKeyPressed()
         setIntent(intent)
         handleIntent(intent)
     }
@@ -289,6 +291,16 @@ class MainActivity : ComponentActivity() {
 
         /** One slot: the latest swap's saved state, until the instance it started takes it. */
         private var handoff: Handoff? = null
+
+        /**
+         * The player pressed Home (here, or on the other screen whose secondary home summoned us): told apart from the HOME
+         * intent Android sends by itself when an app's last window closes, which carries no FROM_HOME_KEY.
+         */
+        fun isHomeKey(intent: Intent?): Boolean {
+            if (intent == null) return false
+            return intent.hasExtra(TaskSwitcher.EXTRA_SWITCHER) ||
+                (intent.hasCategory(Intent.CATEGORY_HOME) && intent.getBooleanExtra(TaskSwitcher.EXTRA_FROM_HOME_KEY, false))
+        }
 
         /** The state [swapScreens] left for the instance it started: only for that intent's token, and only briefly. */
         fun takeHandoff(intent: Intent?): Bundle? {

@@ -49,6 +49,19 @@ class PlayLog(private val dao: GameDao, private val file: File, private val devi
     suspend fun end() = mutex.withLock { closeOpen(abandoned = false) }
 
     /**
+     * The open session's app closed right after starting ([io.github.esko997.sortie.launch.SessionReturn.QUICK_EXIT]): nothing
+     * was played, so the session leaves the history (no time, session count, "last played" or salvage credit). `playlog.jsonl`
+     * keeps its `start` and gets an `end` with `minutes: null` and `quickExit: true`.
+     */
+    suspend fun endQuickExit() = mutex.withLock {
+        val open = dao.openSession()
+        _current.value = null
+        if (open == null) return@withLock
+        dao.deleteSessionsChunk(listOf(open.rowId))
+        append("end", open.gameId, mapOf("minutes" to JsonNull, "quickExit" to JsonPrimitive(true)))
+    }
+
+    /**
      * Runs [block] with session logging held: a [start] or [end] arriving meanwhile waits until it returns, so a backup sees
      * (and a restore writes) the sessions table without a session opening or closing underneath. [block] gets the open session.
      */

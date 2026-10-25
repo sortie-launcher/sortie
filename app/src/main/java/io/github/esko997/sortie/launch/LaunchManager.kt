@@ -25,6 +25,7 @@ import io.github.esko997.sortie.data.user.UserStore
 import java.io.File
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -68,6 +69,20 @@ class LaunchManager(
 
     /** One remembered choice at a time: two quick picks for one system must not both add a profile. */
     private val remembering = Mutex()
+
+    /** Wall-clock time of the latest Home press Sortie received ([homeKeyPressed]); see [sessionReturn]. */
+    @Volatile
+    var homeKeyAt = 0L
+        private set
+
+    /** The game Sortie last started and what that asked of its app, for a [quickExit] notice. */
+    private class Started(val gameId: String, val pkg: String?, val switch: ContentSwitch)
+
+    @Volatile
+    private var lastStarted: Started? = null
+
+    /** Per libretro app (package): the core and file it was last asked to run in this process; see [contentSwitch]. */
+    private val libretroContent = ConcurrentHashMap<String, Pair<String, String>>()
 
     fun profilesFor(game: GameEntity): List<LaunchProfile> {
         val snap = manifests.snapshot.value
@@ -140,6 +155,11 @@ class LaunchManager(
         }
         // A chooser opening is not a game starting. Its private sender records only an actual selection.
         started?.takeUnless { it.generic }?.let {
+            val pkg = it.`package`
+            val content = libretroContent(it, game.path)
+            val switch = if (pkg == null) ContentSwitch.NONE else contentSwitch(libretroContent[pkg], content)
+            if (pkg != null && content != null) libretroContent[pkg] = content
+            lastStarted = Started(game.id, pkg, switch)
             runCatching { playLog.start(game.id, it.id, it.display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
             afterLaunch?.invoke(startedDisplay) // last: the activity may finish itself here
         }
@@ -156,6 +176,7 @@ class LaunchManager(
         val attempt = Attempt(profileId, chosen.flattenToShortString(), "app selected")
         _log.update { (listOf(LogEntry(LocalTime.now().format(TS), gameId, listOf(attempt), true)) + it).take(50) }
         Log.i("SortieLaunch", "$gameId via $profileId: app selected | ${attempt.command}")
+        lastStarted = Started(gameId, chosen.packageName, ContentSwitch.NONE)
         runCatching { playLog.start(gameId, profileId, display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
         origin?.let { background.launch { rememberChoice(gameId, profileId, chosen, it) } }
         afterLaunch?.invoke(target)
@@ -246,6 +267,31 @@ class LaunchManager(
         return true
     }
 
+    /** A Home key press reached Sortie (either screen): the player is coming back on purpose. */
+    fun homeKeyPressed() {
+        homeKeyAt = System.currentTimeMillis()
+    }
+
+    /** [pkg] is known to have no task any more: its next start loads fresh content, whatever it ran before. */
+    fun appClosed(pkg: String) {
+        libretroContent.remove(pkg)
+    }
+
+    /**
+     * The game [gameId] (played with [profileId]) closed right after starting ([SessionReturn.QUICK_EXIT]): logs it and returns
+     * what to tell the player. Its app has closed, so it no longer holds the content it was switching from.
+     */
+    fun quickExit(gameId: String, profileId: String?): String {
+        val started = lastStarted?.takeIf { it.gameId == gameId }
+        val profile = profileId?.let { manifests.snapshot.value.profiles[it] }
+        val pkg = started?.pkg ?: profile?.`package`
+        pkg?.let(::appClosed)
+        val name = pkg?.let { appLabel("app:$it") } ?: profile?.label ?: "The emulator"
+        val switch = started?.switch ?: ContentSwitch.NONE
+        Log.i("SortieLaunch", "$gameId via $profileId: closed right after starting ($switch)")
+        return quickExitMessage(name, switch)
+    }
+
     /**
      * True only when the game file is certainly gone: its folder is missing (card removed) or listable without it. A folder
      * that exists but cannot be listed says nothing, so the launch is still tried and the emulator reports what it can.
@@ -260,11 +306,11 @@ class LaunchManager(
     private fun sortieDisplay(): Int? = runCatching { currentDisplayId?.invoke() }.getOrNull()
 
     /**
-     * Tells the user why a launch did not start: a long toast on [displayId] (else Sortie's default display context). Owned
-     * here, not by a screen, so failures from any activity or companion picker are shown exactly once even when navigation
-     * has finished. Safe from any thread.
+     * Tells the user why a launch did not start (or stopped at once): a long toast on [displayId], by default Sortie's own
+     * (null: the default display context). Owned here, not by a screen, so failures from any activity or companion picker are
+     * shown exactly once even when navigation has finished. Safe from any thread.
      */
-    fun notify(message: String, displayId: Int?) {
+    fun notify(message: String, displayId: Int? = sortieDisplay()) {
         main.post {
             runCatching {
                 val app = context.applicationContext

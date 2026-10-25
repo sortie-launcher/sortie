@@ -141,6 +141,8 @@ class Harness:
         self.apps: list[str] = []
         self.focus_gap_since: float | None = None
         self.last_log_hits: list[tuple[str, str]] = []
+        self.ui_unavailable = False  # `uiautomator dump` cannot work on this device: UI-located scenarios are skipped
+        self.ui_failures = 0  # consecutive dumps that produced no hierarchy
 
     # ---------- plumbing ----------
     def log(self, kind: str, **data):
@@ -450,13 +452,32 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
     # while the top screen has focus. sortie_home_on_top() taps the top-left corner of display 0 on Home (the title, never
     # a control) so the top window is active; later taps on display 0 keep it so. Never tap blind elsewhere: outside a
     # dialog it would close it.
-    def ui_texts(self) -> list[tuple[str, int, int]]:
-        raw = self.sh.run("uiautomator dump /data/local/tmp/stress-ui.xml >/dev/null 2>&1; cat /data/local/tmp/stress-ui.xml", timeout=60)
+    # On some devices it never works: the Retroid Pocket Nova's bound "Game Assistant" accessibility service makes every
+    # dump fail with "null root node returned by UiTestAutomationBridge". That (or three empty dumps in a row) marks
+    # uiautomator unavailable for the run: one `skip` event says so and the UI-located scenarios stop trying.
+    def ui_texts(self) -> list[tuple[str, int, int]] | None:
+        """Text nodes of the active window with their centres; None when the dump failed."""
+        if self.ui_unavailable:
+            return None
+        dump = "/data/local/tmp/stress-ui.xml"
+        raw = self.sh.run(f"rm -f {dump}; uiautomator dump {dump} 2>&1; echo __UI_XML__; cat {dump} 2>/dev/null", timeout=60)
+        said, _, xml = raw.partition("__UI_XML__")
+        if "<hierarchy" not in xml:
+            self.ui_failures += 1
+            if "null root node" in said or self.ui_failures >= 3:
+                self.ui_unavailable = True
+                self.log("skip", scenario="uiautomator", reason="uiautomator unavailable", said=said.strip()[-200:])
+            return None
+        self.ui_failures = 0
         return [(t, (int(a) + int(c)) // 2, (int(b) + int(d)) // 2)
-                for t, a, b, c, d in re.findall(r'<node [^>]*?text="([^"]*)"[^>]*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', raw)]
+                for t, a, b, c, d in re.findall(r'<node [^>]*?text="([^"]*)"[^>]*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)]
 
     def tap_text(self, pattern: str, name: str, settle: float = 1.5) -> bool:
         texts = self.ui_texts()
+        if texts is None:
+            if not self.ui_unavailable:  # a one-off failure; a device where it never works was reported once already
+                self.log("skip", scenario=name, reason="uiautomator dump failed")
+            return False
         for text, x, y in texts:
             if re.fullmatch(pattern, text):
                 self.act(name, f"input -d 0 tap {x} {y}", settle)
@@ -482,12 +503,12 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
         return False
 
     def showing(self, pattern: str) -> bool:
-        return any(re.fullmatch(pattern, t) for t, _, _ in self.ui_texts())
+        return any(re.fullmatch(pattern, t) for t, _, _ in self.ui_texts() or [])
 
     def sc_reader(self, s):
         """Shelf → latest issue → an article, then read, swap screens and turn articles mid-read; never edits clippings."""
         # the shelf's hint bar says "Select · scrapbook" at every width (the wide shelf has no scrapbook header)
-        if not self.sortie_home_on_top() or not self.tap_text("Magazines", "tap-magazines", 2.0) or not self.showing("scrapbook"):
+        if self.ui_unavailable or not self.sortie_home_on_top() or not self.tap_text("Magazines", "tap-magazines", 2.0) or not self.showing("scrapbook"):
             return
         self.act("open-issue", self.key("KEYCODE_BUTTON_A"), 2.0)  # the shelf restores its last focused issue
         # contents restore their scroll position, so their header may be off screen; only contents say "B · shelf"
@@ -506,7 +527,7 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
 
     def sc_hangar(self, s):
         """Open the Hangar, flip to Gallery and back, close: no care, rename, salvage or equip."""
-        if not self.sortie_home_on_top() or not self.tap_text("Hangar", "tap-hangar", 1.5) or not self.showing("Workshop"):
+        if self.ui_unavailable or not self.sortie_home_on_top() or not self.tap_text("Hangar", "tap-hangar", 1.5) or not self.showing("Workshop"):
             return
         if self.rng.random() < 0.6:
             self.tap_text("Gallery", "tap-gallery", 1.0)

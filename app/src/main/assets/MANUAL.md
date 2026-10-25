@@ -42,8 +42,9 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
   **.elf** or **.prx** may not start from Sortie; start such homebrew from inside PPSSPP.
 - After copying new games, use **Library setup → Re-index every system** (or **Settings → Diagnostics → Re-index everything**).
 - After downloading RetroArch cores, use RetroArch's **Quit** action before starting a game here. Save before changing games.
-  RetroArch 1.22 may close itself on the first attempt to open different content; if you return to Sortie, choose the game
-  again. Sortie does not force-close a running game when you switch away to read or use another app.
+  RetroArch 1.22 closes itself when asked to open a different game while it is running, whether on the same core or
+  another. Sortie then says so on the game's page, e.g. *RetroArch closed while switching cores — press Play again*: press
+  **Play** again and it starts. Sortie does not force-close a running game when you switch away to read or use another app.
 
 ### Maintaining your library
 
@@ -238,6 +239,8 @@ to that list. A per-game or one-off chooser pick never changes the system defaul
 emulator is Open with… keeps asking. Only a normal system launch falling through other configured emulators to the
 chooser can remember its first selection; **Default launcher per system → Manifest default** clears that choice.
 Cancelling Android's app chooser does not start a play session. If nothing starts, a message says why.
+If the emulator closes within about three seconds of starting and you did not press Home, the page says so next to
+**Play** for about ten seconds (a short message elsewhere if you have left the page); Sortie does not retry by itself.
 
 **Add notes / Edit notes** opens your own notes and controls:
 - **Where was I?**: save slot, next objective or anything useful when returning.
@@ -432,5 +435,6 @@ refuses an update: ask whoever sent you the APK.
 ## Play log and saves
 
 An emulator/app launch starts a session; opening and cancelling the app chooser does not. Sessions end when the game's
-window is gone. Minutes, session counts and "last played" feed the *Continue* tile and personal history. The **💾 started**
+window is gone. A game whose emulator closed right after starting (see A game's page) is not recorded as played.
+Minutes, session counts and "last played" feed the *Continue* tile and personal history. The **💾 started**
 chip reads the save folders set in **Library setup → BIOS and save folders**, or on a computer-prepared card.

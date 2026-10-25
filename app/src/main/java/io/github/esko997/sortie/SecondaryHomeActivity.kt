@@ -24,7 +24,9 @@ class SecondaryHomeActivity : CompanionHost() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.hasCategory(Intent.CATEGORY_SECONDARY_HOME) && intent.getBooleanExtra(TaskSwitcher.EXTRA_FROM_HOME_KEY, false)) {
-            val switcher = (application as SortieApp).graph.switcher
+            val graph = (application as SortieApp).graph
+            graph.launcher.homeKeyPressed()
+            val switcher = graph.switcher
             switcher.summon(myDisplayId(), switcher.homeTask(myDisplayId()))
         }
     }
