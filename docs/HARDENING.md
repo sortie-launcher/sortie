@@ -17,15 +17,20 @@ Scenarios (weighted, random): Home and the switcher overlay with D-pad/A/B/Y/Sel
 the overlay is up); rapid Home; X screen swaps (single, double, triple); launching apps on either display; a RetroArch game
 with Sortie's default flags; moving a task to the other display; Recents; Back bursts; controller bursts on Sortie;
 force-stopping Sortie; "clear all"; sleep/wake; launching then pressing Home and X before the app has drawn; trim-memory;
-the magazine reader (shelf → latest issue → article, reading, X and L1/R1 mid-article, reader menu); the Hangar (Workshop,
-Gallery, X while open). Reader and Hangar steps locate controls with `uiautomator`, which only sees the default (top)
-display, so they run when navigation is there. `--no-kill` drops the force-stop scenarios for single-process leak runs.
+the magazine reader (shelf → last issue → article, reading, X and L1/R1 mid-article, reader menu); the Hangar (Workshop,
+Gallery, X while open). Reader and Hangar steps return Sortie to its Home route, bring navigation to the top display
+(X) and locate controls with `uiautomator`. That dumps the *active* window, which on two screens can be the companion's
+carousel below, so the harness first taps Home's top-left corner on the top display. `--no-kill` drops the force-stop
+scenarios for single-process leak runs.
 
 Safety: the card's `user.json`, `systems.json`, `launchers.json`, `folders.json` and `device.json` are copied first and
 restored if changed (L1/R1 on Home legitimately changes the saved sort). The harness never presses A in Sortie outside the
 overlay or the reader, never launches games through Sortie (no play-log entries), never edits clippings, never uses care,
 rename, salvage or equip in the Hangar, never uninstalls, mutes media volume and keeps the screen on for the run, then
 restores both. Opening articles does move "Continue reading".
+
+If the device disappears mid-run (see the system crash below), teardown says so; once adb is back,
+`tools/stress/ui-stress.py --serial SERIAL --restore-only --out <that run's folder>` restores its settings and card files.
 
 Output (`~/.cache/sortie-hardening/<serial>-<time>-s<seed>/`): `events.jsonl` (every action, metric sample, log hit and
 anomaly), `logcat.txt`, and `anomalies/<n>/` with both screens, task/focus dumps, the 40 preceding actions and log hits.
@@ -74,6 +79,21 @@ Back on Home moved the task to the back (Android 12+ default for root activities
 screen: reproduced with Home, Home, B. Home now consumes Back. On the Thor, a HOME-type task ignores `moveTaskToBack`, which
 hid this.
 
+### AYN Thor: system_server crash while the switcher overlay closes
+
+25 October, 05:51, segment 3 (0.1.0-beta.1037): `*** FATAL EXCEPTION IN SYSTEM PROCESS: android.display`,
+`NullPointerException: Invalid Surface(name=Sortie switcher) … mNativeObject is null` in
+`CollectWindowContentFrameStatsUtils.getWindowContentFrameStats`, called from `WindowState.setHasSurface`. That class is
+not in AOSP: the Thor's WindowManager collects frame stats from every visible window whenever one gains a surface. Both
+switcher overlay windows were being removed at that instant (their input channels were disposed in the same
+millisecond), and the vendor code read one whose surface had just been released. system_server restarted (a soft
+reboot), which switched wireless debugging off.
+
+The race is in the firmware, but Sortie made it likely: `SwitcherOverlay.show()` removed and re-added both windows on
+every Home press, even while the same overlay was already up. A pending change (draft PR "Switcher overlay: reuse
+windows on repeated Home") keeps them when displays and controller screen are unchanged; it needs a Thor run before
+release. Any app's window churn can still trigger the vendor bug.
+
 ### Seen under stress but not Sortie's
 
 - RetroArch: "no focused window" ANRs after launching a game and pressing Home/X within seconds, a main thread that hangs
@@ -90,4 +110,7 @@ hid this.
 - Thor, 90 min, ~1,600 iterations on 0.1.0-beta.1033 (with the Hangar): no Sortie crash, ANR, stuck focus, duplicate
   navigation task or lingering anchor; overlays never leaked. Live Activities peaked at 31 during swap storms and fell to
   2 within a minute of idling: uncollected instances, not a leak. Sortie and the panel held no network requests.
-- DMG, 90 min, ~1,250 iterations: no Sortie crash or ANR; the Back bug above.
+- Thor, 0.1.0-beta.1037: two further segments (~35 min and ~20 min of activity, reader and Hangar included) found no
+  Sortie crash or ANR before the system crash above.
+- DMG, 90 + 150 min (~3,100 iterations; the second run on the Back fix with 93 Hangar visits, 52 Gallery visits and 93
+  RetroArch launches): no Sortie crash or ANR. Every crash and ANR recorded was RetroArch's.
