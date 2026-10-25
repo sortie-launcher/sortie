@@ -36,9 +36,17 @@ import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.index.cleanTitle
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import java.time.Instant
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.delay
+
+/**
+ * Wall-clock time (epoch ms) for the times the UI displays: Home's [Clock] and "last played" in [playedLine]. Screenshot tests
+ * pin it so their images are stable; nothing in the app sets it.
+ */
+internal var uiNow: () -> Long = System::currentTimeMillis
 
 /**
  * R2 on a focused game tile or row toggles that game's Want to play membership, once per press: only the first key-down acts.
@@ -159,7 +167,7 @@ fun ColourChip(colour: Color) {
 
 /** "Played 95 min · 4 sessions · last 3 days ago" for a game's play stats. */
 fun playedLine(s: PlayStat): String {
-    val last = s.lastPlayed?.let { DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), DateUtils.DAY_IN_MILLIS).toString().lowercase() }
+    val last = s.lastPlayed?.let { DateUtils.getRelativeTimeSpanString(it, uiNow(), DateUtils.DAY_IN_MILLIS).toString().lowercase() }
     return listOfNotNull(
         "Played ${s.minutes} min",
         "${s.sessions} session" + if (s.sessions == 1) "" else "s",
@@ -179,14 +187,16 @@ fun Modifier.heroOnFocus(game: GameEntity): Modifier = onFocusChanged { if (it.i
  */
 @Composable
 fun Clock(modifier: Modifier = Modifier) {
-    var now by remember { mutableStateOf(LocalTime.now()) }
+    var now by remember { mutableStateOf(localTimeNow()) }
     LaunchedEffect(Unit) {
         while (true) {
-            now = LocalTime.now()
-            delay(60_000L - (System.currentTimeMillis() % 60_000L) + 50)
+            now = localTimeNow()
+            delay(60_000L - (uiNow() % 60_000L) + 50)
         }
     }
     Text(now.format(CLOCK_FORMAT), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = modifier)
 }
 
 private val CLOCK_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+private fun localTimeNow(): LocalTime = Instant.ofEpochMilli(uiNow()).atZone(ZoneId.systemDefault()).toLocalTime()

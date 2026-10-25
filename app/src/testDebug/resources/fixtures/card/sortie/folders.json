@@ -1,0 +1,13 @@
+{
+ "folders": [
+  {
+   "id": "shooters",
+   "label": "Shooters",
+   "include": [
+    "genesis/Bolt Runner (World).md",
+    "snes/Night Lancer (USA).sfc"
+   ],
+   "sort": "title:asc"
+  }
+ ]
+}

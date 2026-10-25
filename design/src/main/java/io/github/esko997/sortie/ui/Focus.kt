@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
@@ -57,12 +58,13 @@ fun Modifier.focusGlow(focused: Boolean, shape: Shape, colour: Color = Amber, fo
     val scale = animateFloatAsState(if (focused) focusedScale else 1f, label = "focusScale")
     // The glow pulses for a few seconds after the focus lands, then holds: an endless pulse kept Sortie redrawing while idle
     // (~50% of a core at the display rate, still ~30% sampled at 20 Hz — a launcher waiting for input should cost nothing).
+    // Time comes from the composition's frame clock (vsync on a device), so UI tests can drive the pulse to its end.
     val pulse: State<Float>? = if (focused) {
         val alpha = remember { mutableFloatStateOf(1f) }
         LaunchedEffect(Unit) {
-            val t0 = System.nanoTime()
+            val t0 = withFrameNanos { it }
             while (true) {
-                val t = (System.nanoTime() - t0) / 1e9
+                val t = (withFrameNanos { it } - t0) / 1e9
                 if (t >= PULSE_FOR_S) break
                 alpha.floatValue = 0.775f + 0.225f * sin(t * PI / PULSE_HALF_PERIOD_S).toFloat()
                 delay(50)

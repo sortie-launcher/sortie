@@ -1,0 +1,50 @@
+{
+ "version": 1,
+ "name": "Rivet",
+ "enabled": true,
+ "motion": false,
+ "equipped": {
+  "HEAD": "survey_head_1",
+  "BODY": "yard_body_1",
+  "ARMS": "yard_arms_1",
+  "LEGS": "courier_legs_1"
+ },
+ "owned": [
+  "yard_head_1",
+  "yard_body_1",
+  "yard_arms_1",
+  "yard_legs_1",
+  "survey_head_1",
+  "survey_body_1",
+  "survey_arms_1",
+  "survey_legs_1",
+  "courier_head_1",
+  "courier_body_1",
+  "courier_arms_1",
+  "courier_legs_1"
+ ],
+ "salvage": 2,
+ "bond": 35,
+ "charge": 64,
+ "condition": 72,
+ "sleeping": false,
+ "origins": {
+  "yard_head_1": "Starter kit",
+  "yard_body_1": "Starter kit",
+  "yard_arms_1": "Starter kit",
+  "yard_legs_1": "Starter kit",
+  "survey_head_1": "Starter kit",
+  "survey_body_1": "Starter kit",
+  "survey_arms_1": "Starter kit",
+  "survey_legs_1": "Starter kit",
+  "courier_head_1": "Starter kit",
+  "courier_body_1": "Starter kit",
+  "courier_arms_1": "Starter kit",
+  "courier_legs_1": "Starter kit"
+ },
+ "initializedAt": 1788220800000,
+ "creditedMinutes": 25,
+ "pendingMinutes": 0,
+ "salvageRuns": 0,
+ "processedSessions": []
+}
