@@ -97,6 +97,65 @@ class MechaStore internal constructor(
 
     internal fun setMotion(enabled: Boolean) = change { it.withMotion(enabled) }
 
+    /** A tap on him: bond at most once per [MECHA_PET_BOND_MS] (see [petted]); repeated pets inside that window write nothing. */
+    internal fun pet() = change { it.petted(clock()) }
+
+    /** The hangar as saved now, for a backup; null while none is open (loading, or the save is unreadable). */
+    suspend fun backupSave(): MechaState? = onWorker { state }
+
+    /** Why [backup] (a companion save from a backup) can't be restored by this build, or null when it can. */
+    suspend fun restoreProblem(backup: MechaState): String? = onWorker {
+        if (parts.isEmpty()) {
+            "this build's mecha parts catalog is incomplete"
+        } else {
+            mechaStateProblem(backup, parts)?.let { "the companion save in it can't be used: $it" }
+        }
+    }
+
+    /**
+     * Restores from a backup, before its play history is merged in: [backup] replaces this hangar (play either hangar already
+     * credited stays credited, [restoredOver]); with no [backup] save this hangar stays and [merged], the sessions the
+     * restore is about to add, count as credited elsewhere ([creditedElsewhere]). An unreadable save is set aside first, as
+     * [startFresh] does. Throws when [backup] is invalid or nothing could be written (then nothing changed). The result undoes
+     * it with [undoRestore] if the rest of the restore fails.
+     */
+    suspend fun restore(backup: MechaState?, merged: List<PlaySession>): MechaRestore = onWorker {
+        val before = state
+        if (backup == null) {
+            if (before != null) commitOrThrow(before, before.creditedElsewhere(merged))
+            return@onWorker MechaRestore(before, replaced = false)
+        }
+        require(parts.isNotEmpty()) { "this build's mecha parts catalog is incomplete" }
+        mechaStateProblem(backup, parts)?.let { throw IllegalArgumentException("the companion save in it can't be used: $it") }
+        if (before == null && damaged) {
+            val kept = File(file.parentFile, "state.damaged-${clock()}.json")
+            Files.move(file.toPath(), kept.toPath(), StandardCopyOption.ATOMIC_MOVE)
+            damaged = false
+        }
+        val next = backup.restoredOver(before)
+        save(next)?.let { throw it }
+        state = next
+        _view.value = MechaView(next, parts, message = "${next.name} is back from the backup.")
+        observe(next.initializedAt)
+        MechaRestore(before, replaced = true)
+    }
+
+    /** Puts back what [restore] replaced, when the rest of a restore failed. Throws when it can't be written. */
+    suspend fun undoRestore(done: MechaRestore) = onWorker {
+        val previous = done.previous ?: return@onWorker
+        save(previous)?.let { throw it }
+        state = previous
+        _view.value = MechaView(previous, parts)
+        observe(previous.initializedAt)
+    }
+
+    private fun commitOrThrow(current: MechaState, result: MechaResult) {
+        if (result.state == current) return
+        save(result.state)?.let { throw it }
+        state = result.state
+        _view.value = MechaView(result.state, parts)
+    }
+
     /** Re-reads completed sessions now (e.g. when Sortie comes back to the foreground); already credited ones are skipped. */
     internal fun refreshSessions() = enqueue {
         val current = state ?: return@enqueue
@@ -152,6 +211,19 @@ class MechaStore internal constructor(
         done.await()
     }
 
+    /** Runs [job] on the worker after everything queued before it and returns its result (or throws its failure). */
+    private suspend fun <T> onWorker(job: suspend () -> T): T {
+        val done = CompletableDeferred<T>()
+        enqueue {
+            try {
+                done.complete(job())
+            } catch (e: Throwable) {
+                done.completeExceptionally(e)
+            }
+        }
+        return done.await()
+    }
+
     private fun change(rule: (MechaState) -> MechaResult) = enqueue {
         // No hangar: the view already says why (loading, incomplete catalog or unreadable save); nothing to change.
         val current = state ?: return@enqueue
@@ -184,9 +256,11 @@ class MechaStore internal constructor(
             )
             return
         }
-        state = loaded
-        _view.value = MechaView(loaded, parts)
-        observe(loaded.initializedAt)
+        // an older save is read as is and written in this build's format from its next change on
+        val current = loaded.copy(version = MECHA_SAVE_VERSION)
+        state = current
+        _view.value = MechaView(current, parts)
+        observe(current.initializedAt)
     }
 
     private fun create(message: String?) {
@@ -287,3 +361,6 @@ class MechaStore internal constructor(
         }
     }
 }
+
+/** What [MechaStore.restore] replaced, for [MechaStore.undoRestore]. [replaced]: the backup brought its own hangar. */
+class MechaRestore internal constructor(internal val previous: MechaState?, val replaced: Boolean)

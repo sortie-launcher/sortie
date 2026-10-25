@@ -77,6 +77,7 @@ class SortieApp :
             user,
             playLog,
             sortieDir,
+            mecha,
             deviceName = { manifests.snapshot.value.device.device },
             availableLaunchables = { apps.apps.value.mapTo(HashSet()) { it.id } + shortcuts.shortcuts.value.map { it.id } }
         )
@@ -177,4 +178,4 @@ class SortieApp :
 }
 
 /** The companion's view of a recorded session: games only earn credit, never apps or shortcuts ([LibraryItem.isGameId]). */
-private fun SessionEntity.toPlaySession() = PlaySession(gameId, startedAt, endedAt, abandoned, isGame = LibraryItem.isGameId(gameId))
+fun SessionEntity.toPlaySession() = PlaySession(gameId, startedAt, endedAt, abandoned, isGame = LibraryItem.isGameId(gameId))

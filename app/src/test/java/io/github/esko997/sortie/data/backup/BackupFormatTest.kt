@@ -9,6 +9,8 @@ import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.data.reference.ReferenceCard
 import io.github.esko997.sortie.data.user.GameProgress
+import io.github.esko997.sortie.mecha.MechaSlot
+import io.github.esko997.sortie.mecha.MechaState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -58,7 +60,7 @@ class BackupFormatTest {
     @Test
     fun roundTripKeepsPreferencesAndClosedSessionsOnly() {
         val open = SessionEntity(rowId = 9, gameId = "psx/Running.chd", profileId = null, startedAt = 5_000_000, endedAt = null)
-        val backup = buildBackup(user, listOf(closed("a", 1_000_000, 30, rowId = 1), open), 42, "thor", "0.0.1")
+        val backup = buildBackup(user, listOf(closed("a", 1_000_000, 30, rowId = 1), open), null, 42, "thor", "0.0.1")
         val parsed = valid(encodeBackup(backup))
         assertEquals(user, parsed.backup.user)
         assertEquals(listOf(BackupSession("a", "p", 1_000_000, 1_000_000 + 30 * 60000)), parsed.backup.sessions)
@@ -92,7 +94,7 @@ class BackupFormatTest {
 
     @Test
     fun malformedTruncatedForeignAndNewerFilesAreRejected() {
-        val good = encodeBackup(buildBackup(user, listOf(closed("a", 1_000, 1)), 1, "thor", "0.0.1"))
+        val good = encodeBackup(buildBackup(user, listOf(closed("a", 1_000, 1)), null, 1, "thor", "0.0.1"))
         val rejected = listOf(
             good.substring(0, good.length / 2),
             "",
@@ -129,5 +131,46 @@ class BackupFormatTest {
         assertEquals(2, u.gridRows)
         assertEquals(listOf("x"), u.layout)
         assertNull(valid(text).backup.openSessionExcluded)
+    }
+
+    private val companion = MechaState(
+        name = "Rivet",
+        equipped = MechaSlot.entries.associateWith { "yard_${it.name.lowercase()}_1" },
+        owned = MechaSlot.entries.mapTo(LinkedHashSet()) { "yard_${it.name.lowercase()}_1" } + "survey_head_2",
+        salvage = 4,
+        bond = 17,
+        charge = 70,
+        condition = 85,
+        sleeping = false,
+        origins = mapOf("survey_head_2" to "Salvage run #1"),
+        initializedAt = 500,
+        creditedMinutes = 12,
+        pendingMinutes = 2,
+        salvageRuns = 1,
+        processedSessions = setOf("a@1000"),
+        lastPetAt = 9_000
+    )
+
+    @Test
+    fun theCompanionSaveRoundTripsWhole() {
+        val backup = buildBackup(user, listOf(closed("a", 1_000, 12)), companion, 42, "dmg", "0.0.1")
+        assertEquals(2, backup.version)
+        val parsed = valid(encodeBackup(backup))
+        assertEquals(companion, parsed.backup.mecha)
+    }
+
+    @Test
+    fun versionOneFilesStillReadWithoutACompanion() {
+        val parsed = valid("""{"format": "sortie-backup", "version": 1, "createdAt": 1, "user": {}, "sessions": []}""")
+        assertNull(parsed.backup.mecha)
+    }
+
+    @Test
+    fun aMalformedCompanionSectionRejectsTheWholeFile() {
+        val rejected = listOf(
+            """{"format": "sortie-backup", "version": 2, "createdAt": 1, "user": {}, "sessions": [], "mecha": []}""",
+            """{"format": "sortie-backup", "version": 2, "createdAt": 1, "user": {}, "sessions": [], "mecha": {"name": "Rivet"}}"""
+        )
+        rejected.forEach { assertTrue("accepted: $it", parseBackup(it) is ParsedBackup.Invalid) }
     }
 }

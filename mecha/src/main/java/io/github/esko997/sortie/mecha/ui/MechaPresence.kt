@@ -25,6 +25,9 @@ object MechaPresence {
     /** The edge he walks in from on the stage that just took him over, until it does. */
     internal var arriving: MechaSpotKind? = null
 
+    /** Carried across: where along the width (0..1) he drops in on the stage that just took him over, until he does. */
+    internal var droppedIn: Float? = null
+
     /** Process-wide reaction bookkeeping, so a second stage never repeats what the first already said. */
     internal var welcomeAt = 0L
         private set
@@ -67,6 +70,18 @@ object MechaPresence {
     internal fun handOff(to: MechaStage, side: MechaSpotKind) {
         display = to.displayId
         arriving = side
+        droppedIn = null
+        recompute()
+    }
+
+    /**
+     * Carried to the edge facing [to]'s display and let go: that display has him now and he drops in there through the
+     * facing edge, at [fraction] of its width.
+     */
+    internal fun handOffDrop(to: MechaStage, fraction: Float) {
+        display = to.displayId
+        arriving = null
+        droppedIn = fraction
         recompute()
     }
 

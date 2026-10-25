@@ -6,6 +6,12 @@ enum class MechaSlot { HEAD, BODY, ARMS, LEGS }
 
 internal enum class MechaCare { TUNE, CHARGE, REST }
 
+/** The save format this build writes; it reads every version from 1 up to this one. 2 added [MechaState.lastPetAt]. */
+const val MECHA_SAVE_VERSION = 2
+
+/** A pet counts toward bond at most once in this long, so tapping him over and over earns nothing more. */
+internal const val MECHA_PET_BOND_MS = 5 * 60_000L
+
 /** The three part families, in catalog order; each ships `assets/mecha/<family>/catalog.json` with eight parts. */
 internal val MECHA_FAMILIES: List<String> = listOf("yard", "survey", "courier")
 
@@ -44,10 +50,11 @@ data class MechaPart(val id: String, val slot: MechaSlot, val family: String, va
  * Only game sessions that started at or after [initializedAt] earn credit, each once, identified in [processedSessions] by
  * `<gameId>@<startedAt>` (stable across backup restores and play-history imports, which keep both). [creditedMinutes] is every
  * counted minute so far, [pendingMinutes] the part of them not yet worth a credit (0 until [MECHA_MINUTES_PER_CREDIT]).
+ * [lastPetAt] is when a pet last counted toward bond (epoch millis, 0: never), for [MECHA_PET_BOND_MS].
  */
 @Serializable
 data class MechaState(
-    val version: Int = 1,
+    val version: Int = MECHA_SAVE_VERSION,
     val name: String = MECHA_DEFAULT_NAME,
     val enabled: Boolean = true,
     val motion: Boolean = true,
@@ -63,7 +70,8 @@ data class MechaState(
     val creditedMinutes: Int,
     val pendingMinutes: Int,
     val salvageRuns: Int,
-    val processedSessions: Set<String>
+    val processedSessions: Set<String>,
+    val lastPetAt: Long = 0
 ) {
     /** Minutes of play still needed for the next salvage credit. */
     val minutesToNextCredit: Int get() = MECHA_MINUTES_PER_CREDIT - pendingMinutes

@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.stats
 
 import android.view.Display
+import io.github.esko997.sortie.ui.displayLit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

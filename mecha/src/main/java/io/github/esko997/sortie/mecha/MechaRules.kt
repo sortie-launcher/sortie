@@ -95,7 +95,7 @@ internal fun mechaStateProblem(state: MechaState, parts: List<MechaPart>): Strin
     val unknown = state.owned.filter { it !in byId }
     val stats = MECHA_STAT_FLOOR..MECHA_STAT_MAX
     return when {
-        state.version != 1 -> "it is format version ${state.version}, this build reads version 1"
+        state.version !in 1..MECHA_SAVE_VERSION -> "it is format version ${state.version}, this build reads versions 1 to $MECHA_SAVE_VERSION"
         mechaNameProblem(state.name) != null -> "its name \"${state.name}\" is invalid"
         unknown.isNotEmpty() -> "it owns parts this build doesn't have (${unknown.joinToString()})"
         MechaSlot.entries.any { slot -> state.equipped[slot].let { id -> id == null || id !in state.owned || byId[id]?.slot != slot } } ->
@@ -106,8 +106,39 @@ internal fun mechaStateProblem(state: MechaState, parts: List<MechaPart>): Strin
         state.bond !in 0..MECHA_STAT_MAX -> "its bond (${state.bond}) is out of range"
         state.charge !in stats || state.condition !in stats -> "its charge or condition is out of range"
         state.initializedAt <= 0 -> "it has no start time"
+        state.lastPetAt < 0 -> "its last pet time is negative"
         else -> null
     }
+}
+
+/**
+ * A pet (a tap on him): a little bond, at most once per [MECHA_PET_BOND_MS] however often he is tapped; a pet inside that
+ * window changes nothing and saves nothing. A clock that went backwards (now before [MechaState.lastPetAt]) does not lock
+ * pets out. No message: the mech's own reaction is the feedback.
+ */
+internal fun MechaState.petted(now: Long): MechaResult {
+    if (lastPetAt > 0 && now - lastPetAt in 0 until MECHA_PET_BOND_MS) return MechaResult(this)
+    return MechaResult(copy(lastPetAt = now, bond = bondPlus(1)))
+}
+
+/**
+ * This hangar (from a backup) restored over the device's own hangar [current] (null: none open): every session either one
+ * already credited stays credited, so play that earned salvage on either side never earns it again here. Play the backup's
+ * hangar had not got to yet still counts, once. Saved in this build's format.
+ */
+internal fun MechaState.restoredOver(current: MechaState?): MechaState = copy(
+    version = MECHA_SAVE_VERSION,
+    processedSessions = if (current == null) processedSessions else LinkedHashSet(processedSessions).apply { addAll(current.processedSessions) }
+)
+
+/**
+ * [sessions] counted as already credited without earning anything: play a restore merges in from a backup that carries no
+ * hangar was played (and paid for) on another hangar, so it must not pay again here.
+ */
+internal fun MechaState.creditedElsewhere(sessions: Collection<PlaySession>): MechaResult {
+    val processed = LinkedHashSet(processedSessions)
+    sessions.mapTo(processed, ::mechaSessionKey)
+    return if (processed.size == processedSessions.size) MechaResult(this) else MechaResult(copy(processedSessions = processed))
 }
 
 /** Parts not yet in the hangar, of [slot] (any when null), sorted by id. */

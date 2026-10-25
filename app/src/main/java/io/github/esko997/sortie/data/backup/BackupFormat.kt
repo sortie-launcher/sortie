@@ -2,6 +2,7 @@ package io.github.esko997.sortie.data.backup
 
 import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.manifest.UserData
+import io.github.esko997.sortie.mecha.MechaState
 import io.github.esko997.sortie.stats.statsInterval
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -13,8 +14,9 @@ import kotlinx.serialization.json.intOrNull
 
 /**
  * A Sortie backup (docs/formats/user.md): every device-side preference (user.json, including layout, dock and per-game
- * annotations) plus the closed play sessions from the database. Not included: ROMs, art, emulator saves, the game index
- * (rebuilt from the card), manifests, playlog.jsonl, and anything Android owns (shortcut pins, permissions, default home).
+ * annotations), the closed play sessions from the database and, from version 2, the Hangar companion's save. Not included:
+ * ROMs, art, emulator saves, the game index (rebuilt from the card), manifests, playlog.jsonl, and anything Android owns
+ * (shortcut pins, permissions, default home).
  */
 @Serializable
 data class BackupFile(
@@ -29,11 +31,18 @@ data class BackupFile(
     /** Required (no default), may be empty. */
     val sessions: List<BackupSession>,
     /** The session that was still being played when the snapshot was taken; deliberately not in [sessions] and never imported. */
-    val openSessionExcluded: BackupSession? = null
+    val openSessionExcluded: BackupSession? = null,
+    /**
+     * The companion's whole save (files/mecha/state.json, its own format version inside), or null: a version 1 file, or no
+     * hangar was open when it was made. Checked against this build's parts catalog before a restore is offered.
+     */
+    val mecha: MechaState? = null
 ) {
     companion object {
         const val FORMAT = "sortie-backup"
-        const val VERSION = 1
+
+        /** 2 added [mecha]. Version 1 files are still read (and leave the companion as it is). */
+        const val VERSION = 2
     }
 }
 
@@ -56,7 +65,7 @@ val backupJson = Json {
 }
 
 /** The snapshot as written: closed sessions only; the open one (if any) is recorded as excluded. */
-fun buildBackup(user: UserData, sessions: List<SessionEntity>, createdAt: Long, device: String, appVersion: String): BackupFile {
+fun buildBackup(user: UserData, sessions: List<SessionEntity>, mecha: MechaState?, createdAt: Long, device: String, appVersion: String): BackupFile {
     val (open, closed) = sessions.partition { it.endedAt == null }
     return BackupFile(
         createdAt = createdAt,
@@ -64,7 +73,8 @@ fun buildBackup(user: UserData, sessions: List<SessionEntity>, createdAt: Long, 
         appVersion = appVersion,
         user = user,
         sessions = closed.map { it.toBackup() },
-        openSessionExcluded = open.maxByOrNull { it.startedAt }?.toBackup()
+        openSessionExcluded = open.maxByOrNull { it.startedAt }?.toBackup(),
+        mecha = mecha
     )
 }
 
