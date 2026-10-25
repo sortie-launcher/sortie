@@ -48,6 +48,12 @@ class SwitcherOverlay(private val context: Context) {
      * Shows [content] on every display in [displayIds]; the window on [focusDisplay] takes the controller. B closes through
      * [onClose]; Y/Select are mapped with [Hotkeys.keyFor] and handed to [onHotkey] (not the global bus: Sortie's own screens
      * may be composed underneath and must not react).
+     *
+     * Already showing on the same displays with the controller on the same one (Home pressed again, or repeatedly): the
+     * windows are kept. Their content follows the switcher's state, so there is nothing to rebuild, and replacing them
+     * removes and adds two windows per press. On the AYN Thor that churn crashed system_server: its WindowManager collects
+     * frame stats from every visible window whenever one gains a surface, and met a removed overlay whose surface was
+     * already released (NullPointerException on android.display, soft reboot; docs/HARDENING.md).
      */
     fun show(
         displayIds: List<Int>,
@@ -56,6 +62,9 @@ class SwitcherOverlay(private val context: Context) {
         onHotkey: (Hotkeys.Key) -> Unit,
         content: @Composable (displayId: Int, controller: Boolean) -> Unit
     ) {
+        val same = windows.keys == displayIds.toSet() &&
+            windows.values.all { it.view.isAttachedToWindow && it.controller == (it.displayId == focusDisplay) }
+        if (same) return
         hide()
         val dm = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
         for (id in displayIds) {
