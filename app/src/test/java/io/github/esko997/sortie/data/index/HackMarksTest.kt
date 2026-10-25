@@ -12,14 +12,16 @@ import org.junit.Test
 class HackMarksTest {
     /** The hackRegex the desktop writes into every device's systems.json. */
     private val cardRules = LibraryRules(
-        hackRegex = """(?i)\((hack|translation|redux|patched|undub|un-working designs|one vision|true analogs|plus v[\d.]+|english[^)]*|[^)]*patch)\)|\[[^\]]*(hack|patch)[^\]]*\]"""
+        hackRegex = """(?i)\((hack|translation|redux|patched|undub|un-working designs|one vision|true analogs|plus v[\d.]+|""" +
+            """english[^)]*|[^)]*patch)\)|\[[^\]]*(hack|patch)[^\]]*\]"""
     )
     private val card = HackMarks.compile(cardRules)
 
     // The Thor's guide.json entries, verbatim apart from shortened hooks.
     private val ac2 = GuideEntry(fit = 5, hook = "Armored Core 2 with VanLaser's dual-analog patch… Play this one, not the stock disc.", flags = listOf("hack"))
     private val lastRaven = GuideEntry(fit = 5, hook = "Last Raven with VanLaser's True Analogs v1.03…", flags = listOf("brutal difficulty", "hack"))
-    private val sc3Deluxe = GuideEntry(fit = 3, hook = "A fan build of Soulcalibur III from TopazTK's project to port the Arcade Edition to PS2…", flags = listOf("hack"))
+    private val sc3Deluxe =
+        GuideEntry(fit = 3, hook = "A fan build of Soulcalibur III from TopazTK's project to port the Arcade Edition to PS2…", flags = listOf("hack"))
     private val sc3 = GuideEntry(fit = 4, hook = "Create-a-Soul with 13 job classes…", flags = emptyList())
 
     private fun hack(file: String, guide: GuideEntry? = null, configured: Regex? = card) = HackMarks.isHack(file, configured, guide)
@@ -52,7 +54,8 @@ class HackMarksTest {
 
     @Test
     fun `prose and lookalike words are not evidence`() {
-        val prose = GuideEntry(hook = "Cyberpunk hacking sim with patched-in analog controls and a hack-and-slash finale", flags = listOf("hacker", "dated controls"))
+        val prose =
+            GuideEntry(hook = "Cyberpunk hacking sim with patched-in analog controls and a hack-and-slash finale", flags = listOf("hacker", "dated controls"))
         assertFalse(hack("Uplink - Hacker Elite (USA).iso", prose))
         assertFalse(hack(".hack - Infection (USA).iso"))
         assertFalse(hack("Bandai Collection (USA) (.hack Edition).iso", configured = null))
@@ -77,7 +80,9 @@ class HackMarksTest {
         assertFalse(hack("Frame Gride (Japan) (En) (Translation).cdi", configured = null))
         assertTrue(hack("Zelda (USA) (Randomizer).sfc", configured = Regex("(?i)\\(randomizer\\)")))
         assertNull(HackMarks.compile(LibraryRules(hackRegex = "(unclosed")))
-        assertTrue(hack("Soulcalibur III - Arcade Edition Deluxe (USA) (v1.21 Hack).iso", configured = HackMarks.compile(LibraryRules(hackRegex = "(unclosed"))))
+        assertTrue(
+            hack("Soulcalibur III - Arcade Edition Deluxe (USA) (v1.21 Hack).iso", configured = HackMarks.compile(LibraryRules(hackRegex = "(unclosed")))
+        )
     }
 
     @Test

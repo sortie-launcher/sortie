@@ -442,7 +442,6 @@ private fun Legend(colour: Color, text: String) {
     }
 }
 
-
 @Composable
 private fun Notice(text: String, error: Boolean = false) {
     Text(

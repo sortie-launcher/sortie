@@ -49,3 +49,4 @@ object HackMarks {
         val inner = m.groupValues[2]
         if (!VERSION.containsMatchIn(inner)) m.value else m.groupValues[1] + inner.replace(VERSION, " ").replace(SPACES, " ").trim() + m.groupValues[3]
     }
+}

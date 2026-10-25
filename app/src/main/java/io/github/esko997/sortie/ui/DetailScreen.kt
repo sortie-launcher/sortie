@@ -130,7 +130,9 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
                     Stars(game.fit)
                     Text(
                         listOfNotNull(
-                            game.systemId.uppercase(), game.year?.toString(), game.developer,
+                            game.systemId.uppercase(),
+                            game.year?.toString(),
+                            game.developer,
                             game.players?.let {
                                 "$it players"
                             }

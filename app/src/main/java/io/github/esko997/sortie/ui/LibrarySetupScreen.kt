@@ -1133,7 +1133,6 @@ private fun Note(text: String, error: Boolean = false) {
     )
 }
 
-
 /**
  * One-line text field a controller can pass through: up/down from a physical pad move the focus instead of the caret, A opens
  * the keyboard, Done closes it. The text lives in the screen's saved draft, so closing the keyboard never loses it.

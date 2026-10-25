@@ -277,14 +277,7 @@ fun FocusRow(
  * focus. The label stays on one line (ellipsized), so a button never grows into a two-line pill.
  */
 @Composable
-fun GlowButton(
-    text: String,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    primary: Boolean = false,
-    colour: Color = Amber,
-    onClick: () -> Unit
-) {
+fun GlowButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, primary: Boolean = false, colour: Color = Amber, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     if (primary) {

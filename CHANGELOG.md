@@ -4,6 +4,13 @@
 - Hosted builds now bundle zines `main` as resolved once per build, rather than a manually advanced content commit.
   Tests, APK assembly and signing use the same commit and catalog digest, recorded in release notes. New issues reach
   the next app build automatically; local builds remain offline and opt-in. The local baseline now includes issue 010.
+- Game tiles now show the list row's **hack** mark. Classification uses explicit guide flags as well as filename rules,
+  including versioned qualifiers such as `(True Analogs v1.03)` and `(v1.21 Hack)`. Descriptions are not guessed at;
+  retail originals stay unmarked. Cached games are reclassified once on the next ordinary index pass after upgrading.
+- UI polish: brief touch feedback on custom tiles, rows, dock slots, magazine entries and Hangar controls; consistent
+  controller-focus glows on buttons and filter chips; clearer focused rows in dialogs. Settings switches no longer add
+  a redundant controller stop, and switcher actions wrap on narrow screens. Viewer counters, game metadata and
+  reference-card dividers are better aligned. Feedback is event-driven; the focus pulse respects disabled animations.
 - Roomier Home and browsing: Settings → *Header and hints (Home and browse)* cycles Auto, Expanded and Compact
   (`user.browseChrome`, default Auto). Auto goes compact when the window is short or narrow, whatever the device.
   Compact folds Home's and the browse screens' header into a strip while you browse (tap or pull it down, or press Up on
