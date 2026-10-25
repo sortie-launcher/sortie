@@ -220,28 +220,26 @@ class MechaRulesTest {
         assertNotNull(mechaStateProblem(s.copy(charge = 0), parts))
         assertNotNull(mechaStateProblem(s.copy(pendingMinutes = MECHA_MINUTES_PER_CREDIT), parts))
         assertNotNull(mechaStateProblem(s.copy(salvage = -1), parts))
-        assertNotEquals(s, s.copy(version = MECHA_SAVE_VERSION + 1))
-        assertNotNull(mechaStateProblem(s.copy(version = MECHA_SAVE_VERSION + 1), parts))
-        assertNotNull(mechaStateProblem(s.copy(version = 0), parts))
-        assertNull(mechaStateProblem(s.copy(version = 1), parts)) // an older save still opens
-        assertNotNull(mechaStateProblem(s.copy(lastPetAt = -1), parts))
+        assertNotEquals(s, s.copy(version = 2))
+        assertNotNull(mechaStateProblem(s.copy(version = 2), parts))
     }
 
     @Test
     fun aPetCountsTowardBondAtMostOncePerWindow() {
-        val s = starter()
-        val first = s.petted(INIT + 10 * MINUTE).state
-        assertEquals(s.bond + 1, first.bond)
-        assertEquals(INIT + 10 * MINUTE, first.lastPetAt)
-        // tapping him again and again inside the window earns nothing and changes nothing (nothing to save)
-        for (t in listOf(1L, 30_000L, MECHA_PET_BOND_MS - 1)) assertSame(first, first.petted(INIT + 10 * MINUTE + t).state)
-        val later = first.petted(INIT + 10 * MINUTE + MECHA_PET_BOND_MS).state
-        assertEquals(s.bond + 2, later.bond)
+        val t = INIT + 10 * MINUTE
+        assertTrue(mechaPetCounts(t, 0))
+        // tapping him again and again inside the window earns nothing
+        for (d in listOf(0L, 1L, 30_000L, MECHA_PET_BOND_MS - 1)) assertFalse(mechaPetCounts(t + d, t))
+        assertTrue(mechaPetCounts(t + MECHA_PET_BOND_MS, t))
         // a clock that went backwards does not lock pets out
-        assertEquals(later.bond + 1, later.petted(INIT).state.bond)
-        // bond stays capped
-        assertEquals(MECHA_STAT_MAX, s.copy(bond = MECHA_STAT_MAX).petted(INIT).state.bond)
-        assertNull(s.petted(INIT).message)
+        assertTrue(mechaPetCounts(t - 1, t))
+        val s = starter()
+        assertEquals(s.bond + 1, s.petted().state.bond)
+        assertNull(s.petted().message)
+        // bond stays capped, and a capped pet changes nothing
+        val full = s.copy(bond = MECHA_STAT_MAX)
+        assertEquals(MECHA_STAT_MAX, full.petted().state.bond)
+        assertEquals(full, full.petted().state)
     }
 
     @Test
@@ -259,7 +257,7 @@ class MechaRulesTest {
         val fresh = restored.credited(listOf(session("new", INIT + 3 * MINUTE, 5))).state
         assertEquals(restored.salvage + 1, fresh.salvage)
         assertSame(fresh, fresh.credited(listOf(session("new", INIT + 3 * MINUTE, 5))).state)
-        assertEquals(MECHA_SAVE_VERSION, starter().copy(version = 1).restoredOver(null).version)
+        assertSame(device, device.restoredOver(null))
     }
 
     @Test

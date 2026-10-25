@@ -204,20 +204,36 @@ class MechaStoreTest {
     }
 
     @Test
-    fun petsArePersistedAndRateLimited() = runBlocking {
+    fun petsArePersistedAndRateLimitedAcrossRestarts() = runBlocking {
         val s = store()
         val before = s.settled().state!!
         s.pet()
         s.idle()
         val once = onDisk()
         assertEquals(before.bond + 1, once.bond)
-        assertEquals(INIT, once.lastPetAt)
+        val petFile = File(dir, "mecha/pet.txt")
+        assertEquals(INIT.toString(), petFile.readText())
+        // the save itself keeps format version 1 with no new fields, so every build still reads it
+        assertEquals(1, once.version)
+        assertFalse(file.readText().contains("pet"))
         val bytes = file.readBytes()
         repeat(5) { s.pet() }
         s.idle()
         // the clock has not moved: the same window, so nothing more is earned or written
         assertArrayEquals(bytes, file.readBytes())
         assertEquals(once, s.view.value.state)
+        // a restart inside the window still remembers it; after the window a pet counts again
+        val restarted = store(now = INIT + MECHA_PET_BOND_MS - 1)
+        restarted.settled()
+        restarted.pet()
+        restarted.idle()
+        assertArrayEquals(bytes, file.readBytes())
+        val later = store(now = INIT + MECHA_PET_BOND_MS)
+        later.settled()
+        later.pet()
+        later.idle()
+        assertEquals(before.bond + 2, onDisk().bond)
+        assertEquals((INIT + MECHA_PET_BOND_MS).toString(), petFile.readText())
     }
 
     /** Another device's hangar: its own folder, sessions table and clock. */

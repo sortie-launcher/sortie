@@ -97,10 +97,11 @@ Settings exports a JSON document through Android's file picker. The required fie
 and `sessions` (an array, possibly empty). `device` and `appVersion` identify the source. `openSessionExcluded` optionally
 describes a running session omitted from export.
 
-Version 2 adds `mecha`: the Hangar companion's whole save (`files/mecha/state.json`, with its own `version`, currently 2:
-name, enabled/motion, fitted and owned parts, salvage, bond, charge, condition, credited-session keys `<gameId>@<startedAt>`,
-`lastPetAt`), or absent when no hangar was open. A `mecha` section is checked against this build's parts catalog (owned and
-fitted parts exist, counters in range) before the restore is offered; a bad one rejects the whole file.
+Version 2 adds `mecha`: the Hangar companion's whole save (`files/mecha/state.json`, with its own `version`, 1: name,
+enabled/motion, fitted and owned parts, salvage, bond, charge, condition, credited-session keys `<gameId>@<startedAt>`), or
+absent when no hangar was open. A `mecha` section is checked against this build's parts catalog (owned and fitted parts
+exist, counters in range) before the restore is offered; a bad one rejects the whole file. The pet rate-limit time
+(`files/mecha/pet.txt`) is not backed up.
 
 Each closed session contains `gameId`, `profileId`, `startedAt`, `endedAt` and `abandoned`. Identity is `(gameId, startedAt)`,
 not a database row ID. Unfinished sessions are never imported. Files over 64 MB, unsupported formats/versions, missing required

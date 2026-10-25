@@ -211,7 +211,8 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   about 1 redraw/s, strolls, hops and vignettes are short bursts; not shown: nothing at all.
 - Touch (`MechaGesture`, watched at the host in the Initial pass on a finger that went down on his tap target): released
   before 500 ms without moving past touch slop = **pet** (bounce and heart; wakes a doze; `MechaStore.pet` adds 1 bond at most
-  once per 5 minutes, persisted as `lastPetAt`, repeated pets inside the window write nothing); still for 500 ms = picked
+  once per 5 minutes, the window's start kept in `files/mecha/pet.txt` and written before the bond so a crash can only lose
+  a point; repeated pets inside the window write nothing); still for 500 ms = picked
   up (haptic, arms up), released still = **Hangar**; a move after the hold = **carry** (drawn over the interface,
   dangling from the grip point, following the finger), released = **drop** to the nearest qualifying place with a little
   hop, or, on a stacked dual-screen device, across to the other display when released within 48 dp of the edge facing it
@@ -251,8 +252,8 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Backup (format version 2, docs/formats/user.md): export includes the whole save; restore validates it against the parts
   catalog in the preview, writes it before the history is merged and puts it back if a later step fails. The restored save
   keeps every session either side already credited (`restoredOver`); a backup without a save keeps the device's companion
-  and marks the merged sessions credited (`creditedElsewhere`). No session earns salvage twice. Save format version 2 adds
-  `lastPetAt`; version 1 saves still open.
+  and marks the merged sessions credited (`creditedElsewhere`). No session earns salvage twice. The save format itself is
+  unchanged (version 1), so older builds still read saves written by this one.
 - DMG acceptance for `0.1.0-mecha-lab.2` (dock era): rename/care/salvage/equipment, unowned-part preview restrictions,
   four animated poses and hide/show persistence exercised on device; reader Select → Hangar → Gallery → B → B preserves the
   article position and resumes D-pad scrolling.

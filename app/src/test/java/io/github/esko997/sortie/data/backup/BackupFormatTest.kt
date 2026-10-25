@@ -147,8 +147,7 @@ class BackupFormatTest {
         creditedMinutes = 12,
         pendingMinutes = 2,
         salvageRuns = 1,
-        processedSessions = setOf("a@1000"),
-        lastPetAt = 9_000
+        processedSessions = setOf("a@1000")
     )
 
     @Test

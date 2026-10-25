@@ -58,6 +58,9 @@ class MechaStore internal constructor(
     /** Resolved on the worker: Context.getFilesDir may touch the disk. */
     private val file: File by lazy(locate)
 
+    /** When the last pet that counted toward bond was, beside the save ([pet]). */
+    private val petFile: File by lazy { File(file.parentFile, "pet.txt") }
+
     private val _view = MutableStateFlow(MechaView())
     val view: StateFlow<MechaView> = _view
 
@@ -68,6 +71,7 @@ class MechaStore internal constructor(
     private var state: MechaState? = null
     private var damaged = false
     private var observer: Job? = null
+    private var lastPetAt: Long? = null
 
     init {
         scope.launch {
@@ -97,8 +101,21 @@ class MechaStore internal constructor(
 
     internal fun setMotion(enabled: Boolean) = change { it.withMotion(enabled) }
 
-    /** A tap on him: bond at most once per [MECHA_PET_BOND_MS] (see [petted]); repeated pets inside that window write nothing. */
-    internal fun pet() = change { it.petted(clock()) }
+    /**
+     * A tap on him: a little bond at most once per [MECHA_PET_BOND_MS] ([mechaPetCounts]). When the last counted pet was is
+     * kept beside the save in `pet.txt` (written first, so a crash between the two can only lose a point, never allow an
+     * extra one), not in state.json, so the save format stays readable by every build. Pets inside the window write nothing.
+     */
+    internal fun pet() = enqueue {
+        val current = state ?: return@enqueue
+        val now = clock()
+        val last = lastPetAt ?: readPetTime().also { lastPetAt = it }
+        if (!mechaPetCounts(now, last)) return@enqueue
+        // the window must be on disk before the bond is: a pet that can't be recorded earns nothing
+        if (writeAtomically(petFile, now.toString().toByteArray()) != null) return@enqueue
+        lastPetAt = now
+        commit(current, current.petted())
+    }
 
     /** The hangar as saved now, for a backup; null while none is open (loading, or the save is unreadable). */
     suspend fun backupSave(): MechaState? = onWorker { state }
@@ -256,11 +273,9 @@ class MechaStore internal constructor(
             )
             return
         }
-        // an older save is read as is and written in this build's format from its next change on
-        val current = loaded.copy(version = MECHA_SAVE_VERSION)
-        state = current
-        _view.value = MechaView(current, parts)
-        observe(current.initializedAt)
+        state = loaded
+        _view.value = MechaView(loaded, parts)
+        observe(loaded.initializedAt)
     }
 
     private fun create(message: String?) {
@@ -312,23 +327,34 @@ class MechaStore internal constructor(
     }
 
     /** Writes [next] to state.json via an fsynced temp file and an atomic move; returns the failure, or null. */
-    private fun save(next: MechaState): Exception? {
-        val dir = file.parentFile ?: return IOException("${file.path} has no folder")
-        val tmp = File(dir, "${file.name}.tmp")
+    private fun save(next: MechaState): Exception? = writeAtomically(file, json.encodeToString(MechaState.serializer(), next).toByteArray())
+
+    /** Writes [bytes] to [target] via an fsynced temp file and an atomic move; returns the failure, or null. */
+    private fun writeAtomically(target: File, bytes: ByteArray): Exception? {
+        val dir = target.parentFile ?: return IOException("${target.path} has no folder")
+        val tmp = File(dir, "${target.name}.tmp")
         return try {
             if (!dir.isDirectory && !dir.mkdirs()) throw IOException("can't create ${dir.path}")
             FileOutputStream(tmp).use { out ->
-                out.write(json.encodeToString(MechaState.serializer(), next).toByteArray())
+                out.write(bytes)
                 out.flush()
                 out.fd.sync()
             }
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+            Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
             null
         } catch (e: Exception) {
-            Log.w(TAG, "save ${file.path}", e)
+            Log.w(TAG, "save ${target.path}", e)
             if (tmp.isFile) tmp.delete()
             e
         }
+    }
+
+    /** When the last counted pet was (0: never, or the file is missing or unreadable: a pet then simply counts). */
+    private fun readPetTime(): Long = try {
+        if (petFile.isFile) petFile.readText().trim().toLongOrNull()?.coerceAtLeast(0) ?: 0 else 0
+    } catch (e: IOException) {
+        Log.w(TAG, "read ${petFile.path}", e)
+        0
     }
 
     private companion object {
