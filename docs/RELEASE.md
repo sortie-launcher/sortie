@@ -60,21 +60,30 @@ the machine backups.
 - `versionCode` must increase for every APK that leaves the machine and is never reused. Android refuses to install an
   update with a lower `versionCode` than the installed one.
 - `versionName` is the human version, `X.Y.Z` or `X.Y.Z-pre` (for example `0.1.0-beta.2`).
-- **Hosted releases** use code `1000 + run number` of the `build` workflow, name `0.1.0-beta.<code>` and tag
-  `v0.1.0-beta.<code>` (run 5 would be code 1005, tag `v0.1.0-beta.1005`). The run number counts every run of
+- **Hosted releases** use code `2000 + run number` of the `build` workflow, name `0.1.0-beta.<code>` and tag
+  `v0.1.0-beta.<code>` (run 105 would be code 2105, tag `v0.1.0-beta.2105`). The base was 1000 until 2026-10-25, when
+  it was raised because hand-built test candidates up to 1110 had been installed on the AYN Thor while hosted releases
+  were at 1095. The run number counts every run of
   `.github/workflows/build.yml`, pull requests included, so codes increase with gaps. A re-run keeps its run number and
   therefore its version; it never replaces a published release.
 - **Keep the workflow's identity.** Renaming, moving or recreating the workflow can reset its run number, after which
-  releases with reused or older codes will be refused or skipped. If a reset is unavoidable, raise the `1000` base in the
-  same change above the highest published code.
+  releases with reused or older codes will be refused or skipped. If a reset is unavoidable, raise the `2000` base in the
+  same change above the highest published or installed code.
 - **Local builds:** the defaults in `app/build.gradle.kts` (currently code `9`, name `0.1.0-beta.8`) name the last
   manually built signed preview. Hosted releases override both and do not commit new defaults. Override per build with
   `-PsortieVersionCode=N -PsortieVersionName=X.Y.Z-beta.N`; Gradle rejects malformed values.
 - **Codes below 1000 are reserved for manual signed builds.** Give each manual APK that leaves the machine the next unused
   code and raise the defaults to match, so an ordinary build cannot reuse it. Every hosted release is above them, so a
   release-signed manual install updates in place to any hosted release; the reverse is a downgrade Android refuses.
-  Never hand-build in the hosted range or create a `vX.Y.Z-beta.N` release or tag by hand: a higher manual number makes
-  the workflow skip every hosted release below it.
+  Never hand-build in the hosted range (apart from the pull-request candidates below) or create a `vX.Y.Z-beta.N` release
+  or tag by hand: a higher manual number makes the workflow skip every hosted release below it.
+- **Candidates for everyday devices before merge** (a release-signed APK built from a pull request to check on the Thor
+  or another device that must keep its data): use code `2000 +` the run number of that pull request's latest `build`
+  run, and name `0.1.0-beta.<code>-<topic>`. Pull-request runs never publish, so the code is unused, and the release made
+  when the pull request merges comes from a later run with a higher code, which installs over the candidate in place.
+  Never invent a higher code for convenience: anything above the next hosted release blocks it on that device, which
+  can then only catch up by uninstalling (losing the play history database and the Shizuku grant) or waiting for the
+  run number to pass it. Test devices that may be wiped (the DMG) can take debug builds instead.
 - Record user-visible changes under `## Unreleased` in `CHANGELOG.md` in the same pull request. Hosted release notes are
   generated from merged pull requests; releases do not edit the changelog.
 

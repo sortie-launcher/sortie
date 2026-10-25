@@ -29,7 +29,8 @@ jobs:
         id: version
         shell: bash
         run: |
-          code=$((1000 + GITHUB_RUN_NUMBER))
+          # base 2000 since 2026-10-25: hand-built candidates reached 1110 while runs were at ~1095 (docs/RELEASE.md)
+          code=$((2000 + GITHUB_RUN_NUMBER))
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "name=0.1.0-beta.$code" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
