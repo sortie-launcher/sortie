@@ -519,7 +519,7 @@ private fun Dock(
                         .keyLongPress(unpin ?: {})
                         .combinedClickable(
                             interactionSource = interaction,
-                            indication = null,
+                            indication = PressVeil,
                             onClickLabel = item?.label ?: "Add to the dock",
                             onLongClick = unpin,
                             onClick = {

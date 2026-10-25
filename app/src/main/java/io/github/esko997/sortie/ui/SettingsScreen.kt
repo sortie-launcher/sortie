@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.SortieApp
@@ -203,7 +204,8 @@ internal fun Toggle(label: String, on: Boolean, onChange: (Boolean) -> Unit) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             Spacer(Modifier.width(12.dp))
-            Switch(checked = on, onCheckedChange = onChange)
+            // the row is the controller's stop; the switch stays tappable but is not a second, unmarked one
+            Switch(checked = on, onCheckedChange = onChange, modifier = Modifier.focusProperties { canFocus = false })
         }
     }
 }

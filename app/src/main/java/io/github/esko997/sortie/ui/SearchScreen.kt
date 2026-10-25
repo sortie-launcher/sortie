@@ -27,13 +27,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -511,30 +507,10 @@ private fun LayoutCoordinates.fullyShown(): Boolean {
     return size.height > 0 && size.width > 0 && bounds.height >= size.height - 1f && bounds.width >= size.width - 1f
 }
 
-/** A filter button: its name, how many values are picked, and ▾ for the picker it opens; [focusGlow] for the controller. */
+/** A filter button: its name, how many values are picked, and ▾ for the picker it opens. */
 @Composable
-private fun PickerChip(label: String, picked: Int, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    FilterChip(
-        selected = picked > 0,
-        onClick = onClick,
-        label = { Text(if (picked > 0) "$label · $picked" else label, maxLines = 1) },
-        trailingIcon = { Text("▾") },
-        modifier = modifier.focusGlow(interaction.collectIsFocusedAsState().value, FilterChipDefaults.shape),
-        interactionSource = interaction
-    )
-}
-
-/** A way out of an empty result; [focusGlow] for the controller. */
-@Composable
-private fun GlowButton(text: String, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    OutlinedButton(
-        onClick = onClick,
-        modifier = Modifier.focusGlow(interaction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape),
-        interactionSource = interaction
-    ) { Text(text, maxLines = 1) }
-}
+private fun PickerChip(label: String, picked: Int, modifier: Modifier = Modifier, onClick: () -> Unit) =
+    GlowChip(if (picked > 0) "$label · $picked" else label, picked > 0, modifier, trailing = "▾", onClick = onClick)
 
 /** Nothing matches: say why and offer the ways out that apply. */
 @OptIn(ExperimentalLayoutApi::class)
@@ -550,9 +526,9 @@ private fun NoResults(filters: SearchFilters, onClearFilters: () -> Unit, onIncl
             )
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (filters.hasFilters) GlowButton("Clear filters", onClearFilters)
-            if (filters.onDeviceOnly) GlowButton("Include games not on device", onIncludeAll)
-            if (filters.query.isNotEmpty()) GlowButton("Clear text", onClearText)
+            if (filters.hasFilters) GlowButton("Clear filters", onClick = onClearFilters)
+            if (filters.onDeviceOnly) GlowButton("Include games not on device", onClick = onIncludeAll)
+            if (filters.query.isNotEmpty()) GlowButton("Clear text", onClick = onClearText)
         }
     }
 }

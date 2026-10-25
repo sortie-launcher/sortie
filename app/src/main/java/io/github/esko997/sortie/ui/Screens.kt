@@ -17,9 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -129,13 +127,13 @@ fun DiagnosticsScreen(vm: SortieViewModel) {
             Text("Diagnostics", style = MaterialTheme.typography.titleLarge)
             var debuggingFailed by remember { mutableStateOf(false) }
             FlowRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { vm.reindex(force = true) }, enabled = !index.running) { Text(if (index.running) "Indexing…" else "Re-index everything") }
-                OutlinedButton(onClick = { vm.reloadManifests() }) { Text("Reload manifests") }
-                OutlinedButton(onClick = {
+                GlowButton(if (index.running) "Indexing…" else "Re-index everything", enabled = !index.running, primary = true) { vm.reindex(force = true) }
+                GlowButton("Reload manifests") { vm.reloadManifests() }
+                GlowButton("Wireless debugging") {
                     // Developer options, scrolled to Wireless debugging (the fragment arg Settings itself uses)
                     val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
                     debuggingFailed = !openSettingsScreen(context, intent)
-                }) { Text("Wireless debugging") }
+                }
             }
             if (debuggingFailed) {
                 Text(
@@ -171,15 +169,13 @@ fun DiagnosticsScreen(vm: SortieViewModel) {
             )
             Text(shizukuText(shizuku), style = MaterialTheme.typography.bodySmall)
             FlowRow(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { vm.shizukuRefresh() }) { Text("Refresh") }
-                if (shizuku == ScreenMover.Status.PERMISSION_NEEDED) OutlinedButton(onClick = { vm.shizukuRequest() }) { Text("Allow Sortie in Shizuku") }
+                GlowButton("Refresh") { vm.shizukuRefresh() }
+                if (shizuku == ScreenMover.Status.PERMISSION_NEEDED) GlowButton("Allow Sortie in Shizuku") { vm.shizukuRequest() }
                 if (shizuku == ScreenMover.Status.READY && usable.size > 1) {
                     for (from in usable) {
                         for (to in usable) {
                             if (from.displayId == to.displayId) continue
-                            OutlinedButton(onClick = { vm.moveTopApp(from.displayId, to.displayId) }) {
-                                Text("App on ${displayLabel(from)} → ${displayLabel(to)}")
-                            }
+                            GlowButton("App on ${displayLabel(from)} → ${displayLabel(to)}") { vm.moveTopApp(from.displayId, to.displayId) }
                         }
                     }
                 }
@@ -238,7 +234,7 @@ fun PermissionScreen() {
             "1. Press Open settings.\n2. Turn on \"Allow access to manage all files\" for Sortie.\n3. Go back; Sortie opens your library.",
             style = MaterialTheme.typography.bodyMedium
         )
-        Button(onClick = { failed = !openAllFilesAccessSettings(ctx) }, modifier = Modifier.focusRequester(primary)) { Text("Open settings") }
+        GlowButton("Open settings", Modifier.focusRequester(primary), primary = true) { failed = !openAllFilesAccessSettings(ctx) }
         if (failed) {
             Text(
                 "Android settings couldn't be opened from here. Open the Settings app yourself and go to $ALL_FILES_ACCESS_PATH.",

@@ -163,7 +163,8 @@ fun ReferenceCompanion(
                     "${index + 1} of ${cards.size} · $status",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             TouchChip("›", enabled = cards.size > 1, onClickLabel = "Next card") { ReferenceCards.neighbour(cards, card.id, 1)?.let(onShow) }
@@ -320,7 +321,7 @@ private fun MarkdownBlock(b: MdBlock) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 10.dp)
         )
-        MdBlock.Rule -> Box(Modifier.padding(vertical = 10.dp).fillMaxWidth().height(1.dp).background(Slate))
+        MdBlock.Rule -> Box(Modifier.padding(vertical = 10.dp).fillMaxWidth().height(1.dp).background(Hairline))
     }
 }
 

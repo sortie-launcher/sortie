@@ -35,13 +35,14 @@ import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.mecha.MECHA_FAMILIES
 import io.github.esko997.sortie.mecha.MechaPart
 import io.github.esko997.sortie.ui.Amber
+import io.github.esko997.sortie.ui.Hairline
 import io.github.esko997.sortie.ui.Ink
+import io.github.esko997.sortie.ui.PressVeil
 import io.github.esko997.sortie.ui.focusGlow
 import kotlin.math.roundToInt
 
 internal val Muted = Color(0xFF9AA3AD)
 internal val Warning = Color(0xFFF87171)
-internal val Hairline = Color(0xFF2A323C)
 private val ButtonFace = Color(0xFF26303A)
 
 internal fun familyName(family: String): String = family.replaceFirstChar { it.uppercase() }
@@ -72,7 +73,7 @@ internal fun MechaButton(text: String, onClick: () -> Unit, modifier: Modifier =
             .focusGlow(focused, shape)
             .clip(shape)
             .background(if (primary && enabled) Amber else ButtonFace)
-            .clickable(interaction, null, enabled = enabled, role = Role.Button, onClick = onClick)
+            .clickable(interaction, PressVeil, enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp)
     )
 }
@@ -99,7 +100,7 @@ internal fun MechaChip(text: String, selected: Boolean, onClick: () -> Unit, mod
             .background(ButtonFace)
             .border(if (selected) 2.dp else 1.dp, if (selected) Amber else Hairline, shape)
             .semantics { this.selected = selected }
-            .clickable(interaction, null, role = Role.Tab, onClick = onClick)
+            .clickable(interaction, PressVeil, role = Role.Tab, onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 7.dp)
     )
 }
