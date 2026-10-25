@@ -346,6 +346,188 @@ class LibrarySetupStoreTest {
         assertEquals(before["folders.json"], File(dir, "folders.json").readText())
     }
 
+    /** The default Favourites entry older builds wrote, as the example card had it and as the format docs showed it (no sort). */
+    private val legacyFavourites = """{"id": "favourites", "label": "Favourites", "rule": {"favourite": true}, "apps": true, "sort": "title:asc"}"""
+    private val legacyFavouritesDocs = """{"id": "favourites", "label": "Favourites", "rule": { "favourite": true }, "apps": true}"""
+    private val shmups = """{"id": "shmups", "label": "Shmups", "include": ["snes/a.sfc"], "note": "desktop"}"""
+
+    private fun foldersFile(dir: File, vararg entries: String) =
+        File(dir, "folders.json").apply { writeText("""{"folders": [${entries.joinToString(",\n")}], "version": 2}""") }
+
+    private fun ids(folders: File) = obj(folders)["folders"]!!.jsonArray.map { it.jsonObject["id"]!!.jsonPrimitive.content }
+
+    @Test
+    fun legacyFavouritesEntriesAreCountedAndRemovedLosslessly() = runBlocking {
+        val dir = desktopCard()
+        val folders = foldersFile(
+            dir,
+            legacyFavourites,
+            shmups,
+            """{"id": "cocoon-7", "label": "Pixel Art", "include": ["snes/b.sfc"]}""",
+            legacyFavouritesDocs,
+            """{"id": "explicit", "label": "Favourites", "rule": {"favourite": true}, "apps": true}""",
+            // the same default with every other key written out at its default value
+            """{"id": "favourites", "label": "Favourites", "rule": {"favourite": true}, "include": [], "exclude": [], "apps": true, "limit": 0}"""
+        )
+        val kept = listOf("shmups", "cocoon-7", "explicit").associateWith { entry(folders, "folders", it) }
+        val before = bytes(dir)
+        val s = store(dir)
+        val config = s.load()
+        assertEquals(emptyList<String>(), config.errors)
+        assertEquals(3, config.legacyFavourites)
+        assertEquals(before, bytes(dir)) // loading never tidies
+        val others = before - "folders.json"
+
+        val tidied = s.removeLegacyFavourites(config)
+        assertEquals(0, tidied.legacyFavourites)
+        assertEquals(config.systems, tidied.systems)
+        assertEquals(config.profiles, tidied.profiles)
+        assertEquals(listOf("shmups", "cocoon-7", "explicit"), ids(folders)) // order kept, only the default entries gone
+        kept.forEach { (id, before) -> assertEquals(id, before, entry(folders, "folders", id)) } // unknown keys included
+        assertEquals("2", obj(folders)["version"].toString())
+        assertEquals(others, bytes(dir) - "folders.json") // user.json (the favourites themselves), playlog, other manifests
+        assertCompleteSet(dir)
+
+        // nothing left to remove: no file changes
+        val again = dir.listFiles()!!.associate { it.name to it.lastModified() to it.readText() }
+        assertEquals(tidied, s.removeLegacyFavourites(tidied))
+        assertEquals(again, dir.listFiles()!!.associate { it.name to it.lastModified() to it.readText() })
+    }
+
+    @Test
+    fun customisedReservedFavouritesEntriesAreNeitherCountedNorRemoved() = runBlocking {
+        val variants = listOf(
+            """{"id": "favourites", "label": "My favourites", "rule": {"favourite": true}, "apps": true}""",
+            """{"id": "favourites", "rule": {"favourite": true}, "apps": true}""",
+            """{"id": "favourites", "label": "Favourites", "rule": {"favourite": true, "system": "snes"}, "apps": true}""",
+            """{"id": "favourites", "label": "Favourites", "rule": {"favourite": "true"}, "apps": true}""",
+            """{"id": "favourites", "label": "Favourites", "rule": {"favourite": false}, "apps": true}""",
+            """{"id": "favourites", "label": "Favourites", "rule": {"favourite": true}}""",
+            """{"id": "favourites", "label": "Favourites", "rule": {"favourite": true}, "apps": false}""",
+            """{"id": "favourites", "label": "Favourites", "rule": {"favourite": true}, "apps": true, "sort": "fit:desc"}""",
+            """{"id": "favourites", "label": "Favourites", "rule": {"favourite": true}, "apps": true, "include": ["snes/a.sfc"]}""",
+            """{"id": "favourites", "label": "Favourites", "rule": {"favourite": true}, "apps": true, "exclude": ["snes/a.sfc"]}""",
+            """{"id": "favourites", "label": "Favourites", "rule": {"favourite": true}, "apps": true, "limit": 10}""",
+            """{"id": "favourites", "label": "Favourites", "rule": {"favourite": true}, "apps": true, "colour": "#ff0000"}""",
+            """{"id": "favourites", "label": "Favourites", "include": ["snes/a.sfc"], "apps": true}"""
+        )
+        for (variant in variants) {
+            val dir = desktopCard()
+            val folders = foldersFile(dir, shmups, variant)
+            val before = bytes(dir)
+            val s = store(dir)
+            val config = s.load()
+            assertEquals(variant, emptyList<String>(), config.errors)
+            assertEquals(variant, 0, config.legacyFavourites)
+            s.removeLegacyFavourites(config)
+            assertEquals(variant, before, bytes(dir))
+
+            // beside a removable default entry, only that entry goes
+            foldersFile(dir, variant, legacyFavourites, shmups)
+            val custom = obj(folders)["folders"]!!.jsonArray[0]
+            val mixed = s.load()
+            assertEquals(variant, 1, mixed.legacyFavourites)
+            assertEquals(variant, 0, s.removeLegacyFavourites(mixed).legacyFavourites)
+            assertEquals(variant, listOf(custom, Json.parseToJsonElement(shmups)), obj(folders)["folders"]!!.jsonArray.toList())
+        }
+    }
+
+    /** A partial configuration (systems.json only) is not completed by a tidy-up: only folders.json is ever written. */
+    @Test
+    fun legacyFavouritesCleanupOfAPartialConfigurationWritesOnlyFoldersJson() = runBlocking {
+        val dir = desktopCard()
+        for (name in listOf("device.json", "launchers.json", "guide.json", "folders.json")) File(dir, name).delete()
+        val s = store(dir)
+
+        // no folders.json and nothing to remove: no file is created
+        val none = bytes(dir)
+        val missing = s.load()
+        assertTrue(missing.exists)
+        assertEquals(0, missing.legacyFavourites)
+        assertEquals(missing, s.removeLegacyFavourites(missing))
+        assertEquals(none, bytes(dir))
+
+        // a folders.json without the default entry: nothing changes
+        val folders = foldersFile(dir, shmups)
+        val clean = bytes(dir)
+        val unchanged = s.load()
+        assertEquals(0, unchanged.legacyFavourites)
+        s.removeLegacyFavourites(unchanged)
+        assertEquals(clean, bytes(dir))
+
+        // with it: folders.json loses that entry and is the only file written; no missing manifest is added
+        foldersFile(dir, legacyFavourites, shmups)
+        val before = bytes(dir)
+        val config = s.load()
+        assertEquals(1, config.legacyFavourites)
+        val tidied = s.removeLegacyFavourites(config)
+        assertEquals(0, tidied.legacyFavourites)
+        assertEquals(config.systems, tidied.systems)
+        assertEquals(before.keys, bytes(dir).keys)
+        assertEquals(before - "folders.json", bytes(dir) - "folders.json")
+        assertEquals(listOf("shmups"), ids(folders))
+        assertEquals(entry(folders, "folders", "shmups"), Json.parseToJsonElement(shmups))
+        assertEquals("2", obj(folders)["version"].toString())
+        json.decodeFromString(FoldersManifest.serializer(), folders.readText())
+        assertEquals(emptyList<String>(), dir.list()!!.filter { it.endsWith(ManifestCommit.STAGED_SUFFIX) || it.startsWith(ManifestCommit.JOURNAL) })
+    }
+
+    @Test
+    fun legacyFavouritesAreNeverRemovedFromAnUnreadableOrChangedFile() = runBlocking {
+        // a folders.json the app cannot load (an entry without an id) is reported, not counted, and never rewritten
+        val dir = desktopCard()
+        foldersFile(dir, legacyFavourites, """{"label": "No id"}""")
+        val broken = bytes(dir)
+        val s = store(dir)
+        val config = s.load()
+        assertTrue(config.errors.toString(), config.errors.any { it.startsWith("folders.json") })
+        assertEquals(0, config.legacyFavourites)
+        try {
+            s.removeLegacyFavourites(config)
+            fail("rewrote an unreadable folders.json")
+        } catch (e: IOException) {
+        }
+        assertEquals(broken, bytes(dir))
+
+        // a desktop edit after loading wins
+        foldersFile(dir, legacyFavourites, shmups)
+        val loaded = s.load()
+        assertEquals(1, loaded.legacyFavourites)
+        File(dir, "folders.json").appendText("\n")
+        val edited = bytes(dir)
+        try {
+            s.removeLegacyFavourites(loaded)
+            fail("removed from a changed folders.json")
+        } catch (e: LibraryConflictException) {
+        }
+        assertEquals(edited, bytes(dir))
+
+        // a failed write changes nothing and the same snapshot can be retried
+        val fresh = s.load()
+        try {
+            store(dir, FaultyIo(at = 1, crash = false)).removeLegacyFavourites(fresh)
+            fail("write should fail")
+        } catch (e: IOException) {
+        }
+        assertEquals(edited, bytes(dir))
+        assertEquals(0, s.removeLegacyFavourites(fresh).legacyFavourites)
+        assertEquals(listOf("shmups"), ids(File(dir, "folders.json")))
+
+        // without a library configuration nothing is counted, and removing creates no files
+        val bare = File(Files.createTempDirectory("sortie-card").toFile(), "sortie").apply { mkdirs() }
+        foldersFile(bare, legacyFavourites)
+        val bareBefore = bytes(bare)
+        val none = store(bare).load()
+        assertFalse(none.exists)
+        assertEquals(0, none.legacyFavourites)
+        try {
+            store(bare).removeLegacyFavourites(none)
+            fail("created a configuration while tidying")
+        } catch (e: IOException) {
+        }
+        assertEquals(bareBefore, bytes(bare))
+    }
+
     @Test
     fun aConcurrentDesktopEditIsDetected() = runBlocking {
         val dir = desktopCard()

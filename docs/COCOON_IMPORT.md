@@ -21,12 +21,15 @@ Code: `app/src/main/java/io/github/esko997/sortie/data/cocoon/` and `ui/CocoonIm
 3. **Review the preview.** It lists systems to add (with their folders and emulator, and whether that emulator is installed),
    existing systems that only get a media folder, favourites, hidden games, emulator choices, artwork to copy against the
    free space on its volume, and the entries that were not found, ambiguous or skipped. Every category has a switch. Nothing
-   has been written yet; **Cancel** changes nothing.
+   has been written yet; **Cancel** changes nothing. If `folders.json` still holds Sortie's old default Favourites folder
+   (see "Old Favourites folder entry"), the Favourites switch also says it removes that entry, even when there are no
+   favourites to add.
 4. **Import.** Sortie saves a safety copy, then adds systems and re-indexes, saves favourites, hidden games and emulator
-   choices, adds sessions and folders, and copies artwork last. Only the artwork copy can be stopped; files already copied
-   stay, and running the import again copies the rest. Leaving the screen does not interrupt the import.
-5. **Read the result.** It says what was added and what was skipped, and what stays only in Cocoon. Running the import
-   again adds nothing twice.
+   choices (and, with Favourites on, removes the old default Favourites entry), adds sessions and folders, and copies
+   artwork last. Only the artwork copy can be stopped; files already copied stay, and running the import again copies the
+   rest. Leaving the screen does not interrupt the import.
+5. **Read the result.** It says what was added and what was skipped, what stays only in Cocoon, and, on its own line, how
+   many old Favourites entries were removed. Running the import again adds nothing twice and finds no entry left to remove.
 
 ## What is imported
 
@@ -36,7 +39,7 @@ Code: `app/src/main/java/io/github/esko997/sortie/data/cocoon/` and `ui/CocoonIm
 | Platform emulator (`<cocoon:defaultplayerid>`) | the system's launch profile choice in `user.json`, only where you have not chosen one | no |
 | Favourite / hidden flags | `favourites` / `hidden` in `user.json` (added, never removed) | no |
 | Downloaded box art, logos, gameplay screenshots | copies in the system's media folder as `covers/`, `marquees/`, `screenshots/` | no |
-| User-made folders | `folders.json` entries `cocoon-<n>` with the matched games | yes |
+| User-made folders | `folders.json` entries `cocoon-<n>` with the matched games (a folder named "Favourites" too: it stays a user folder and does not favourite its games) | yes |
 | Play sessions | sessions in Sortie's play database, with their real start and end times | yes |
 | Per-game emulator choices | `profileOverrides` in `user.json`, only where you have none | yes |
 
@@ -61,10 +64,25 @@ home app.
   notification-listener roles are untouched. Its private app data is never read.
 - **Your existing setup wins.** Existing systems are not renamed, extended or re-rooted (one only gains a media folder when
   it has none and artwork is copied for it). Existing launch profiles keep their definitions, emulator choices you made stay,
-  existing artwork is never replaced, and existing sessions and folders are kept.
+  existing artwork is never replaced, and existing sessions and folders are kept. The only exception is the old default
+  Favourites entry below, removed only with the Favourites switch on.
 - **No cross-device rewriting.** Cocoon records artwork as storage URIs tied to a device's volumes. A reference to a volume
   that is not mounted, or to a file that no longer exists, is counted as unavailable and skipped; paths are never rewritten
   to guess where another device kept a file.
+
+## Old Favourites folder entry
+
+Older Sortie setups wrote a `folders.json` entry with the id `favourites` (every favourite, apps included, by title). The
+built-in Favourites folder now has that id and lists the same favourites from `user.json`, so Sortie ignores the entry
+and reports it as a folder rule problem. When the preview finds entries that only repeat that old default (the store's
+`LibraryConfiguration.legacyFavourites` count), the Favourites switch removes them after the write guard and the safety
+copy, through `LibrarySetupStore.removeLegacyFavourites` on a freshly loaded configuration: one fingerprint-checked
+`ManifestCommit` that keeps every other folder and unknown key. With the switch off, nothing is removed. A `folders.json`
+that changed meanwhile or can't be read is left as it is and the import stops with an error. Favourite flags in `user.json` are never
+changed by this. Entries that use a built-in folder's id (`favourites`, `want-to-play`, `finished`, `shelved`) but differ
+from the old default are customised: the import never removes them, the preview lists them in its notes, and Sortie keeps
+reporting them on that built-in folder until they get another id. `folders.json` is not in the safety copy; the removed
+entry only repeated the built-in folder.
 
 ## Safety copy and undo
 
@@ -74,7 +92,8 @@ Restoring it (Settings → Backup and restore) brings back the preferences from 
 emulator choices and per-game overrides. It is not a full rollback:
 
 - systems and launch profiles added to `systems.json`/`launchers.json`, media folders set on existing systems, and
-  `cocoon-<n>` folders in `folders.json` stay; remove them in Library setup or by editing those files;
+  `cocoon-<n>` folders in `folders.json` stay; remove them in Library setup or by editing those files. A removed old
+  default Favourites entry is not brought back, and is not needed;
 - copied artwork stays in the media folders;
 - imported play sessions stay, because a restore only adds sessions and never deletes existing ones.
 
@@ -169,10 +188,12 @@ Sortie's extension and skip rules apply.
 
 `CocoonImporter.apply`: write guard → safety copy → systems and media folders (`LibrarySetupStore.saveSystem`, atomic
 `ManifestCommit`) → index → one `user.json` commit (favourites ∪, hidden ∪, emulator choices and per-game overrides only
-where absent, `cocoonDir`) → sessions (`planSessionMerge`, inserted while the play log is paused) → folders
-(`LibrarySetupStore.saveFolders`; an existing folder of the same id keeps its name and rules and gains members) → artwork
-copy (temp file then rename per file, existing targets kept, stoppable between files) → re-index. Everything before the
-artwork copy runs to completion even if the screen is left; a failure stops the import and reports what was already done.
+where absent, `cocoonDir`) → old default Favourites entries (`LibrarySetupStore.removeLegacyFavourites`, only with
+Favourites on and a count in the preview; a refused save stops the import) → sessions (`planSessionMerge`,
+inserted while the play log is paused) → folders (`LibrarySetupStore.saveFolders`; an existing folder of the same id keeps
+its name and rules and gains members) → artwork copy (temp file then rename per file, existing targets kept, stoppable
+between files) → re-index. Everything before the artwork copy runs to completion even if the screen is left; a failure
+stops the import and reports what was already done.
 
 ### Acceptance check on a device
 
@@ -181,3 +202,9 @@ every category (and a re-run) must match, and Cocoon must still open its library
 appends to `cocoon-database-log.txt` and `scan_debug.log` (its catalogue sync reacts to any package install, including
 Sortie's), so exclude those two. Use `-exec … \;`: some Android `find` builds fail with `-exec … +` or `xargs` on many file
 names containing spaces.
+
+The legacy Favourites cleanup was exercised on an isolated Android 13 emulator with a synthetic Cocoon export containing
+no new favourites: the preview still offered cleanup, opting out left `folders.json` byte-identical, opting in removed
+only the redundant default, and repeating the import made no further folder changes. Existing favourite flags, a custom
+folder, unknown root fields and all source XML/artwork bytes were preserved. The accompanying build passed style checks
+and 261 JVM tests in each variant, including partial configurations, customised entries, concurrent edits and write failures.

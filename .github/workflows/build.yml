@@ -155,11 +155,11 @@ jobs:
           Third-party magazine media retains its original rights and credits; it is not covered by the app's MIT licence.
 
           Signing certificate SHA-256: \`c4fc71bdee0987939c7af166465241c9c1bd3fc6c0a486d9dd76546975414cf4\`.
-          The attached .sha256 file verifies the APK download. This is an automated prerelease, not a claim of per-build hardware testing.
+          The attached .sha256 file verifies the APK download. This is an automated beta release, not a claim of per-build hardware testing.
           EOF
           gh release create "$TAG" "$apk" "$apk.sha256" --target "$GITHUB_SHA" \
-            --title "Sortie $VERSION_NAME" --draft --prerelease --generate-notes --notes-file "$RUNNER_TEMP/release-notes.md"
-          gh release edit "$TAG" --draft=false --prerelease --latest=false
+            --title "Sortie $VERSION_NAME" --draft --generate-notes --notes-file "$RUNNER_TEMP/release-notes.md"
+          gh release edit "$TAG" --draft=false --prerelease=false --latest=true
       - name: Remove signing files even after failure
         if: always()
         shell: bash

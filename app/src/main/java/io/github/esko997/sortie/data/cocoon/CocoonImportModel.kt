@@ -3,6 +3,10 @@ package io.github.esko997.sortie.data.cocoon
 import android.net.Uri
 import android.util.Log
 import io.github.esko997.sortie.SortieApp
+import io.github.esko997.sortie.data.manifest.FAVOURITES_FOLDER_ID
+import io.github.esko997.sortie.data.manifest.WANT_TO_PLAY_FOLDER_ID
+import io.github.esko997.sortie.data.user.FINISHED_FOLDER_ID
+import io.github.esko997.sortie.data.user.SHELVED_FOLDER_ID
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -47,6 +51,7 @@ data class BackupChoice(val dir: File, val createdAt: Long)
 /** Which parts of a [CocoonImportPlan] the user keeps; the backup-only parts are ignored when no backup was read. */
 data class ImportOptions(
     val systems: Boolean = true,
+    /** Adds the plan's favourites and removes its [CocoonImportPlan.legacyFavourites] folders.json entries. */
     val favourites: Boolean = true,
     val hidden: Boolean = true,
     val emulators: Boolean = true,
@@ -268,8 +273,22 @@ class CocoonImportModel private constructor(private val graph: SortieApp.Graph) 
         )
         val plan = planner.plan(library, backup, roots, probe.listings())
         // Problems found while reading and an unreadable card configuration belong in the preview, not only in the log.
-        val notes = (plan.notes + library.problems + config.errors).distinct()
+        val notes = (plan.notes + library.problems + config.errors + listOfNotNull(customisedReservedNote(plan))).distinct()
         return CocoonImportState.Preview(plan.copy(notes = notes), ImportOptions())
+    }
+
+    /**
+     * Entries using a built-in folder's id that are not the old default Favourites the import may remove: the import never
+     * touches them, so the preview says they stay ignored instead of letting the cleanup look like the whole fix.
+     */
+    private fun customisedReservedNote(plan: CocoonImportPlan): String? {
+        val claimed = graph.manifests.snapshot.value.folders.count { it.id in RESERVED_FOLDER_IDS }
+        val customised = (claimed - plan.legacyFavourites).coerceAtLeast(0)
+        if (customised == 0) return null
+        val them = if (customised == 1) "it" else "them"
+        return "folders.json has ${if (customised == 1) "1 folder" else "$customised folders"} using a built-in folder's id " +
+            "(${RESERVED_FOLDER_IDS.joinToString()}) other than Sortie's old default Favourites. The import leaves $them as written; " +
+            "Sortie keeps ignoring such entries and reports each on that built-in folder. Give $them another id in folders.json to use $them."
     }
 
     /** (system, kind folder, file stem) of every art file Sortie's index already shows, so the plan never copies over or beside it. */
@@ -297,6 +316,9 @@ class CocoonImportModel private constructor(private val graph: SortieApp.Graph) 
 
         /** Cocoon platforms that are not ROM folders: its own screens and DroidDeck pins (listed for re-pinning instead). */
         private val NOT_ROMS = setOf("pod", "shortcut")
+
+        /** The built-in folders' ids, which folders.json entries cannot use. */
+        private val RESERVED_FOLDER_IDS = listOf(FAVOURITES_FOLDER_ID, WANT_TO_PLAY_FOLDER_ID, FINISHED_FOLDER_ID, SHELVED_FOLDER_ID)
 
         private var instance: CocoonImportModel? = null
 

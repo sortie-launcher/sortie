@@ -1,7 +1,7 @@
 # Releases: signing, versions, beta status and magazine content
 
 Sortie is distributed as signed APKs on [GitHub releases](https://github.com/sortie-launcher/sortie/releases): every
-successful push to `main` publishes an automated beta prerelease. A signed APK can also be built locally for isolated
+successful push to `main` publishes an automated beta release marked Latest. A signed APK can also be built locally for isolated
 testing. There is no Google Play listing, app store account, update server, in-app updater, telemetry or download service.
 This file is the maintainer's procedure plus the current beta's goal, acceptance criteria, evidence and known limitations.
 
@@ -18,7 +18,7 @@ only hosted copy is the pair of encrypted environment secrets described in [Auto
 The repositories are [sortie-launcher/sortie](https://github.com/sortie-launcher/sortie) and
 [sortie-launcher/sortie-zines](https://github.com/sortie-launcher/sortie-zines). Their SSH origins are configured on the
 sanitized checkouts. Changes reach `main` through reviewed pull requests; never force-push it. **A push to `main` is a
-release:** once the hosted build passes, the workflow signs and publishes a prerelease of that commit. Local verification
+release:** once the hosted build passes, the workflow signs and publishes a release of that commit. Local verification
 is not a hosted CI result.
 
 ## One permanent release key
@@ -127,14 +127,14 @@ Without signing variables `assembleRelease` (including `tools/build.sh` and the 
   3. requires the APK's signer certificate SHA-256 to be the permanent one above and its `.sha256` to verify.
   4. creates a draft with the APK, its `.sha256`, generated notes and a fixed header (commit, version code, "update, do not
      uninstall", content commit, magazine media rights, certificate fingerprint, not hardware-tested per build), then
-     publishes it as a prerelease not marked Latest.
+     publishes it as a normal GitHub Release marked Latest (not a GitHub prerelease).
   5. deletes the signing directory on exit and again in a step that runs even after failure.
 
 Release jobs share one concurrency group and never cancel a running one. GitHub keeps only the newest *waiting* job in a
 group, so when several merges land quickly an intermediate release can be cancelled; that merge gets no release of its own
 and the next one supersedes it.
 
-Automatic releases are prereleases, not stable releases. Their gate is the hosted style check, unit tests, signature check
+Automatic releases retain beta version labels; GitHub's Latest designation is not a claim of stable maturity. Their gate is the hosted style check, unit tests, signature check
 and checksum; they are not installed on hardware one by one. Device evidence in [Beta 0.1](#beta-01) applies only to the
 builds it names.
 
@@ -198,7 +198,7 @@ If they disagree the build fails; there is no fallback to other content or to no
   - delete it (`gh release delete <tag>`; if `git ls-remote --tags origin <tag>` still lists the tag, delete that too) and
     re-run the failed `release` job, which rebuilds and re-signs the same version; or
   - download both assets, check the checksum and `apksigner verify --print-certs` against the certificate above, and only
-    then publish it with `gh release edit <tag> --draft=false --prerelease --latest=false`.
+    then publish it with `gh release edit <tag> --draft=false --prerelease=false --latest=true`.
 
   When in doubt, delete and re-run. Never publish unverified assets or attach a different APK to an existing tag.
 - **Tag belongs to another commit:** something created that tag by hand or reused it. Stop and investigate; do not delete
@@ -208,7 +208,7 @@ If they disagree the build fails; there is no fallback to other content or to no
 
 ## Distributing
 
-Normal path: merge to `main`. When the run passes, the release appears on the Releases page as a prerelease; check that
+Normal path: merge to `main`. When the run passes, the release appears on the Releases page marked Latest; check that
 it carries exactly the APK and its `.sha256`.
 
 Manual signed builds from `tools/release.sh` are for an isolated test device or for preparing a device before hosted
@@ -216,7 +216,7 @@ releases; never attach them to GitHub releases. Before one leaves the machine: t
 passes, it has a new manual version (see [Versions](#versions)), and it was installed over the previous release on an
 isolated test device (below) with data surviving.
 
-Tester instructions: download the newest prerelease's `.apk` (and its `.sha256`) from the
+Tester instructions: download the Latest release's `.apk` (and its `.sha256`) from the
 [Releases page](https://github.com/sortie-launcher/sortie/releases). Check the SHA-256 if you can, open the APK and allow
 your browser or file manager to install unknown apps when Android asks. For an update, open the new APK and choose
 **Update**; never uninstall first, because uninstalling removes Sortie's Android-owned and app-private data (see the
@@ -280,7 +280,7 @@ No accounts, server, app store, automatic updater, ROM/BIOS downloads or telemet
   failed game/app/shortcut launches show a message.
 - Plain-language All files access screen with fallbacks; overlay/Shizuku/Home role/radial keyboard stay optional.
 - Persistent release key tooling, versioning and verified signed APK packaging.
-- Automatic signed prerelease publication from `main` with pinned magazine content (see
+- Automatic signed beta release publication from `main` with pinned magazine content (see
   [Automatic beta releases](#automatic-beta-releases)).
 
 ### Evidence (2026-10-24)
@@ -343,7 +343,7 @@ verifies with `apksigner` as a single v2 signer with the certificate above.
   checked style, ran both unit-test variants and built/uploaded debug and unsigned-release artifacts. CI does not sign
   releases or bundle zines by default.
   That was the state at source publication; the workflow has since been extended to bundle the pinned zines and to sign
-  and publish prereleases from `main` (see [Automatic beta releases](#automatic-beta-releases)).
+  and publish beta releases from `main` (see [Automatic beta releases](#automatic-beta-releases)).
 
 After changing signing or publication automation, download its first hosted release, verify its checksum and certificate,
 and install it over a release-signed copy on an isolated test device. Record the result in that release's notes; workflow

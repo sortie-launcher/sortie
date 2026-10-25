@@ -278,6 +278,34 @@ class CocoonPlannerTest {
     }
 
     /**
+     * A Cocoon folder the user named "Favourites" is just a user folder: it keeps its `cocoon-<id>` identity (never the
+     * reserved built-in id) and its members do not become native favourites.
+     */
+    @Test
+    fun `a backup folder named Favourites stays a cocoon folder and adds no favourite flags`() {
+        val patrol = CocoonRef("tg16", "Star Patrol (USA).pce", null)
+        val backup = CocoonBackup(
+            dir = tmp.newFolder("backup"),
+            createdAt = 0L,
+            appVersion = "3.07",
+            folders = listOf(CocoonFolder(3, "Favourites", listOf(patrol, CocoonRef("cps2", "skyfleet.7z", null)))),
+            sessions = emptyList(),
+            playerOverrides = emptyMap(),
+            hidden = emptySet(),
+            roots = emptyMap(),
+            favourites = emptySet()
+        )
+        val p = plan(backup)
+        assertEquals(
+            listOf(FolderPlan(FolderDef(id = "cocoon-3", label = "Favourites", include = listOf("tg16/Star Patrol (USA).pce", "cps2/skyfleet.7z")), 0)),
+            p.folders
+        )
+        // only the gamelist's own favourite flag; folder members are not favourited
+        assertEquals(listOf("pcengine/Bonk's Adventure (USA).pce"), p.favourites)
+        assertEquals(0, p.legacyFavourites)
+    }
+
+    /**
      * Seen on the DMG: ZX Spectrum ports share arcade names (`strider.zip`) and Game Gear shares titles with Genesis, so the
      * probe offers those folders as roots. A hit in the platform's own system must win and a folder of a system outside the
      * alias group must never make a match ambiguous — or, worse, be the only match.

@@ -1,14 +1,17 @@
 # Changelog
 
 ## Unreleased
+- Cocoon import previews cleanup of redundant legacy default Favourites rules, including imports with no new favourites.
+  Cleanup runs only with Favourites enabled, preserves the actual favourites and other configuration, and leaves customized
+  reserved-folder definitions untouched. A Cocoon user folder named Favourites remains a separate imported folder.
 - Automatic signed beta releases: after the hosted build passes on a push to `main` (or a manual run on `main`), the
   workflow signs the APK with the permanent release key held as secrets in the `main`-only `release` environment, checks
-  its certificate and checksum, and publishes a GitHub prerelease `v0.1.0-beta.<code>` (code = 1000 + build run number)
+  its certificate and checksum, and publishes a GitHub release marked Latest, `v0.1.0-beta.<code>` (code = 1000 + build run number),
   with the APK, its `.sha256` and generated notes. Published releases are never replaced, an older run skips once a newer
   release exists, and an interrupted draft stops later attempts until inspected. Pull requests never reach signing.
   Hosted builds and artifacts now bundle Field Notes from a pinned `sortie-zines` commit verified against
   `app/magazines.lock`. Local build defaults name the last manual signed preview (code 9, `0.1.0-beta.8`); manual codes
-  stay below 1000. Automatic releases are prereleases, not hardware-tested build by build. Procedure and recovery:
+  stay below 1000. Automatic releases retain beta version labels and are not hardware-tested build by build. Procedure and recovery:
   docs/RELEASE.md.
 - Pin release verification to Android build-tools 35.0.0 instead of whichever SDK tool happens to be newest on the host.
   Hosted jobs use Ubuntu 24.04 and commit-pinned, maintained action releases rather than deprecated Node 20 actions.

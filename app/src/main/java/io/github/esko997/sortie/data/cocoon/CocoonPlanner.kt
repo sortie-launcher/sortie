@@ -60,7 +60,13 @@ data class CocoonImportPlan(
     val droidDeck: List<String>,
     /** "switch: no ROM folder found", … */
     val skippedPlatforms: List<String>,
-    val notes: List<String>
+    val notes: List<String>,
+    /**
+     * Copies of Sortie's old default Favourites folder in folders.json ([LibraryConfiguration.legacyFavourites] when planned);
+     * removed with the Favourites category, since the built-in Favourites folder replaces them. Customised entries with a
+     * built-in folder's id are not counted and never removed.
+     */
+    val legacyFavourites: Int = 0
 )
 
 /**
@@ -237,7 +243,8 @@ class CocoonPlanner(
                 playStats = library.platforms.filter { it.id != POD }.sumOf { p -> p.games.count { it.playCount > 0 } },
                 droidDeck = droidDeck,
                 skippedPlatforms = skipped,
-                notes = notes
+                notes = notes,
+                legacyFavourites = config.legacyFavourites
             )
         }
 

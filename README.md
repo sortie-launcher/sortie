@@ -8,7 +8,7 @@ internet permission and never downloads games, BIOS files, emulators or artwork.
 > **Sortie is built in collaboration with AI.** The code, this documentation and the optional Field Notes magazine are
 > written with AI assistance. If that's a dealbreaker, better to know now than after setup.
 
-**Beta.** Each merge to `main` that passes CI publishes a signed prerelease APK on
+**Beta.** Each merge to `main` that passes CI publishes a signed beta APK as the Latest release on
 [GitHub releases](https://github.com/sortie-launcher/sortie/releases); see [Installing](#installing).
 
 <img src="docs/screenshots/readme/home.png" alt="Sortie's Home screen in the Custom sort: a Continue tile for the last game played, pinned games with box art, and buttons for Apps, Library setup, Search, Magazines, Journal and Settings" width="100%">
@@ -125,7 +125,7 @@ Browsing, setup and launching need none of these. The guide has a
 ## Installing
 
 Download the newest `.apk` (and its `.sha256`) from [GitHub releases](https://github.com/sortie-launcher/sortie/releases).
-Each merge to `main` that passes CI publishes one automatically as a signed beta prerelease, checked by hosted tests
+Each merge to `main` that passes CI publishes one automatically as a signed beta release marked Latest, checked by hosted tests
 and signature verification but not tested on hardware build by build. There is no store listing, account or
 auto-updater; watch the repository's releases to hear about updates, and install a newer APK over the old one.
 **Never uninstall to update.**

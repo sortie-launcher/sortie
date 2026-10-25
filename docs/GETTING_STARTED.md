@@ -61,7 +61,7 @@ downloads of APKs, emulators or RetroArch cores may need a connection in those o
 ### Getting the APK
 
 Download the APK attached to the newest beta on the [Releases page](https://github.com/sortie-launcher/sortie/releases).
-These automated prereleases include the Field Notes magazines and use the permanent release signing key. Each includes a
+These automated beta releases are marked Latest, include the Field Notes magazines and use the permanent release signing key. Each includes a
 `.sha256` checksum file you can compare with a checksum app. A beta passing automated checks is not a guarantee that every
 emulator or device has been tested.
 
