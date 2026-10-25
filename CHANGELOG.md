@@ -11,6 +11,10 @@
   speech bubble where there is room, dozes after three quiet minutes, and draws no frames while standing still or while a
   game is in front. **Hangar** in Home's header (or a tap on him) opens the Hangar; Show/Hide companion lives there.
   Browse screens no longer show him; reader Select → Visit the hangar is unchanged.
+- Device stats (Settings → Device stats, off by default): CPU and GPU load with their clocks, RAM in use, CPU, GPU and
+  battery temperatures and the fan speed, as thin strips down both sides of the companion screen, one line at the top of
+  the switcher overlay, or both. They refresh every 2, 5 or 10 seconds, only while shown on a screen that is on. Without
+  Shizuku only RAM and the battery temperature show; anything a device does not report is left out.
 - AYN Thor: pressing Home again while the app switcher is up keeps its windows instead of rebuilding them. Rebuilding both
   on every press could crash the Thor's system UI (a firmware race), restarting it and turning off wireless debugging.
   The Thor-panel guard now acts only on a complete system probe, never on partial output.

@@ -28,6 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import io.github.esko997.sortie.stats.DeviceStatsMode
+import io.github.esko997.sortie.stats.nextStatsInterval
+import io.github.esko997.sortie.stats.statsInterval
 
 /** Device preferences and entry points for library management, Android permissions and recovery. */
 @Composable
@@ -88,6 +91,21 @@ fun SettingsScreen(
                             Toast.makeText(context, "$OVERLAY_ACCESS_PATH. The regular switcher still works without it.", Toast.LENGTH_LONG).show()
                         }
                     }
+                }
+            }
+            item { SectionTitle("Device stats") }
+            item {
+                val mode = DeviceStatsMode.of(user.deviceStats)
+                FocusRow(onClick = { vm.setDeviceStats(mode.next()) }) {
+                    Line(
+                        "Show device stats",
+                        "${mode.label} · A cycles Off, Companion screen, Switcher overlay, Both · CPU, GPU, temperatures and fan need Shizuku"
+                    )
+                }
+            }
+            item {
+                FocusRow(onClick = { vm.setDeviceStatsInterval(nextStatsInterval(user.deviceStatsInterval)) }) {
+                    Line("Device stats refresh", "every ${statsInterval(user.deviceStatsInterval)} s · A cycles 2, 5, 10 s")
                 }
             }
             item { SectionTitle("Radial keyboard") }

@@ -22,6 +22,8 @@ All `stack-list.txt` files are `adb shell cmd activity stack list`, verbatim apa
 | `thor/panel-stuck` | The AYN panel lock-up (docs/HARDENING.md): Sortie's navigation on the bottom with ANRs, Thor button dead. |
 | `thor/release-1033` | `windows.txt` only: a healthy window dump with no panel window (the panel had not been opened). |
 | `dmg/home-app-under-game` | RetroArch running; Sortie and another HOME app's leftover task share the home root task under it. |
+| `thor/device-stats` | `probe-1.txt`, `probe-2.txt`: the device-stats probe (`DeviceStatsProbe.SCRIPT`) run twice, two seconds apart, idle with the fan stopped. |
+| `dmg/device-stats` | `probe.txt`: the same probe on the DMG, which has no fan node. |
 
 `thor/panel-stuck` also has what the panel probe (`ScreenMover.PANEL_PROBE`) reads:
 
@@ -32,6 +34,10 @@ All `stack-list.txt` files are `adb shell cmd activity stack list`, verbatim apa
   `mFocusedApp=` lines.
 - `windows.txt`: `dumpsys window windows`, only its header, each `Window #` line with its `mDisplayId=` and `mHasSurface=`
   lines, and the two-space summary lines at the end (`mTopFocusedDisplayId=` …), in their original order.
+
+The `device-stats` captures are the probe's output verbatim (`adb shell` with the script as the command); they hold only
+kernel counters, clocks, thermal-zone names and readings. `DeviceStatsProbeTest` parses them and also runs the real script
+in a local `sh` against a fake `/proc` and `/sys`.
 
 `home-activities.txt` per device is not a capture: the HOME and SECONDARY_HOME activities the package manager would report,
 reconstructed from the components the captures show and Sortie's manifest.

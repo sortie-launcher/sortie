@@ -120,6 +120,13 @@ class ScreenMover internal constructor(
         runCatching { shell.exec(cmd) }.getOrElse { "-1\n${it.message}" }
     }
 
+    /** Output of a read-only [cmd] run as the shell user; null without Shizuku, before the shell service binds, or on a non-zero exit. */
+    suspend fun read(cmd: String): String? {
+        if (!ready) return null
+        val reply = exec(cmd)
+        return if (reply.substringBefore('\n').trim() == "0") reply.substringAfter('\n') else null
+    }
+
     /** Parses `cmd activity stack list`: a RootTask line, then one `taskId=` line per leaf task in it (top-most first). */
     suspend fun rootTasks(): List<RootTask> = parseRootTasks(exec("cmd activity stack list"))
 

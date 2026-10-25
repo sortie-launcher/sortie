@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import io.github.esko997.sortie.shell.TaskSwitcher
 import io.github.esko997.sortie.ui.CompanionScreen
+import io.github.esko997.sortie.ui.DeviceStatsSides
 import io.github.esko997.sortie.ui.SortieTheme
 
 /**
@@ -42,7 +43,7 @@ abstract class CompanionHost : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { SortieTheme { CompanionScreen(displayId = myDisplayId()) } }
+        setContent { SortieTheme { DeviceStatsSides { CompanionScreen(displayId = myDisplayId()) } } }
     }
 
     override fun onResume() {

@@ -302,6 +302,9 @@ The line below a game's title shows its platform, year, developer and genre when
 - **Dot** (bottom-left): the dock. Tap to unfurl five slots up the left edge; the controller moves to them. A / tap an empty
   slot to pin an app, A / tap a pinned app to start it there, hold A / long-press to unpin, B folds it away.
 - **Battery** (top-left) and **bell** (top-right): the bell opens the notification shade.
+- **Device stats** (if turned on in Settings): a thin strip down each side. Left: CPU and GPU load with their clocks, and
+  RAM in use of the total. Right: CPU, GPU and battery temperatures in °C and the fan speed (AYN Thor; its sensor gives no
+  unit, Sortie shows it as rpm). The panel narrows to make room, so nothing is covered.
 
 Touching the companion hands the controller back to the other screen a moment later.
 
@@ -321,14 +324,22 @@ Android protection; granting overlay permission does not override it.
 Choosing or moving a picture-in-picture player restores its existing task to fullscreen. Internal controller-focus changes
 do not ask the player to enter PiP again. If you do not want an app to use PiP at all, disable its **Picture-in-picture**
 permission in Android's app settings.
+With **Device stats** set to *Switcher overlay* or *Both*, the overlay's title line also shows the same readings in one row.
 
 ## Settings
 
 **Library and emulators** (systems, game folders, emulators, BIOS/save folders, re-index), **Default home app** (once you
 have games), layouts (home/browse grid, sideways grids, rows and columns, app tile density), hero rotation, the overlay
-switcher, a default launcher per system, the optional **Radial keyboard**, **Backup and restore**, **Import from Cocoon…**,
-Diagnostics and this manual. Smart folders, guide notes, logos and custom launch profiles still come from a computer-prepared
-card if you use one.
+switcher, device stats, a default launcher per system, the optional **Radial keyboard**, **Backup and restore**,
+**Import from Cocoon…**, Diagnostics and this manual. Smart folders, guide notes, logos and custom launch profiles still
+come from a computer-prepared card if you use one.
+
+**Device stats → Show device stats** puts CPU, GPU, RAM, temperatures and the fan on the companion screen, the switcher
+overlay, both, or nowhere (*Off*, the default); **A** cycles. **Device stats refresh** reads them every 2, 5 or 10
+seconds, only while they are on a screen that is on: hidden, paused or asleep, Sortie reads nothing. CPU and GPU load,
+clocks, temperatures and the fan need Shizuku (Sortie reads them as the shell user, read-only); without it only RAM and
+the battery temperature show. Readings a device does not offer are left out: the AYANEO Pocket DMG, for one, has no fan
+reading.
 
 **Which emulator starts a game.** A per-game **Launch with…** choice first; then the system's **Default launcher per
 system** choice made here; otherwise the system's Emulators list from Library setup, in order, skipping emulators that
