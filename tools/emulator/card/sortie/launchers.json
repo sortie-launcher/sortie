@@ -1,0 +1,9 @@
+{
+    "profiles": [
+        {
+            "id": "open-with",
+            "label": "Open with\u2026",
+            "generic": true
+        }
+    ]
+}

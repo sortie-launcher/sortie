@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Package visibility: the reader test checks Sortie's bundled magazines through its package context. -->
+    <queries>
+        <package android:name="io.github.esko997.sortie" />
+    </queries>
+</manifest>

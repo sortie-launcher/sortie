@@ -1,0 +1,10 @@
+{
+    "device": "emulator",
+    "root": "/storage/emulated/0",
+    "screens": {
+        "count": 2,
+        "navigation": "bottom",
+        "presentationIndex": 0
+    },
+    "shizuku": false
+}

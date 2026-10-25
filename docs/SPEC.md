@@ -273,9 +273,9 @@ Code map (`app/src/main/java/io/github/esko997/sortie/`):
   and spot modifiers, `ui/MechaDirector` behaviour, `ui/MechaPresence` one mech across displays) and Hangar UI. It knows
   no Room, app or navigation types: `SortieApp` maps sessions to `PlaySession` for `MechaStore`, `SortieNav` and
   `CompanionScreen` host stages and declare spots, and the view model reports returns from play.
-- `app/src/test/`, `mecha/src/test/` JVM unit tests. Device paths, serials and emulator package names belong in the on-card
-  manifests or environment variables (`tools/dev.sh` reads `SORTIE_SERIAL`, `SORTIE_TOP_DISPLAY`, `SORTIE_BOTTOM_DISPLAY`),
-  never in code.
+- `app/src/test/`, `mecha/src/test/` JVM unit tests; `smoke/` emulator smoke tests (`tools/emulator/smoke.sh`,
+  docs/HARDENING.md). Device paths, serials and emulator package names belong in the on-card manifests or environment
+  variables (`tools/dev.sh` reads `SORTIE_SERIAL`, `SORTIE_TOP_DISPLAY`, `SORTIE_BOTTOM_DISPLAY`), never in code.
 
 Android behaviour that shaped the design (observed on Android 13 dual-screen hardware):
 
