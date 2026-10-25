@@ -42,7 +42,17 @@ object LibraryPresets {
         RetroArchBuild("$RETROARCH.ra32", "ra32", "RetroArch (32-bit)")
     )
 
-    private fun retroArch(core: String, label: String, build: RetroArchBuild = RA_TESTED) = LaunchProfile(
+    /**
+     * The RetroArch profile for [core] in the official build with application id [packageName] (`ra-`, `ra64-` or `ra32-`
+     * ids); [label] is the core's display name. Shared with importers so a profile they create equals the catalog's.
+     */
+    internal fun retroArch(core: String, label: String, packageName: String = RETROARCH): LaunchProfile {
+        val build = (listOf(RA_TESTED) + RA_SOURCE_ONLY).firstOrNull { it.pkg == packageName }
+        requireNotNull(build) { "$packageName is not an official RetroArch build." }
+        return retroArchProfile(core, label, build)
+    }
+
+    private fun retroArchProfile(core: String, label: String, build: RetroArchBuild) = LaunchProfile(
         id = "${build.idPrefix}-$core",
         label = "${build.appLabel} · $label",
         `package` = build.pkg,
@@ -404,7 +414,7 @@ object LibraryPresets {
                 listOf(p)
             } else {
                 val core = p.id.removePrefix("${RA_TESTED.idPrefix}-")
-                listOf(p) + RA_SOURCE_ONLY.map { retroArch(core, p.label.substringAfter(" · "), it) }
+                listOf(p) + RA_SOURCE_ONLY.map { retroArchProfile(core, p.label.substringAfter(" · "), it) }
             }
         } + OPEN_WITH
         LibraryPreset(
@@ -427,4 +437,14 @@ object LibraryPresets {
 
     /** The preset for [systemId], if the catalog has one. */
     fun preset(systemId: String): LibraryPreset? = systems.firstOrNull { it.system.id == systemId }
+
+    /** The generic "Open with…" profile every preset offers last; lets other code reuse the exact catalog entry. */
+    internal val openWith: LaunchProfile get() = OPEN_WITH
+
+    /**
+     * The first catalog profile launching [packageName] (any system's preset, including the RetroArch flavours), so an
+     * imported "this app plays it" can reuse a tested profile instead of inventing one; null when the catalog has none.
+     */
+    internal fun profileFor(packageName: String): LaunchProfile? =
+        systems.asSequence().flatMap { it.profiles.asSequence() }.firstOrNull { it.`package` == packageName }
 }

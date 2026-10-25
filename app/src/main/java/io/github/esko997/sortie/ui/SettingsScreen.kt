@@ -31,7 +31,14 @@ import androidx.compose.ui.unit.dp
 
 /** Device preferences and entry points for library management, Android permissions and recovery. */
 @Composable
-fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit, onManual: () -> Unit, onBackup: () -> Unit, onLibrary: () -> Unit) {
+fun SettingsScreen(
+    vm: SortieViewModel,
+    onDiagnostics: () -> Unit,
+    onManual: () -> Unit,
+    onBackup: () -> Unit,
+    onLibrary: () -> Unit,
+    onImportCocoon: () -> Unit
+) {
     val user by vm.user.collectAsState()
     val systems by vm.systems.collectAsState()
     val snap by vm.manifests.collectAsState()
@@ -101,6 +108,11 @@ fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit, onManual: () 
             item { SectionTitle("Help") }
             item { FocusRow(onClick = onManual) { Line("Manual", "controls, home, lists, the companion screen, the switcher") } }
             item { FocusRow(onClick = onBackup) { Line("Backup and restore", "export preferences, notes and play history to a file; restore one") } }
+            item {
+                FocusRow(onClick = onImportCocoon) {
+                    Line("Import from Cocoon…", "bring systems, favourites, folders and artwork over from the Cocoon launcher")
+                }
+            }
             item { FocusRow(onClick = onDiagnostics) { Line("Diagnostics", "index, manifests, Shizuku, launch log, wireless debugging") } }
             item { SectionTitle("Default launcher per system") }
             item {
@@ -131,8 +143,9 @@ fun SettingsScreen(vm: SortieViewModel, onDiagnostics: () -> Unit, onManual: () 
     }
 }
 
+/** A labelled switch row (also used by [CocoonImportScreen]'s preview). */
 @Composable
-private fun Toggle(label: String, on: Boolean, onChange: (Boolean) -> Unit) {
+internal fun Toggle(label: String, on: Boolean, onChange: (Boolean) -> Unit) {
     FocusRow(onClick = { onChange(!on) }) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))

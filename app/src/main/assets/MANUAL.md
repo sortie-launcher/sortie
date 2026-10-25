@@ -281,8 +281,14 @@ permission in Android's app settings.
 
 **Library and emulators** (systems, game folders, emulators, BIOS/save folders, re-index), **Default home app** (once you
 have games), layouts (home/browse grid, sideways grids, rows and columns, app tile density), hero rotation, the overlay
-switcher, a default launcher per system, the optional **Radial keyboard**, **Backup and restore**, Diagnostics and this manual.
-Smart folders, guide notes, logos and custom launch profiles still come from a computer-prepared card if you use one.
+switcher, a default launcher per system, the optional **Radial keyboard**, **Backup and restore**, **Import from Cocoon…**,
+Diagnostics and this manual. Smart folders, guide notes, logos and custom launch profiles still come from a computer-prepared
+card if you use one.
+
+**Import from Cocoon…** reads the Cocoon launcher's folder (and, if you pick one, a Cocoon backup) and previews the systems,
+favourites, hidden games, emulator choices, artwork, folders and play sessions it would add; nothing changes until you choose
+**Import**, and Cocoon's own files are never modified. Your preferences and play history are saved as a safety copy first;
+restoring it brings the preferences back but does not remove added systems, folders, copied artwork or imported sessions.
 
 ## Radial keyboard
 

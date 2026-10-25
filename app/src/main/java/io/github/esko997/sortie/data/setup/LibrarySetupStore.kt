@@ -1,6 +1,8 @@
 package io.github.esko997.sortie.data.setup
 
 import io.github.esko997.sortie.data.manifest.DeviceManifest
+import io.github.esko997.sortie.data.manifest.FAVOURITES_FOLDER_ID
+import io.github.esko997.sortie.data.manifest.FolderDef
 import io.github.esko997.sortie.data.manifest.FoldersManifest
 import io.github.esko997.sortie.data.manifest.GuideFile
 import io.github.esko997.sortie.data.manifest.LaunchProfile
@@ -8,6 +10,9 @@ import io.github.esko997.sortie.data.manifest.LaunchersManifest
 import io.github.esko997.sortie.data.manifest.ManifestStore
 import io.github.esko997.sortie.data.manifest.SystemDef
 import io.github.esko997.sortie.data.manifest.SystemsManifest
+import io.github.esko997.sortie.data.manifest.WANT_TO_PLAY_FOLDER_ID
+import io.github.esko997.sortie.data.user.FINISHED_FOLDER_ID
+import io.github.esko997.sortie.data.user.SHELVED_FOLDER_ID
 import java.io.File
 import java.io.IOException
 import java.util.Locale
@@ -46,9 +51,9 @@ data class LibraryConfiguration(
 class LibraryConflictException(message: String) : IOException(message)
 
 /**
- * Reads and edits the library part of `<card>/sortie` (systems.json, launchers.json and the BIOS/save paths of device.json)
- * for on-device setup. Writes are JSON-level merges: unknown keys, unedited systems/profiles, library rules, folders.json,
- * guide.json and user data are kept as they are; only the edited entries change. A first save creates the complete manifest
+ * Reads and edits the library part of `<card>/sortie` (systems.json, launchers.json, the BIOS/save paths of device.json and
+ * folders.json entries) for on-device setup. Writes are JSON-level merges: unknown keys, unedited systems/profiles/folders,
+ * library rules, guide.json and user data are kept as they are; only the edited entries change. A first save creates the complete manifest
  * set (missing files only). Every save is checked against the caller's [LibraryConfiguration.fingerprint] and committed with
  * [ManifestCommit], so a crash, failure or cancellation leaves the previous set or the complete new one, never a mix, and
  * the [ManifestStore] never publishes a half-written set. Successful saves reload the [ManifestStore] (which also starts its
@@ -80,6 +85,7 @@ class LibrarySetupStore internal constructor(
         val device: Parsed<DeviceManifest>,
         val systems: Parsed<SystemsManifest>,
         val launchers: Parsed<LaunchersManifest>,
+        val folders: Parsed<FoldersManifest>,
         val errors: List<String>,
         val blocking: List<String>,
         val fingerprint: String
@@ -143,14 +149,15 @@ class LibrarySetupStore internal constructor(
         val device = parse(DEVICE, DeviceManifest.serializer(), blocks = true)
         val systems = parse(SYSTEMS, SystemsManifest.serializer(), blocks = true)
         val launchers = parse(LAUNCHERS, LaunchersManifest.serializer(), blocks = true)
-        // only created when missing, never rewritten, so a broken one is reported but does not block library edits
-        parse(FOLDERS, FoldersManifest.serializer(), blocks = false)
+        // folders.json is only rewritten by saveFolders, which refuses a broken one; guide.json is only created when missing.
+        // A broken one is reported but does not block library edits.
+        val folders = parse(FOLDERS, FoldersManifest.serializer(), blocks = false)
         parse(GUIDE, GuideFile.serializer(), blocks = false)
         val fingerprint = ManifestCommit.sha256(
             raw.entries.joinToString("\n") { (name, bytes) -> "$name=${bytes?.let { ManifestCommit.sha256(it) } ?: "absent"}" }
                 .toByteArray(Charsets.UTF_8)
         )
-        return State(raw, device, systems, launchers, errors, blocking, fingerprint)
+        return State(raw, device, systems, launchers, folders, errors, blocking, fingerprint)
     }
 
     suspend fun load(): LibraryConfiguration = withContext(Dispatchers.IO) { ManifestCommit.withLock(directory) { readState() }.toConfiguration() }
@@ -205,7 +212,32 @@ class LibrarySetupStore internal constructor(
         work.device = JsonObject(fields)
     }
 
-    private class Work(var device: JsonObject, var systems: JsonObject, var launchers: JsonObject)
+    /**
+     * Adds or replaces each of [folders] by id in folders.json; other folders and unknown keys are kept. The built-in folder
+     * ids are reserved (the app ignores entries using them) and new ids use the same charset as systems (an existing
+     * desktop-authored id stays editable). A folders.json that exists but does not parse is never overwritten.
+     */
+    suspend fun saveFolders(expected: LibraryConfiguration, folders: List<FolderDef>): LibraryConfiguration = mutate(expected) { state, work ->
+        if (state.raw[FOLDERS] != null && state.folders.obj == null) {
+            throw IOException(state.errors.firstOrNull { it.startsWith(FOLDERS) } ?: "$FOLDERS could not be read; Sortie will not overwrite it.")
+        }
+        val existing = state.folders.value?.folders.orEmpty().associateBy { it.id }
+        val passedIds = HashSet<String>()
+        for (f in folders) {
+            require(f.id !in RESERVED_FOLDER_IDS) { "Folder id \"${f.id}\" is reserved for a built-in folder." }
+            if (f.id !in existing) require(NEW_ID.matches(f.id)) { "Folder id \"${f.id}\" must use lower-case letters, digits, '.', '_' or '-'." }
+            require(passedIds.add(f.id)) { "Folder ${f.id} is listed twice." }
+            require(f.label.isNotBlank()) { "Folder ${f.id} has no name." }
+        }
+        val changed = folders.filter { existing[it.id] != it }
+        if (changed.isNotEmpty()) {
+            var array = elements(work.folders, "folders")
+            for (f in changed) array = upsert(array, f.id, encode(FolderDef.serializer(), f), FolderDef.serializer())
+            work.folders = JsonObject(work.folders + ("folders" to JsonArray(array)))
+        }
+    }
+
+    private class Work(var device: JsonObject, var systems: JsonObject, var launchers: JsonObject, var folders: JsonObject)
 
     private enum class Outcome { UNCHANGED, COMMITTED }
 
@@ -241,6 +273,7 @@ class LibrarySetupStore internal constructor(
         }
         if (state.blocking.isNotEmpty()) throw IOException(state.blocking.joinToString("\n"))
         val parent = directory.absoluteFile.parentFile
+        val foldersScaffold = JsonObject(mapOf("folders" to JsonArray(emptyList())))
         val work = Work(
             device = state.device.obj ?: JsonObject(mapOf("device" to JsonPrimitive(deviceName), "root" to JsonPrimitive(parent?.path ?: "/"))),
             systems = state.systems.obj ?: JsonObject(
@@ -249,13 +282,16 @@ class LibrarySetupStore internal constructor(
                     "library" to JsonObject(mapOf("skipFiles" to JsonArray(LibraryPresets.defaultSkipFiles.map { JsonPrimitive(it) })))
                 )
             ),
-            launchers = state.launchers.obj ?: JsonObject(mapOf("profiles" to JsonArray(emptyList())))
+            launchers = state.launchers.obj ?: JsonObject(mapOf("profiles" to JsonArray(emptyList()))),
+            folders = state.folders.obj ?: foldersScaffold
         )
         edit(state, work)
         val next = LinkedHashMap<String, JsonObject>()
         if (state.device.obj != work.device) next[DEVICE] = work.device
         if (state.systems.obj != work.systems) next[SYSTEMS] = work.systems
         if (state.launchers.obj != work.launchers) next[LAUNCHERS] = work.launchers
+        // compared with the scaffold when the file is missing or broken, so a broken folders.json is never replaced by it
+        if ((state.folders.obj ?: foldersScaffold) != work.folders) next[FOLDERS] = work.folders
         if (next.isEmpty() && state.exists) {
             // a no-op edit of an existing configuration changes no file, not even missing folders/guide (not ours to add)
             return Outcome.UNCHANGED
@@ -264,12 +300,13 @@ class LibrarySetupStore internal constructor(
         if (state.raw[DEVICE] == null) next[DEVICE] = work.device
         if (state.raw[SYSTEMS] == null) next[SYSTEMS] = work.systems
         if (state.raw[LAUNCHERS] == null) next[LAUNCHERS] = work.launchers
-        if (state.raw[FOLDERS] == null) next[FOLDERS] = JsonObject(mapOf("folders" to JsonArray(emptyList())))
+        if (state.raw[FOLDERS] == null) next[FOLDERS] = work.folders
         if (state.raw[GUIDE] == null) next[GUIDE] = JsonObject(mapOf("built" to JsonPrimitive(""), "games" to JsonObject(emptyMap())))
         // the result must load exactly as ManifestStore will load it
         next[DEVICE]?.let { decoder.decodeFromJsonElement(DeviceManifest.serializer(), it) }
         next[SYSTEMS]?.let { decoder.decodeFromJsonElement(SystemsManifest.serializer(), it) }
         next[LAUNCHERS]?.let { decoder.decodeFromJsonElement(LaunchersManifest.serializer(), it) }
+        next[FOLDERS]?.let { decoder.decodeFromJsonElement(FoldersManifest.serializer(), it) }
         if (!directory.isDirectory) {
             if (parent == null || !parent.isDirectory) {
                 throw IOException("Storage ${parent?.path ?: directory.path} is not available. Insert the card or grant All files access, then try again.")
@@ -365,6 +402,7 @@ class LibrarySetupStore internal constructor(
         private val EXTENSION = Regex("[a-z0-9_+-]+")
         private val COLOUR = Regex("#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})")
         private val DISPLAYS = setOf("same", "top", "bottom")
+        private val RESERVED_FOLDER_IDS = setOf(FAVOURITES_FOLDER_ID, WANT_TO_PLAY_FOLDER_ID, FINISHED_FOLDER_ID, SHELVED_FOLDER_ID)
 
         /** A stable, readable device name for playlog lines (`ayn-thor`); "android" when the model is unknown. */
         internal fun defaultDeviceName(): String = runCatching { android.os.Build.MODEL }.getOrNull()

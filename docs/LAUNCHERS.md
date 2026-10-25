@@ -24,6 +24,11 @@ Notes
 - `file://` URIs require the app to relax StrictMode's file-URI check (done once in `SortieApp`).
 - Every attempt and the exact `am start` equivalent are in Diagnostics and in logcat under the `SortieLaunch` tag.
 - Debug builds accept `am start -n io.github.esko997.sortie/.MainActivity --es launch '<systemId>/<file>' [--es profile <id>]`.
+- **Remembered chooser pick:** the first app picked in Open with… becomes the system's default as a `chosen-<package>`
+  profile (explicit component, VIEW, `${uri}` with a read grant; see [formats/launchers.md](formats/launchers.md)), so the
+  chooser is not shown on every launch. Systems with a profile already chosen on the device are left alone; change the
+  default in Library setup or on the game page. An app that only accepts a file path or its own intent still needs a
+  dedicated profile.
 
 ## Fresh beta setup checks — 2026-10-24
 

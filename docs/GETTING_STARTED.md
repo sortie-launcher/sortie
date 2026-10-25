@@ -313,8 +313,10 @@ just leaves that part empty.
 
 **Your state and shared content are kept apart.** Your favourites, queue, shelves, notes, reference cards, journal and
 play history are yours (`user.json` and Sortie's own database; export them with **Backup and restore**). Shared content
-such as guides, magazines and logos is read, never rewritten with your personal data. Sortie does not currently import
-settings from other launchers; your game files can stay where they are and be used by several apps at once.
+such as guides, magazines and logos is read, never rewritten with your personal data. Coming from Cocoon?
+**Settings → Import from Cocoon…** brings over its systems, favourites and artwork, and from a Cocoon backup your folders
+and play sessions, without changing Cocoon's files ([details](COCOON_IMPORT.md)). Other launchers are not imported; your
+game files can stay where they are and be used by several apps at once.
 
 ## Troubleshooting
 

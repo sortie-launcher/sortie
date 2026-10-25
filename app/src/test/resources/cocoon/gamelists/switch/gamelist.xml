@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<gameList>
+	<cocoon:defaultplayerid>__none__</cocoon:defaultplayerid>
+	<game>
+		<path>./example_switch_game.nsp</path>
+		<name>Example Switch Game</name>
+		<desc>Experience the nostalgic story &amp; more.</desc>
+		<favorite>false</favorite>
+		<hidden>false</hidden>
+		<playcount>0</playcount>
+		<cocoon:playtime>0</cocoon:playtime>
+		<cocoon:boxartlocal>android.resource://rip.moth.cocoonshell/drawable/silk</cocoon:boxartlocal>
+	</game>
+</gameList>

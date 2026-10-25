@@ -40,6 +40,7 @@ Every key is optional; unknown keys are ignored.
 | `referenceCards` | game id → cards[] | `{}` | personal Markdown/image reference cards; image files live separately under `reference/` |
 | `magazineClippings` | clippings[] | `[]` | saved paragraph highlights and article recommendations, including copied excerpts and personal notes |
 | `journalEntries` | entries[] | `[]` | dated personal notes and attachment metadata; recorded sessions remain in Room, not this array |
+| `cocoonDir` | path \| absent | absent | Cocoon directory last imported from by "Import from Cocoon…"; offered first when the import is run again. Sortie only reads that directory |
 
 ## Personal game notes
 
@@ -101,6 +102,9 @@ sections or invalid session timestamps are rejected before any writes; a missing
 
 Restore requires confirmation and no open play session. It first fsyncs the current preferences and history to
 `<card>/sortie/backups/pre-restore-<yyyyMMdd-HHmmss>.json` in the same format. Failure to save that copy prevents the restore.
+Import from Cocoon writes the same kind of safety copy under its own prefix (`pre-cocoon-import-<yyyyMMdd-HHmmss>.json`);
+restoring one brings the preferences from before the import back. It does not undo the import's other changes: added
+systems, launch profiles and folders, copied artwork and imported sessions stay.
 New sessions are inserted transactionally; existing device sessions, including newer ones, are kept unchanged. Preferences
 are then replaced durably and published only after the write succeeds. If preference writing fails, imported rows are removed;
 if that compensation also fails, the result reports the remaining imported sessions. Session logging is paused during restore.

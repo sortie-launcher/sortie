@@ -1,0 +1,17 @@
+{
+  "created_at": 1791000000000,
+  "db_schema_version": 47,
+  "format": "cocoon_unified_backup",
+  "payloads": [
+    {
+      "byte_count": 2048,
+      "category": "layout",
+      "file_name": "categories/layout/grid_v1.json",
+      "restore_phase": "POST_SCAN",
+      "restore_semantics": "REPLACE"
+    }
+  ],
+  "selected_categories": ["metadata", "play_history", "layout"],
+  "source_app_version": "3.07",
+  "source_package_name": "rip.moth.cocoonshell"
+}

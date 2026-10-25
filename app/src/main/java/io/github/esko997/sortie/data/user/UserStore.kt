@@ -220,6 +220,9 @@ class UserStore(
     fun setSystemProfile(systemId: String, profileId: String?) =
         update { it.copy(systemProfiles = if (profileId == null) it.systemProfiles - systemId else it.systemProfiles + (systemId to profileId)) }
 
+    /** Remembers the Cocoon directory an import read from (null forgets it) so the next import offers it first. */
+    fun setCocoonDir(path: String?) = update { it.copy(cocoonDir = path) }
+
     /** Pins [itemId] (null clears) into dock [slot]; the list is padded to [DOCK_SLOTS] with empty strings. */
     fun setDockSlot(slot: Int, itemId: String?) = update {
         val slots = MutableList(DOCK_SLOTS) { i -> it.dock.getOrNull(i).orEmpty() }
