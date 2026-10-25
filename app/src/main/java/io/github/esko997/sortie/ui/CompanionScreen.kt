@@ -88,6 +88,7 @@ import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import io.github.esko997.sortie.mecha.MechaProp
 import io.github.esko997.sortie.mecha.MechaSpotKind
 import io.github.esko997.sortie.mecha.ui.MechaStageHost
 import io.github.esko997.sortie.mecha.ui.mechaBaseSize
@@ -140,7 +141,8 @@ fun CompanionScreen(displayId: Int) {
     val contents = rememberSaveableStateHolder()
     // the host hands the controller away on every tap; not while a text field here needs the IME
     val host = LocalContext.current as? CompanionHost
-    // The companion roams this panel too (one mech for both screens, MechaPresence), but never while a game is in front.
+    // The companion roams this panel too (one mech for both screens, MechaPresence), including while a game runs on the
+    // other screen: he lives whenever this window is resumed on a lit display (players can hide him in the Hangar).
     val stage = rememberMechaStage(graph.mecha)
     // pickers, the open dock and the Hangar keep the controller here: their controls take the D-pad, B closes
     val picking = launcher || dockSlot >= 0 || dock || stage.hangarOpen
@@ -154,7 +156,7 @@ fun CompanionScreen(displayId: Int) {
         dockSlot = -1
     }
     Surface(Modifier.fillMaxSize(), color = Ink) {
-        MechaStageHost(stage, active = session == null || navigationVisible) {
+        MechaStageHost(stage) {
             when {
                 switcher.open && !switcher.overlay -> TouchSwitcher(graph.switcher, switcher, displayId)
                 launcher -> TouchLauncher(graph, displayId, scope, onClose = { launcher = false })
@@ -199,7 +201,11 @@ fun CompanionScreen(displayId: Int) {
                         onToggle = { dock = !dock }
                     ) { dockSlot = it }
                     // one element per corner, all on the same 44 dp inset: battery · bell / dock · '+'
-                    Battery(Modifier.align(Alignment.TopStart).padding(16.dp).mechaSpot("companion:battery", MechaSpotKind.BESIDE_END))
+                    // he may poke the battery from beside it, or stand under it and lift it (decorative, never a control)
+                    Battery(
+                        Modifier.align(Alignment.TopStart).padding(16.dp)
+                            .mechaSpot("companion:battery", MechaSpotKind.BESIDE_END, props = setOf(MechaProp.POKE, MechaProp.LIFT))
+                    )
                     Bell(graph, Modifier.align(Alignment.TopEnd).padding(16.dp).mechaSpot("companion:bell", MechaSpotKind.BESIDE_START, interactive = true))
                     // his home base: right under the bell, beside the picture (Panel keeps the picture clear of it)
                     Spacer(

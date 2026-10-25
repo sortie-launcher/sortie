@@ -142,6 +142,13 @@ private fun LazyListScope.preview(p: BackupState.Preview, playing: String?, prim
                     "(+${merge.addedMinutes} min), ${merge.alreadyPresent} already on this device."
             )
             if (p.openIgnored > 0) Note("${p.openIgnored} unfinished sessions in the file will be ignored.")
+            val save = b.mecha
+            if (save != null) {
+                val now = p.currentMecha?.let { " (replaces ${BackupManager.mechaLine(it)})" }.orEmpty()
+                Note("Hangar companion: ${BackupManager.mechaLine(save)}$now. Play already credited on either side earns nothing again.")
+            } else {
+                Note("No Hangar companion in this backup: this device's companion stays as it is.")
+            }
             b.openSessionExcluded?.let { Note("${it.gameId} was being played when this backup was made; that session is not in it.") }
             if (p.missingLaunchables > 0) {
                 Note(
@@ -150,7 +157,7 @@ private fun LazyListScope.preview(p: BackupState.Preview, playing: String?, prim
                     error = true
                 )
             }
-            Note("Your current preferences are saved as a safety copy first (it recovers preferences; merged history stays).")
+            Note("Your current preferences and companion are saved as a safety copy first (it recovers them; merged history stays).")
         }
     }
     if (playing != null) {
@@ -158,7 +165,7 @@ private fun LazyListScope.preview(p: BackupState.Preview, playing: String?, prim
     }
     item { FocusRow(onClick = onCancel) { Line("Cancel", "keep everything as it is") } }
     if (playing == null) {
-        item { FocusRow(onClick = onConfirm) { Line("Replace preferences and merge history", "writes user.json and the play database") } }
+        item { FocusRow(onClick = onConfirm) { Line("Replace preferences and merge history", "writes user.json, the companion save and the play database") } }
     }
 }
 

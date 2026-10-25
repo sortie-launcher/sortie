@@ -6,6 +6,9 @@ enum class MechaSlot { HEAD, BODY, ARMS, LEGS }
 
 internal enum class MechaCare { TUNE, CHARGE, REST }
 
+/** A pet counts toward bond at most once in this long, so tapping him over and over earns nothing more. */
+internal const val MECHA_PET_BOND_MS = 5 * 60_000L
+
 /** The three part families, in catalog order; each ships `assets/mecha/<family>/catalog.json` with eight parts. */
 internal val MECHA_FAMILIES: List<String> = listOf("yard", "survey", "courier")
 

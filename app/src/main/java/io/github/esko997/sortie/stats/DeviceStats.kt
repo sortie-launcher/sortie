@@ -1,6 +1,5 @@
 package io.github.esko997.sortie.stats
 
-import android.view.Display
 import java.util.Locale
 
 /**
@@ -81,16 +80,6 @@ fun nextPollDelayMs(intervalSeconds: Int, cpuPending: Boolean, perfSeconds: Int?
     cpuPending -> CPU_WARMUP_MS
     perfSeconds != null -> perfInterval(perfSeconds) * 1_000L
     else -> statsInterval(intervalSeconds) * 1_000L
-}
-
-/**
- * Whether a display state draws: a display that is off or dozing (the whole device asleep, or the Thor's bottom screen
- * switched off) shows no stats, so none are read for it. On, VR and on-suspend draw; unknown (not reported yet) is treated
- * as on so a surface never stays blank by mistake.
- */
-fun displayLit(state: Int): Boolean = when (state) {
-    Display.STATE_OFF, Display.STATE_DOZE, Display.STATE_DOZE_SUSPEND -> false
-    else -> true
 }
 
 /** One reading in a side strip: a small label, the value and an optional second line. */

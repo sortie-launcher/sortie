@@ -154,6 +154,12 @@ release unit tests stay plain JUnit).
   (`w640dp-h480dp`), recorded at half size with no tolerance into `app/src/testDebug/screenshots/<device>/`. A build run
   with `-Proborazzi.test.verify=true` (`tools/build.sh`, CI) fails on any pixel change; CI uploads the diffs as
   `screenshot-diffs`, locally they are in `app/build/outputs/roborazzi/`.
+- **Companion** (`mecha/src/test/`, plain JVM): Home goldens keep him hidden, so his behaviour is tested as pure decisions
+  instead: touch classification (pet, hold, carry, swipe, slop and hold thresholds by event time), the pet bond rate limit,
+  drop to the nearest place and the hand-off at the edge facing the other display, sit and lift geometry, lift eligibility
+  (never a control, a focused element or one under a finger), the lifecycle gate (`MechaLifeTest`: a ticker under
+  `whileShown(mechaShown(...))` on virtual time does nothing while paused, stopped or on a dark display, without any Compose
+  frame) and the backup round trip of the save without double credit (`MechaStoreTest`).
 
 Re-record after an intended visual change, look at every changed image, and commit them with the change:
 

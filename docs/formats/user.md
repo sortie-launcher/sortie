@@ -93,15 +93,26 @@ a journal entry never changes session history.
 ## Backup export and restore
 
 Settings exports a JSON document through Android's file picker. The required fields are `format: "sortie-backup"`,
-`version: 1`, `createdAt` (epoch milliseconds), `user` (the full preferences object above) and `sessions` (an array, possibly empty).
-`device` and `appVersion` identify the source. `openSessionExcluded` optionally describes a running session omitted from export.
+`version` (2; files of version 1 are still read), `createdAt` (epoch milliseconds), `user` (the full preferences object above)
+and `sessions` (an array, possibly empty). `device` and `appVersion` identify the source. `openSessionExcluded` optionally
+describes a running session omitted from export.
+
+Version 2 adds `mecha`: the Hangar companion's whole save (`files/mecha/state.json`, with its own `version`, 1: name,
+enabled/motion, fitted and owned parts, salvage, bond, charge, condition, credited-session keys `<gameId>@<startedAt>`), or
+absent when no hangar was open. A `mecha` section is checked against this build's parts catalog (owned and fitted parts
+exist, counters in range) before the restore is offered; a bad one rejects the whole file. The pet rate-limit time
+(`files/mecha/pet.txt`) is not backed up.
 
 Each closed session contains `gameId`, `profileId`, `startedAt`, `endedAt` and `abandoned`. Identity is `(gameId, startedAt)`,
 not a database row ID. Unfinished sessions are never imported. Files over 64 MB, unsupported formats/versions, missing required
 sections or invalid session timestamps are rejected before any writes; a missing `user` object is never interpreted as defaults.
 
-Restore requires confirmation and no open play session. It first fsyncs the current preferences and history to
+Restore requires confirmation and no open play session. It first fsyncs the current preferences, history and companion to
 `<card>/sortie/backups/pre-restore-<yyyyMMdd-HHmmss>.json` in the same format. Failure to save that copy prevents the restore.
+Then the companion is restored, before any history is merged: a backup's `mecha` replaces the device's save, keeping every
+session either side already credited as credited; a backup without one keeps the device's companion and marks the sessions it
+merges as credited (they earned their salvage where they were played). No session earns salvage twice. If a later step fails,
+the companion is put back.
 Import from Cocoon writes the same kind of safety copy under its own prefix (`pre-cocoon-import-<yyyyMMdd-HHmmss>.json`);
 restoring one brings the preferences from before the import back. It does not undo the import's other changes: added
 systems, launch profiles and folders, copied artwork and imported sessions stay.

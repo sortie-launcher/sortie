@@ -14,6 +14,10 @@ import io.github.esko997.sortie.data.db.deleteSessions
 import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.data.user.PlayLog
 import io.github.esko997.sortie.data.user.UserStore
+import io.github.esko997.sortie.mecha.MechaRestore
+import io.github.esko997.sortie.mecha.MechaState
+import io.github.esko997.sortie.mecha.MechaStore
+import io.github.esko997.sortie.toPlaySession
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -44,7 +48,9 @@ sealed interface BackupState {
         val merge: SessionMerge,
         val current: UserData,
         /** App and shortcut ids the backup's favourites/layout/dock refer to that this device does not have (Android owns those). */
-        val missingLaunchables: Int
+        val missingLaunchables: Int,
+        /** This device's companion, which the backup's ([BackupFile.mecha]) would replace; null while no hangar is open. */
+        val currentMecha: MechaState? = null
     ) : BackupState
 
     data class Result(val ok: Boolean, val title: String, val lines: List<String>) : BackupState
@@ -53,11 +59,12 @@ sealed interface BackupState {
 /**
  * Export to and restore from a file the user picks through the Storage Access Framework (format: [BackupFile]).
  *
- * Restore replaces user.json with the backup's preferences and merges its sessions into the database (see [planSessionMerge]);
- * playlog.jsonl is never touched (it is this device's append-only log for the desktop, not the stats source). Before anything
- * is replaced, the current state is written to `<card>/sortie/backups/pre-restore-<time>.json` in the same format. Restoring
- * that file brings the previous preferences back; it cannot remove imported sessions (restore only ever merges history).
- * Work runs on this object's own scope so leaving the screen cannot cut it short.
+ * Restore replaces user.json with the backup's preferences, replaces the companion's save with the backup's (when it has one)
+ * and merges its sessions into the database (see [planSessionMerge]); play credit is never paid twice
+ * ([MechaStore.restore]). playlog.jsonl is never touched (it is this device's append-only log for the desktop, not the stats
+ * source). Before anything is replaced, the current state is written to `<card>/sortie/backups/pre-restore-<time>.json` in
+ * the same format. Restoring that file brings the previous preferences and companion back; it cannot remove imported
+ * sessions (restore only ever merges history). Work runs on this object's own scope so leaving the screen cannot cut it short.
  */
 class BackupManager(
     private val context: Context,
@@ -65,6 +72,7 @@ class BackupManager(
     private val user: UserStore,
     private val playLog: PlayLog,
     sortieDir: File,
+    private val mecha: MechaStore,
     private val deviceName: () -> String,
     /** Ids (`app:` / `shortcut:`) Android currently offers; used only to warn about entries a restore cannot bring back. */
     private val availableLaunchables: () -> Set<String>
@@ -78,15 +86,15 @@ class BackupManager(
     val safetyDir = File(sortieDir, "backups")
 
     /**
-     * Writes the current preferences and all recorded sessions to `<safetyDir>/<prefix>-<time>.json` in the backup format and
-     * returns the file, so any bulk change (a restore, an import) can be undone by restoring it. Throws when it cannot be
-     * written; callers must then not make their change.
+     * Writes the current preferences, all recorded sessions and the companion to `<safetyDir>/<prefix>-<time>.json` in the
+     * backup format and returns the file, so any bulk change (a restore, an import) can be undone by restoring it. Throws when
+     * it cannot be written; callers must then not make their change.
      */
-    suspend fun writeSafetyCopy(prefix: String): File = writeSafetyCopy(prefix, user.data.value, dao.allSessions())
+    suspend fun writeSafetyCopy(prefix: String): File = writeSafetyCopy(prefix, user.data.value, dao.allSessions(), mecha.backupSave())
 
-    /** Writes exactly [prefs] and [sessions], for callers that must know what the copy holds (restore compares it with user.json). */
-    private suspend fun writeSafetyCopy(prefix: String, prefs: UserData, sessions: List<SessionEntity>): File = withContext(Dispatchers.IO) {
-        File(safetyDir, "$prefix-${stamp()}.json").also { writeSafety(it, prefs, sessions) }
+    /** Writes exactly [prefs], [sessions] and [save], for callers that must know what the copy holds (restore compares it with user.json). */
+    private suspend fun writeSafetyCopy(prefix: String, prefs: UserData, sessions: List<SessionEntity>, save: MechaState?): File = withContext(Dispatchers.IO) {
+        File(safetyDir, "$prefix-${stamp()}.json").also { writeSafety(it, prefs, sessions, save) }
     }
 
     fun suggestedName(): String {
@@ -138,7 +146,9 @@ class BackupManager(
     private suspend fun exportTo(uri: Uri): BackupState {
         val name = displayName(uri)
         // One consistent snapshot: no session can open or close while the preferences and the table are read.
-        val backup = playLog.paused { buildBackup(user.data.value, dao.allSessions(), System.currentTimeMillis(), deviceName(), BuildConfig.VERSION_NAME) }
+        val backup = playLog.paused {
+            buildBackup(user.data.value, dao.allSessions(), mecha.backupSave(), System.currentTimeMillis(), deviceName(), BuildConfig.VERSION_NAME)
+        }
         val bytes = encodeBackup(backup).toByteArray()
         try {
             writeUri(uri, bytes)
@@ -166,6 +176,7 @@ class BackupManager(
                 "Saved $name: all preferences and personal records, including favourites, Want to play, Finished/Shelved status, game notes, " +
                     "reference-card text, magazine clippings and journal entries. Completed play sessions saved: ${backup.sessions.size}."
             )
+            backup.mecha?.let { add("Hangar companion saved: ${mechaLine(it)}.") }
             backup.openSessionExcluded?.let {
                 add("${it.gameId} is being played right now; its session is still open, so it is not in this backup. Export again after it ends.")
             }
@@ -185,10 +196,12 @@ class BackupManager(
         return when (val parsed = parseBackup(bytes.toString(Charsets.UTF_8))) {
             is ParsedBackup.Invalid -> BackupState.Result(false, "Can't restore $name", listOf(parsed.reason, "Nothing was changed."))
             is ParsedBackup.Valid -> {
+                val problem = parsed.backup.mecha?.let { mecha.restoreProblem(it) }
+                if (problem != null) return BackupState.Result(false, "Can't restore $name", listOf("The backup is damaged: $problem.", "Nothing was changed."))
                 val available = availableLaunchables()
                 val missing = parsed.backup.user.launchableIds().count { it !in available }
                 val merge = planSessionMerge(parsed.backup.sessions, dao.allSessions())
-                BackupState.Preview(name, parsed.backup, parsed.openIgnored, merge, user.data.value, missing)
+                BackupState.Preview(name, parsed.backup, parsed.openIgnored, merge, user.data.value, missing, mecha.backupSave())
             }
         }
     }
@@ -209,8 +222,9 @@ class BackupManager(
         val merge = planSessionMerge(preview.backup.sessions, existing)
         val next = preview.backup.user
         var before = user.data.value
+        val companionBefore = mecha.backupSave()
         val safety = try {
-            writeSafetyCopy("pre-restore", before, existing)
+            writeSafetyCopy("pre-restore", before, existing, companionBefore)
         } catch (e: Exception) {
             Log.w(TAG, "safety copy", e)
             return BackupState.Result(
@@ -219,14 +233,22 @@ class BackupManager(
                 listOf("Couldn't save a safety copy of the current state to ${safetyDir.path}: ${describe(e)}", "Nothing was changed.")
             )
         }
+        // the companion first, before the history it would otherwise credit lands in the database
+        val companion = try {
+            mecha.restore(preview.backup.mecha, merge.toInsert.map { it.toPlaySession() })
+        } catch (e: Exception) {
+            Log.w(TAG, "restore companion", e)
+            return BackupState.Result(false, "Restore not started", listOf("Couldn't restore the Hangar companion: ${describe(e)}", "Nothing was changed."))
+        }
         val inserted = try {
             db.withTransaction { dao.insertSessions(merge.toInsert) }
         } catch (e: Exception) {
             Log.w(TAG, "restore sessions", e)
+            val undone = undoCompanion(companion)
             return BackupState.Result(
                 false,
                 "Restore failed",
-                listOf("Couldn't add the play history: ${describe(e)}", "The database write was rolled back; preferences and history are unchanged.")
+                listOf("Couldn't add the play history: ${describe(e)}", "The database write was rolled back; preferences and history are unchanged.", undone)
             )
         }
         val failure: Exception? = try {
@@ -235,7 +257,7 @@ class BackupManager(
             while (!replaced && tries++ < 3) {
                 // an edit landed after the safety copy was taken: copy again so it holds exactly the preferences being replaced
                 before = user.data.value
-                writeSafety(safety, before, existing)
+                writeSafety(safety, before, existing, companionBefore)
                 replaced = user.replace(before, next)
             }
             if (replaced) null else IOException("preferences kept changing during the restore")
@@ -250,7 +272,11 @@ class BackupManager(
             } else {
                 "${inserted.size} imported sessions could not be removed again and remain in the play history."
             }
-            return BackupState.Result(false, "Restore failed", listOf("Couldn't write user.json: ${describe(failure)}", "Preferences are unchanged.", history))
+            return BackupState.Result(
+                false,
+                "Restore failed",
+                listOf("Couldn't write user.json: ${describe(failure)}", "Preferences are unchanged.", history, undoCompanion(companion))
+            )
         }
         val lines = buildList {
             add(
@@ -262,9 +288,18 @@ class BackupManager(
                     "Sessions recorded here since the backup are untouched. playlog.jsonl was not modified."
             )
             add(
-                "Previous preferences saved to ${safety.path}; restoring that file brings them back. It cannot remove the sessions " +
+                "Previous preferences and companion saved to ${safety.path}; restoring that file brings them back. It cannot remove the sessions " +
                     "this restore added (history is only ever merged)."
             )
+            val save = preview.backup.mecha
+            if (save != null) {
+                add(
+                    "Hangar companion restored: ${mechaLine(save)}. Play either companion was already credited for stays credited, " +
+                        "so no session earns salvage twice."
+                )
+            } else {
+                add("The backup holds no Hangar companion; this device's companion was kept (the merged sessions earn it nothing).")
+            }
             if (preview.missingLaunchables > 0) {
                 add(
                     "${preview.missingLaunchables} apps/shortcuts the backup refers to aren't on this device. Their ids are kept; they reappear once " +
@@ -276,8 +311,17 @@ class BackupManager(
         return BackupState.Result(true, "Restore complete", lines)
     }
 
-    private fun writeSafety(target: File, prefs: UserData, sessions: List<SessionEntity>) {
-        val backup = buildBackup(prefs, sessions, System.currentTimeMillis(), deviceName(), BuildConfig.VERSION_NAME)
+    /** Puts the companion back after a failed restore; the line that says so. */
+    private suspend fun undoCompanion(done: MechaRestore): String = try {
+        mecha.undoRestore(done)
+        "The Hangar companion is as it was."
+    } catch (e: Exception) {
+        Log.w(TAG, "undo companion", e)
+        "The Hangar companion could not be put back (${describe(e)}); the safety copy holds it."
+    }
+
+    private fun writeSafety(target: File, prefs: UserData, sessions: List<SessionEntity>, save: MechaState?) {
+        val backup = buildBackup(prefs, sessions, save, System.currentTimeMillis(), deviceName(), BuildConfig.VERSION_NAME)
         target.parentFile?.mkdirs()
         val tmp = File(target.path + ".tmp")
         FileOutputStream(tmp).use { out ->
@@ -317,9 +361,10 @@ class BackupManager(
         private const val MAX_BYTES = 64 * 1024 * 1024
 
         const val SCOPE = "A backup holds Sortie's own state: every preference in user.json (layout, favourites, hidden entries, launcher choices, dock, " +
-            "Want to play, game notes, controller entries, Finished/Shelved verdicts, magazine clippings, reference-card text and journal entries) " +
-            "and the play history from the database. It does not hold reference images or journal screenshots: copy their folders alongside " +
-            "the backup. ROMs, covers, emulator saves, the game index (rebuilt from the card), desktop manifests and playlog.jsonl are also excluded."
+            "Want to play, game notes, controller entries, Finished/Shelved verdicts, magazine clippings, reference-card text and journal entries), " +
+            "the play history from the database and the Hangar companion (name, parts, salvage, bond). It does not hold reference images or " +
+            "journal screenshots: copy their folders alongside the backup. ROMs, covers, emulator saves, the game index (rebuilt from the card), " +
+            "desktop manifests and playlog.jsonl are also excluded."
 
         const val NOT_RESTORED = "Not restored, because Android owns them: launcher shortcut pins, Shizuku and all-files/draw-over-apps permissions, " +
             "and the default home app. Re-grant those in Android settings if they were lost."
@@ -329,6 +374,9 @@ class BackupManager(
         fun describe(e: Throwable): String = e.message?.takeIf { it.isNotBlank() } ?: e.javaClass.simpleName
 
         fun formatTime(millis: Long): String = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(millis))
+
+        /** One line about a companion save: name, parts, salvage credits and bond. */
+        fun mechaLine(m: MechaState): String = "${m.name}, ${m.owned.size} parts, ${m.salvage} salvage credit${if (m.salvage == 1) "" else "s"}, bond ${m.bond}"
     }
 }
 

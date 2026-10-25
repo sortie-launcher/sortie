@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- Hangar companion, playful: tap him to pet him (a bounce and a little heart; a little bond at most once every five
+  minutes), hold still for half a second and let go to open the Hangar, or hold and move to pick him up and carry him: he
+  dangles from your finger and drops to the nearest place he can stand with a hop; on a dual-screen handheld, let go near
+  the edge facing the other screen and he goes across. A quick swipe starting on him still scrolls. While you can see him
+  he breathes, blinks and glances about, and now and then naps, sits on an edge with his legs dangling, pokes the battery
+  (or Home's clock), or lifts the battery a few pixels, straining; any button or touch puts it back at once. New poses are
+  made by moving the existing part layers by whole pixels, no new art. He keeps living on the other screen while a game
+  runs (hide him in the Hangar if you prefer) and does nothing at all when Sortie is in the background or the screen is off.
+- Backup format 2: exports include the Hangar companion (name, parts, salvage, bond); a restore brings him back and no play
+  session ever earns salvage twice. Older backups still restore and leave the companion as it is.
 - Perf page: in the switcher overlay, **R1** (or L1, or the new **Perf** chip on either screen) swaps the app list for live
   performance numbers: CPU load and clock, GPU load and clock, RAM, CPU, GPU and battery temperatures and the fan, each
   large with a two-minute line, then every core's clock and every thermal zone, grouped. B, R1 or **Apps** go back with

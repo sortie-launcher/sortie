@@ -20,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
@@ -174,18 +176,78 @@ private fun spriteLoad(layers: List<Pair<MechaSlot, MechaPart?>>): SpriteLoad {
     return load
 }
 
-/** Draws [frame] of every layer in [sheets], [scale]× with nearest-neighbour sampling, frame row 0 at [frameTop], box left [x]. */
-internal fun DrawScope.drawMechaFrame(sheets: List<ImageBitmap>, frame: Int, x: Int, frameTop: Int, scale: Int) {
+internal fun DrawScope.drawMechaFrame(sheets: List<ImageBitmap>, frame: Int, x: Int, frameTop: Int, scale: Int) =
+    drawMechaFrame(sheets, MechaRig(frame), x, frameTop, scale)
+
+/**
+ * Draws [rig] of every layer in [sheets] (in [DRAW_ORDER]), [scale]× with nearest-neighbour sampling, frame row 0 at
+ * [frameTop], box left [x]; each part shifted by its rig offset in whole sprite pixels, so it stays crisp.
+ */
+internal fun DrawScope.drawMechaFrame(sheets: List<ImageBitmap>, rig: MechaRig, x: Int, frameTop: Int, scale: Int) {
     val side = MECHA_FRAME * scale
-    for (sheet in sheets) {
+    sheets.forEachIndexed { i, sheet ->
+        val slot = DRAW_ORDER.getOrElse(i) { MechaSlot.HEAD }
         drawImage(
             sheet,
-            srcOffset = IntOffset(frame * MECHA_FRAME, 0),
+            srcOffset = IntOffset(rig.frame * MECHA_FRAME, 0),
             srcSize = IntSize(MECHA_FRAME, MECHA_FRAME),
-            dstOffset = IntOffset(x, frameTop),
+            dstOffset = IntOffset(x + rig.dx(slot) * scale, frameTop + rig.dy(slot) * scale),
             dstSize = IntSize(side, side),
             filterQuality = FilterQuality.None
         )
+    }
+}
+
+/**
+ * One drawn pose: [frame] of every sheet with each part layer shifted by whole sprite pixels (positive right and down).
+ * Procedural animation on top of the authored frames: a breath lifts the upper body, a glance moves the head, a dangle
+ * stretches and swings the legs, a strain hunches the upper body, sitting tucks the legs up.
+ */
+@Immutable
+internal data class MechaRig(
+    val frame: Int,
+    val legsX: Int = 0,
+    val legsY: Int = 0,
+    val bodyX: Int = 0,
+    val bodyY: Int = 0,
+    val armsX: Int = 0,
+    val armsY: Int = 0,
+    val headX: Int = 0,
+    val headY: Int = 0
+) {
+    fun dx(slot: MechaSlot): Int = when (slot) {
+        MechaSlot.LEGS -> legsX
+        MechaSlot.BODY -> bodyX
+        MechaSlot.ARMS -> armsX
+        MechaSlot.HEAD -> headX
+    }
+
+    fun dy(slot: MechaSlot): Int = when (slot) {
+        MechaSlot.LEGS -> legsY
+        MechaSlot.BODY -> bodyY
+        MechaSlot.ARMS -> armsY
+        MechaSlot.HEAD -> headY
+    }
+
+    /** Body, arms and head moved together by [dx], [dy] more; the legs stay. */
+    fun upper(dx: Int, dy: Int): MechaRig =
+        copy(bodyX = bodyX + dx, bodyY = bodyY + dy, armsX = armsX + dx, armsY = armsY + dy, headX = headX + dx, headY = headY + dy)
+}
+
+/** A small pixel glyph ('X' = filled), drawn [scale]× with its top-left at ([left], [top]) in window-local pixels. */
+internal class MechaGlyph(rows: List<String>) {
+    val width = rows.maxOf { it.length }
+    val height = rows.size
+    private val cells: List<Pair<Int, Int>> = rows.flatMapIndexed { y, row -> row.mapIndexedNotNull { x, c -> if (c == 'X') x to y else null } }
+
+    fun draw(scope: DrawScope, color: Color, left: Int, top: Int, scale: Int) {
+        val px = Size(scale.toFloat(), scale.toFloat())
+        for ((x, y) in cells) scope.drawRect(color, Offset((left + x * scale).toFloat(), (top + y * scale).toFloat()), px)
+    }
+
+    companion object {
+        val HEART = MechaGlyph(listOf(".XX.XX.", "XXXXXXX", "XXXXXXX", ".XXXXX.", "..XXX..", "...X..."))
+        val ZED = MechaGlyph(listOf("XXXX", "..X.", ".X..", "XXXX"))
     }
 }
 
