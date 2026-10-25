@@ -216,7 +216,8 @@ Covered:
   app is HOME), the case behind "Back on Home sent Sortie away" above.
 - The magazine reader, with the pinned magazines: shelf, issue contents, first article, controller only. Each Down waits
   until the focus or the list has visibly moved: presses sent blind piled up while a slow runner was busy and were then
-  handled in one burst past every article, so A toggled the games filter instead.
+  handled in one burst past every article, so A toggled the games filter instead. Once the first article is focused,
+  one A must open it; the smoke does not retry activation.
 - Any Sortie crash or ANR in the log fails the run, even one the tests recovered from.
 
 Not covered: everything that needs Shizuku (the switcher overlay, moving, swapping and closing apps, the AYN panel guard).

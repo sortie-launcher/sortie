@@ -12,7 +12,6 @@ import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.Configurator
 import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.UiDevice
-import androidx.test.uiautomator.Until
 import java.util.regex.Pattern
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -209,11 +208,8 @@ class DualScreenSmokeTest {
                 contentsState().let { it != null && it != before }
             }
         }
-        // A opens it. Pressed once more only if, 5 s later, the contents are still up with the first article focused: the press
-        // was lost (once the contents leave, a second A would act inside the article instead).
-        val contentsShown = By.pkg(PKG).text("shelf").displayId(PRIMARY)
+        // One A must open the focused article; retrying would hide a real activation regression.
         shell("input keyevent KEYCODE_BUTTON_A")
-        if (device.wait(Until.gone(contentsShown), 5_000) != true && firstArticleFocused()) shell("input keyevent KEYCODE_BUTTON_A")
         awaitText("reader menu", "an article")
         assertEquals(PRIMARY, mainTasks().single().display)
     }
