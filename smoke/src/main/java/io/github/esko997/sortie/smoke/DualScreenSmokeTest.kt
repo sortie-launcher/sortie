@@ -11,6 +11,7 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.Configurator
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -191,18 +192,38 @@ class DualScreenSmokeTest {
         shell("input keyevent KEYCODE_BUTTON_A")
         awaitText("shelf", "an issue's contents") // contents hints: A open · B shelf
         // Contents open on the masthead, then the editor's note: passages the D-pad scrolls through 72 dp at a time and that
-        // open nothing. Down walks to the first entry that is a button, the first article.
-        val focusedButton = By.pkg(PKG).displayId(PRIMARY).focused(true).clickable(true)
-        var downs = 0
-        while (downs++ < 40 && !device.hasObject(focusedButton)) {
+        // open nothing. Down walks to the first article (numbered "01"), one press at a time: each press must visibly move the
+        // focus or scroll before the next is sent. Blind presses queue up while the app is busy (a slow runner) and are then
+        // handled in one burst that runs straight past the articles, so A landed on the games filter.
+        var presses = 0
+        while (!firstArticleFocused()) {
+            assertTrue("no article after $presses presses; it shows ${texts(PRIMARY)}", presses++ < 40)
+            val before = contentsState()
             shell("input keyevent KEYCODE_DPAD_DOWN")
-            SystemClock.sleep(300)
+            await("Down $presses to move the focus or scroll", timeoutMs = 5_000, detail = { "it shows ${texts(PRIMARY)}" }) {
+                contentsState().let { it != null && it != before }
+            }
         }
-        await("the first article focused in the contents", detail = { "it shows ${texts(PRIMARY)}" }) { device.hasObject(focusedButton) }
+        // A opens it. Pressed once more only if, 5 s later, the contents are still up with the first article focused: the press
+        // was lost (once the contents leave, a second A would act inside the article instead).
+        val contentsShown = By.pkg(PKG).text("shelf").displayId(PRIMARY)
         shell("input keyevent KEYCODE_BUTTON_A")
-        awaitText("reader menu", "an article") // article hints: … Select reader menu · B contents
+        if (device.wait(Until.gone(contentsShown), 5_000) != true && firstArticleFocused()) shell("input keyevent KEYCODE_BUTTON_A")
+        awaitText("reader menu", "an article")
         assertEquals(PRIMARY, mainTasks().single().display)
     }
+
+    /**
+     * What a Down on the contents can change: the focused entry, and where every text is (a scroll inside a passage taller
+     * than the screen moves its lines but not its clipped bounds). Null while no entry is focused or a node went stale.
+     */
+    private fun contentsState(): String? = runCatching {
+        val focused = device.findObject(By.pkg(PKG).displayId(PRIMARY).focused(true)) ?: return@runCatching null
+        val lines = device.findObjects(By.pkg(PKG).displayId(PRIMARY).textContains("")).map { "${it.text.take(12)}@${it.visibleBounds.top}" }
+        "${focused.visibleBounds.toShortString()} $lines"
+    }.getOrNull()
+
+    private fun firstArticleFocused(): Boolean = device.hasObject(By.pkg(PKG).displayId(PRIMARY).focused(true).clickable(true).hasDescendant(By.text("01")))
 
     // ---------- helpers ----------
 

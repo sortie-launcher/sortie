@@ -203,7 +203,9 @@ Covered:
 - Home from another app (Settings) returns to the same navigation task.
 - Back on Home leaves Sortie in front, both as HOME and in an ordinary task (started from the launcher intent while another
   app is HOME), the case behind "Back on Home sent Sortie away" above.
-- The magazine reader, with the pinned magazines: shelf, issue contents, first article, controller only.
+- The magazine reader, with the pinned magazines: shelf, issue contents, first article, controller only. Each Down waits
+  until the focus or the list has visibly moved: presses sent blind piled up while a slow runner was busy and were then
+  handled in one burst past every article, so A toggled the games filter instead.
 - Any Sortie crash or ANR in the log fails the run, even one the tests recovered from.
 
 Not covered: everything that needs Shizuku (the switcher overlay, moving, swapping and closing apps, the AYN panel guard).
