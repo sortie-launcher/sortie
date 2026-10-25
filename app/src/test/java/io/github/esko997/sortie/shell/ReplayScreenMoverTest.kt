@@ -7,11 +7,9 @@ import org.junit.Test
 
 /** ScreenMover's task decisions against `cmd activity stack list` recorded on an AYN Thor (two displays) and an AYANEO DMG. */
 class ReplayScreenMoverTest {
-    private fun mover(capture: String): Pair<ScreenMover, ReplayShell> =
-        replayMover(capture.substringBefore('/'), DeviceCaptures.stackList(capture))
+    private fun mover(capture: String): Pair<ScreenMover, ReplayShell> = replayMover(capture.substringBefore('/'), DeviceCaptures.stackList(capture))
 
-    private fun appTaskIds(capture: String): List<Pair<Int, Int>> =
-        runBlocking { mover(capture).first.appTasks() }.map { it.displayId to it.id }
+    private fun appTaskIds(capture: String): List<Pair<Int, Int>> = runBlocking { mover(capture).first.appTasks() }.map { it.displayId to it.id }
 
     @Test
     fun appTasksAreEveryRunningAppTopMostFirstPerDisplayButNeverSortieOrALauncher() {

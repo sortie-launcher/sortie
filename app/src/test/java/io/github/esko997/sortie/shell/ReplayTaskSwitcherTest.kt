@@ -48,13 +48,18 @@ class ReplayTaskSwitcherTest {
 
     @Test
     fun goHomeRaisesSortiesNavigationWhereverItRuns() {
-        for ((capture, nav) in listOf(
-            "thor/sortie-top" to 9101, // navigation is HOME on the top screen
-            "thor/sortie-bottom" to 6768, // navigation was swapped to the bottom screen
-            "thor/switcher-overlay" to 10820, // hidden on the bottom screen under the secondary home; companion on top
+        val navigation = listOf(
+            // navigation is HOME on the top screen
+            "thor/sortie-top" to 9101,
+            // navigation was swapped to the bottom screen
+            "thor/sortie-bottom" to 6768,
+            // hidden on the bottom screen under the secondary home; companion on top
+            "thor/switcher-overlay" to 10820,
             "thor/panel-stuck" to 5502,
-            "dmg/home-app-under-game" to 332 // single screen: in the home root task, under the game
-        )) {
+            // single screen: in the home root task, under the game
+            "dmg/home-app-under-game" to 332
+        )
+        for ((capture, nav) in navigation) {
             val (switcher, shell) = switcher(capture)
             runBlocking { switcher.goHome(0).join() }
             assertEquals(capture, listOf("am task focus $nav"), shell.actions)
