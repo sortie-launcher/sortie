@@ -2,7 +2,7 @@
 """Generate the yard (industrial salvage) mecha part family.
 
 Writes eight 512x64 RGBA sprite atlases plus catalog.json into
-app/src/main/assets/mecha/yard/, and a contact board and animated
+mecha/src/main/assets/mecha/yard/, and a contact board and animated
 assembled GIF into ~/.cache/sortie-mecha-lab/.
 
 All art is authored procedurally here as hard-edged pixels: shapes are
@@ -24,7 +24,7 @@ from PIL import Image, ImageDraw, ImageFont
 W = 64
 FRAMES = 8
 ROOT = Path(__file__).resolve().parents[2]
-ASSETS = ROOT / "app/src/main/assets/mecha"
+ASSETS = ROOT / "mecha/src/main/assets/mecha"
 OUT_DIR = ASSETS / "yard"
 CACHE = Path.home() / ".cache/sortie-mecha-lab"
 

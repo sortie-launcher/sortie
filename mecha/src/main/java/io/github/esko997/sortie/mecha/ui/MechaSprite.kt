@@ -1,4 +1,4 @@
-package io.github.esko997.sortie.ui.mecha
+package io.github.esko997.sortie.mecha.ui
 
 import android.content.res.AssetManager
 import android.graphics.BitmapFactory
@@ -38,8 +38,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import io.github.esko997.sortie.data.mecha.MechaPart
-import io.github.esko997.sortie.data.mecha.MechaSlot
+import io.github.esko997.sortie.mecha.MechaPart
+import io.github.esko997.sortie.mecha.MechaSlot
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -51,14 +51,14 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 
-enum class MechaPose { IDLE, WALK, SLEEP, CELEBRATE }
+internal enum class MechaPose { IDLE, WALK, SLEEP, CELEBRATE }
 
 /** One authored frame is 64x64 sprite pixels; a sheet holds eight of them side by side (see the art contract). */
-const val MECHA_FRAME = 64
+internal const val MECHA_FRAME = 64
 private const val SHEET_FRAMES = 8
 
 /** Sprite pixels reserved above the frame: the art can reach row 0 and a cheer hops up to this far. */
-const val MECHA_HEADROOM = 3
+internal const val MECHA_HEADROOM = 3
 
 /** Legs first, head last: arms overlap the body's shoulders and the head sits over the neck. */
 private val DRAW_ORDER = arrayOf(MechaSlot.LEGS, MechaSlot.BODY, MechaSlot.ARMS, MechaSlot.HEAD)
@@ -140,7 +140,7 @@ private sealed interface SpriteLoad {
  * A missing equipped part or an unreadable sheet says so in text instead of drawing an empty box.
  */
 @Composable
-fun MechaSprite(parts: List<MechaPart>, equipped: Map<MechaSlot, String>, pose: MechaPose, motion: Boolean, modifier: Modifier = Modifier) {
+internal fun MechaSprite(parts: List<MechaPart>, equipped: Map<MechaSlot, String>, pose: MechaPose, motion: Boolean, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     // per layer: the asset path, or why it cannot be drawn
     val layers: List<Pair<MechaSlot, MechaPart?>> = remember(parts, equipped) {
@@ -229,7 +229,7 @@ private fun initialSpriteLoad(layers: List<Pair<MechaSlot, MechaPart?>>): Sprite
  * [MECHA_HEADROOM] sprite pixels above it for hops, so the sprite fills it exactly on this screen's density.
  */
 @Composable
-fun mechaSize(target: Dp): DpSize {
+internal fun mechaSize(target: Dp): DpSize {
     val density = LocalDensity.current
     return remember(target, density) {
         with(density) {
@@ -241,7 +241,7 @@ fun mechaSize(target: Dp): DpSize {
 
 /** The largest frame height of at most [limit] whose whole-multiple sprite still fits [available] across, for [mechaSize]. */
 @Composable
-fun mechaFit(available: Dp, limit: Dp): Dp {
+internal fun mechaFit(available: Dp, limit: Dp): Dp {
     val density = LocalDensity.current
     return remember(available, limit, density) {
         with(density) {
@@ -253,11 +253,18 @@ fun mechaFit(available: Dp, limit: Dp): Dp {
 
 /** A [MechaSprite] sized with [mechaSize]. */
 @Composable
-fun MechaFigure(parts: List<MechaPart>, equipped: Map<MechaSlot, String>, pose: MechaPose, motion: Boolean, target: Dp, modifier: Modifier = Modifier) {
+internal fun MechaFigure(
+    parts: List<MechaPart>,
+    equipped: Map<MechaSlot, String>,
+    pose: MechaPose,
+    motion: Boolean,
+    target: Dp,
+    modifier: Modifier = Modifier
+) {
     MechaSprite(parts, equipped, pose, motion, modifier.size(mechaSize(target)))
 }
 
-fun MechaSlot.label(): String = when (this) {
+internal fun MechaSlot.label(): String = when (this) {
     MechaSlot.HEAD -> "Head"
     MechaSlot.BODY -> "Body"
     MechaSlot.ARMS -> "Arms"

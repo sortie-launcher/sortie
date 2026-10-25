@@ -13,8 +13,10 @@ import coil3.SingletonImageLoader
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
 import io.github.esko997.sortie.data.apps.AppsRepository
+import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.apps.ShortcutsRepository
 import io.github.esko997.sortie.data.backup.BackupManager
+import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.db.SortieDb
 import io.github.esko997.sortie.data.folders.FolderRepository
 import io.github.esko997.sortie.data.index.DeviceState
@@ -23,16 +25,18 @@ import io.github.esko997.sortie.data.magazine.BundledMagazines
 import io.github.esko997.sortie.data.magazine.MagazineGames
 import io.github.esko997.sortie.data.magazine.MagazineRepository
 import io.github.esko997.sortie.data.manifest.ManifestStore
-import io.github.esko997.sortie.data.mecha.MechaStore
 import io.github.esko997.sortie.data.setup.LibrarySetupStore
 import io.github.esko997.sortie.data.user.PlayLog
 import io.github.esko997.sortie.data.user.UserStore
 import io.github.esko997.sortie.launch.LaunchManager
+import io.github.esko997.sortie.mecha.MechaStore
+import io.github.esko997.sortie.mecha.PlaySession
 import io.github.esko997.sortie.shell.ScreenMover
 import io.github.esko997.sortie.shell.TaskSwitcher
 import io.github.esko997.sortie.ui.SwitcherHost
 import java.io.File
 import java.io.IOException
+import kotlinx.coroutines.flow.map
 
 /** Hand-rolled service locator; small enough that a DI framework would be more code than it saves. */
 class SortieApp :
@@ -51,7 +55,7 @@ class SortieApp :
         // never recreates a remembered folder that is missing: preferences then wait for it instead of starting an empty one
         val user = UserStore(File(sortieDir, "user.json"), mayCreateDirectory = { pinnedSortieDir(app) == null })
         val playLog = PlayLog(db.games(), File(sortieDir, "playlog.jsonl"), manifests.snapshot.value.device.device)
-        val mecha = MechaStore(app, db.games())
+        val mecha = MechaStore(app) { from -> db.games().completedSessionsFrom(from).map { rows -> rows.map { it.toPlaySession() } } }
         val indexer = Indexer(db.games(), manifests)
         val magazines = MagazineRepository(sortieDir, BundledMagazines.forApp(app))
         val magazineGames = MagazineGames(db.games()) { manifests.snapshot.value.systems }
@@ -169,3 +173,6 @@ class SortieApp :
         }
     }
 }
+
+/** The companion's view of a recorded session: games only earn credit, never apps or shortcuts ([LibraryItem.isGameId]). */
+private fun SessionEntity.toPlaySession() = PlaySession(gameId, startedAt, endedAt, abandoned, isGame = LibraryItem.isGameId(gameId))

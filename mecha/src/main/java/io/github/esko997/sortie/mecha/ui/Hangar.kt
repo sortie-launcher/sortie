@@ -1,4 +1,4 @@
-package io.github.esko997.sortie.ui.mecha
+package io.github.esko997.sortie.mecha.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -52,20 +52,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import io.github.esko997.sortie.data.mecha.MECHA_FAMILIES
-import io.github.esko997.sortie.data.mecha.MECHA_MINUTES_PER_CREDIT
-import io.github.esko997.sortie.data.mecha.MECHA_NAME_MAX
-import io.github.esko997.sortie.data.mecha.MECHA_SESSION_MINUTES_CAP
-import io.github.esko997.sortie.data.mecha.MECHA_STAT_MAX
-import io.github.esko997.sortie.data.mecha.MechaCare
-import io.github.esko997.sortie.data.mecha.MechaPart
-import io.github.esko997.sortie.data.mecha.MechaSlot
-import io.github.esko997.sortie.data.mecha.MechaState
-import io.github.esko997.sortie.data.mecha.MechaStore
-import io.github.esko997.sortie.data.mecha.MechaView
-import io.github.esko997.sortie.data.mecha.mechaNameProblem
-import io.github.esko997.sortie.data.mecha.owns
-import io.github.esko997.sortie.data.mecha.unownedIn
+import io.github.esko997.sortie.mecha.MECHA_FAMILIES
+import io.github.esko997.sortie.mecha.MECHA_MINUTES_PER_CREDIT
+import io.github.esko997.sortie.mecha.MECHA_NAME_MAX
+import io.github.esko997.sortie.mecha.MECHA_SESSION_MINUTES_CAP
+import io.github.esko997.sortie.mecha.MECHA_STAT_MAX
+import io.github.esko997.sortie.mecha.MechaCare
+import io.github.esko997.sortie.mecha.MechaPart
+import io.github.esko997.sortie.mecha.MechaSlot
+import io.github.esko997.sortie.mecha.MechaState
+import io.github.esko997.sortie.mecha.MechaStore
+import io.github.esko997.sortie.mecha.MechaView
+import io.github.esko997.sortie.mecha.mechaNameProblem
+import io.github.esko997.sortie.mecha.owns
+import io.github.esko997.sortie.mecha.unownedIn
 import io.github.esko997.sortie.ui.Amber
 import io.github.esko997.sortie.ui.FocusRow
 import io.github.esko997.sortie.ui.Ink
@@ -81,7 +81,7 @@ private enum class HangarTab { WORKSHOP, GALLERY }
  * B closes the Gallery back to the Workshop, then the Hangar.
  */
 @Composable
-internal fun Hangar(store: MechaStore, onClose: () -> Unit) {
+fun Hangar(store: MechaStore, onClose: () -> Unit) {
     val view by store.view.collectAsState()
     var tab by rememberSaveable { mutableStateOf(HangarTab.WORKSHOP) }
     // the explicit foreground refresh: sessions finished since the last look count now

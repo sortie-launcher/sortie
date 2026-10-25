@@ -2,7 +2,7 @@
 """Survey mecha family: field-science companions in teal and ivory.
 
 Draws the eight 512x64 part sheets (eight 64x64 frames each) into
-app/src/main/assets/mecha/survey/, writes catalog.json beside them, and renders
+mecha/src/main/assets/mecha/survey/, writes catalog.json beside them, and renders
 a review board plus an animated assembly GIF into ~/.cache/sortie-mecha-lab/.
 
 Every pixel is placed by hard-edged masks; nothing is antialiased or dithered.
@@ -19,7 +19,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
-ASSETS = ROOT / "app/src/main/assets/mecha/survey"
+ASSETS = ROOT / "mecha/src/main/assets/mecha/survey"
 CACHE = Path.home() / ".cache/sortie-mecha-lab"
 FAMILY = "survey"
 

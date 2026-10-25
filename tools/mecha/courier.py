@@ -8,8 +8,8 @@ RGBA strip of eight 64x64 frames (0 idle, 1 idle detail, 2-5 walk, 6 sleep,
 and survey parts.
 
 Outputs (repeatable, overwrites):
-  app/src/main/assets/mecha/courier/courier_<slot>_<1|2>.png
-  app/src/main/assets/mecha/courier/catalog.json
+  mecha/src/main/assets/mecha/courier/courier_<slot>_<1|2>.png
+  mecha/src/main/assets/mecha/courier/catalog.json
   ~/.cache/sortie-mecha-lab/courier-board.png   (review contact sheet)
   ~/.cache/sortie-mecha-lab/courier-walk.gif    (animated assembled review)
 
@@ -24,7 +24,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[2]
-ASSETS = ROOT / "app/src/main/assets/mecha/courier"
+ASSETS = ROOT / "mecha/src/main/assets/mecha/courier"
 CACHE = Path.home() / ".cache/sortie-mecha-lab"
 FAMILY = "courier"
 SIZE = 64

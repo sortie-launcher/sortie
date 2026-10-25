@@ -28,6 +28,8 @@
   Workshop supports naming, care, mixing owned parts and salvage from new completed game sessions; Gallery compares three
   original art families and four animated poses without unlocking preview parts. Motion can be disabled and the companion
   hidden. Reader Select → Visit the hangar preserves the article underneath. Its save is not yet part of Backup.
+- Internal: the Hangar companion is now its own `:mecha` Gradle module and the shared theme and focus helpers a `:design`
+  module; no behaviour change, and existing companion saves carry over.
 - Getting started explains which emulator starts a game (per-game choice, then Settings default, then the Library setup
   list) and adds "Want box art?": the three routes to artwork (Cocoon import, ES-DE's on-device scraper, a computer) and
   that linking scraped folders is still a `systems.json` edit. The manual gains the same precedence note and no longer
