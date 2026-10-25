@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- AYN Thor: Sortie now keeps the Thor button's panel (`com.odin.dualscreen.assistant`) healthy. The panel leaks a network
+  callback every time it opens; after a few hundred openings Android refuses more, the panel crashes while opening but stays
+  alive, and its invisible window steals the bottom screen's input. The button then does nothing and the app on that screen
+  (Sortie) shows "isn't responding" on every press until a reboot. With Shizuku, Sortie restarts the panel while it is
+  closed before the limit, or at once when it finds that stuck window; the panel comes straight back.
+- `tools/stress/ui-stress.py`: seeded, multi-hour UI stress for the Thor and single-screen handhelds (Home overlay,
+  screen swaps, moving and closing apps across screens, Recents, force-stops, sleep, reader and Hangar), with crash, ANR,
+  stuck-focus, task, overlay, memory and callback-leak monitors and a guard that restores the card's settings. See
+  docs/HARDENING.md.
 - Magazine pictures are sized from their real shape instead of a fixed-height slate box: portrait frames stand at up to 70%
   of the screen, wide diagrams and 16:9 shots may use the full reading width, captions sit under the picture at its width,
   and small pixel art is enlarged by whole steps without smoothing. Placeholders already have the final size, so a restored

@@ -2,6 +2,7 @@ package io.github.esko997.sortie.ui
 
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -95,6 +96,10 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
     Column(Modifier.fillMaxSize()) {
         NavHost(nav, startDestination = "home", modifier = Modifier.weight(1f)) {
             composable("home") {
+                // Home is the launcher's root: Back has nothing to return to. Without this, Android moves a root task to the
+                // back, which on a device where Sortie runs in an ordinary task (started from an icon or another launcher)
+                // drops the player into Recents or a stale app. HomeScreen's own handlers (Move, console sort) win when on.
+                BackHandler {}
                 HomeScreen(
                     vm,
                     onSystem = { nav.navigate("system/${enc(it)}") },
