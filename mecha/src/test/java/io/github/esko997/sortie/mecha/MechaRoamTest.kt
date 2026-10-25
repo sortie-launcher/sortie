@@ -100,6 +100,73 @@ class MechaRoamTest {
         assertNull(MechaRoam.place(bar, 1, stage, listOf(bar, wall)))
     }
 
+    private fun heightMm(scale: Int, ydpi: Float) = MechaBody.FRAME * scale / ydpi * 25.4f
+
+    @Test
+    fun scaleComesFromThePhysicalSizeOfEachDisplay() {
+        // AYN Thor: both panels report density 369 and ~320 real dpi (dumpsys display); top 1920x1080, bottom 1240x1080
+        assertEquals(2, MechaRoam.physicalScale(ydpi = 320.842f, densityDpi = 369))
+        // AYANEO Pocket DMG 1240x1080: density 360, 321.387 dpi (read from the device)
+        assertEquals(2, MechaRoam.physicalScale(ydpi = 321.387f, densityDpi = 360))
+        // Retroid Nova 1280x960 at 320 dpi
+        assertEquals(2, MechaRoam.physicalScale(ydpi = 320f, densityDpi = 320))
+        for (dpi in listOf(320.842f, 321.387f, 320f)) assertTrue(heightMm(2, dpi) in 9f..11f)
+        // a dense phone gets a bigger multiple so he stays the same size in the hand
+        val phone = MechaRoam.physicalScale(ydpi = 460f, densityDpi = 440)
+        assertEquals(3, phone)
+        assertTrue(heightMm(phone, 460f) in 9f..11f)
+        // a display that reports a nonsense dpi falls back to its density bucket
+        assertEquals(MechaRoam.physicalScale(480f, 480), MechaRoam.physicalScale(ydpi = 0f, densityDpi = 480))
+        assertEquals(MechaRoam.physicalScale(480f, 480), MechaRoam.physicalScale(ydpi = 96f, densityDpi = 480))
+    }
+
+    @Test
+    fun aSpotQualifiesOnlyWhereAtLeastFortyDpOfHimIsShowingAndFreeOfControls() {
+        val tap = 92 // 40 dp at the Thor's density 2.30625
+        // a peek shows head and shoulders: enough rows for a tappable height, not just the antenna
+        val tile = el("tile", MechaSpotKind.PEEK, 300, 500, 700, 800, interactive = true)
+        val p = MechaRoam.place(tile, 2, stage, listOf(tile), minTap = tap)!!
+        assertTrue(p.exposed.height >= tap)
+        assertEquals(500, p.exposed.bottom)
+        assertNotNull(MechaRoam.hitTarget(p, 2, tap, stage, listOf(tile)))
+        // only 47 px between the chips above and the tile: a head-only peek fits, a tappable one does not
+        val chips = el("chips", null, 0, 400, 1240, 453, interactive = true)
+        assertNotNull(MechaRoam.place(tile, 2, stage, listOf(tile, chips)))
+        assertNull(MechaRoam.place(tile, 2, stage, listOf(tile, chips), minTap = tap))
+        // standing visible behind a transparent list row is not enough: the row would take the tap
+        val bar = el("bar", MechaSpotKind.LEDGE, 0, 900, 1240, 960)
+        val row = MechaElement("row", null, MechaRect(0, 700, 1240, 900), MechaRect(0, 700, 1240, 900), interactive = true, solid = false)
+        assertNotNull(MechaRoam.place(bar, 2, stage, listOf(bar, row)))
+        assertNull(MechaRoam.place(bar, 2, stage, listOf(bar, row), minTap = tap))
+        // at 1x his art is 54 px wide: never 92 px of him to tap, so nothing qualifies
+        assertTrue(MechaRoam.fitting(listOf(bar), 1, stage, tap).isEmpty())
+        assertEquals(1, MechaRoam.fitting(listOf(bar), 2, stage, tap).size)
+    }
+
+    @Test
+    fun withNowhereTappableHeGoesToTheHomeBaseElseHides() {
+        val tap = 90
+        val s = 2
+        // a Home-like bottom: the hint bar row holds the reserved base at its end, the tiles end right above that row
+        val hints = el("hints", MechaSpotKind.LEDGE, 0, 900, 1112, 1000)
+        val tiles = el("tiles", null, 0, 400, 1240, 1000 - MechaBody.height(s), interactive = true)
+        val base = el("base", MechaSpotKind.BASE, 1112, 1000 - MechaBody.height(s), 1240, 1000)
+        val p = MechaRoam.places(listOf(hints, tiles, base), s, stage, tap).single()
+        assertEquals("base", p.spotId)
+        assertTrue(base.bounds.contains(p.exposed))
+        assertNotNull(MechaRoam.hitTarget(p, s, tap, stage, listOf(hints, tiles, base)))
+        // the base is only a fallback: with a real spot qualifying, he goes there instead
+        val roomy = el("roomy", MechaSpotKind.ROOM, 0, 100, 600, 380)
+        assertEquals(listOf("roomy"), MechaRoam.places(listOf(hints, tiles, base, roomy), s, stage, tap).map { it.spotId })
+        // a base too small for him, or covered, does not hold him: nowhere at all, so he hides
+        val small = el("base", MechaSpotKind.BASE, 1180, 960, 1240, 1000)
+        assertTrue(MechaRoam.places(listOf(hints, tiles, small), s, stage, tap).isEmpty())
+        val covered = el("toast", null, 1100, 900, 1240, 960)
+        assertTrue(MechaRoam.places(listOf(hints, tiles, base, covered), s, stage, tap).isEmpty())
+        // no base declared (a hidden companion reserves none): hide too
+        assertTrue(MechaRoam.places(listOf(hints, tiles), s, stage, tap).isEmpty())
+    }
+
     @Test
     fun whenThingsMoveAroundAStandingMechHisTapTargetAndBubbleFollow() {
         val bar = el("bar", MechaSpotKind.LEDGE, 0, 900, 1240, 960)

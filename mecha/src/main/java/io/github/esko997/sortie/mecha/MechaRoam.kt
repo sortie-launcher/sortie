@@ -29,7 +29,13 @@ enum class MechaSpotKind {
     EDGE_START,
 
     /** Like [EDGE_START] at the end edge. */
-    EDGE_END;
+    EDGE_END,
+
+    /**
+     * The host's reserved home base: empty space the size of the mech box ([io.github.esko997.sortie.mecha.ui.mechaBaseSize])
+     * that nothing else uses. He stands inside it on its bottom edge, only when no other spot qualifies.
+     */
+    BASE;
 
     internal val edge: Boolean get() = this == EDGE_START || this == EDGE_END
 }
@@ -74,7 +80,7 @@ internal object MechaBody {
     const val ART_LEFT = 5
     const val ART_RIGHT = 59
 
-    /** Frame rows a peek shows above the edge: the head down to just under the eyes (eyes sit on rows 14-19). */
+    /** Frame rows a peek shows above the edge at least: the head down to just under the eyes (eyes sit on rows 14-19). */
     const val PEEK_ROWS = 21
 
     /** Art pixels a mech waiting at the screen edge shows, at most and at least. */
@@ -90,8 +96,14 @@ internal object MechaBody {
     /** The opaque art's extent for box left [x] standing on [floor]. */
     fun art(x: Int, floor: Int, scale: Int): MechaRect = MechaRect(x + ART_LEFT * scale, frameTop(floor, scale), x + ART_RIGHT * scale, floor)
 
-    /** The floor that leaves exactly [PEEK_ROWS] rows above [edge]. */
-    fun peekFloor(edge: Int, scale: Int): Int = edge + (FRAME - 1 - PEEK_ROWS) * scale
+    /**
+     * Frame rows a peek shows above its edge: at least [PEEK_ROWS], and enough that the showing part is [minTap] pixels tall
+     * at [scale] (head and shoulders, so he can be tapped). Never the whole frame: that would be standing, not peeking.
+     */
+    fun peekRows(scale: Int, minTap: Int): Int = max(PEEK_ROWS, (minTap + scale - 1) / scale).coerceAtMost(FRAME - 2)
+
+    /** The floor that leaves exactly [rows] frame rows above [edge]. */
+    fun peekFloor(edge: Int, scale: Int, rows: Int = PEEK_ROWS): Int = edge + (FRAME - 1 - rows) * scale
 }
 
 /**
@@ -114,11 +126,27 @@ internal object MechaRoam {
     /** Frame pixels between the mech and the element it stands beside. */
     private const val BESIDE_GAP = 2
 
+    /** The lowest height the mech should stand on any screen, in millimetres (the owner asked for about 9-10 mm). */
+    const val MIN_HEIGHT_MM = 9f
+
+    /**
+     * The whole-number scale of the 64-pixel frame that makes him about the same physical size everywhere: the smallest
+     * scale at least [MIN_HEIGHT_MM] tall on a display with [ydpi] vertical pixels per inch. Some displays report a made-up
+     * dpi; one implausibly far from the density bucket [densityDpi] is ignored in favour of the bucket.
+     */
+    fun physicalScale(ydpi: Float, densityDpi: Int): Int {
+        val dpi = if (ydpi >= 72f && ydpi in densityDpi * 0.6f..densityDpi * 1.6f) ydpi else densityDpi.toFloat()
+        val px = MIN_HEIGHT_MM / 25.4f * dpi
+        return max(1, kotlin.math.ceil(px / MechaBody.FRAME).toInt())
+    }
+
     /**
      * The placement for [spot] at [scale] nearest to [preferX] (box left; null: the spot's natural position) where the exposed
-     * art stays inside [stage] and clear of every other element, or null when it does not fit anywhere along the spot.
+     * art stays inside [stage] and clear of every other element, or null when it does not fit anywhere along the spot. With
+     * [minTap] above 0 it also has to be tappable: a control-free exposed area at least [minTap] pixels each way
+     * ([hitTarget]); a peek shows as many rows as that takes ([MechaBody.peekRows]).
      */
-    fun place(spot: MechaElement, scale: Int, stage: MechaRect, elements: Collection<MechaElement>, preferX: Int? = null): MechaPlacement? {
+    fun place(spot: MechaElement, scale: Int, stage: MechaRect, elements: Collection<MechaElement>, preferX: Int? = null, minTap: Int = 0): MechaPlacement? {
         val kind = spot.kind ?: return null
         val a = spot.bounds
         val w = MechaBody.width(scale)
@@ -140,7 +168,7 @@ internal object MechaRoam {
                 maxX = a.right - 8 * s - w / 2
             }
             MechaSpotKind.PEEK -> {
-                floor = MechaBody.peekFloor(a.top, s)
+                floor = MechaBody.peekFloor(a.top, s, MechaBody.peekRows(s, minTap))
                 clip = a.top
                 // the whole body behind the anchor
                 minX = a.left - MechaBody.ART_LEFT * s
@@ -158,7 +186,7 @@ internal object MechaRoam {
                 minX = a.left - (BESIDE_GAP + MechaBody.ART_RIGHT) * s
                 maxX = minX
             }
-            MechaSpotKind.ROOM -> {
+            MechaSpotKind.ROOM, MechaSpotKind.BASE -> {
                 floor = a.bottom
                 clip = Int.MAX_VALUE
                 minX = a.left - MechaBody.ART_LEFT * s
@@ -174,7 +202,9 @@ internal object MechaRoam {
             for (x in if (offset == 0) intArrayOf(start) else intArrayOf(start + offset, start - offset)) {
                 if (x < minX || x > maxX) continue
                 val exposed = exposedArt(x, floor, clip, s)
-                if (stage.contains(exposed) && clear(exposed, spot, elements)) return MechaPlacement(spot.id, kind, x, floor, clip, exposed)
+                if (!stage.contains(exposed) || !clear(exposed, spot, elements)) continue
+                val p = MechaPlacement(spot.id, kind, x, floor, clip, exposed)
+                if (minTap <= 0 || hitTarget(p, s, minTap, stage, elements) != null) return p
             }
             offset += step
         }
@@ -218,22 +248,40 @@ internal object MechaRoam {
     private fun clear(r: MechaRect, anchor: MechaElement, elements: Collection<MechaElement>): Boolean =
         elements.none { it !== anchor && it.solid && it.visible.intersects(r) }
 
-    /** Every non-edge spot's placement at [scale] (each at its natural position, or [preferX] for spots that span a range). */
-    fun fitting(elements: Collection<MechaElement>, scale: Int, stage: MechaRect, preferX: ((MechaElement) -> Int?)? = null): List<MechaPlacement> =
-        elements.mapNotNull { e -> if (e.kind == null || e.kind.edge) null else place(e, scale, stage, elements, preferX?.invoke(e)) }
+    /** Every ordinary spot's placement at [scale] (each at its natural position, or [preferX] for spots that span a range). */
+    fun fitting(
+        elements: Collection<MechaElement>,
+        scale: Int,
+        stage: MechaRect,
+        minTap: Int = 0,
+        preferX: ((MechaElement) -> Int?)? = null
+    ): List<MechaPlacement> = elements.mapNotNull { e ->
+        if (e.kind == null || e.kind.edge || e.kind == MechaSpotKind.BASE) null else place(e, scale, stage, elements, preferX?.invoke(e), minTap)
+    }
 
-    /** Edge placements that fit, for entrances, exits and peeking in. */
+    /** The host's home base, when it is laid out and he fits there tappably. */
+    fun base(elements: Collection<MechaElement>, scale: Int, stage: MechaRect, minTap: Int): MechaPlacement? =
+        elements.firstNotNullOfOrNull { e -> if (e.kind == MechaSpotKind.BASE) place(e, scale, stage, elements, minTap = minTap) else null }
+
+    /**
+     * Where he may stand now: every spot that qualifies (fits and is tappable), else the home base alone, else nowhere (he
+     * hides; the Hangar header button stays the way in). Never somewhere he shows but cannot be tapped.
+     */
+    fun places(elements: Collection<MechaElement>, scale: Int, stage: MechaRect, minTap: Int, preferX: ((MechaElement) -> Int?)? = null): List<MechaPlacement> =
+        fitting(elements, scale, stage, minTap, preferX).ifEmpty { listOfNotNull(base(elements, scale, stage, minTap)) }
+
+    /** Edge placements that fit, for walking onto and off the screen. */
     fun edges(elements: Collection<MechaElement>, scale: Int, stage: MechaRect): List<MechaPlacement> =
         elements.mapNotNull { e -> if (e.kind?.edge == true) place(e, scale, stage, elements) else null }
 
     /**
-     * The largest scale up to [preferred] at which at least two spots fit (so he has somewhere to go), else the largest at
-     * which one does, else [preferred]: with nothing fitting he waits off screen and the size does not matter.
+     * [preferred] (the physical size, [physicalScale]) when at least two spots qualify there; else the largest smaller scale
+     * at which two do, else the largest at which one does, else [preferred] (he uses the home base or hides).
      */
-    fun chooseScale(elements: Collection<MechaElement>, stage: MechaRect, preferred: Int): Int {
+    fun chooseScale(elements: Collection<MechaElement>, stage: MechaRect, preferred: Int, minTap: Int = 0): Int {
         var single = 0
         for (s in preferred downTo 1) {
-            val n = fitting(elements, s, stage).size
+            val n = fitting(elements, s, stage, minTap).size
             if (n >= 2) return s
             if (n == 1 && single == 0) single = s
         }

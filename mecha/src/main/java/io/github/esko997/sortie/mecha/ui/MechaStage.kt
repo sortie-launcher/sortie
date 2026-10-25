@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -65,18 +66,14 @@ import io.github.esko997.sortie.mecha.MechaSpotKind
 import io.github.esko997.sortie.mecha.MechaStore
 import io.github.esko997.sortie.ui.Amber
 import io.github.esko997.sortie.ui.Slate
-import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlinx.coroutines.channels.Channel
 
 /** The stage of the window being composed; [Modifier.mechaSpot] and [Modifier.mechaObstacle] report to it. */
 val LocalMechaStage = staticCompositionLocalOf<MechaStage?> { null }
 
-/** The companion aims for this height; spots that cannot hold it at a whole multiple of the 64px frame get a smaller one. */
-private val PREFERRED_HEIGHT = 48.dp
-
-/** Smallest tap target over the mech, either way; less and the Hangar header button is the way in. */
-private val MIN_TAP = 24.dp
+/** The exposed, control-free part of him must be at least this big each way for a spot to qualify: he is always tappable. */
+private val MIN_TAP = 40.dp
 
 private val BUBBLE_MAX_WIDTH = 220.dp
 private val BUBBLE_PAD_H = 10.dp
@@ -191,11 +188,11 @@ class MechaStage internal constructor(internal val store: MechaStore, internal v
         }
     }
 
-    /** True when at least one spot fits here now: somewhere to go when he crosses over. */
+    /** True when he has somewhere to stand here now (a spot or the home base): where a stroll may take him across. */
     internal fun hasRoom(): Boolean {
         val b = bounds ?: return false
-        val s = MechaRoam.chooseScale(elements.values, b, preferredScale)
-        return MechaRoam.fitting(elements.values, s, b).isNotEmpty()
+        val s = MechaRoam.chooseScale(elements.values, b, preferredScale, minTap)
+        return MechaRoam.places(elements.values, s, b, minTap).isNotEmpty()
     }
 
     internal fun hitAt(px: Float, py: Float): Boolean {
@@ -207,22 +204,42 @@ class MechaStage internal constructor(internal val store: MechaStore, internal v
 /** A speech bubble: [text] in [rect] (window pixels), measured to fit before it was placed. */
 internal class MechaBubble(val text: String, val rect: MechaRect)
 
-/** The stage for this window, sized for its density. */
+/** The stage for this window: the mech's size from the display's real pixel density (about 9-10 mm tall everywhere). */
 @Composable
 fun rememberMechaStage(store: MechaStore): MechaStage {
     val view = LocalView.current
     val density = LocalDensity.current
     return remember(store, view, density) {
-        with(density) {
-            MechaStage(
-                store,
-                view.display?.displayId ?: Display.DEFAULT_DISPLAY,
-                preferredScale = max(1, (PREFERRED_HEIGHT.toPx() / MechaBody.FRAME).roundToInt()),
-                minTap = MIN_TAP.roundToPx()
-            )
-        }
+        val metrics = view.context.resources.displayMetrics
+        MechaStage(
+            store,
+            view.display?.displayId ?: Display.DEFAULT_DISPLAY,
+            preferredScale = MechaRoam.physicalScale(metrics.ydpi, metrics.densityDpi),
+            minTap = with(density) { MIN_TAP.roundToPx() }
+        )
     }
 }
+
+/**
+ * The room a host reserves for the companion's home base ([mechaHomeBase]): the mech box at this stage's size. Zero without a
+ * stage or while the companion is hidden or not yet loaded, so a hidden companion takes no space and draws nothing.
+ */
+@Composable
+fun mechaBaseSize(): DpSize {
+    val stage = LocalMechaStage.current ?: return DpSize.Zero
+    val view by stage.store.view.collectAsState()
+    if (view.state?.enabled != true) return DpSize.Zero
+    val density = LocalDensity.current
+    return remember(stage, density) {
+        with(density) { DpSize(MechaBody.width(stage.preferredScale).toDp(), MechaBody.height(stage.preferredScale).toDp()) }
+    }
+}
+
+/**
+ * Declares the host's home base: empty space of [mechaBaseSize] that nothing else covers, where he stands when no other spot
+ * qualifies. If even the base cannot hold him he hides (the Hangar header button stays the way in).
+ */
+fun Modifier.mechaHomeBase(id: String): Modifier = mechaSpot(id, MechaSpotKind.BASE)
 
 /**
  * Hosts the companion in one window: [content] with the mech drawn behind it (so every control, tile and text wins and peeks

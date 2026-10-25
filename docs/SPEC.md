@@ -142,8 +142,14 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   Spot kinds: LEDGE (on an element's top edge), PEEK (head above an element's top edge, the rest clipped away),
   BESIDE_END/START (on its bottom line, just outside it), ROOM (inside empty space), EDGE_START/END (partly off screen at
   the edge, standing on the element: the way in and out). A spot counts only while its element is laid out and whole on
-  screen and the exposed art is inside the window and clear of every other element. Scale: whole multiples of the 64 px
-  frame, aiming at 48 dp, smaller while fewer than two spots fit.
+  screen, the exposed art is inside the window and clear of every other element, and at least 40 dp × 40 dp of him shows
+  free of controls (so he is always tappable; a peek shows as many rows as that takes: head and shoulders). Scale: the
+  smallest whole multiple of the 64 px frame at least 9 mm tall from the display's real dpi (`ydpi`, or the density bucket
+  when it reports nonsense): 2× on the Thor, DMG and Nova; one step smaller only if fewer than two spots qualify.
+- Home base: when no spot qualifies he stands in empty space the host reserves for him (`mechaBaseSize`,
+  `Modifier.mechaHomeBase`): on Home at the end of the hint bar row, on the other display under the bell (the picture keeps
+  clear of it). A hidden companion reserves nothing. If even the base cannot hold him he hides; he is never visible and
+  untappable.
 - Home spots: after the clock/game count, on the header actions when they wrap below the title, after the sort chips,
   over every laid-out tile (in practice the first visible row: elsewhere the head would be inside another tile), on the
   hint bar, both edges along the hint bar. Other display: after the battery, before the bell, on and after **Want to
@@ -156,9 +162,10 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   Single-screen devices keep him on Home. The other display's stage is inactive while a game is in front.
 - Movement: a stroll every 45–90 s while the stage is resumed: walking (3 frame pixels per 120 ms walk frame) along a
   shared floor up to half the screen, a seven-step hop for a small nearby step, otherwise sinking out of sight through
-  his floor line and rising into the next spot. With nothing fitting he waits off screen and now and then leans in from
-  an edge for 3.5 s. A spot that loses its room (scrolling, rewrapping) makes him sink away; he comes back to a fitting
-  spot once the layout has been still for 1.2 s. He follows his element while it moves.
+  his floor line and rising into the next spot. With nothing qualifying he stands at the home base, or stays out of
+  sight. A spot that loses its room (scrolling, rewrapping) makes him sink away; he comes back to a qualifying place once
+  the layout has been still for 1.2 s. He follows his element while it moves. Motion off: always the first qualifying
+  place in declaration order (deterministic for screenshots).
 - Reactions: the first look after a play session closes (any session, games or apps) greets the player with a cheer and
   "Welcome back!" plus the store's credit message; other store messages (care, salvage, rename, equipment) show in a
   5 s bubble after the Hangar closes. A bubble only appears beside him on empty space; he moves to a spot with room or
@@ -169,7 +176,7 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Access: **Hangar** in Home's header (controller; focus returns to it on close), a tap on the visible mech (watched at the
   host in the Initial pass: a short low-movement tap whose down landed on his target opens the Hangar and consumes only
   its release; drags pass through untouched). The tap target is the exposed art widened to the frame where that touches
-  no control, at least 24 dp each way, otherwise none. The Hangar holds Animate and Hide/Show companion. Reader
+  no control (at least 40 dp each way, which every place he stands guarantees). The Hangar holds Animate and Hide/Show companion. Reader
   Select → Visit the hangar keeps its controller access. The Hangar dialog stays mounted while its rename field uses the
   keyboard.
 - Roaming acceptance (`0.1.0-mecha-roam` debug on the DMG, `0.1.0-beta.1044-roam.1` on the Thor): DMG Home at the clock,

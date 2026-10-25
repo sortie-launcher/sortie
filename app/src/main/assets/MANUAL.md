@@ -147,12 +147,13 @@ Touch and keyboard arrows still position the caret, and **A** on a text field br
 
 ## Hangar companion (experimental)
 
-The little mech on Home is an optional, experimental companion. He lives behind the interface, in its margins: beside the
-clock, at the end of the sort chips, peeking over the first row of tiles, standing on the hint bar or leaning in from the
-screen edge. Every tile, button and line of text stays in front of him, so he never covers anything you need. When there
-is no room he waits off screen and now and then peeks in. On a dual-screen handheld he also roams the other screen (near
-the battery and bell, on or beside **Want to play**, over the game's picture, by the **+**) and can walk off one screen
-and onto the other. There is only one of him.
+The little mech on Home is an optional, experimental companion, about a centimetre tall on any screen. He lives behind the
+interface, in its margins: beside the clock, at the end of the sort chips, peeking over the first row of tiles or standing
+on the hint bar. Every tile, button and line of text stays in front of him, so he never covers anything you need, and he
+only stops where enough of him shows to tap. When nowhere has room he goes to his home base at the end of the hint bar.
+On a dual-screen handheld he also roams the other screen (near the battery and bell, on or beside **Want to play**, over
+the game's picture, by the **+**, with his base under the bell) and can walk off one screen and onto the other. There is
+only one of him.
 
 - Every minute or so he strolls to another spot. When you come back from a game he waves and says what the session earned;
   news from the Hangar shows in a speech bubble where there is empty space. After a few quiet minutes he dozes until you

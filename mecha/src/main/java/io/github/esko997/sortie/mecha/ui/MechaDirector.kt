@@ -38,7 +38,6 @@ private const val WELCOME_WAIT_MS = 1_500L
 private const val WELCOME_STALE_MS = 60_000L
 
 private const val BUBBLE_MS = 5_000L
-private const val EDGE_PEEK_MS = 3_500L
 
 /** Walk pace: [STRIDE] frame pixels per step, one step per walk frame, so the feet and the floor agree. */
 private const val STRIDE = 3
@@ -194,14 +193,23 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
 
     private fun elements() = stage.elements.values
 
-    private fun options(scale: Int, bounds: MechaRect, spread: Boolean): List<MechaPlacement> = MechaRoam.fitting(elements(), scale, bounds) { e ->
-        if (!spread) null else e.bounds.left + random.nextInt(max(1, e.bounds.width)) - MechaBody.width(scale) / 2
+    /** Where he may stand now (tappable spots, else the home base, else nowhere); [spread] varies x along wide spots. */
+    private fun options(scale: Int, bounds: MechaRect, spread: Boolean): List<MechaPlacement> = MechaRoam.places(elements(), scale, bounds, stage.minTap) { e ->
+        if (!spread || !motion) null else e.bounds.left + random.nextInt(max(1, e.bounds.width)) - MechaBody.width(scale) / 2
     }
 
-    /** Becoming the owner: walk in after a hand-off, else stand where he was (or anywhere that fits) at once. */
+    private fun rescale(b: MechaRect) {
+        stage.scale = MechaRoam.chooseScale(elements(), b, stage.preferredScale, stage.minTap)
+    }
+
+    /** Motion off: always the first qualifying place in declaration order, so a still companion is placed the same way every time. */
+    private fun pick(opts: List<MechaPlacement>, from: MechaPlacement?, b: MechaRect): MechaPlacement? =
+        if (!motion) opts.firstOrNull() else MechaRoam.chooseNext(opts, null, previous, from, b.width, random)
+
+    /** Becoming the owner: walk in after a hand-off, else stand where he was (or anywhere that qualifies) at once. */
     private suspend fun arrive() {
         val b = stage.bounds ?: return
-        stage.scale = MechaRoam.chooseScale(elements(), b, stage.preferredScale)
+        rescale(b)
         val side = MechaPresence.arriving
         MechaPresence.arriving = null
         if (side != null && motion && !resting) {
@@ -210,7 +218,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
             return
         }
         val opts = options(stage.scale, b, spread = false)
-        val p = opts.firstOrNull { it.spotId == lastSpot } ?: opts.randomOrNull(random)
+        val p = opts.firstOrNull { it.spotId == lastSpot } ?: pick(opts, null, b)
         if (p == null) {
             settleAt = SystemClock.uptimeMillis() + SETTLE_MS
             return
@@ -218,16 +226,16 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         place(p)
     }
 
-    /** Off screen and the layout has settled: back to a spot that fits, rising into it. */
+    /** Off screen and the layout has settled: back to a place that qualifies, rising into it. */
     private suspend fun comeBack() {
         val b = stage.bounds ?: return
-        stage.scale = MechaRoam.chooseScale(elements(), b, stage.preferredScale)
-        val p = MechaRoam.chooseNext(options(stage.scale, b, spread = true), null, previous, null, b.width, random) ?: return
+        rescale(b)
+        val p = pick(options(stage.scale, b, spread = true), null, b) ?: return
         if (motion && !resting) rise(p)
         place(p)
     }
 
-    /** The layout changed under him: follow his element, or get out of the way when it no longer leaves him room. */
+    /** The layout changed under him: follow his element, or get out of the way when it no longer qualifies. */
     private suspend fun settle() {
         val b = stage.bounds ?: return
         val cur = at
@@ -236,7 +244,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
             return
         }
         val spot = stage.elements[cur.spotId]
-        val p = spot?.let { MechaRoam.place(it, stage.scale, b, elements(), it.bounds.left + anchorDx) }
+        val p = spot?.let { MechaRoam.place(it, stage.scale, b, elements(), it.bounds.left + anchorDx, stage.minTap) }
         if (p == null) {
             pushedOff(cur)
             return
@@ -291,30 +299,19 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         val cur = at
         val other = MechaPresence.otherWithRoom(stage)
         if (cur != null) strollsHere++
-        if (other != null && (MechaRoam.crossOver(strollsHere, true, random) || cur == null && MechaRoam.fitting(elements(), stage.scale, b).isEmpty())) {
+        val here = options(stage.scale, b, spread = true)
+        if (other != null && (MechaRoam.crossOver(strollsHere, true, random) || cur == null && here.isEmpty())) {
             leave(other, b)
             return
         }
-        val next = MechaRoam.chooseNext(options(stage.scale, b, spread = true), cur?.spotId, previous, cur, b.width, random)
+        val next = MechaRoam.chooseNext(here, cur?.spotId, previous, cur, b.width, random)
         when {
             cur == null && next != null -> {
                 rise(next)
                 place(next)
             }
-            cur == null -> edgePeek(b)
-            next != null -> moveTo(cur, next, b)
+            next != null && cur != null -> moveTo(cur, next, b)
         }
-    }
-
-    /** Nothing fits: he leans in from an edge for a few seconds and leaves again. */
-    private suspend fun edgePeek(b: MechaRect) {
-        val e = MechaRoam.edges(elements(), stage.scale, b).randomOrNull(random) ?: return
-        walkInFrom(e, b)
-        place(e)
-        delay(EDGE_PEEK_MS)
-        stage.stand(null)
-        walk(MechaRoam.offstageX(e.kind, b, stage.scale))
-        hide()
     }
 
     private suspend fun moveTo(from: MechaPlacement, to: MechaPlacement, b: MechaRect) {
@@ -331,7 +328,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         previous = from.spotId
         // the layout may have moved while he walked: stand where the spot is now
         val spot = stage.elements[to.spotId]
-        val now = spot?.let { MechaRoam.place(it, stage.scale, b, elements(), to.x) }
+        val now = spot?.let { MechaRoam.place(it, stage.scale, b, elements(), to.x, stage.minTap) }
         if (now != null) place(now) else pushedOff(to)
     }
 
@@ -379,7 +376,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         walkInFrom(e, b)
         place(e)
         if (next == null) {
-            delay(EDGE_PEEK_MS)
+            // nowhere to stand here (not even the home base): straight back out of sight
             stage.stand(null)
             walk(MechaRoam.offstageX(e.kind, b, stage.scale))
             hide()

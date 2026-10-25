@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Hangar companion size and reach: he is now about a centimetre tall on every screen (2× on the Thor and DMG, from the
+  display's real dpi), only stops where at least 40 dp of him shows clear of controls so he can always be tapped, and
+  falls back to a reserved home base (end of Home's hint bar; under the bell on the other screen) or hides.
 - Hangar companion: the footer strip is gone; the mech now lives behind Home's interface and roams its margins (beside
   the clock, the end of the sort chips, peeking over the first row of tiles, on the hint bar, at the screen edges), and on
   dual-screen handhelds the other screen's panel too, walking off one screen and onto the other. Controls and text always

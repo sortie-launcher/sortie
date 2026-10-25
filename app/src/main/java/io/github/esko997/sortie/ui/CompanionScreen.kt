@@ -90,6 +90,8 @@ import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.mecha.MechaSpotKind
 import io.github.esko997.sortie.mecha.ui.MechaStageHost
+import io.github.esko997.sortie.mecha.ui.mechaBaseSize
+import io.github.esko997.sortie.mecha.ui.mechaHomeBase
 import io.github.esko997.sortie.mecha.ui.mechaObstacle
 import io.github.esko997.sortie.mecha.ui.mechaSpot
 import io.github.esko997.sortie.mecha.ui.rememberMechaStage
@@ -193,6 +195,12 @@ fun CompanionScreen(displayId: Int) {
                     // one element per corner, all on the same 44 dp inset: battery · bell / dock · '+'
                     Battery(Modifier.align(Alignment.TopStart).padding(16.dp).mechaSpot("companion:battery", MechaSpotKind.BESIDE_END))
                     Bell(graph, Modifier.align(Alignment.TopEnd).padding(16.dp).mechaSpot("companion:bell", MechaSpotKind.BESIDE_START, interactive = true))
+                    // his home base: right under the bell, beside the picture (Panel keeps the picture clear of it)
+                    Spacer(
+                        Modifier.align(Alignment.TopEnd).padding(top = BASE_TOP, end = 8.dp)
+                            .size(mechaBaseSize())
+                            .mechaHomeBase("companion:base")
+                    )
                 }
             }
         }
@@ -379,7 +387,9 @@ private fun Panel(
     val hasNotes = notes != null && !notes.isEmpty()
     val lower = detail != null || hasNotes
     Column(Modifier.fillMaxSize().then(tap).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.weight(if (lower) 0.5f else 1f).fillMaxWidth(), contentAlignment = Alignment.Center) { art() }
+        // the picture keeps clear of the companion's home base at the top end (none while he is hidden)
+        val baseInset = mechaBaseSize().width
+        Box(Modifier.weight(if (lower) 0.5f else 1f).fillMaxWidth().padding(horizontal = baseInset), contentAlignment = Alignment.Center) { art() }
         if (status != null) {
             Text(
                 status,
@@ -573,6 +583,9 @@ private fun Bell(graph: SortieApp.Graph, modifier: Modifier) {
 
 /** Size of the four corner controls; the dock dot and battery centre themselves in it so every corner lines up. */
 private val CORNER = 44.dp
+
+/** Top of the companion's home base on the idle panel: under the bell's corner (16 dp inset + [CORNER] + a gap). */
+private val BASE_TOP = 68.dp
 
 /**
  * Small translucent round '+' in the corner of the idle panel and beside the magazine contents; opens [TouchLauncher]. A
