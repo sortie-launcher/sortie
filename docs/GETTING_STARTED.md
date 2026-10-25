@@ -327,8 +327,8 @@ You can leave Library setup while it saves or indexes; the work carries on. Repe
 just played.
 
 **RetroArch notes.** After downloading cores inside RetroArch, quit it before starting a game from Sortie. Save before
-changing games. RetroArch 1.22 may close itself on the first attempt to open a *different* game; if you land back in
-Sortie, choose the game again.
+changing games. RetroArch 1.22 closes itself when asked to open a *different* game while it runs; Sortie then says so on
+the game's page (*RetroArch closed while switching cores — press Play again*). Press **Play** again.
 
 **Which emulator starts a game?** Sortie checks three places, in this order: a per-game choice made with **Launch with…**
 on the game's page; the system's choice under **Settings → Default launcher per system**; otherwise the system's

@@ -395,7 +395,8 @@ object LibraryPresets {
             )
             add(
                 "After core setup, use RetroArch's Quit action before starting a game here. Save before changing games. " +
-                    "RetroArch 1.22 may close itself on the first attempt to open different content; if you return to Sortie, choose the game again."
+                    "RetroArch 1.22 closes itself when asked to open a different game while it runs; Sortie then says so on the game's page: " +
+                    "press Play again."
             )
         }
         profiles.forEach { p -> PROFILE_NOTES[p.id]?.let { add(it) } }
