@@ -14,7 +14,8 @@ TEST_APK=${SORTIE_TEST_APK:-smoke/build/outputs/apk/debug/smoke-debug.apk}
 OUT=${SORTIE_SMOKE_OUT:-smoke/build/emulator-smoke}
 adb() { command adb "$@" </dev/null; }
 sh_() { adb shell "$@"; }
-displays() { sh_ dumpsys display | grep -cE '^\s+mDisplayId=' || true; }
+# grep -c reads everything: an early-exiting grep -q would fail the pipe under pipefail
+second_display() { [ "$(sh_ dumpsys display | grep -c 'uniqueId="virtual:com.android.emulator.multidisplay' || true)" -gt 0 ]; }
 
 [ -f "$APK" ] && [ -f "$TEST_APK" ] || { echo "Missing $APK or $TEST_APK: ./gradlew assembleDebug :smoke:assembleDebug" >&2; exit 2; }
 adb wait-for-device
@@ -43,8 +44,10 @@ sh_ input keyevent KEYCODE_WAKEUP
 sh_ wm dismiss-keyguard || true
 
 echo "== install"
-adb install -r -t "$APK"
-adb install -r -t "$TEST_APK"
+# Fresh installs: no data from an earlier run, and no clash with an install signed by another machine's debug key.
+for pkg in "$PKG.smoke" "$PKG"; do adb uninstall "$pkg" >/dev/null 2>&1 || true; done
+adb install -t "$APK"
+adb install -t "$TEST_APK"
 for op in MANAGE_EXTERNAL_STORAGE SYSTEM_ALERT_WINDOW; do sh_ appops set "$PKG" "$op" allow; done
 
 echo "== card"
@@ -65,15 +68,15 @@ sh_ input keyevent KEYCODE_HOME
 # only, touch, rotates with content, system decorations, trusted). An overlay display (settings overlay_display_devices)
 # would not do: Android leaves overlay displays out of accessibility, so no test could read the second screen.
 echo "== second screen"
-before=$(displays)
 # The first request can answer "MultiDisplayPipe is not up yet" while it starts the guest's display service; repeating the
-# same request is harmless (unchanged parameters are ignored).
+# same request is harmless (unchanged parameters are ignored), and so is a display left by an earlier run.
 for attempt in 1 2 3; do
+  second_display && break
   adb emu multidisplay add 1 1240 1080 369 1739 || true
-  for _ in $(seq 15); do [ "$(displays)" -gt "$before" ] && break 2; sleep 1; done
+  for _ in $(seq 15); do second_display && break 2; sleep 1; done
   echo "No second display after attempt $attempt"
 done
-[ "$(displays)" -gt "$before" ] || { echo "The emulator did not add a second display" >&2; exit 1; }
+second_display || { echo "The emulator did not add a second display" >&2; exit 1; }
 sh_ dumpsys display | grep -E 'DisplayDeviceInfo\{"' || true
 
 echo "== tests"

@@ -80,14 +80,16 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      # Saved right after the first boot, before the tests change the AVD's disk (a post-job save would keep this run's
+      # install, signed with this runner's throwaway debug key).
       - name: Restore the booted AVD
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: avd-cache
         with:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-33-google_apis-x86_64-v1
+          key: avd-33-google_apis-x86_64-v2
       - name: Create the AVD and a boot snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -101,6 +103,14 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
           script: echo "Booted once for the snapshot cache."
+      - name: Keep the freshly booted AVD
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: ${{ steps.avd-cache.outputs.cache-primary-key }}
       - name: Smoke tests on two screens
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
