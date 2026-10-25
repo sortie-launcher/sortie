@@ -192,9 +192,11 @@ To add a capture (and keep it free of private data), follow the README in the ca
 Android 13 x86_64 emulator with a second screen, the way a player would: keys go to whichever display has input focus, and
 every check reads the task list (`cmd activity stack list`), the focused display (`dumpsys input`) or the accessibility
 tree of one display. `tools/emulator/smoke.sh` prepares the emulator and runs it; `.github/workflows/emulator.yml` runs that
-script on demand (Actions > emulator > Run workflow, or `gh workflow run emulator.yml --ref BRANCH`, once the workflow is on
-main), on pull requests labelled `emulator`, and on pull requests that touch `shell/`, `MainActivity`, `CompanionActivity`,
-`SecondaryHomeActivity`, `AnchorActivity`, the app manifest, `smoke/` or `tools/emulator/`. A run takes about 5 minutes
+script on demand (Actions > emulator > Run workflow, or `gh workflow run emulator.yml --ref BRANCH`), on pull requests
+labelled `emulator`, and on pull requests that touch the code it exercises: the app's `ui/`, `launch/`, `shell/` and
+`stats/` packages, `MainActivity`, `CompanionActivity`, `SecondaryHomeActivity`, `AnchorActivity`, the app manifest,
+`mecha/src/main/`, `design/src/main/`, `app/build.gradle.kts`, `gradle/libs.versions.toml`, `smoke/`, `tools/emulator/` or
+the workflow itself. Docs, unit tests and the site alone don't run it. A run takes about 5 minutes
 once the booted AVD is cached (build 2, emulator boot and setup 2, the tests under 1) and about 8 when it has to create
 the AVD; the cache is saved right after the first boot, before the tests change the emulator.
 
