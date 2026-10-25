@@ -10,7 +10,9 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.Configurator
+import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.UiDevice
+import java.util.regex.Pattern
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -42,9 +44,12 @@ class DualScreenSmokeTest {
     fun backToHome() {
         Configurator.getInstance().waitForIdleTimeout = 1_000 // Home's ambient background never goes idle for long
         shell("input keyevent KEYCODE_WAKEUP")
-        // A failed test may leave navigation below: X there brings it back up (keys sent to that display explicitly).
+        // A test may leave navigation below (a double X can end there): X brings it back up. Sent to the focused display, as a
+        // controller does: forced onto the second display, the key's release arrived after the swap had moved focus away,
+        // waited for a window there and became an ANR that a later key dismissed by closing Sortie.
         if (mainTasks().any { it.display == second && it.visible }) {
-            shell("input -d $second keyevent KEYCODE_BUTTON_X")
+            await("the controller with navigation on display $second") { focusedDisplay() == second }
+            pressX()
             await("navigation back on the primary display") { mainTasks().any { it.display == PRIMARY && it.visible } }
         }
         shell("input -d $PRIMARY keyevent KEYCODE_HOME")
@@ -191,18 +196,37 @@ class DualScreenSmokeTest {
         shell("input keyevent KEYCODE_BUTTON_A")
         awaitText("shelf", "an issue's contents") // contents hints: A open · B shelf
         // Contents open on the masthead, then the editor's note: passages the D-pad scrolls through 72 dp at a time and that
-        // open nothing. Down walks to the first entry that is a button, the first article.
-        val focusedButton = By.pkg(PKG).displayId(PRIMARY).focused(true).clickable(true)
-        var downs = 0
-        while (downs++ < 40 && !device.hasObject(focusedButton)) {
+        // open nothing. Down walks to the first article (numbered "01"), one press at a time: each press must visibly move the
+        // focus or scroll before the next is sent. Blind presses queue up while the app is busy (a slow runner) and are then
+        // handled in one burst that runs straight past the articles, so A landed on the games filter.
+        var presses = 0
+        while (!firstArticleFocused()) {
+            assertTrue("no article after $presses presses; it shows ${texts(PRIMARY)}", presses++ < 40)
+            val before = contentsState()
             shell("input keyevent KEYCODE_DPAD_DOWN")
-            SystemClock.sleep(300)
+            await("Down $presses to move the focus or scroll from $before", timeoutMs = 5_000, detail = { "now ${contentsState()}" }) {
+                contentsState().let { it != null && it != before }
+            }
         }
-        await("the first article focused in the contents", detail = { "it shows ${texts(PRIMARY)}" }) { device.hasObject(focusedButton) }
+        // One A must open the focused article; retrying would hide a real activation regression.
         shell("input keyevent KEYCODE_BUTTON_A")
-        awaitText("reader menu", "an article") // article hints: … Select reader menu · B contents
+        awaitText("reader menu", "an article")
         assertEquals(PRIMARY, mainTasks().single().display)
     }
+
+    /**
+     * What a Down on the contents can change: the focused entry, and where every text is (a scroll inside a passage taller
+     * than the screen moves its lines but not its clipped bounds). Null only when a node went stale while being read.
+     */
+    private fun contentsState(): String? = try {
+        val focused = device.findObject(By.pkg(PKG).displayId(PRIMARY).focused(true))?.visibleBounds?.toShortString() ?: "none"
+        val lines = device.findObjects(By.pkg(PKG).displayId(PRIMARY).text(ANY_TEXT)).map { "${it.text.orEmpty().take(12)}@${it.visibleBounds.top}" }
+        "focus=$focused $lines"
+    } catch (e: StaleObjectException) {
+        null
+    }
+
+    private fun firstArticleFocused(): Boolean = device.hasObject(By.pkg(PKG).displayId(PRIMARY).focused(true).clickable(true).hasDescendant(By.text("01")))
 
     // ---------- helpers ----------
 
@@ -325,5 +349,6 @@ class DualScreenSmokeTest {
         val ROOT_LINE = Regex("""^\s*RootTask id=(\d+)\b.*\bdisplayId=(\d+)""")
         val TASK_LINE = Regex("""taskId=(\d+): ([\w.]+/[\w.$]+).*visible=(true|false)""")
         val COMPONENT = Regex("""[\w.]+/[\w.$]+""")
+        val ANY_TEXT: Pattern = Pattern.compile(".+", Pattern.DOTALL)
     }
 }

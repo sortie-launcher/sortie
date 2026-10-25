@@ -197,9 +197,11 @@ To add a capture (and keep it free of private data), follow the README in the ca
 Android 13 x86_64 emulator with a second screen, the way a player would: keys go to whichever display has input focus, and
 every check reads the task list (`cmd activity stack list`), the focused display (`dumpsys input`) or the accessibility
 tree of one display. `tools/emulator/smoke.sh` prepares the emulator and runs it; `.github/workflows/emulator.yml` runs that
-script on demand (Actions > emulator > Run workflow, or `gh workflow run emulator.yml --ref BRANCH`, once the workflow is on
-main), on pull requests labelled `emulator`, and on pull requests that touch `shell/`, `MainActivity`, `CompanionActivity`,
-`SecondaryHomeActivity`, `AnchorActivity`, the app manifest, `smoke/` or `tools/emulator/`. A run takes about 5 minutes
+script on demand (Actions > emulator > Run workflow, or `gh workflow run emulator.yml --ref BRANCH`), on pull requests
+labelled `emulator`, and on pull requests that touch the code it exercises: the app's `ui/`, `launch/`, `shell/` and
+`stats/` packages, `MainActivity`, `CompanionActivity`, `SecondaryHomeActivity`, `AnchorActivity`, the app manifest,
+`mecha/src/main/`, `design/src/main/`, `app/build.gradle.kts`, `gradle/libs.versions.toml`, `smoke/`, `tools/emulator/` or
+the workflow itself. Docs, unit tests and the site alone don't run it. A run takes about 5 minutes
 once the booted AVD is cached (build 2, emulator boot and setup 2, the tests under 1) and about 8 when it has to create
 the AVD; the cache is saved right after the first boot, before the tests change the emulator.
 
@@ -217,7 +219,10 @@ Covered:
 - Home from another app (Settings) returns to the same navigation task.
 - Back on Home leaves Sortie in front, both as HOME and in an ordinary task (started from the launcher intent while another
   app is HOME), the case behind "Back on Home sent Sortie away" above.
-- The magazine reader, with the pinned magazines: shelf, issue contents, first article, controller only.
+- The magazine reader, with the pinned magazines: shelf, issue contents, first article, controller only. Each Down waits
+  until the focus or the list has visibly moved: presses sent blind piled up while a slow runner was busy and were then
+  handled in one burst past every article, so A toggled the games filter instead. Once the first article is focused,
+  one A must open it; the smoke does not retry activation.
 - Any Sortie crash or ANR in the log fails the run, even one the tests recovered from.
 
 Not covered: everything that needs Shizuku (the switcher overlay, moving, swapping and closing apps, the AYN panel guard).
@@ -248,4 +253,8 @@ changing `GAME_COUNT` in the test. `ZINES_COMMIT` in emulator.yml follows build.
 Found while building it (fixed by `AnchorGuard`): X again within 1.5 s of a swap's hand-off left the controller on the
 companion's screen. Companions skipped their resume hand-off for 1.5 s after any anchor, to stop two companions anchoring
 back at each other, so the companion returning under the second swap kept the controller. Now only the one resume an anchor
-causes on its own display is skipped, and navigation resuming there retires the anchor.
+causes on its own display is skipped, and navigation resuming (or an X swap starting) retires the anchor.
+
+Then, with presses 350 ms apart: a companion closed by the second swap still ran the hand-off it had scheduled on its last
+resume, sending the controller to the screen navigation had just left, and that anchor also made the companion coming back
+there skip its own hand-off. A closing companion no longer hands off (run 40227931213 caught it, 1 run in 7).

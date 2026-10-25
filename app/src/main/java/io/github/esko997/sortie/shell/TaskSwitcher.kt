@@ -285,8 +285,8 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
 
     private val anchorGuard = AnchorGuard(System::currentTimeMillis)
 
-    /** Navigation resumed on [displayId] (see [AnchorGuard.navigationResumed]). */
-    fun navigationResumed(displayId: Int) = anchorGuard.navigationResumed(displayId)
+    /** Navigation resumed or is being swapped to the other screen (see [AnchorGuard.navigationShown]). */
+    fun navigationShown() = anchorGuard.navigationShown()
 
     /** A companion resumed on [displayId]: whether it hands the controller back, or the resume was our own anchor's (see [AnchorGuard]). */
     fun companionShouldHandOff(displayId: Int): Boolean = anchorGuard.companionResumed(displayId)
