@@ -32,7 +32,7 @@ class AnchorGuardTest {
     fun aSecondSwapWithinTheWindowHandsTheControllerToNavigation() {
         // X: navigation moves to the bottom; the top companion hands the controller down and navigation resumes there
         guard.anchored(2)
-        guard.navigationResumed(2)
+        guard.navigationShown()
         // X again 0.3 s later: navigation moves up, the bottom companion resumes and must hand the controller up
         clock += 300
         assertTrue(guard.companionResumed(2))
@@ -47,11 +47,14 @@ class AnchorGuardTest {
     }
 
     @Test
-    fun navigationElsewhereLeavesTheGuardInPlace() {
+    fun aSwapStartedBeforeTheAnchorLandedStillHandsOff() {
+        // the top companion's hand-off anchors the bottom screen, where navigation is; X moves navigation up before that anchor
+        // resumes anything, and the bottom companion that comes back must hand the controller up, not keep it
         guard.anchored(2)
-        guard.navigationResumed(0)
         clock += 100
-        assertFalse(guard.companionResumed(2))
+        guard.navigationShown()
+        clock += 300
+        assertTrue(guard.companionResumed(2))
     }
 
     @Test

@@ -243,4 +243,8 @@ changing `GAME_COUNT` in the test. `ZINES_COMMIT` in emulator.yml follows build.
 Found while building it (fixed by `AnchorGuard`): X again within 1.5 s of a swap's hand-off left the controller on the
 companion's screen. Companions skipped their resume hand-off for 1.5 s after any anchor, to stop two companions anchoring
 back at each other, so the companion returning under the second swap kept the controller. Now only the one resume an anchor
-causes on its own display is skipped, and navigation resuming there retires the anchor.
+causes on its own display is skipped, and navigation resuming (or an X swap starting) retires the anchor.
+
+Then, with presses 350 ms apart: a companion closed by the second swap still ran the hand-off it had scheduled on its last
+resume, sending the controller to the screen navigation had just left, and that anchor also made the companion coming back
+there skip its own hand-off. A closing companion no longer hands off (run 40227931213 caught it, 1 run in 7).
