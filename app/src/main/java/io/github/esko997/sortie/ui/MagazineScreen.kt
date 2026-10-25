@@ -129,6 +129,7 @@ import io.github.esko997.sortie.data.magazine.saveClipping
 import io.github.esko997.sortie.data.magazine.source
 import io.github.esko997.sortie.data.markdown.MdBlock
 import io.github.esko997.sortie.data.user.UserStore
+import io.github.esko997.sortie.ui.mecha.Hangar
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -1083,6 +1084,7 @@ private fun ArticleReader(
     var selected by rememberSaveable { mutableStateOf(-1) }
     var clipping by rememberSaveable { mutableStateOf(NOT_CLIPPING) }
     var menu by rememberSaveable { mutableStateOf(false) }
+    var hangar by rememberSaveable { mutableStateOf(false) }
     val blocks = (content as? ArticleContent.Ready)?.blocks.orEmpty()
     val highlights = remember(clippings, blocks) { clippings.highlightsIn(issue.issue.id, article.id, blocks) }
     val articleClip = remember(clippings) { clippings.articleClip(issue.issue.id, article.id) }
@@ -1167,7 +1169,7 @@ private fun ArticleReader(
                 add("L1/R1" to "articles")
                 if (article.games.isNotEmpty()) add("A" to if (article.games.size == 1) "library page" else "games")
                 if (canMark) add("Y" to "highlight")
-                add("Select" to "clip · scrapbook")
+                add("Select" to "reader menu")
                 add("B" to backLabel)
             }
         }
@@ -1183,7 +1185,7 @@ private fun ArticleReader(
         val n = clippings.size
         MagazineMenu(
             title = article.title,
-            subtitle = "Clip and keep",
+            subtitle = "Reader tools",
             items = listOf(
                 MenuItem("Highlight a passage", "Y · ↑/↓ choose a paragraph, A saves it with an optional note", enabled = canMark) {
                     menu = false
@@ -1199,10 +1201,17 @@ private fun ArticleReader(
                 MenuItem("Open the scrapbook", if (n == 1) "1 clipping" else "$n clippings") {
                     menu = false
                     onScrapbook()
+                },
+                MenuItem("Visit the hangar", "Care for your companion or try different parts; your reading position stays here") {
+                    menu = false
+                    hangar = true
                 }
             ),
             onDismiss = { menu = false }
         )
+    }
+    if (hangar) {
+        Hangar((context.applicationContext as SortieApp).graph.mecha, onClose = { hangar = false })
     }
     val target = clipping
     if (target != NOT_CLIPPING) {

@@ -23,6 +23,7 @@ import io.github.esko997.sortie.data.magazine.BundledMagazines
 import io.github.esko997.sortie.data.magazine.MagazineGames
 import io.github.esko997.sortie.data.magazine.MagazineRepository
 import io.github.esko997.sortie.data.manifest.ManifestStore
+import io.github.esko997.sortie.data.mecha.MechaStore
 import io.github.esko997.sortie.data.setup.LibrarySetupStore
 import io.github.esko997.sortie.data.user.PlayLog
 import io.github.esko997.sortie.data.user.UserStore
@@ -50,6 +51,7 @@ class SortieApp :
         // never recreates a remembered folder that is missing: preferences then wait for it instead of starting an empty one
         val user = UserStore(File(sortieDir, "user.json"), mayCreateDirectory = { pinnedSortieDir(app) == null })
         val playLog = PlayLog(db.games(), File(sortieDir, "playlog.jsonl"), manifests.snapshot.value.device.device)
+        val mecha = MechaStore(app, db.games())
         val indexer = Indexer(db.games(), manifests)
         val magazines = MagazineRepository(sortieDir, BundledMagazines.forApp(app))
         val magazineGames = MagazineGames(db.games()) { manifests.snapshot.value.systems }
