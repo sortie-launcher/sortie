@@ -172,6 +172,14 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   no control, at least 24 dp each way, otherwise none. The Hangar holds Animate and Hide/Show companion. Reader
   Select → Visit the hangar keeps its controller access. The Hangar dialog stays mounted while its rename field uses the
   keyboard.
+- Roaming acceptance (`0.1.0-mecha-roam` debug on the DMG, `0.1.0-beta.1044-roam.1` on the Thor): DMG Home at the clock,
+  on the wrapped header buttons, on the hint bar (list view) and peeking over first-row tiles (grid view); peek-to-peek
+  strolls; 0 frames in 10 s windows between strolls, while dozing (only the clock's minute tick) and with motion off; a
+  real 70 s game session greeted with "Welcome back!" plus the credit message; Home Hangar button by controller with focus
+  returned on B; tap on him opens the Hangar, a tap beside him reaches the row, a drag starting on him scrolls the list;
+  hide removes him, show brings him back; name/parts/salvage unchanged. Thor: Mica at scale 2 beside the sort chips and
+  over tiles on top; leaving Home sent him to the bottom panel (battery, Want to play, +); two X swaps showed one mech and
+  no crash. The bottom panel's rotating hero still redraws on its own timer (not the mech).
 - One named companion, cosmetic Bond/Charge/Condition, tune/charge/rest interactions, motion toggle and hide/show.
   No time-away decay, death, streaks, notifications, network calls or requirement to care before playing.
 - Three original pixel-art families (yard, survey, courier), two variants for each head/body/arms/legs slot: 24 authored
