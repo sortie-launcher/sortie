@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -49,6 +50,7 @@ import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.shell.TaskSwitcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -217,7 +219,15 @@ private fun ScreenRow(
         return
     }
     val returnTask = restore?.takeIf { it.row == displayId }?.task
-    val list = rememberLazyListState(initialFirstVisibleItemIndex = shown.indexOfFirst { it.task.id == returnTask }.coerceAtLeast(0))
+    val list = rememberLazyListState()
+    // the returning card may lie past the right edge, where the row has not composed it: scroll it in so it can take the
+    // focus (a card the row has composed, even partly shown, scrolls itself into view when focused)
+    LaunchedEffect(returnTask) {
+        val index = shown.indexOfFirst { it.task.id == returnTask }
+        if (index < 0) return@LaunchedEffect
+        val laidOut = snapshotFlow { list.layoutInfo }.first { it.totalItemsCount > 0 }
+        if (laidOut.visibleItemsInfo.none { it.index == index }) list.scrollToItem(index)
+    }
     LazyRow(state = list, horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 6.dp, horizontal = 4.dp)) {
         itemsIndexed(shown, key = { _, e -> "$displayId/${e.task.id}" }) { i, e ->
             val elsewhere = e.task.displayId != displayId

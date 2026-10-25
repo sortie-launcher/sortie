@@ -3,7 +3,6 @@ package io.github.esko997.sortie.ui
 import android.view.KeyEvent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -23,9 +22,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,6 +59,7 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.esko997.sortie.SortieApp
@@ -65,6 +68,7 @@ import io.github.esko997.sortie.stats.PerfMetric
 import io.github.esko997.sortie.stats.Sparkline
 import io.github.esko997.sortie.stats.StatsText
 import io.github.esko997.sortie.stats.ZoneGroup
+import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -82,7 +86,7 @@ fun OverlayPerf(controller: Boolean, onApps: () -> Unit) {
 /** [OverlayPerf] for a given [frame]. */
 @Composable
 fun OverlayPerfPage(frame: PerfFrame?, controller: Boolean, onApps: () -> Unit) {
-    val scroll = rememberScrollState()
+    val list = rememberLazyListState()
     val title: @Composable () -> Unit = {
         Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Performance", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
@@ -90,7 +94,7 @@ fun OverlayPerfPage(frame: PerfFrame?, controller: Boolean, onApps: () -> Unit) 
         }
     }
     if (!controller) {
-        PerfPage(frame, Modifier.fillMaxSize(), PaddingValues(16.dp), scroll, title)
+        PerfPage(frame, Modifier.fillMaxSize(), PaddingValues(16.dp), list, title)
         return
     }
     val requester = remember { FocusRequester() }
@@ -121,12 +125,12 @@ fun OverlayPerfPage(frame: PerfFrame?, controller: Boolean, onApps: () -> Unit) 
                         KeyEvent.KEYCODE_DPAD_DOWN -> step
                         else -> return@onPreviewKeyEvent false
                     }
-                    scope.launch { scroll.animateScrollBy(by) }
+                    scope.launch { list.animateScrollBy(by) }
                     true
                 }
                 .focusable(),
             PaddingValues(16.dp),
-            scroll,
+            list,
             title
         )
         HintBar("↑↓" to "scroll", "B" to "apps", "R1" to "apps")
@@ -156,49 +160,59 @@ fun CompanionPerfPage(frame: PerfFrame?) {
 /**
  * Large numbers with a two-minute sparkline each, then the details: every core's clock and every thermal zone, grouped. A
  * metric the device never reported in the window gets no tile; the details appear once the first detailed poll is in.
- * Stateless: everything comes from [frame], so it renders the same for the same frame (screenshot tests).
+ * Stateless: everything comes from [frame], so it renders the same for the same frame (screenshot tests). A lazy list, so a
+ * poll recomposes only what is on screen: the Thor reports some 60 zones, mostly below the fold.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun PerfPage(frame: PerfFrame?, modifier: Modifier, contentPadding: PaddingValues, scroll: ScrollState = rememberScrollState(), title: @Composable () -> Unit) {
-    Column(modifier.verticalScroll(scroll).padding(contentPadding)) {
-        title()
-        if (frame == null) {
-            Text("Reading…", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            return@Column
-        }
-        val metrics = remember(frame) { PerfMetric.entries.filter(frame.history::has) }
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val columns = (maxWidth / TILE_MIN_WIDTH).toInt().coerceIn(2, 5)
+fun PerfPage(
+    frame: PerfFrame?,
+    modifier: Modifier,
+    contentPadding: PaddingValues,
+    list: LazyListState = rememberLazyListState(),
+    title: @Composable () -> Unit
+) {
+    BoxWithConstraints(modifier) {
+        val side = contentPadding.calculateLeftPadding(LayoutDirection.Ltr) + contentPadding.calculateRightPadding(LayoutDirection.Ltr)
+        val columns = ((maxWidth - side) / TILE_MIN_WIDTH).toInt().coerceIn(2, 5)
+        val metrics = remember(frame) { frame?.let { f -> PerfMetric.entries.filter(f.history::has) }.orEmpty() }
+        val groups = remember(frame?.stats?.zones) { frame?.stats?.zones?.let(ZoneGroup::of).orEmpty() }
+        LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = contentPadding) {
+            item(key = "title") { title() }
+            if (frame == null) {
+                item(key = "reading") { Text("Reading…", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                return@LazyColumn
+            }
             // rows of equal weights rather than a FlowRow of computed widths, which rounding can push onto the next line
-            Column(verticalArrangement = Arrangement.spacedBy(TILE_GAP)) {
-                for (row in metrics.chunked(columns)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(TILE_GAP)) {
-                        for (m in row) MetricTile(frame, m, Modifier.weight(1f))
-                        repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+            itemsIndexed(metrics.chunked(columns), key = { i, _ -> "tiles-$i" }) { i, row ->
+                Row(Modifier.padding(top = if (i > 0) TILE_GAP else 0.dp), horizontalArrangement = Arrangement.spacedBy(TILE_GAP)) {
+                    for (m in row) MetricTile(frame, m, Modifier.weight(1f))
+                    repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+            if (PerfMetric.CPU_LOAD !in metrics && frame.stats.zones == null) {
+                item(key = "shizuku") {
+                    Text(
+                        "CPU, GPU, temperatures and the fan need Shizuku (Settings → Diagnostics).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                }
+            }
+            frame.stats.coreKhz?.let { cores ->
+                item(key = "cores") {
+                    Column {
+                        SectionLabel("Core clocks · GHz")
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            for (c in cores) Chip("cpu${c.core}", String.format(Locale.US, "%.2f", c.khz / 1_000_000.0))
+                        }
                     }
                 }
             }
-        }
-        if (PerfMetric.CPU_LOAD !in metrics && frame.stats.zones == null) {
-            Text(
-                "CPU, GPU, temperatures and the fan need Shizuku (Settings → Diagnostics).",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 12.dp)
-            )
-        }
-        frame.stats.coreKhz?.let { cores ->
-            SectionLabel("Core clocks · GHz")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                for (c in cores) Chip("cpu${c.core}", String.format(java.util.Locale.US, "%.2f", c.khz / 1_000_000.0))
-            }
-        }
-        frame.stats.zones?.let { zones ->
-            SectionLabel("Thermal zones · °C")
-            val groups = remember(zones) { ZoneGroup.of(zones) }
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (g in groups) ZoneRow(g)
+            if (groups.isNotEmpty()) {
+                item(key = "zones") { SectionLabel("Thermal zones · °C") }
+                items(groups, key = { "zone-${it.name}" }) { ZoneRow(it, Modifier.padding(bottom = 8.dp)) }
             }
         }
     }
@@ -284,8 +298,8 @@ private fun Chip(label: String, value: String) {
 /** A zone group: its name and hottest reading, then each zone. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ZoneRow(group: ZoneGroup) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+private fun ZoneRow(group: ZoneGroup, modifier: Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             if (group.name == ZoneGroup.OTHER) group.name else "${group.name} · up to ${StatsText.celsius(group.hottest)}",
             style = MaterialTheme.typography.labelMedium,
