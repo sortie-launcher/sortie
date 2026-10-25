@@ -10,6 +10,7 @@ import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -51,6 +52,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -63,6 +65,11 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -90,9 +97,9 @@ import kotlinx.coroutines.launch
 /**
  * What the other screen shows: the game being browsed while Sortie's navigation is on screen (even with a game running
  * behind it), else the game being played (while a play session is open), else the selected game's art and hook or
- * a rotating hero; while the switcher is open, the apps running on this very display as a touch carousel. A corner '+' opens a
- * touch list of apps to start on this display. The host hands the controller back to the other screen on every touch, so every
- * control here is touch and nothing requests focus.
+ * a rotating hero; while the switcher is open, the apps running on this very display as a touch carousel. A corner '+' (also
+ * beside the magazine contents) opens a touch list of apps to start on this display. The host hands the controller back to the
+ * other screen on every touch, so every control here is touch and nothing requests focus.
  */
 @Composable
 fun CompanionScreen(displayId: Int) {
@@ -115,6 +122,12 @@ fun CompanionScreen(displayId: Int) {
     val navigationVisible by Selection.navigationVisible.collectAsState()
     val magazine by Selection.magazine.collectAsState()
     LaunchedEffect(selected?.id, session?.gameId, magazine?.issue?.id, magazine?.articleId) { dock = false }
+    // X relaunches the reader on the other screen and the new instance publishes its own owner: a picker opened beside the old
+    // reader closes, so it never launches onto the screen the reader now covers
+    val readerOwner = magazine?.owner
+    LaunchedEffect(readerOwner) { if (readerOwner != null) launcher = false }
+    // the contents desk leaves composition while the picker is open: keep its tab and scroll for when the picker closes
+    val contents = rememberSaveableStateHolder()
     // the host hands the controller away on every tap; not while a text field here needs the IME
     val host = LocalContext.current as? CompanionHost
     // pickers and the open dock keep the controller here: their slots take the D-pad (A opens, hold A unpins), B closes
@@ -123,6 +136,11 @@ fun CompanionScreen(displayId: Int) {
         if (picking) host?.keepController = true else if (host?.keepController == true) host.releaseController()
     }
     BackHandler(enabled = dock && !launcher && dockSlot < 0) { dock = false }
+    // B closes a picker back to the panel it was opened from (the companion activity must not finish under it)
+    BackHandler(enabled = launcher || dockSlot >= 0) {
+        launcher = false
+        dockSlot = -1
+    }
     Surface(Modifier.fillMaxSize(), color = Ink) {
         when {
             switcher.open && !switcher.overlay -> TouchSwitcher(graph.switcher, switcher, displayId)
@@ -131,7 +149,13 @@ fun CompanionScreen(displayId: Int) {
                 graph.user.setDockSlot(dockSlot, it.id)
                 dockSlot = -1
             }
-            navigationVisible && magazine != null -> MagazineCompanion(magazine!!)
+            navigationVisible && magazine != null -> {
+                val panel = magazine!!
+                val contentsKey = remember(panel.issue.id, panel.articleId) { "${panel.issue.id}/${panel.articleId.orEmpty()}" }
+                contents.SaveableStateProvider(contentsKey) {
+                    MagazineCompanion(panel) { CornerPlus(Modifier) { launcher = true } }
+                }
+            }
             else -> Box(Modifier.fillMaxSize()) {
                 // Exactly one of these is composed: the hero ticker only runs while nothing is being played. Browsing another
                 // game with the navigation visible takes the panel without ending the session; once the navigation is gone (the
@@ -460,7 +484,6 @@ private fun Dock(
     }
 }
 
-/** Small translucent round '+' in the corner of the idle panel; opens [TouchLauncher]. */
 /**
  * Battery and a bell, top-right of the idle panel. Battery comes from the sticky ACTION_BATTERY_CHANGED broadcast (no polling;
  * the receiver only lives while the panel is composed). The bell opens the system notification shade on this display over
@@ -507,17 +530,30 @@ private fun Bell(graph: SortieApp.Graph, modifier: Modifier) {
 /** Size of the four corner controls; the dock dot and battery centre themselves in it so every corner lines up. */
 private val CORNER = 44.dp
 
+/**
+ * Small translucent round '+' in the corner of the idle panel and beside the magazine contents; opens [TouchLauncher]. A
+ * button that glows while it has the focus, so a controller handed to this screen can reach it too.
+ */
 @Composable
 private fun CornerPlus(modifier: Modifier, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
     Box(
         modifier
+            .focusGlow(interaction.collectIsFocusedAsState().value, CircleShape)
             .size(CORNER)
             .clip(CircleShape)
             .background(Slate.copy(alpha = 0.6f))
-            .clickable(onClickLabel = "Open an app here", onClick = onClick),
+            .clickable(
+                interactionSource = interaction,
+                indication = LocalIndication.current,
+                onClickLabel = "Open an app here",
+                role = Role.Button,
+                onClick = onClick
+            )
+            .semantics { contentDescription = "Open an app here" },
         contentAlignment = Alignment.Center
     ) {
-        Text("+", color = Amber, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Text("+", color = Amber, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clearAndSetSemantics {})
     }
 }
 
@@ -525,17 +561,19 @@ private fun CornerPlus(modifier: Modifier, onClick: () -> Unit) {
  * Installed apps and opted-in shortcuts as a 4-column touch grid; a tap starts the entry on this display and closes the list.
  * Starting an activity moves the controller to this display and the companion pauses before the host's debounced touch
  * hand-off runs (onPause cancels it), so the launch hands the controller back to the other screen itself, in [scope] (the
- * screen's, which outlives this list).
+ * screen's, which outlives this list). The display is read from the window at the tap, never from when the list opened.
  */
 @Composable
 private fun TouchLauncher(graph: SortieApp.Graph, displayId: Int, scope: CoroutineScope, onClose: () -> Unit) {
     val context = LocalContext.current
+    val view = LocalView.current
     AppPicker(graph, "Open on this screen", onClose = onClose) { item ->
+        val here = view.display?.displayId ?: displayId
         onClose()
         scope.launch {
-            if (!launchOn(context, graph, item, displayId)) return@launch
+            if (!launchOn(context, graph, item, here)) return@launch
             delay(HAND_OFF_DELAY_MS)
-            if (!graph.switcher.anchoredRecently()) graph.switcher.handOff(displayId)
+            if (!graph.switcher.anchoredRecently()) graph.switcher.handOff(here)
         }
     }
 }

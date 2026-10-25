@@ -1,6 +1,8 @@
 package io.github.esko997.sortie.data.cocoon
 
+import io.github.esko997.sortie.data.index.Indexer
 import io.github.esko997.sortie.data.manifest.FolderDef
+import io.github.esko997.sortie.data.manifest.LibraryRules
 import io.github.esko997.sortie.data.manifest.SystemDef
 import io.github.esko997.sortie.data.setup.LibraryConfiguration
 import io.github.esko997.sortie.data.setup.LibraryPresets
@@ -114,12 +116,12 @@ class CocoonPlannerTest {
             "cps2" to listOf(File(card, "roms/cps2"))
         )
 
-    private fun plan(backup: CocoonBackup? = null): CocoonImportPlan {
+    private fun plan(backup: CocoonBackup? = null, library: CocoonLibrary = this.library, installed: Set<String> = setOf("com.retroarch")): CocoonImportPlan {
         val planner = CocoonPlanner(
             cardRoot = card,
             sortieDir = File(card, "sortie"),
             config = config,
-            installed = { it == "com.retroarch" },
+            installed = { it in installed },
             existingMedia = { system, kind, stem -> system == "genesis" && kind == "covers" && stem == "Sonic (USA)" },
             exists = { it.path.startsWith("/storage/emulated/0/Cocoon/") || it.isFile },
             length = { if (it.path.startsWith("/storage/")) 1234L else it.length() }
@@ -164,12 +166,11 @@ class CocoonPlannerTest {
         assertFalse("configured profiles are never rewritten", tg16.profiles.any { it.id == "ra-mednafen_pce" })
         assertTrue(p.notes.any { it.startsWith("tg16: your PC Engine system does not include") })
 
+        // only new systems get an emulator, and it is the one they list first; the user's pcengine and genesis are untouched
         val choices = p.systemProfiles.associate { it.systemId to it.profileId }
-        assertEquals(
-            mapOf("tg16" to "ra-mednafen_pce", "pcengine" to "ra-mednafen_pce", "genesis" to "ra-genesis_plus_gx", "gba" to "ra-mgba", "cps2" to "ra-fbneo"),
-            choices
-        )
-        assertTrue(p.systemProfiles.all { it.installed })
+        assertEquals(mapOf("tg16" to "ra-mednafen_pce", "gba" to "ra-mgba", "cps2" to "ra-fbneo"), choices)
+        p.newSystems.forEach { assertEquals(choices[it.system.id], it.system.profiles.first()) }
+        assertTrue(p.systemProfiles.all { it.installed && it.requestedProfileId == null })
         assertEquals(listOf("pod: Cocoon's own screens, not games", "switch: no ROM folder found (1 game)"), p.skippedPlatforms)
         assertEquals(listOf("Example Quest"), p.droidDeck)
     }
@@ -271,8 +272,11 @@ class CocoonPlannerTest {
             listOf(SessionPlan("tg16/Star Patrol (USA).pce", "ra-mednafen_pce", 100L, 200L), SessionPlan("app:com.example.shmup", null, 300L, 400L)),
             p.sessions
         )
-        assertEquals(mapOf("gba/Metroid Fusion (USA).gba" to "ra64-mgba"), p.profileOverrides)
-        assertTrue(p.notes.any { it.startsWith("1 per-game emulator choice") })
+        // Cocoon's AArch64 RetroArch isn't installed: the same core in the installed com.retroarch build is used
+        assertEquals(mapOf("gba/Metroid Fusion (USA).gba" to "ra-mgba"), p.profileOverrides)
+        assertEquals(emptyList<String>(), p.additionalProfiles.map { it.id }) // ra-mgba comes with the new gba system
+        assertTrue(p.notes.any { it.startsWith("1 per-game emulator choice uses an app") })
+        assertTrue(p.notes.any { it.startsWith("1 per-game emulator choice names a RetroArch build that isn't installed") })
         assertEquals(listOf("pcengine/Bonk's Adventure (USA).pce", "app:com.example.shmup"), p.favourites)
         assertEquals(listOf("tg16/Star Patrol (USA).pce", "app:com.example.reader"), p.hidden)
     }
@@ -402,5 +406,128 @@ class CocoonPlannerTest {
         listOf("roms/neogeo", "roms/gamegear").forEach { dir ->
             assertTrue(dir, p.notes.any { it.startsWith(File(card, dir).path + " holds games of ") })
         }
+    }
+
+    private fun withPlayer(platform: String, player: String) =
+        library.copy(platforms = library.platforms.map { if (it.id == platform) it.copy(defaultPlayer = player) else it })
+
+    /**
+     * On the Thor the import pinned 34 existing systems in user.json's systemProfiles, three to another emulator. An existing
+     * system's emulator stays the user's whether Cocoon used the same one (pcengine) or another (genesis): no choice is
+     * planned for either, only the different one is mentioned.
+     */
+    @Test
+    fun `existing systems keep their emulators whether Cocoon used the same one or another`() {
+        val p = plan(library = withPlayer("genesis", "genesis.ra.picodrive"))
+        val newIds = p.newSystems.map { it.system.id }
+        assertFalse("pcengine" in newIds || "genesis" in newIds)
+        assertEquals(newIds.toSet(), p.systemProfiles.map { it.systemId }.toSet())
+        assertTrue(p.notes.any { it.startsWith("Genesis: Cocoon launched it with RetroArch · PicoDrive; your emulator setup for it is kept") })
+        assertFalse(p.notes.any { it.startsWith("PC Engine: Cocoon launched it") })
+    }
+
+    /**
+     * A new preset system must list what Cocoon's games there are (an N64 library of .7z files indexed nothing), yet a
+     * disc track type must not join a folder of cue sheets, where it would list each track next to its sheet; a folder of
+     * bare tracks gets the type. Checked against the index's own scan of the planned systems.
+     */
+    @Test
+    fun `a new preset system lists its Cocoon games' file types, except disc tracks beside cue sheets`() {
+        files("roms/n64", "Mario Kart 64 (USA).7z", "F-Zero X (USA).z64")
+        files("roms/psx", "Ape Escape (USA).cue", "Ape Escape (USA).bin", "Vagrant Story (USA).bin")
+        files("roms/saturn", "Panzer Dragoon (USA).bin")
+        val library = CocoonLibrary(
+            cocoon,
+            listOf(
+                platform("n64", "n64.ra.mupen64plus_next", game("Mario Kart 64 (USA).7z", favourite = true), game("F-Zero X (USA).z64")),
+                platform("psx", "psx.ra.swanstation", game("Ape Escape (USA).cue"), game("Vagrant Story (USA).bin", favourite = true)),
+                platform("saturn", "saturn.ra.yabasanshiro", game("Panzer Dragoon (USA).bin", favourite = true))
+            ),
+            emptyList()
+        )
+        val roots = listOf("n64", "psx", "saturn").associateWith { listOf(File(card, "roms/$it")) }
+        val planner = CocoonPlanner(card, File(card, "sortie"), config, installed = { true }, existingMedia = { _, _, _ -> false })
+        val p = planner.plan(library, null, roots, RootProbe(listOf(card), exclude = listOf(cocoon)).listings())
+        assertEquals(listOf("n64", "psx", "saturn"), p.newSystems.map { it.system.id })
+        assertTrue(p.newSystems.all { it.fromPreset })
+
+        val indexed = p.newSystems.flatMap { Indexer.scan(card, it.system, LibraryRules()).found.keys }.toSet()
+        assertEquals(setOf("n64/Mario Kart 64 (USA).7z", "n64/F-Zero X (USA).z64", "psx/Ape Escape (USA).cue", "saturn/Panzer Dragoon (USA).bin"), indexed)
+        // what the preview counts and flags is what the index lists; the Cocoon .bin beside cue sheets is reported instead
+        assertEquals(4, p.matched)
+        assertEquals(listOf("n64/Mario Kart 64 (USA).7z", "saturn/Panzer Dragoon (USA).bin"), p.favourites)
+        assertTrue(p.notes.any { it.startsWith("PlayStation: 1 matched game skipped (.bin)") })
+    }
+
+    /** Cocoon's per-game `gbc.ra.sameboy` was dropped for want of a profile: per-game cores now resolve like platform ones. */
+    @Test
+    fun `per-game RetroArch cores no preset has are imported with their profiles`() {
+        val backup = CocoonBackup(
+            dir = tmp.newFolder("backup"),
+            createdAt = 0L,
+            appVersion = "3.07",
+            folders = emptyList(),
+            sessions = emptyList(),
+            playerOverrides = mapOf(
+                CocoonRef("tg16", "Bonk's Adventure (USA).pce", null) to "tg16.ra.mednafen_supergrafx",
+                CocoonRef("cps2", "skyfleet.7z", null) to "cps2.ra.fbalpha2012",
+                CocoonRef("cps2", "brickout.zip", null) to "cps2.ra.fbalpha2012",
+                CocoonRef("gba", "Existing (USA).gba", null) to "gba.ra.mgba",
+                CocoonRef("genesis", "Sonic (USA).md", null) to "genesis.ra.genesis_plus_gx"
+            ),
+            hidden = emptySet(),
+            roots = emptyMap(),
+            favourites = emptySet()
+        )
+        val p = plan(backup)
+        assertEquals(
+            mapOf(
+                "pcengine/Bonk's Adventure (USA).pce" to "ra-mednafen_supergrafx",
+                "cps2/skyfleet.7z" to "ra-fbalpha2012",
+                "cps2/brickout.zip" to "ra-fbalpha2012",
+                "gba/Existing (USA).gba" to "ra-mgba",
+                "genesis/Sonic (USA).md" to "ra-genesis_plus_gx"
+            ),
+            p.profileOverrides
+        )
+        // each definition once, and only those neither configured nor added with the game's own new system
+        assertEquals(listOf("ra-mednafen_supergrafx", "ra-fbalpha2012"), p.additionalProfiles.map { it.id })
+        p.additionalProfiles.forEach { profile ->
+            assertEquals("com.retroarch", profile.`package`)
+            assertTrue(profile.extras.getValue("LIBRETRO").endsWith("/${profile.id.removePrefix("ra-")}_libretro_android.so"))
+        }
+        // after the import every override names a profile Sortie has
+        val available = config.profiles.map { it.id } + p.additionalProfiles.map { it.id }
+        p.profileOverrides.forEach { (gameId, profileId) ->
+            val own = p.newSystems.firstOrNull { it.system.id == gameId.substringBefore('/') }?.profiles.orEmpty().map { it.id }
+            assertTrue("$gameId → $profileId", profileId in available || profileId in own)
+        }
+        assertFalse(p.notes.any { it.contains("per-game emulator choice") })
+    }
+
+    /**
+     * GBA got `ra64-mgba` on the Thor although only com.retroarch was installed. The same core in an installed build replaces
+     * a missing one and says so; the exact build Cocoon named is kept when it is installed, and when nothing is.
+     */
+    @Test
+    fun `a missing RetroArch build is replaced by the same core in an installed one only when it is missing`() {
+        val library = withPlayer("gba", "gba.ra64.mgba")
+        fun gba(installed: Set<String>): Pair<CocoonImportPlan, SystemProfileChoice> =
+            plan(library = library, installed = installed).let { p -> p to p.systemProfiles.single { it.systemId == "gba" } }
+        fun CocoonImportPlan.first() = newSystems.single { it.system.id == "gba" }.system.profiles.first()
+
+        val (replaced, replacedChoice) = gba(setOf("com.retroarch"))
+        assertEquals(SystemProfileChoice("gba", "ra-mgba", installed = true, requestedProfileId = "ra64-mgba"), replacedChoice)
+        assertEquals("ra-mgba", replaced.first())
+        val note = "Game Boy Advance: Cocoon used RetroArch (AArch64) · mGBA (com.retroarch.aarch64), which isn't installed"
+        assertTrue(replaced.notes.any { it.startsWith(note) })
+
+        val (exact, exactChoice) = gba(setOf("com.retroarch", "com.retroarch.aarch64"))
+        assertEquals(SystemProfileChoice("gba", "ra64-mgba", installed = true), exactChoice)
+        assertEquals("ra64-mgba", exact.first())
+
+        val (none, noneChoice) = gba(emptySet())
+        assertEquals(SystemProfileChoice("gba", "ra64-mgba", installed = false), noneChoice)
+        assertEquals("ra64-mgba", none.first())
     }
 }

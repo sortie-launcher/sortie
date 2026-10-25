@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.shell
 
 import android.app.Activity
+import android.app.ActivityManager
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
@@ -137,23 +138,38 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
     /** The display that is not [displayId]: the second screen from the top one, the top one from anywhere else. */
     fun other(displayId: Int): Int? = if (displayId == TOP) secondaryDisplay() else TOP
 
-    /** True when at least one switchable app is running; used to decide whether Home should land on the switcher. */
-    suspend fun anyRunning(): Boolean = mover.ready && mover.appTasks().isNotEmpty()
+    /**
+     * Whether the Home key lands on the switcher: whenever Shizuku is ready, even when no other app runs. The switcher is also
+     * where "Open app…" lives, so Home from Sortie's own screens (a magazine article, a game page) must reach it rather than
+     * depend on some external task existing. Without Shizuku, Home stays plain Sortie.
+     */
+    val summonable: Boolean get() = mover.ready
 
     /**
-     * Home pressed while something runs, on [focusDisplay]. With the draw-over-apps grant the switcher is an overlay on both
+     * Home pressed on the second screen ([focusDisplay]). With the draw-over-apps grant the switcher is an overlay on both
      * screens (games keep running underneath); otherwise Sortie's navigation comes to the top screen with the switcher route.
-     * Nothing happens when nothing is running.
+     * Without Shizuku nothing opens and the Sortie surface Home covered ([homeTask], e.g. navigation after an X swap) comes
+     * back, as Home does on the top screen. Main thread.
      */
-    fun summon(focusDisplay: Int, homeTask: Int?) = scope.launch {
-        if (!anyRunning()) return@launch
-        val presented = withContext(Dispatchers.Main) { presenter?.invoke(focusDisplay, homeTask) ?: false }
-        if (presented) return@launch
+    fun summon(focusDisplay: Int, homeTask: Int?) {
+        if (!summonable) {
+            homeTask?.let(::raiseOwnTask)
+            return
+        }
+        if (presenter?.invoke(focusDisplay, homeTask) == true) return
         open()
         val options = ActivityOptions.makeBasic().setLaunchDisplayId(TOP)
         val intent = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra(EXTRA_SWITCHER, true)
         runCatching { context.startActivity(intent, options.toBundle()) }.onFailure { Log.w(TAG, "summon", it) }
     }
+
+    /** Raises one of Sortie's own tasks (navigation, companion) on its display; AppTask needs no Shizuku. */
+    fun raiseOwnTask(id: Int): Boolean = runCatching {
+        val task = context.getSystemService(ActivityManager::class.java).appTasks.firstOrNull { it.taskInfo.taskId == id }
+            ?: return@runCatching false
+        task.moveToFront()
+        true
+    }.onFailure { Log.w(TAG, "raise $id", it) }.getOrDefault(false)
 
     /** Raises [entry] on its display and gives that display the controller. The overlay closes: the user chose what to play. */
     fun bringToFront(entry: Entry) = act(dismiss = true) {
@@ -224,14 +240,13 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
 
     /** Restores the exact Sortie surface Home covered, or the prior external app, then anchors the overlay's display. */
     fun reveal(displayId: Int, homeTask: Int?) = scope.launch {
-        lock.withLock {
-            val task = if (homeTask != null) {
-                mover.rootTasks().firstOrNull { it.id == homeTask }
-            } else {
+        if (homeTask != null) {
+            raiseOwnTask(homeTask)
+        } else {
+            lock.withLock {
                 reloadLocked()
-                _state.value.on(displayId).firstOrNull()?.task
+                _state.value.on(displayId).firstOrNull()?.task?.let { mover.focusTask(it) }
             }
-            task?.let { mover.focusTask(it) }
         }
         anchor(displayId)
     }

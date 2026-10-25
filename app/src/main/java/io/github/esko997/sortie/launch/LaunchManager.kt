@@ -17,13 +17,14 @@ import androidx.core.content.FileProvider
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.manifest.LaunchProfile
 import io.github.esko997.sortie.data.manifest.ManifestStore
+import io.github.esko997.sortie.data.manifest.UserData
+import io.github.esko997.sortie.data.setup.LibraryConfiguration
 import io.github.esko997.sortie.data.setup.LibrarySetupStore
 import io.github.esko997.sortie.data.user.PlayLog
 import io.github.esko997.sortie.data.user.UserStore
 import java.io.File
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +42,7 @@ class LaunchManager(
     private val manifests: ManifestStore,
     private val user: UserStore,
     private val playLog: PlayLog,
-    /** Saves the app first picked in Open with… as the system's profile (see [chooserSelected]). */
+    /** Saves the app picked in an Open with… fallback as the system's default launcher (see [chooserSelected]). */
     private val librarySetup: LibrarySetupStore
 ) {
     /** Why an attempt did not start, for the user-facing failure message (the [Attempt.outcome] keeps the exact error). */
@@ -82,7 +83,10 @@ class LaunchManager(
     suspend fun launch(game: GameEntity, only: LaunchProfile? = null): Boolean {
         val file = File(game.path)
         val attempts = mutableListOf<Attempt>()
-        val candidates = only?.let { listOf(it) } ?: profilesFor(game)
+        val snap = manifests.snapshot.value
+        val userData = user.data.value
+        val systemProfiles = snap.systems.firstOrNull { it.id == game.systemId }?.profiles.orEmpty()
+        val candidates = only?.let { listOf(it) } ?: profileOrder(game.id, game.systemId, userData, systemProfiles, snap.profiles)
         var started: LaunchProfile? = null
         var startedDisplay: Int? = null
         // Nothing to try: the file is gone or the system has no profile. Recorded as an attempt so Diagnostics shows it.
@@ -105,7 +109,8 @@ class LaunchManager(
                 val titleId = sidecarTitleId(file)
                 val (options, displayId, displayNote) = displayOptions(profile.display)
                 val intent = if (profile.generic) {
-                    openWith(file, uri, game.id, profile, displayId)
+                    val origin = chooserOrigin(game.id, game.systemId, userData, systemProfiles, snap.profiles, profile, explicit = only != null)
+                    openWith(file, uri, game.id, profile, displayId, origin)
                 } else {
                     IntentBuilder.build(profile, IntentBuilder.vars(file, game.systemId, uri, titleId))
                 }
@@ -142,59 +147,50 @@ class LaunchManager(
     }
 
     /**
-     * The user picked [chosen] in the Open with… chooser: logs it and opens the play session. When [profileId] is a generic
-     * profile and the game's system has no device-chosen profile yet, the pick also becomes that system's default (see
-     * [rememberChoice]), so the chooser is not asked again on every launch.
+     * The user picked [chosen] in the Open with… chooser: logs it and opens the play session. [origin] (see [chooserOrigin])
+     * is non-null only when the chooser was the system's fallback after its emulators; then the pick also becomes that
+     * system's default (see [rememberChoice]), so the chooser is not asked again on every launch. A one-off, per-game or
+     * deliberately configured Open with… never changes the system.
      */
-    internal suspend fun chooserSelected(gameId: String, profileId: String, display: String, target: Int?, chosen: ComponentName) {
+    internal suspend fun chooserSelected(gameId: String, profileId: String, display: String, target: Int?, chosen: ComponentName, origin: List<String>?) {
         val attempt = Attempt(profileId, chosen.flattenToShortString(), "app selected")
         _log.update { (listOf(LogEntry(LocalTime.now().format(TS), gameId, listOf(attempt), true)) + it).take(50) }
         Log.i("SortieLaunch", "$gameId via $profileId: app selected | ${attempt.command}")
         runCatching { playLog.start(gameId, profileId, display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
-        background.launch { rememberChoice(gameId, profileId, chosen) }
+        origin?.let { background.launch { rememberChoice(gameId, profileId, chosen, it) } }
         afterLaunch?.invoke(target)
     }
 
     /**
-     * Saves [chosen] as a launchers.json profile `chosen-<package>` (explicit component, VIEW with the read-granted content
-     * URI, like the chooser sent it), puts it first in the system's list and selects it in user.json's systemProfiles. Only
-     * for a generic profile and a system without a device-chosen profile: a choice the user made in Library setup or on the
-     * game page always wins. Best effort: any failure is logged and the launch, already done, is unaffected.
+     * Saves [chosen] as the game's system default ([rememberedChoice]): the `chosen-<package>` profile in launchers.json
+     * and the selection in user.json's systemProfiles, never a reordered systems.json. Rechecked against the configuration
+     * on the card and the user data, which must still reach the chooser through [origin]: anything the user changed while
+     * the chooser was open wins. Best effort: any failure is logged and the launch, already done, is unaffected.
      */
-    private suspend fun rememberChoice(gameId: String, profileId: String, chosen: ComponentName) {
+    private suspend fun rememberChoice(gameId: String, profileId: String, chosen: ComponentName, origin: List<String>) {
         try {
             remembering.withLock {
-                val generic = manifests.snapshot.value.profiles[profileId]
-                if (generic == null || !generic.generic) return
-                // game ids are "<systemId>/<file name>" (Indexer)
-                val systemId = gameId.substringBefore('/')
-                if (user.data.value.systemProfiles[systemId] != null) return
-                val expected = librarySetup.load()
-                val system = expected.systems.firstOrNull { it.id == systemId } ?: return
                 val pkg = chosen.packageName
-                val newId = "chosen-" + pkg.lowercase(Locale.ROOT).replace(NOT_ID_CHAR, "-")
-                // an existing profile with this id (another system's pick, or the user's own edit of it) is reused unchanged
-                val profiles = if (expected.profiles.any { it.id == newId }) {
-                    emptyList()
-                } else {
-                    val pm = context.packageManager
-                    val label = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrNull()?.takeIf { it.isNotBlank() } ?: pkg
-                    listOf(
-                        LaunchProfile(
-                            id = newId,
-                            label = label,
-                            `package` = pkg,
-                            activity = chosen.className,
-                            action = Intent.ACTION_VIEW,
-                            data = "\${uri}",
-                            flags = listOf("NEW_TASK", "GRANT_READ_URI_PERMISSION"),
-                            display = generic.display
-                        )
-                    )
+                if (pkg == context.packageName) return
+                val pm = context.packageManager
+                val label = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrNull()?.takeIf { it.isNotBlank() } ?: pkg
+                fun plan(config: LibraryConfiguration, data: UserData) =
+                    rememberedChoice(gameId, profileId, origin, data, config.systems, config.profiles, pkg, chosen.className, label)
+                var config = librarySetup.load()
+                val choice = plan(config, user.data.value)
+                if (choice == null) {
+                    Log.i("SortieLaunch", "$gameId: Open with… choice not remembered; the launch settings changed meanwhile")
+                    return
                 }
-                librarySetup.saveSystem(expected, system.copy(profiles = listOf(newId) + system.profiles.filter { it != newId }), profiles)
-                user.setSystemProfile(systemId, newId)
-                Log.i("SortieLaunch", "$systemId: remembered Open with… choice as $newId")
+                choice.profile?.let { config = librarySetup.saveProfiles(config, listOf(it)) }
+                val current = user.data.value
+                val confirmed = plan(config, current)?.profileId == choice.profileId &&
+                    user.replace(current, current.copy(systemProfiles = current.systemProfiles + (choice.systemId to choice.profileId)))
+                if (confirmed) {
+                    Log.i("SortieLaunch", "${choice.systemId}: remembered Open with… choice as ${choice.profileId}")
+                } else {
+                    Log.i("SortieLaunch", "${choice.systemId}: Open with… choice not set as default; the user data changed meanwhile")
+                }
             }
         } catch (e: CancellationException) {
             throw e
@@ -298,10 +294,10 @@ class LaunchManager(
         null
     }
 
-    private fun openWith(file: File, uri: Uri?, gameId: String, profile: LaunchProfile, displayId: Int?): Intent {
+    private fun openWith(file: File, uri: Uri?, gameId: String, profile: LaunchProfile, displayId: Int?, origin: List<String>?): Intent {
         val target = uri ?: Uri.fromFile(file)
         val view = Intent(Intent.ACTION_VIEW).setDataAndType(target, "*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        return Intent.createChooser(view, file.name, ChooserLaunchReceiver.sender(context, gameId, profile, displayId))
+        return Intent.createChooser(view, file.name, ChooserLaunchReceiver.sender(context, gameId, profile, displayId, origin))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
@@ -331,8 +327,6 @@ class LaunchManager(
     companion object {
         private val TS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 
-        /** Characters outside the profile id charset of Library setup (lower-case letters, digits, '.', '_', '-'). */
-        private val NOT_ID_CHAR = Regex("[^a-z0-9._-]")
         private const val SHORTCUT_PREFIX = "shortcut:"
         private const val DETAILS = "Details are in Settings → Diagnostics."
 

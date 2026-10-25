@@ -53,6 +53,8 @@ import io.github.esko997.sortie.data.cocoon.CocoonImportState
 import io.github.esko997.sortie.data.cocoon.CocoonImporter
 import io.github.esko997.sortie.data.cocoon.CocoonLocator
 import io.github.esko997.sortie.data.cocoon.CocoonPaths
+import io.github.esko997.sortie.data.cocoon.DeltaCount
+import io.github.esko997.sortie.data.cocoon.FolderDelta
 import io.github.esko997.sortie.data.cocoon.ImportOptions
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -293,11 +295,19 @@ private fun LazyListScope.preview(
 ) {
     val plan = p.plan
     val o = p.options
+    val d = p.delta
     val backup = plan.backup
     val tooBig = o.artwork && space.orEmpty().any { !it.fits }
     item {
         // focused first, so confirming takes a deliberate D-pad down past the toggles and Cancel
         InfoBlock("Import from ${plan.cocoonDir.path}?", Modifier.focusRequester(primary)) {
+            if (p.changed) {
+                Note(
+                    "Your library settings changed after the previous preview, so nothing was imported. This preview was made again " +
+                        "from the current settings: review it, then choose Import.",
+                    error = true
+                )
+            }
             Note(
                 if (backup == null) {
                     "No backup used: folders, play sessions and per-game emulators are not imported."
@@ -318,22 +328,26 @@ private fun LazyListScope.preview(
         }
     }
     if (plan.newSystems.isNotEmpty()) item { Toggle("Add ${plural(plan.newSystems.size, "system")}", o.systems) { onOptions(o.copy(systems = it)) } }
-    if (plan.favourites.isNotEmpty() || plan.legacyFavourites > 0) {
-        item { Toggle(favouritesToggle(plan.favourites.size, plan.legacyFavourites), o.favourites) { onOptions(o.copy(favourites = it)) } }
+    // the legacy cleanup stays selectable when every favourite is already here
+    if (d.favourites.add > 0 || plan.legacyFavourites > 0) {
+        item { Toggle(favouritesToggle(d.favourites, plan.legacyFavourites), o.favourites) { onOptions(o.copy(favourites = it)) } }
     }
     if (plan.legacyFavourites > 0) item { InfoBlock("Old Favourites folder entry") { Note(legacyFavouritesNote(plan.legacyFavourites, o.favourites)) } }
-    if (plan.hidden.isNotEmpty()) item { Toggle("Hide ${plural(plan.hidden.size, "game")}", o.hidden) { onOptions(o.copy(hidden = it)) } }
-    if (plan.systemProfiles.isNotEmpty()) {
-        item { Toggle("Choose emulators for ${plural(plan.systemProfiles.size, "system")}", o.emulators) { onOptions(o.copy(emulators = it)) } }
+    if (d.hidden.add > 0) {
+        item { Toggle("Hide ${plural(d.hidden.add, "game")}${alreadyHere(d.hidden.present)}", o.hidden) { onOptions(o.copy(hidden = it)) } }
     }
     if (plan.artwork.isNotEmpty()) {
         item { Toggle("Copy ${plural(plan.artwork.size, "artwork file")} (${bytes(plan.artworkBytes)})", o.artwork) { onOptions(o.copy(artwork = it)) } }
     }
     if (backup != null) {
-        if (plan.folders.isNotEmpty()) item { Toggle("Create ${plural(plan.folders.size, "folder")}", o.folders) { onOptions(o.copy(folders = it)) } }
-        if (plan.sessions.isNotEmpty()) item { Toggle("Add ${plural(plan.sessions.size, "play session")}", o.sessions) { onOptions(o.copy(sessions = it)) } }
-        if (plan.profileOverrides.isNotEmpty()) {
-            item { Toggle("Set ${plural(plan.profileOverrides.size, "per-game emulator")}", o.overrides) { onOptions(o.copy(overrides = it)) } }
+        if (d.folders.create + d.folders.update > 0) item { Toggle(foldersToggle(d.folders), o.folders) { onOptions(o.copy(folders = it)) } }
+        if (d.sessions.add > 0) {
+            val label = "Add ${plural(d.sessions.add, "play session")} (${d.sessions.addedMinutes} min)${alreadyHere(d.sessions.present)}"
+            item { Toggle(label, o.sessions) { onOptions(o.copy(sessions = it)) } }
+        }
+        if (d.overrides.add > 0) {
+            val kept = if (d.overrides.present > 0) " · ${plural(d.overrides.present, "game")} keep your choice" else ""
+            item { Toggle("Set ${plural(d.overrides.add, "per-game emulator")}$kept", o.overrides) { onOptions(o.copy(overrides = it)) } }
         }
     }
     if (tooBig) {
@@ -341,6 +355,10 @@ private fun LazyListScope.preview(
     }
     item { FocusRow(onClick = onCancel) { Line("Cancel", "change nothing") } }
     if (!tooBig) item { FocusRow(onClick = onConfirm) { Line("Import", "writes Sortie's library files, user.json, the play database and media folders") } }
+    val present = alreadyPresent(p)
+    if (present.isNotEmpty()) {
+        item { InfoBlock("Already in Sortie") { Note("Nothing new to add for: ${present.joinToString()}. The import leaves them as they are.") } }
+    }
 
     if (plan.artwork.isNotEmpty() || plan.missingVolume > 0) {
         item {
@@ -372,14 +390,15 @@ private fun LazyListScope.preview(
             InfoBlock("Systems to add") {
                 plan.newSystems.take(LIST_CAP).forEach { ns ->
                     val sys = ns.system
+                    // the first profile in the new system's list is its default; Cocoon's choice (or its installed equivalent) is put there
                     val choice = plan.systemProfiles.firstOrNull { it.systemId == sys.id }
-                    val profileId = choice?.profileId ?: sys.profiles.firstOrNull()
-                    val label = profileId?.let { id -> ns.profiles.firstOrNull { it.id == id }?.label ?: id }
+                    val label = sys.profiles.firstOrNull()?.let { id -> ns.profiles.firstOrNull { it.id == id }?.label ?: id }
                     val emulator = when {
                         label == null -> "no emulator (Open with… only)"
-                        choice != null && !choice.installed -> "$label — not installed yet"
-                        choice != null -> "$label — installed"
-                        else -> label
+                        choice == null -> label
+                        !choice.installed -> "$label — not installed yet"
+                        choice.requestedProfileId != null -> "$label — installed, instead of Cocoon's ${choice.requestedProfileId}"
+                        else -> "$label — installed"
                     }
                     Note("${sys.id} · ${sys.label}${if (ns.fromPreset) "" else " (custom)"}: ${sys.roots.joinToString()} · $emulator")
                 }
@@ -394,15 +413,6 @@ private fun LazyListScope.preview(
             InfoBlock("Existing systems that get a media folder") {
                 Note("Needed for the copied artwork; only systems without one get it.")
                 capped(media.map { (id, path) -> "$id → $path" }).forEach { Note(it) }
-            }
-        }
-    }
-    val existingChoices = plan.systemProfiles.filter { it.systemId !in newIds }
-    if (existingChoices.isNotEmpty()) {
-        item {
-            InfoBlock("Emulators for systems you already have") {
-                Note("Set only where you haven't chosen one yourself.")
-                capped(existingChoices.map { "${it.systemId}: ${it.profileId}${if (it.installed) "" else " (not installed)"}" }).forEach { Note(it) }
             }
         }
     }
@@ -432,14 +442,37 @@ private fun LazyListScope.preview(
     if (plan.notes.isNotEmpty()) item { InfoBlock("Notes") { capped(plan.notes).forEach { Note(it) } } }
 }
 
-/** The Favourites switch: adding favourites as before, plus the old default Favourites entry's removal when there is one. */
-private fun favouritesToggle(favourites: Int, legacy: Int): String {
+/** The Favourites switch: adding the new favourites, plus the old default Favourites entry's removal when there is one. */
+private fun favouritesToggle(favourites: DeltaCount, legacy: Int): String {
     val cleanup = "remove the old Favourites folder ${if (legacy == 1) "entry" else "entries"}"
+    val add = "Add ${plural(favourites.add, "favourite")}"
     return when {
-        legacy == 0 -> "Add ${plural(favourites, "favourite")}"
-        favourites == 0 -> "${cleanup.replaceFirstChar { it.uppercase() }} (no new favourites)"
-        else -> "Add ${plural(favourites, "favourite")} and $cleanup"
+        legacy == 0 -> add + alreadyHere(favourites.present)
+        favourites.add == 0 -> "${cleanup.replaceFirstChar { it.uppercase() }} (no new favourites)"
+        else -> "$add and $cleanup${alreadyHere(favourites.present)}"
     }
+}
+
+private fun alreadyHere(n: Int): String = if (n > 0) " · $n already here" else ""
+
+private fun foldersToggle(f: FolderDelta): String {
+    val what = listOfNotNull(
+        f.create.takeIf { it > 0 }?.let { "create ${plural(it, "folder")}" },
+        f.update.takeIf { it > 0 }?.let { "add to ${plural(it, "existing folder")}" }
+    ).joinToString(" and ").replaceFirstChar { it.uppercase() }
+    return "$what (${plural(f.members, "item")})${alreadyHere(f.unchanged)}"
+}
+
+/** Categories the plan has items for but every one is already in Sortie, so no switch is shown for them. */
+private fun alreadyPresent(p: CocoonImportState.Preview): List<String> {
+    val d = p.delta
+    return listOfNotNull(
+        plural(d.favourites.present, "favourite").takeIf { d.favourites.add == 0 && d.favourites.present > 0 },
+        plural(d.hidden.present, "hidden game").takeIf { d.hidden.add == 0 && d.hidden.present > 0 },
+        plural(d.folders.unchanged, "folder").takeIf { d.folders.create + d.folders.update == 0 && d.folders.unchanged > 0 },
+        plural(d.sessions.present, "play session").takeIf { d.sessions.add == 0 && d.sessions.present > 0 },
+        "per-game emulators for ${plural(d.overrides.present, "game")} (your choices stay)".takeIf { d.overrides.add == 0 && d.overrides.present > 0 }
+    )
 }
 
 private fun legacyFavouritesNote(legacy: Int, on: Boolean): String {
