@@ -1,0 +1,6329 @@
+{
+ "format": 1,
+ "about": "Accounting for every authored source record by its line in the source snapshot named by 'source' (whole-file SHA-256); no per-record digests and never file names. published: hook, controls and flags as authored. edited: published after the curation.json decision named by 'reasons'. merged: same platform and match key as 'mergedInto', whose prose describes the game. excluded: not published, for the stated reason. Fit scores are never published.",
+ "source": {
+  "sha256": "9c6749a68402ab27ef9f5b251bce4ee47eda70473eec7a50f7cc5187f4ce669a",
+  "bytes": 245444,
+  "lines": 1103,
+  "commentLines": 1,
+  "blankLines": 0,
+  "records": 1102,
+  "published": 1012,
+  "edited": 62,
+  "merged": 22,
+  "excluded": 6
+ },
+ "catalog": {
+  "works": 1054,
+  "variants": 1074,
+  "sha256": "811167aabe84251fd1a8354ca889114eb4412dd6a76c42271db91f3f86c531a2"
+ },
+ "sharedVariants": [
+  {
+   "platform": "ps2",
+   "matchKey": "onimusha dawn of dreams",
+   "records": [
+    60,
+    61
+   ],
+   "primary": 60,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "psx",
+   "matchKey": "bushido blade",
+   "records": [
+    157,
+    158
+   ],
+   "primary": 157,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "psx",
+   "matchKey": "bushido blade 2",
+   "records": [
+    159,
+    160
+   ],
+   "primary": 159,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "psx",
+   "matchKey": "colony wars",
+   "records": [
+    166,
+    167
+   ],
+   "primary": 166,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "psx",
+   "matchKey": "dragon valor",
+   "records": [
+    172,
+    173
+   ],
+   "primary": 172,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "psx",
+   "matchKey": "metal gear solid",
+   "records": [
+    194,
+    195
+   ],
+   "primary": 194,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "psx",
+   "matchKey": "parasite eve",
+   "records": [
+    204,
+    205
+   ],
+   "primary": 204,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "psx",
+   "matchKey": "tales of destiny ii",
+   "records": [
+    227,
+    228,
+    229
+   ],
+   "primary": 227,
+   "distinctSourceHooks": 3,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "psx",
+   "matchKey": "valkyrie profile",
+   "records": [
+    237,
+    238
+   ],
+   "primary": 237,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "saturn",
+   "matchKey": "panzer dragoon saga",
+   "records": [
+    326,
+    327,
+    328,
+    329
+   ],
+   "primary": 326,
+   "distinctSourceHooks": 4,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "gc",
+   "matchKey": "baten kaitos eternal wings and the lost ocean",
+   "records": [
+    368,
+    369
+   ],
+   "primary": 368,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "arcade",
+   "matchKey": "viewpoin",
+   "records": [
+    569,
+    570
+   ],
+   "primary": 570,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "arcade",
+   "matchKey": "kod",
+   "records": [
+    585,
+    586
+   ],
+   "primary": 586,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "arcade",
+   "matchKey": "ddtod",
+   "records": [
+    613,
+    614
+   ],
+   "primary": 614,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "arcade",
+   "matchKey": "gigawing",
+   "records": [
+    618,
+    619
+   ],
+   "primary": 619,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "arcade",
+   "matchKey": "mmatrix",
+   "records": [
+    622,
+    623
+   ],
+   "primary": 623,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "gba",
+   "matchKey": "pokemon firered version",
+   "records": [
+    790,
+    791
+   ],
+   "primary": 790,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "gba",
+   "matchKey": "pokemon firered rocket edition",
+   "records": [
+    814,
+    815
+   ],
+   "primary": 814,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  },
+  {
+   "platform": "gba",
+   "matchKey": "pokemon sors",
+   "records": [
+    852,
+    853
+   ],
+   "primary": 853,
+   "distinctSourceHooks": 2,
+   "resolution": "primary record's hook published; others merged"
+  }
+ ],
+ "repeatedHooks": [
+  {
+   "hook": "Slot machine sim.",
+   "variants": [
+    "ngp-pachi-slot-aruze-oukoku-pocket-azteca",
+    "ngp-pachi-slot-aruze-oukoku-pocket-dekahel-2",
+    "ngp-pachi-slot-aruze-oukoku-pocket-delsol-2",
+    "ngp-pachi-slot-aruze-oukoku-pocket-e-cup",
+    "ngp-pachi-slot-aruze-oukoku-pocket-hanabi",
+    "ngp-pachi-slot-aruze-oukoku-pocket-ohanabi",
+    "ngp-pachi-slot-aruze-oukoku-pocket-ward-of-lights",
+    "ngp-pachi-slot-aruze-oukoku-porcano-2"
+   ]
+  },
+  {
+   "hook": "Baseball.",
+   "variants": [
+    "arcade-bstars",
+    "ngp-baseball-stars",
+    "ngp-dynamite-slugger",
+    "ngp-neo-poke-pro-yakyuu"
+   ]
+  },
+  {
+   "hook": "Football.",
+   "variants": [
+    "arcade-goalx3",
+    "arcade-socbrawl",
+    "arcade-ssideki4",
+    "ngp-neogeo-cup-98"
+   ]
+  },
+  {
+   "hook": "Casino.",
+   "variants": [
+    "ngp-neo-baccarat-pocket-casino-series",
+    "ngp-neo-dragons-wild-pocket-casino-series",
+    "ngp-neo-mystery-bonus-pocket-casino-series"
+   ]
+  },
+  {
+   "hook": "Isometric rally.",
+   "variants": [
+    "arcade-neodrift",
+    "neogeocd-neo-drift-out-new-technology"
+   ]
+  },
+  {
+   "hook": "Japanese Dive Alert.",
+   "variants": [
+    "ngp-dive-alert-burn-hen",
+    "ngp-dive-alert-rebecca-hen"
+   ]
+  },
+  {
+   "hook": "Mahjong.",
+   "variants": [
+    "ngp-dokodemo-mahjong",
+    "ngp-koi-koi-mahjong"
+   ]
+  },
+  {
+   "hook": "Picross.",
+   "variants": [
+    "ngp-oekaki-puzzle",
+    "ngp-picture-puzzle"
+   ]
+  },
+  {
+   "hook": "Racing.",
+   "variants": [
+    "gba-f-zero-gp-legend",
+    "gba-f-zero-maximum-velocity"
+   ]
+  }
+ ],
+ "records": [
+  {
+   "line": 2,
+   "disposition": "published",
+   "variant": "ps2-armored-core-last-raven"
+  },
+  {
+   "line": 3,
+   "disposition": "published",
+   "variant": "ps2-armored-core-nexus-evolution"
+  },
+  {
+   "line": 4,
+   "disposition": "published",
+   "variant": "ps2-armored-core-nine-breaker"
+  },
+  {
+   "line": 5,
+   "disposition": "published",
+   "variant": "ps2-armored-core-2"
+  },
+  {
+   "line": 6,
+   "disposition": "published",
+   "variant": "ps2-armored-core-2-another-age"
+  },
+  {
+   "line": 7,
+   "disposition": "published",
+   "variant": "ps2-armored-core-3"
+  },
+  {
+   "line": 8,
+   "disposition": "published",
+   "variant": "ps2-the-bards-tale"
+  },
+  {
+   "line": 9,
+   "disposition": "published",
+   "variant": "ps2-baroque"
+  },
+  {
+   "line": 10,
+   "disposition": "published",
+   "variant": "ps2-berserk-millennium-falcon-hen-seima-senki-no-shou-v1-1-translation"
+  },
+  {
+   "line": 11,
+   "disposition": "published",
+   "variant": "ps2-black"
+  },
+  {
+   "line": 12,
+   "disposition": "published",
+   "variant": "ps2-blood-will-tell-tezuka-osamus-dororo"
+  },
+  {
+   "line": 13,
+   "disposition": "published",
+   "variant": "ps2-breath-of-fire-dragon-quarter"
+  },
+  {
+   "line": 14,
+   "disposition": "published",
+   "variant": "ps2-champions-return-to-arms"
+  },
+  {
+   "line": 15,
+   "disposition": "published",
+   "variant": "ps2-conflict-vietnam"
+  },
+  {
+   "line": 16,
+   "disposition": "published",
+   "variant": "ps2-culdcept"
+  },
+  {
+   "line": 17,
+   "disposition": "published",
+   "variant": "ps2-dark-cloud"
+  },
+  {
+   "line": 18,
+   "disposition": "published",
+   "variant": "ps2-dark-cloud-2"
+  },
+  {
+   "line": 19,
+   "disposition": "edited",
+   "variant": "ps2-devil-kings",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Refers to the curator's own library contents; removed."
+   ]
+  },
+  {
+   "line": 20,
+   "disposition": "published",
+   "variant": "ps2-dragon-ball-z-budokai-tenkaichi-3"
+  },
+  {
+   "line": 21,
+   "disposition": "edited",
+   "variant": "ps2-dragon-ball-z-budokai-tenkaichi-3-crossover-legends",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Described the curator's memory-card setup; removed."
+   ]
+  },
+  {
+   "line": 22,
+   "disposition": "published",
+   "variant": "ps2-dynasty-tactics"
+  },
+  {
+   "line": 23,
+   "disposition": "published",
+   "variant": "ps2-dynasty-tactics-2"
+  },
+  {
+   "line": 24,
+   "disposition": "published",
+   "variant": "ps2-dynasty-warriors-gundam-2"
+  },
+  {
+   "line": 25,
+   "disposition": "published",
+   "variant": "ps2-dynasty-warriors-3-xtreme-legends"
+  },
+  {
+   "line": 26,
+   "disposition": "published",
+   "variant": "ps2-dynasty-warriors-4-empires"
+  },
+  {
+   "line": 27,
+   "disposition": "published",
+   "variant": "ps2-dynasty-warriors-5"
+  },
+  {
+   "line": 28,
+   "disposition": "published",
+   "variant": "ps2-dynasty-warriors-5-empires"
+  },
+  {
+   "line": 29,
+   "disposition": "published",
+   "variant": "ps2-dynasty-warriors-6"
+  },
+  {
+   "line": 30,
+   "disposition": "published",
+   "variant": "ps2-evergrace"
+  },
+  {
+   "line": 31,
+   "disposition": "published",
+   "variant": "ps2-final-fantasy-xii"
+  },
+  {
+   "line": 32,
+   "disposition": "published",
+   "variant": "ps2-front-mission-5-scars-of-the-war-patch-4-translation"
+  },
+  {
+   "line": 33,
+   "disposition": "published",
+   "variant": "ps2-gladius"
+  },
+  {
+   "line": 34,
+   "disposition": "published",
+   "variant": "ps2-goblin-commander-unleash-the-horde"
+  },
+  {
+   "line": 35,
+   "disposition": "published",
+   "variant": "ps2-god-hand"
+  },
+  {
+   "line": 36,
+   "disposition": "published",
+   "variant": "ps2-god-of-war"
+  },
+  {
+   "line": 37,
+   "disposition": "published",
+   "variant": "ps2-gradius-v"
+  },
+  {
+   "line": 38,
+   "disposition": "published",
+   "variant": "ps2-grand-theft-auto-san-andreas-a-true-definitive-v3-0"
+  },
+  {
+   "line": 39,
+   "disposition": "published",
+   "variant": "ps2-grimgrimoire"
+  },
+  {
+   "line": 40,
+   "disposition": "published",
+   "variant": "ps2-guilty-gear-isuka"
+  },
+  {
+   "line": 41,
+   "disposition": "published",
+   "variant": "ps2-gungriffon-blaze"
+  },
+  {
+   "line": 42,
+   "disposition": "published",
+   "variant": "ps2-jade-cocoon-2"
+  },
+  {
+   "line": 43,
+   "disposition": "published",
+   "variant": "ps2-kengo-master-of-bushido"
+  },
+  {
+   "line": 44,
+   "disposition": "edited",
+   "variant": "ps2-kingdom-hearts",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 45,
+   "disposition": "published",
+   "variant": "ps2-the-lord-of-the-rings-the-return-of-the-king"
+  },
+  {
+   "line": 46,
+   "disposition": "published",
+   "variant": "ps2-the-lord-of-the-rings-the-third-age"
+  },
+  {
+   "line": 47,
+   "disposition": "published",
+   "variant": "ps2-the-lord-of-the-rings-the-two-towers"
+  },
+  {
+   "line": 48,
+   "disposition": "published",
+   "variant": "ps2-marvel-vs-capcom-2-new-age-of-heroes",
+   "reasons": [
+    "Both hooks describe the same 56-character Marvel vs. Capcom 2 tag fighter."
+   ]
+  },
+  {
+   "line": 49,
+   "disposition": "published",
+   "variant": "ps2-mercenaries"
+  },
+  {
+   "line": 50,
+   "disposition": "published",
+   "variant": "ps2-mercenaries-2-world-in-flames"
+  },
+  {
+   "line": 51,
+   "disposition": "published",
+   "variant": "ps2-mobile-suit-gundam-encounters-in-space"
+  },
+  {
+   "line": 52,
+   "disposition": "published",
+   "variant": "ps2-mobile-suit-gundam-federation-vs-zeon"
+  },
+  {
+   "line": 53,
+   "disposition": "published",
+   "variant": "ps2-mobile-suit-gundam-gundam-vs-zeta-gundam"
+  },
+  {
+   "line": 54,
+   "disposition": "published",
+   "variant": "ps2-mobile-suit-gundam-journey-to-jaburo"
+  },
+  {
+   "line": 55,
+   "disposition": "published",
+   "variant": "ps2-mobile-suit-gundam-zeonic-front"
+  },
+  {
+   "line": 56,
+   "disposition": "published",
+   "variant": "ps2-musashi-samurai-legend"
+  },
+  {
+   "line": 57,
+   "disposition": "published",
+   "variant": "ps2-the-nightmare-of-druaga-fushigino-dungeon"
+  },
+  {
+   "line": 58,
+   "disposition": "published",
+   "variant": "ps2-nightshade"
+  },
+  {
+   "line": 59,
+   "disposition": "published",
+   "variant": "ps2-onimusha-blade-warriors"
+  },
+  {
+   "line": 60,
+   "disposition": "published",
+   "variant": "ps2-onimusha-dawn-of-dreams"
+  },
+  {
+   "line": 61,
+   "disposition": "merged",
+   "variant": "ps2-onimusha-dawn-of-dreams",
+   "mergedInto": 60,
+   "reasons": [
+    "Same platform and match key as line 60 (disc companion); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 62,
+   "disposition": "published",
+   "variant": "ps2-onimusha-warlords"
+  },
+  {
+   "line": 63,
+   "disposition": "published",
+   "variant": "ps2-onimusha-2-samurais-destiny"
+  },
+  {
+   "line": 64,
+   "disposition": "published",
+   "variant": "ps2-onimusha-3-demon-siege"
+  },
+  {
+   "line": 65,
+   "disposition": "published",
+   "variant": "ps2-r-type-final"
+  },
+  {
+   "line": 66,
+   "disposition": "published",
+   "variant": "ps2-radiata-stories"
+  },
+  {
+   "line": 67,
+   "disposition": "published",
+   "variant": "ps2-ratchet-deadlocked"
+  },
+  {
+   "line": 68,
+   "disposition": "published",
+   "variant": "ps2-ring-of-red"
+  },
+  {
+   "line": 69,
+   "disposition": "published",
+   "variant": "ps2-romancing-saga"
+  },
+  {
+   "line": 70,
+   "disposition": "published",
+   "variant": "ps2-s-l-a-i-steel-lancer-arena-international"
+  },
+  {
+   "line": 71,
+   "disposition": "edited",
+   "variant": "ps2-ssx-3",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 72,
+   "disposition": "published",
+   "variant": "ps2-samurai-western"
+  },
+  {
+   "line": 73,
+   "disposition": "published",
+   "variant": "ps2-sengoku-basara-2-heroes"
+  },
+  {
+   "line": 74,
+   "disposition": "published",
+   "variant": "ps2-shadow-tower-abyss-translation"
+  },
+  {
+   "line": 75,
+   "disposition": "published",
+   "variant": "ps2-shadow-of-the-colossus"
+  },
+  {
+   "line": 76,
+   "disposition": "published",
+   "variant": "ps2-shining-force-exa"
+  },
+  {
+   "line": 77,
+   "disposition": "published",
+   "variant": "ps2-shining-force-neo"
+  },
+  {
+   "line": 78,
+   "disposition": "published",
+   "variant": "ps2-shinobido-way-of-the-ninja"
+  },
+  {
+   "line": 79,
+   "disposition": "published",
+   "variant": "ps2-silent-line-armored-core"
+  },
+  {
+   "line": 80,
+   "disposition": "published",
+   "variant": "ps2-soulcalibur-iii"
+  },
+  {
+   "line": 81,
+   "disposition": "published",
+   "variant": "ps2-star-wars-battlefront-ii"
+  },
+  {
+   "line": 82,
+   "disposition": "published",
+   "variant": "ps2-steambot-chronicles"
+  },
+  {
+   "line": 83,
+   "disposition": "published",
+   "variant": "ps2-super-dragon-ball-z"
+  },
+  {
+   "line": 84,
+   "disposition": "published",
+   "variant": "ps2-swords-of-destiny"
+  },
+  {
+   "line": 85,
+   "disposition": "edited",
+   "variant": "ps2-tales-of-the-abyss",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 86,
+   "disposition": "published",
+   "variant": "ps2-tenchu-wrath-of-heaven"
+  },
+  {
+   "line": 87,
+   "disposition": "edited",
+   "variant": "ps2-tony-hawks-underground-2",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 88,
+   "disposition": "published",
+   "variant": "ps2-trapt"
+  },
+  {
+   "line": 89,
+   "disposition": "published",
+   "variant": "ps2-ultimate-spider-man"
+  },
+  {
+   "line": 90,
+   "disposition": "published",
+   "variant": "ps2-way-of-the-samurai"
+  },
+  {
+   "line": 91,
+   "disposition": "published",
+   "variant": "ps2-way-of-the-samurai-2"
+  },
+  {
+   "line": 92,
+   "disposition": "published",
+   "variant": "ps2-wizardry-tale-of-the-forsaken-land"
+  },
+  {
+   "line": 93,
+   "disposition": "published",
+   "variant": "ps2-zone-of-the-enders"
+  },
+  {
+   "line": 94,
+   "disposition": "published",
+   "variant": "ps2-zone-of-the-enders-the-2nd-runner"
+  },
+  {
+   "line": 95,
+   "disposition": "published",
+   "variant": "psp-alien-syndrome"
+  },
+  {
+   "line": 96,
+   "disposition": "published",
+   "variant": "psp-armored-core-formula-front-extreme-battle"
+  },
+  {
+   "line": 97,
+   "disposition": "published",
+   "variant": "psp-armored-core-last-raven-portable-true-analogs-v1-03"
+  },
+  {
+   "line": 98,
+   "disposition": "published",
+   "variant": "psp-brandish-the-dark-revenant"
+  },
+  {
+   "line": 99,
+   "disposition": "published",
+   "variant": "psp-carnage-heart-exa"
+  },
+  {
+   "line": 100,
+   "disposition": "published",
+   "variant": "psp-cladun-x2"
+  },
+  {
+   "line": 101,
+   "disposition": "published",
+   "variant": "psp-cladun-this-is-an-rpg"
+  },
+  {
+   "line": 102,
+   "disposition": "published",
+   "variant": "psp-the-con"
+  },
+  {
+   "line": 103,
+   "disposition": "published",
+   "variant": "psp-dungeon-maker-hunting-ground"
+  },
+  {
+   "line": 104,
+   "disposition": "published",
+   "variant": "psp-dungeon-maker-ii-the-hidden-war"
+  },
+  {
+   "line": 105,
+   "disposition": "published",
+   "variant": "psp-dynasty-warriors-strikeforce"
+  },
+  {
+   "line": 106,
+   "disposition": "edited",
+   "variant": "psp-elminage-original",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Described where the curator keeps a DLC file; removed."
+   ]
+  },
+  {
+   "line": 107,
+   "disposition": "published",
+   "variant": "psp-final-fantasy-tactics-the-war-of-the-lions-slowdown-fix"
+  },
+  {
+   "line": 108,
+   "disposition": "published",
+   "variant": "psp-final-fantasy-type-0-v2-translation"
+  },
+  {
+   "line": 109,
+   "disposition": "published",
+   "variant": "psp-gladiator-begins"
+  },
+  {
+   "line": 110,
+   "disposition": "published",
+   "variant": "psp-god-of-war-chains-of-olympus"
+  },
+  {
+   "line": 111,
+   "disposition": "published",
+   "variant": "psp-god-of-war-ghost-of-sparta"
+  },
+  {
+   "line": 112,
+   "disposition": "published",
+   "variant": "psp-gods-eater-burst"
+  },
+  {
+   "line": 113,
+   "disposition": "published",
+   "variant": "psp-gundam-assault-survive-english-beta"
+  },
+  {
+   "line": 114,
+   "disposition": "published",
+   "variant": "psp-jeanne-darc"
+  },
+  {
+   "line": 115,
+   "disposition": "published",
+   "variant": "psp-kidou-senshi-gundam-gundam-vs-gundam-next-plus-english-patched"
+  },
+  {
+   "line": 116,
+   "disposition": "published",
+   "variant": "psp-killzone-liberation"
+  },
+  {
+   "line": 117,
+   "disposition": "published",
+   "variant": "psp-kurohyou-ryu-ga-gotoku-shinshou-v1-2-translation"
+  },
+  {
+   "line": 118,
+   "disposition": "published",
+   "variant": "psp-kurohyou-2-ryu-ga-gotoku-ashura-hen-v1-0-translation"
+  },
+  {
+   "line": 119,
+   "disposition": "published",
+   "variant": "psp-lord-of-apocalypse-v1-6-translation"
+  },
+  {
+   "line": 120,
+   "disposition": "published",
+   "variant": "psp-the-lord-of-the-rings-tactics"
+  },
+  {
+   "line": 121,
+   "disposition": "published",
+   "variant": "psp-metal-gear-acid"
+  },
+  {
+   "line": 122,
+   "disposition": "published",
+   "variant": "psp-metal-gear-acid-2"
+  },
+  {
+   "line": 123,
+   "disposition": "published",
+   "variant": "psp-metal-gear-solid-peace-walker"
+  },
+  {
+   "line": 124,
+   "disposition": "published",
+   "variant": "psp-monster-hunter-freedom-unite"
+  },
+  {
+   "line": 125,
+   "disposition": "published",
+   "variant": "psp-monster-hunter-portable-3rd-hd-v6-3-0-translation"
+  },
+  {
+   "line": 126,
+   "disposition": "published",
+   "variant": "psp-mytran-wars"
+  },
+  {
+   "line": 127,
+   "disposition": "published",
+   "variant": "psp-no-heroes-allowed"
+  },
+  {
+   "line": 128,
+   "disposition": "published",
+   "variant": "psp-phantasy-star-portable-2"
+  },
+  {
+   "line": 129,
+   "disposition": "published",
+   "variant": "psp-rengoku-ii-the-stairway-to-h-e-a-v-e-n"
+  },
+  {
+   "line": 130,
+   "disposition": "edited",
+   "variant": "psp-ridge-racer",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 131,
+   "disposition": "published",
+   "variant": "psp-riviera-the-promised-land"
+  },
+  {
+   "line": 132,
+   "disposition": "published",
+   "variant": "psp-sd-gundam-g-generation-over-world-v1-1-hq-translation"
+  },
+  {
+   "line": 133,
+   "disposition": "published",
+   "variant": "psp-star-wars-battlefront-ii-remastered-edition-v8"
+  },
+  {
+   "line": 134,
+   "disposition": "published",
+   "variant": "psp-super-robot-taisen-a-portable-plus-v1-2"
+  },
+  {
+   "line": 135,
+   "disposition": "published",
+   "variant": "psp-tactics-ogre-let-us-cling-together-one-vision-v1-11d"
+  },
+  {
+   "line": 136,
+   "disposition": "published",
+   "variant": "psp-tactics-ogre-let-us-cling-together"
+  },
+  {
+   "line": 137,
+   "disposition": "published",
+   "variant": "psp-tenchu-time-of-the-assassins-undub-v1-5c"
+  },
+  {
+   "line": 138,
+   "disposition": "published",
+   "variant": "psp-untold-legends-brotherhood-of-the-blade"
+  },
+  {
+   "line": 139,
+   "disposition": "published",
+   "variant": "psp-untold-legends-the-warriors-code"
+  },
+  {
+   "line": 140,
+   "disposition": "published",
+   "variant": "psp-valkyria-chronicles-3-v1-0-8-translation"
+  },
+  {
+   "line": 141,
+   "disposition": "published",
+   "variant": "psp-warhammer-battle-for-atluma"
+  },
+  {
+   "line": 142,
+   "disposition": "published",
+   "variant": "psp-warhammer-40-000-squad-command"
+  },
+  {
+   "line": 143,
+   "disposition": "published",
+   "variant": "psp-yu-gi-oh-5ds-tag-force-5"
+  },
+  {
+   "line": 144,
+   "disposition": "published",
+   "variant": "psp-yu-gi-oh-5ds-tag-force-6-v1-1-translation"
+  },
+  {
+   "line": 145,
+   "disposition": "published",
+   "variant": "psp-yu-gi-oh-gx-tag-force-3"
+  },
+  {
+   "line": 146,
+   "disposition": "published",
+   "variant": "psp-z-h-p-unlosing-ranger-vs-darkdeath-evilman"
+  },
+  {
+   "line": 147,
+   "disposition": "published",
+   "variant": "psx-alundra"
+  },
+  {
+   "line": 148,
+   "disposition": "published",
+   "variant": "psx-alundra-un-working-designs"
+  },
+  {
+   "line": 149,
+   "disposition": "published",
+   "variant": "psx-asteroids"
+  },
+  {
+   "line": 150,
+   "disposition": "published",
+   "variant": "psx-azure-dreams"
+  },
+  {
+   "line": 151,
+   "disposition": "published",
+   "variant": "psx-baroque-yuganda-mousou-v1-02-translation"
+  },
+  {
+   "line": 152,
+   "disposition": "published",
+   "variant": "psx-blood-omen-legacy-of-kain"
+  },
+  {
+   "line": 153,
+   "disposition": "published",
+   "variant": "psx-brahma-force-the-assault-on-beltlogger-9"
+  },
+  {
+   "line": 154,
+   "disposition": "published",
+   "variant": "psx-breath-of-fire-iv"
+  },
+  {
+   "line": 155,
+   "disposition": "published",
+   "variant": "psx-brigandine-grand-edition-cross-mod-v7-1"
+  },
+  {
+   "line": 156,
+   "disposition": "published",
+   "variant": "psx-brigandine-the-legend-of-forsena"
+  },
+  {
+   "line": 157,
+   "disposition": "edited",
+   "variant": "psx-bushido-blade",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 158,
+   "disposition": "merged",
+   "variant": "psx-bushido-blade",
+   "mergedInto": 157,
+   "reasons": [
+    "Same platform and match key as line 157 (library copy of the same edition); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 159,
+   "disposition": "published",
+   "variant": "psx-bushido-blade-2"
+  },
+  {
+   "line": 160,
+   "disposition": "merged",
+   "variant": "psx-bushido-blade-2",
+   "mergedInto": 159,
+   "reasons": [
+    "Same platform and match key as line 159 (library copy of the same edition); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 161,
+   "disposition": "published",
+   "variant": "psx-capcom-vs-snk-pro"
+  },
+  {
+   "line": 162,
+   "disposition": "published",
+   "variant": "psx-carnage-heart"
+  },
+  {
+   "line": 163,
+   "disposition": "edited",
+   "variant": "psx-castlevania-rondo-of-night",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+   ]
+  },
+  {
+   "line": 164,
+   "disposition": "published",
+   "variant": "psx-castlevania-symphony-of-the-night"
+  },
+  {
+   "line": 165,
+   "disposition": "published",
+   "variant": "psx-chocobos-dungeon-2"
+  },
+  {
+   "line": 166,
+   "disposition": "published",
+   "variant": "psx-colony-wars"
+  },
+  {
+   "line": 167,
+   "disposition": "merged",
+   "variant": "psx-colony-wars",
+   "mergedInto": 166,
+   "reasons": [
+    "Same platform and match key as line 166 (disc companion); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 168,
+   "disposition": "published",
+   "variant": "psx-cowboy-bebop"
+  },
+  {
+   "line": 169,
+   "disposition": "published",
+   "variant": "psx-destrega"
+  },
+  {
+   "line": 170,
+   "disposition": "published",
+   "variant": "psx-digimon-digital-card-battle"
+  },
+  {
+   "line": 171,
+   "disposition": "published",
+   "variant": "psx-dragon-ball-z-ultimate-battle-22"
+  },
+  {
+   "line": 172,
+   "disposition": "published",
+   "variant": "psx-dragon-valor"
+  },
+  {
+   "line": 173,
+   "disposition": "merged",
+   "variant": "psx-dragon-valor",
+   "mergedInto": 172,
+   "reasons": [
+    "Same platform and match key as line 172 (disc companion); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 174,
+   "disposition": "published",
+   "variant": "psx-einhaender"
+  },
+  {
+   "line": 175,
+   "disposition": "published",
+   "variant": "psx-front-mission-3"
+  },
+  {
+   "line": 176,
+   "disposition": "published",
+   "variant": "psx-future-cop-l-a-p-d"
+  },
+  {
+   "line": 177,
+   "disposition": "published",
+   "variant": "psx-g-darius"
+  },
+  {
+   "line": 178,
+   "disposition": "edited",
+   "variant": "psx-gran-turismo",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 179,
+   "disposition": "published",
+   "variant": "psx-gundam-battle-assault"
+  },
+  {
+   "line": 180,
+   "disposition": "published",
+   "variant": "psx-gundam-battle-assault-2"
+  },
+  {
+   "line": 181,
+   "disposition": "published",
+   "variant": "psx-i-q-intelligent-qube"
+  },
+  {
+   "line": 182,
+   "disposition": "published",
+   "variant": "psx-in-the-hunt"
+  },
+  {
+   "line": 183,
+   "disposition": "published",
+   "variant": "psx-jade-cocoon-story-of-the-tamamayu"
+  },
+  {
+   "line": 184,
+   "disposition": "published",
+   "variant": "psx-jojos-bizarre-adventure"
+  },
+  {
+   "line": 185,
+   "disposition": "published",
+   "variant": "psx-kakuge-yarou-fighting-game-creator-translation"
+  },
+  {
+   "line": 186,
+   "disposition": "published",
+   "variant": "psx-kartia-the-word-of-fate"
+  },
+  {
+   "line": 187,
+   "disposition": "published",
+   "variant": "psx-legacy-of-kain-soul-reaver"
+  },
+  {
+   "line": 188,
+   "disposition": "published",
+   "variant": "psx-legend-of-mana"
+  },
+  {
+   "line": 189,
+   "disposition": "published",
+   "variant": "psx-linda-cube-again-v0-95-9-translation"
+  },
+  {
+   "line": 190,
+   "disposition": "published",
+   "variant": "psx-magic-the-gathering-battlemage"
+  },
+  {
+   "line": 191,
+   "disposition": "published",
+   "variant": "psx-magical-drop-iii-magical-drop-iii"
+  },
+  {
+   "line": 192,
+   "disposition": "published",
+   "variant": "psx-magical-drop-iii-magical-drop-1"
+  },
+  {
+   "line": 193,
+   "disposition": "published",
+   "variant": "psx-marvel-vs-capcom-clash-of-super-heroes"
+  },
+  {
+   "line": 194,
+   "disposition": "published",
+   "variant": "psx-metal-gear-solid"
+  },
+  {
+   "line": 195,
+   "disposition": "merged",
+   "variant": "psx-metal-gear-solid",
+   "mergedInto": 194,
+   "reasons": [
+    "Same platform and match key as line 194 (disc companion); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 196,
+   "disposition": "published",
+   "variant": "psx-metal-slug-x"
+  },
+  {
+   "line": 197,
+   "disposition": "published",
+   "variant": "psx-the-misadventures-of-tron-bonne"
+  },
+  {
+   "line": 198,
+   "disposition": "published",
+   "variant": "psx-monster-rancher"
+  },
+  {
+   "line": 199,
+   "disposition": "published",
+   "variant": "psx-monster-rancher-2"
+  },
+  {
+   "line": 200,
+   "disposition": "published",
+   "variant": "psx-monster-rancher-battle-card-episode-ii"
+  },
+  {
+   "line": 201,
+   "disposition": "published",
+   "variant": "psx-moon-remix-rpg-adventure-translation"
+  },
+  {
+   "line": 202,
+   "disposition": "published",
+   "variant": "psx-omega-boost"
+  },
+  {
+   "line": 203,
+   "disposition": "published",
+   "variant": "psx-panzer-bandit"
+  },
+  {
+   "line": 204,
+   "disposition": "published",
+   "variant": "psx-parasite-eve"
+  },
+  {
+   "line": 205,
+   "disposition": "merged",
+   "variant": "psx-parasite-eve",
+   "mergedInto": 204,
+   "reasons": [
+    "Same platform and match key as line 204 (disc companion); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 206,
+   "disposition": "published",
+   "variant": "psx-puchi-carat"
+  },
+  {
+   "line": 207,
+   "disposition": "published",
+   "variant": "psx-r-type-delta"
+  },
+  {
+   "line": 208,
+   "disposition": "edited",
+   "variant": "psx-r4-ridge-racer-type-4",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 209,
+   "disposition": "edited",
+   "variant": "psx-rage-racer",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 210,
+   "disposition": "published",
+   "variant": "psx-the-raiden-project"
+  },
+  {
+   "line": 211,
+   "disposition": "published",
+   "variant": "psx-rapid-reload"
+  },
+  {
+   "line": 212,
+   "disposition": "published",
+   "variant": "psx-raycrisis-series-termination"
+  },
+  {
+   "line": 213,
+   "disposition": "published",
+   "variant": "psx-raystorm"
+  },
+  {
+   "line": 214,
+   "disposition": "published",
+   "variant": "psx-rayman"
+  },
+  {
+   "line": 215,
+   "disposition": "published",
+   "variant": "psx-romance-of-the-three-kingdoms-iv-wall-of-fire"
+  },
+  {
+   "line": 216,
+   "disposition": "published",
+   "variant": "psx-romance-of-the-three-kingdoms-vi-awakening-of-the-dragon"
+  },
+  {
+   "line": 217,
+   "disposition": "published",
+   "variant": "psx-silent-bomber"
+  },
+  {
+   "line": 218,
+   "disposition": "published",
+   "variant": "psx-soul-blade"
+  },
+  {
+   "line": 219,
+   "disposition": "published",
+   "variant": "psx-spawn-the-eternal"
+  },
+  {
+   "line": 220,
+   "disposition": "published",
+   "variant": "psx-spider-man"
+  },
+  {
+   "line": 221,
+   "disposition": "published",
+   "variant": "psx-star-wars-episode-i-jedi-power-battles"
+  },
+  {
+   "line": 222,
+   "disposition": "published",
+   "variant": "psx-street-fighter-alpha-3"
+  },
+  {
+   "line": 223,
+   "disposition": "published",
+   "variant": "psx-strider-2"
+  },
+  {
+   "line": 224,
+   "disposition": "published",
+   "variant": "psx-strikers-1945"
+  },
+  {
+   "line": 225,
+   "disposition": "published",
+   "variant": "psx-suikoden-ii"
+  },
+  {
+   "line": 226,
+   "disposition": "published",
+   "variant": "psx-syphon-filter"
+  },
+  {
+   "line": 227,
+   "disposition": "published",
+   "variant": "psx-tales-of-destiny-ii"
+  },
+  {
+   "line": 228,
+   "disposition": "merged",
+   "variant": "psx-tales-of-destiny-ii",
+   "mergedInto": 227,
+   "reasons": [
+    "Same platform and match key as line 227 (disc companion); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 229,
+   "disposition": "merged",
+   "variant": "psx-tales-of-destiny-ii",
+   "mergedInto": 227,
+   "reasons": [
+    "Same platform and match key as line 227 (disc companion); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 230,
+   "disposition": "published",
+   "variant": "psx-tecmos-deception-invitation-to-darkness"
+  },
+  {
+   "line": 231,
+   "disposition": "published",
+   "variant": "psx-tekken-3"
+  },
+  {
+   "line": 232,
+   "disposition": "published",
+   "variant": "psx-tenchi-o-kurau-ii-sekiheki-no-tatakai"
+  },
+  {
+   "line": 233,
+   "disposition": "published",
+   "variant": "psx-tenchu-stealth-assassins"
+  },
+  {
+   "line": 234,
+   "disposition": "published",
+   "variant": "psx-tenchu-2-birth-of-the-stealth-assassins"
+  },
+  {
+   "line": 235,
+   "disposition": "published",
+   "variant": "psx-tobal-no-1"
+  },
+  {
+   "line": 236,
+   "disposition": "published",
+   "variant": "psx-vagrant-story"
+  },
+  {
+   "line": 237,
+   "disposition": "published",
+   "variant": "psx-valkyrie-profile"
+  },
+  {
+   "line": 238,
+   "disposition": "merged",
+   "variant": "psx-valkyrie-profile",
+   "mergedInto": 237,
+   "reasons": [
+    "Same platform and match key as line 237 (disc companion); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 239,
+   "disposition": "published",
+   "variant": "psx-vanguard-bandits"
+  },
+  {
+   "line": 240,
+   "disposition": "edited",
+   "variant": "psx-wipeout-3",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 241,
+   "disposition": "published",
+   "variant": "psx-world-of-dragon-warrior-torneko-the-last-hope"
+  },
+  {
+   "line": 242,
+   "disposition": "published",
+   "variant": "psvita-demon-gaze-ii"
+  },
+  {
+   "line": 243,
+   "disposition": "published",
+   "variant": "psvita-dragons-crown"
+  },
+  {
+   "line": 244,
+   "disposition": "published",
+   "variant": "psvita-freedom-wars"
+  },
+  {
+   "line": 245,
+   "disposition": "published",
+   "variant": "psvita-gravity-rush"
+  },
+  {
+   "line": 246,
+   "disposition": "published",
+   "variant": "psvita-hotline-miami"
+  },
+  {
+   "line": 247,
+   "disposition": "published",
+   "variant": "psvita-hotline-miami-2"
+  },
+  {
+   "line": 248,
+   "disposition": "published",
+   "variant": "psvita-oreshika-tainted-bloodlines"
+  },
+  {
+   "line": 249,
+   "disposition": "published",
+   "variant": "psvita-shiren-the-wanderer"
+  },
+  {
+   "line": 250,
+   "disposition": "published",
+   "variant": "psvita-sorcery-saga-curse-of-the-great-curry-god"
+  },
+  {
+   "line": 251,
+   "disposition": "published",
+   "variant": "psvita-soul-sacrifice-delta"
+  },
+  {
+   "line": 252,
+   "disposition": "published",
+   "variant": "psvita-ultimate-marvel-vs-capcom-3"
+  },
+  {
+   "line": 253,
+   "disposition": "published",
+   "variant": "psvita-ys-viii-lacrimosa-of-dana"
+  },
+  {
+   "line": 254,
+   "disposition": "published",
+   "variant": "nds-age-of-empires-the-age-of-kings"
+  },
+  {
+   "line": 255,
+   "disposition": "published",
+   "variant": "nds-animal-crossing-wild-world-singleplayer-nookingtons-v1-1-1"
+  },
+  {
+   "line": 256,
+   "disposition": "published",
+   "variant": "nds-bangai-o-spirits"
+  },
+  {
+   "line": 257,
+   "disposition": "published",
+   "variant": "nds-castlevania-dawn-of-sorrow-de-v2-3-original-art"
+  },
+  {
+   "line": 258,
+   "disposition": "published",
+   "variant": "nds-castlevania-order-of-ecclesia"
+  },
+  {
+   "line": 259,
+   "disposition": "published",
+   "variant": "nds-culdcept-ds-translation"
+  },
+  {
+   "line": 260,
+   "disposition": "published",
+   "variant": "nds-custom-robo-arena"
+  },
+  {
+   "line": 261,
+   "disposition": "published",
+   "variant": "nds-the-dark-spire"
+  },
+  {
+   "line": 262,
+   "disposition": "published",
+   "variant": "nds-digimon-world-dawn-qol-v0-2-1"
+  },
+  {
+   "line": 263,
+   "disposition": "published",
+   "variant": "nds-digimon-world-dusk-qol"
+  },
+  {
+   "line": 264,
+   "disposition": "published",
+   "variant": "nds-dragon-quest-ix-sentinels-of-the-starry-skies"
+  },
+  {
+   "line": 265,
+   "disposition": "published",
+   "variant": "nds-drone-tactics"
+  },
+  {
+   "line": 266,
+   "disposition": "edited",
+   "variant": "nds-elite-beat-agents",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 267,
+   "disposition": "published",
+   "variant": "nds-front-mission"
+  },
+  {
+   "line": 268,
+   "disposition": "published",
+   "variant": "nds-ghost-trick-phantom-detective"
+  },
+  {
+   "line": 269,
+   "disposition": "published",
+   "variant": "nds-grand-theft-auto-chinatown-wars"
+  },
+  {
+   "line": 270,
+   "disposition": "published",
+   "variant": "nds-infinite-space"
+  },
+  {
+   "line": 271,
+   "disposition": "published",
+   "variant": "nds-knights-in-the-nightmare"
+  },
+  {
+   "line": 272,
+   "disposition": "published",
+   "variant": "nds-locks-quest"
+  },
+  {
+   "line": 273,
+   "disposition": "published",
+   "variant": "nds-the-lord-of-the-rings-conquest"
+  },
+  {
+   "line": 274,
+   "disposition": "published",
+   "variant": "nds-lufia-curse-of-the-sinistrals"
+  },
+  {
+   "line": 275,
+   "disposition": "published",
+   "variant": "nds-maplestory-ds-v2025-12-16-translation"
+  },
+  {
+   "line": 276,
+   "disposition": "edited",
+   "variant": "nds-mario-kart-ds",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 277,
+   "disposition": "published",
+   "variant": "nds-mario-kart-ds-custom-tracks-grand-prix-nitro"
+  },
+  {
+   "line": 278,
+   "disposition": "published",
+   "variant": "nds-marvel-trading-card-game"
+  },
+  {
+   "line": 279,
+   "disposition": "published",
+   "variant": "nds-metal-max-2-reloaded-v1-0-translation"
+  },
+  {
+   "line": 280,
+   "disposition": "published",
+   "variant": "nds-metal-max-3-v1-0-translation"
+  },
+  {
+   "line": 281,
+   "disposition": "published",
+   "variant": "nds-mr-driller-drill-spirits"
+  },
+  {
+   "line": 282,
+   "disposition": "published",
+   "variant": "nds-mystery-dungeon-shiren-the-wanderer"
+  },
+  {
+   "line": 283,
+   "disposition": "published",
+   "variant": "nds-orcs-and-elves"
+  },
+  {
+   "line": 284,
+   "disposition": "published",
+   "variant": "nds-planet-puzzle-league"
+  },
+  {
+   "line": 285,
+   "disposition": "published",
+   "variant": "nds-pokemon-black-version-ndsi-enhanced"
+  },
+  {
+   "line": 286,
+   "disposition": "published",
+   "variant": "nds-pokemon-heartgold-version"
+  },
+  {
+   "line": 287,
+   "disposition": "published",
+   "variant": "nds-pokemon-platinum-version"
+  },
+  {
+   "line": 288,
+   "disposition": "published",
+   "variant": "nds-pokemon-soulsilver-version"
+  },
+  {
+   "line": 289,
+   "disposition": "published",
+   "variant": "nds-pokemon-aether-white-2"
+  },
+  {
+   "line": 290,
+   "disposition": "edited",
+   "variant": "nds-pokemon-blaze-black-2-complete",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Refers to the curator's own library contents; removed."
+   ]
+  },
+  {
+   "line": 291,
+   "disposition": "published",
+   "variant": "nds-pokemon-conquest-ndsi-enhanced"
+  },
+  {
+   "line": 292,
+   "disposition": "published",
+   "variant": "nds-pokemon-garbage-gold-deluxe"
+  },
+  {
+   "line": 293,
+   "disposition": "published",
+   "variant": "nds-pokemon-golden-shield"
+  },
+  {
+   "line": 294,
+   "disposition": "published",
+   "variant": "nds-pokemon-mystery-dungeon-explorers-of-darkness"
+  },
+  {
+   "line": 295,
+   "disposition": "published",
+   "variant": "nds-pokemon-mystery-dungeon-explorers-of-fortune"
+  },
+  {
+   "line": 296,
+   "disposition": "published",
+   "variant": "nds-pokemon-mystery-dungeon-explorers-of-sky"
+  },
+  {
+   "line": 297,
+   "disposition": "published",
+   "variant": "nds-pokemon-mystery-dungeon-explorers-of-time"
+  },
+  {
+   "line": 298,
+   "disposition": "published",
+   "variant": "nds-pokemon-mystery-dungeon-explorers-of-the-spirit"
+  },
+  {
+   "line": 299,
+   "disposition": "published",
+   "variant": "nds-pokemon-omega-paradox-complete"
+  },
+  {
+   "line": 300,
+   "disposition": "published",
+   "variant": "nds-pokemon-ranger"
+  },
+  {
+   "line": 301,
+   "disposition": "published",
+   "variant": "nds-pokemon-ranger-shadows-of-almia"
+  },
+  {
+   "line": 302,
+   "disposition": "published",
+   "variant": "nds-pokemon-renegade-platinum"
+  },
+  {
+   "line": 303,
+   "disposition": "published",
+   "variant": "nds-pokemon-sacred-gold-v1-05-complete"
+  },
+  {
+   "line": 304,
+   "disposition": "published",
+   "variant": "nds-pokemon-storm-silver-v1-05-complete"
+  },
+  {
+   "line": 305,
+   "disposition": "published",
+   "variant": "nds-pokemon-vintage-white-plus"
+  },
+  {
+   "line": 306,
+   "disposition": "edited",
+   "variant": "nds-pokemon-volt-white-2-complete",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Refers to the curator's own library contents; removed."
+   ]
+  },
+  {
+   "line": 307,
+   "disposition": "published",
+   "variant": "nds-pokemon-volt-white-2-redux-complete"
+  },
+  {
+   "line": 308,
+   "disposition": "published",
+   "variant": "nds-snk-vs-capcom-card-fighters-ds"
+  },
+  {
+   "line": 309,
+   "disposition": "published",
+   "variant": "nds-scribblenauts-collection"
+  },
+  {
+   "line": 310,
+   "disposition": "published",
+   "variant": "nds-shin-megami-tensei-devil-survivor-2"
+  },
+  {
+   "line": 311,
+   "disposition": "published",
+   "variant": "nds-shin-megami-tensei-strange-journey"
+  },
+  {
+   "line": 312,
+   "disposition": "published",
+   "variant": "nds-solatorobo-red-the-hunter-ndsi-enhanced"
+  },
+  {
+   "line": 313,
+   "disposition": "published",
+   "variant": "nds-soma-bringer-english-patched"
+  },
+  {
+   "line": 314,
+   "disposition": "published",
+   "variant": "nds-super-robot-taisen-og-saga-endless-frontier"
+  },
+  {
+   "line": 315,
+   "disposition": "published",
+   "variant": "nds-the-world-ends-with-you"
+  },
+  {
+   "line": 316,
+   "disposition": "published",
+   "variant": "nds-yu-gi-oh-nightmare-troubadour"
+  },
+  {
+   "line": 317,
+   "disposition": "published",
+   "variant": "nds-yu-gi-oh-world-championship-2008"
+  },
+  {
+   "line": 318,
+   "disposition": "published",
+   "variant": "nds-zero-dungeon-isle-of-mystery"
+  },
+  {
+   "line": 319,
+   "disposition": "published",
+   "variant": "saturn-baku-baku-animal-world-zookeeper-contest"
+  },
+  {
+   "line": 320,
+   "disposition": "published",
+   "variant": "saturn-burning-rangers"
+  },
+  {
+   "line": 321,
+   "disposition": "published",
+   "variant": "saturn-dark-savior"
+  },
+  {
+   "line": 322,
+   "disposition": "published",
+   "variant": "saturn-dragon-force"
+  },
+  {
+   "line": 323,
+   "disposition": "published",
+   "variant": "saturn-guardian-heroes"
+  },
+  {
+   "line": 324,
+   "disposition": "published",
+   "variant": "saturn-the-legend-of-oasis"
+  },
+  {
+   "line": 325,
+   "disposition": "published",
+   "variant": "saturn-magic-knight-rayearth-un-working-designs"
+  },
+  {
+   "line": 326,
+   "disposition": "published",
+   "variant": "saturn-panzer-dragoon-saga"
+  },
+  {
+   "line": 327,
+   "disposition": "merged",
+   "variant": "saturn-panzer-dragoon-saga",
+   "mergedInto": 326,
+   "reasons": [
+    "Same platform and match key as line 326 (disc companion); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 328,
+   "disposition": "merged",
+   "variant": "saturn-panzer-dragoon-saga",
+   "mergedInto": 326,
+   "reasons": [
+    "Same platform and match key as line 326 (disc companion); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 329,
+   "disposition": "merged",
+   "variant": "saturn-panzer-dragoon-saga",
+   "mergedInto": 326,
+   "reasons": [
+    "Same platform and match key as line 326 (disc companion); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 330,
+   "disposition": "published",
+   "variant": "saturn-shining-the-holy-ark"
+  },
+  {
+   "line": 331,
+   "disposition": "published",
+   "variant": "saturn-virtual-on-cyber-troopers"
+  },
+  {
+   "line": 332,
+   "disposition": "published",
+   "variant": "dreamcast-armada"
+  },
+  {
+   "line": 333,
+   "disposition": "published",
+   "variant": "dreamcast-border-down"
+  },
+  {
+   "line": 334,
+   "disposition": "published",
+   "variant": "dreamcast-cyber-troopers-virtual-on-oratorio-tangram"
+  },
+  {
+   "line": 335,
+   "disposition": "published",
+   "variant": "dreamcast-fatal-fury-mark-of-the-wolves"
+  },
+  {
+   "line": 336,
+   "disposition": "published",
+   "variant": "dreamcast-frame-gride-translation"
+  },
+  {
+   "line": 337,
+   "disposition": "published",
+   "variant": "dreamcast-guilty-gear-x"
+  },
+  {
+   "line": 338,
+   "disposition": "published",
+   "variant": "dreamcast-halo-revamped-dc"
+  },
+  {
+   "line": 339,
+   "disposition": "published",
+   "variant": "dreamcast-marvel-vs-capcom-2",
+   "reasons": [
+    "Both hooks describe the same 56-character Marvel vs. Capcom 2 tag fighter."
+   ]
+  },
+  {
+   "line": 340,
+   "disposition": "edited",
+   "variant": "dreamcast-marvel-vs-capcom-2-house-remix-hack",
+   "edited": [
+    "hook",
+    "flag -duplicate"
+   ],
+   "reasons": [
+    "Library-management advice and a library-relative 'duplicate' flag; the description of the hack is kept.",
+    "Soundtrack hack of Marvel vs. Capcom 2 with roster and gameplay unchanged: an edition of the same work."
+   ]
+  },
+  {
+   "line": 341,
+   "disposition": "published",
+   "variant": "dreamcast-outtrigger"
+  },
+  {
+   "line": 342,
+   "disposition": "published",
+   "variant": "dreamcast-phantasy-star-online-ver-2"
+  },
+  {
+   "line": 343,
+   "disposition": "published",
+   "variant": "dreamcast-power-stone-2"
+  },
+  {
+   "line": 344,
+   "disposition": "published",
+   "variant": "dreamcast-record-of-lodoss-war"
+  },
+  {
+   "line": 345,
+   "disposition": "published",
+   "variant": "dreamcast-spawn-in-the-demons-hand"
+  },
+  {
+   "line": 346,
+   "disposition": "published",
+   "variant": "dreamcast-tech-romancer"
+  },
+  {
+   "line": 347,
+   "disposition": "published",
+   "variant": "dreamcast-time-stalkers"
+  },
+  {
+   "line": 348,
+   "disposition": "published",
+   "variant": "dreamcast-twinkle-star-sprites",
+   "reasons": [
+    "Same Twinkle Star Sprites game on another platform; the Neo Geo CD hook calls itself that edition."
+   ]
+  },
+  {
+   "line": 349,
+   "disposition": "published",
+   "variant": "dreamcast-wetrix"
+  },
+  {
+   "line": 350,
+   "disposition": "published",
+   "variant": "n64-bazr"
+  },
+  {
+   "line": 351,
+   "disposition": "published",
+   "variant": "n64-dinosaur-planet-enhanced-2025-01-26"
+  },
+  {
+   "line": 352,
+   "disposition": "edited",
+   "variant": "n64-f-zero-x-climax",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 353,
+   "disposition": "edited",
+   "variant": "n64-f-zero-x",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 354,
+   "disposition": "published",
+   "variant": "n64-the-legend-of-zelda-the-missing-link"
+  },
+  {
+   "line": 355,
+   "disposition": "published",
+   "variant": "n64-the-legend-of-zelda-the-sealed-palace-pirate"
+  },
+  {
+   "line": 356,
+   "disposition": "published",
+   "variant": "n64-pokemon-puzzle-league"
+  },
+  {
+   "line": 357,
+   "disposition": "published",
+   "variant": "n64-smash-remix-extra-v0-5-0"
+  },
+  {
+   "line": 358,
+   "disposition": "published",
+   "variant": "n64-smash-remix"
+  },
+  {
+   "line": 359,
+   "disposition": "published",
+   "variant": "n64-spacestation-silicon-valley"
+  },
+  {
+   "line": 360,
+   "disposition": "published",
+   "variant": "n64-star-fox-64-survival-hack"
+  },
+  {
+   "line": 361,
+   "disposition": "published",
+   "variant": "n64-super-mario-64"
+  },
+  {
+   "line": 362,
+   "disposition": "published",
+   "variant": "n64-super-mario-64-beyond-the-cursed-mirror"
+  },
+  {
+   "line": 363,
+   "disposition": "published",
+   "variant": "n64-super-smash-bros"
+  },
+  {
+   "line": 364,
+   "disposition": "published",
+   "variant": "gc-007-agent-under-fire"
+  },
+  {
+   "line": 365,
+   "disposition": "published",
+   "variant": "gc-007-everything-or-nothing"
+  },
+  {
+   "line": 366,
+   "disposition": "published",
+   "variant": "gc-007-from-russia-with-love"
+  },
+  {
+   "line": 367,
+   "disposition": "published",
+   "variant": "gc-007-nightfire"
+  },
+  {
+   "line": 368,
+   "disposition": "published",
+   "variant": "gc-baten-kaitos-eternal-wings-and-the-lost-ocean"
+  },
+  {
+   "line": 369,
+   "disposition": "merged",
+   "variant": "gc-baten-kaitos-eternal-wings-and-the-lost-ocean",
+   "mergedInto": 368,
+   "reasons": [
+    "Same platform and match key as line 368 (disc companion); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 370,
+   "disposition": "edited",
+   "variant": "gc-baten-kaitos-origins",
+   "edited": [
+    "hook",
+    "flag -missing disc 2"
+   ],
+   "reasons": [
+    "Said which discs the curator owns; the description of the game is kept."
+   ]
+  },
+  {
+   "line": 371,
+   "disposition": "published",
+   "variant": "gc-cubivore-survival-of-the-fittest"
+  },
+  {
+   "line": 372,
+   "disposition": "published",
+   "variant": "gc-custom-robo"
+  },
+  {
+   "line": 373,
+   "disposition": "edited",
+   "variant": "gc-f-zero-gx",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 374,
+   "disposition": "published",
+   "variant": "gc-the-legend-of-zelda-the-wind-waker"
+  },
+  {
+   "line": 375,
+   "disposition": "published",
+   "variant": "gc-lost-kingdoms"
+  },
+  {
+   "line": 376,
+   "disposition": "published",
+   "variant": "gc-lost-kingdoms-ii"
+  },
+  {
+   "line": 377,
+   "disposition": "published",
+   "variant": "gc-phantasy-star-online-episode-iii-c-a-r-d-revolution"
+  },
+  {
+   "line": 378,
+   "disposition": "published",
+   "variant": "gc-pokemon-colosseum"
+  },
+  {
+   "line": 379,
+   "disposition": "published",
+   "variant": "gc-pokemon-xd-gale-of-darkness"
+  },
+  {
+   "line": 380,
+   "disposition": "published",
+   "variant": "gc-super-mario-sunshine-eclipse"
+  },
+  {
+   "line": 381,
+   "disposition": "published",
+   "variant": "gc-super-mario-sunshine-sunburn"
+  },
+  {
+   "line": 382,
+   "disposition": "published",
+   "variant": "gc-super-smash-bros-melee"
+  },
+  {
+   "line": 383,
+   "disposition": "published",
+   "variant": "gc-super-smash-bros-melee-akaneia-build"
+  },
+  {
+   "line": 384,
+   "disposition": "published",
+   "variant": "wii-muramasa-the-demon-blade"
+  },
+  {
+   "line": 385,
+   "disposition": "published",
+   "variant": "amiga-armour-geddon-psygnosis"
+  },
+  {
+   "line": 386,
+   "disposition": "published",
+   "variant": "amiga-banshee-core-aga"
+  },
+  {
+   "line": 387,
+   "disposition": "published",
+   "variant": "amiga-the-chaos-engine-2-renegade-aga"
+  },
+  {
+   "line": 388,
+   "disposition": "published",
+   "variant": "amiga-disposable-hero-gremlin"
+  },
+  {
+   "line": 389,
+   "disposition": "published",
+   "variant": "amiga-exile-audiogenic-aga"
+  },
+  {
+   "line": 390,
+   "disposition": "published",
+   "variant": "amiga-hired-guns-v1-08-39-25-psygnosis"
+  },
+  {
+   "line": 391,
+   "disposition": "published",
+   "variant": "amiga-k240-v1-886-gremlin"
+  },
+  {
+   "line": 392,
+   "disposition": "published",
+   "variant": "amiga-lionheart-thalion"
+  },
+  {
+   "line": 393,
+   "disposition": "published",
+   "variant": "amiga-midwinter-ii-flames-of-freedom-v1-7-9-1991-rainbird"
+  },
+  {
+   "line": 394,
+   "disposition": "published",
+   "variant": "amiga-perihelion-the-prophecy-psygnosis"
+  },
+  {
+   "line": 395,
+   "disposition": "published",
+   "variant": "amiga-syndicate-electronic-arts"
+  },
+  {
+   "line": 396,
+   "disposition": "published",
+   "variant": "amiga-uridium-2-v0-90-1-00-renegade-aga"
+  },
+  {
+   "line": 397,
+   "disposition": "published",
+   "variant": "amiga-virocop-v1-00-renegade-aga"
+  },
+  {
+   "line": 398,
+   "disposition": "published",
+   "variant": "amiga-walker-psygnosis"
+  },
+  {
+   "line": 399,
+   "disposition": "published",
+   "variant": "amiga-z-out-rainbow-arts"
+  },
+  {
+   "line": 400,
+   "disposition": "published",
+   "variant": "snes-battle-pinball"
+  },
+  {
+   "line": 401,
+   "disposition": "published",
+   "variant": "snes-chrono-trigger"
+  },
+  {
+   "line": 402,
+   "disposition": "published",
+   "variant": "snes-cybernator"
+  },
+  {
+   "line": 403,
+   "disposition": "published",
+   "variant": "snes-f-zero-bf-deluxe"
+  },
+  {
+   "line": 404,
+   "disposition": "edited",
+   "variant": "snes-f-zero",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 405,
+   "disposition": "published",
+   "variant": "snes-front-mission-series-gun-hazard-english-v1-01"
+  },
+  {
+   "line": 406,
+   "disposition": "published",
+   "variant": "snes-the-legend-of-zelda-a-link-to-the-past"
+  },
+  {
+   "line": 407,
+   "disposition": "published",
+   "variant": "snes-the-legend-of-zelda-interconnected-strongholds"
+  },
+  {
+   "line": 408,
+   "disposition": "published",
+   "variant": "snes-lufia-ii-rise-of-the-sinistrals"
+  },
+  {
+   "line": 409,
+   "disposition": "published",
+   "variant": "snes-metal-marines"
+  },
+  {
+   "line": 410,
+   "disposition": "published",
+   "variant": "snes-ogre-battle-the-march-of-the-black-queen"
+  },
+  {
+   "line": 411,
+   "disposition": "published",
+   "variant": "snes-robotrek"
+  },
+  {
+   "line": 412,
+   "disposition": "published",
+   "variant": "snes-uncharted-waters"
+  },
+  {
+   "line": 413,
+   "disposition": "published",
+   "variant": "snes-utopia-the-creation-of-a-nation"
+  },
+  {
+   "line": 414,
+   "disposition": "published",
+   "variant": "snes-wild-guns"
+  },
+  {
+   "line": 415,
+   "disposition": "published",
+   "variant": "neogeocd-2020-super-baseball"
+  },
+  {
+   "line": 416,
+   "disposition": "published",
+   "variant": "neogeocd-aso-ii-the-last-guardian-alpha-mission-ii"
+  },
+  {
+   "line": 417,
+   "disposition": "published",
+   "variant": "neogeocd-art-of-fighting-ryuuko-no-ken-gaiden-the-path-of-the-warrior-art-of-fighting-3"
+  },
+  {
+   "line": 418,
+   "disposition": "published",
+   "variant": "neogeocd-bakumatsu-roman-daini-maku-gekka-no-kenshi-tsuki-ni-saku-hana-chiri-yuku-hana-the-last-blade-2"
+  },
+  {
+   "line": 419,
+   "disposition": "published",
+   "variant": "neogeocd-baseball-stars-2"
+  },
+  {
+   "line": 420,
+   "disposition": "published",
+   "variant": "neogeocd-crossed-swords"
+  },
+  {
+   "line": 421,
+   "disposition": "published",
+   "variant": "neogeocd-crossed-swords-ii"
+  },
+  {
+   "line": 422,
+   "disposition": "published",
+   "variant": "neogeocd-dunk-dream-street-slam-street-hoop"
+  },
+  {
+   "line": 423,
+   "disposition": "published",
+   "variant": "neogeocd-last-resort"
+  },
+  {
+   "line": 424,
+   "disposition": "edited",
+   "variant": "neogeocd-neo-drift-out-new-technology",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 425,
+   "disposition": "published",
+   "variant": "neogeocd-ninja-masters-haou-ninpou-chou"
+  },
+  {
+   "line": 426,
+   "disposition": "published",
+   "variant": "neogeocd-samurai-spirits-zankurou-musouken-samurai-shodown-iii"
+  },
+  {
+   "line": 427,
+   "disposition": "published",
+   "variant": "neogeocd-shin-samurai-spirits-haoumaru-jigokuhen-samurai-shodown-ii"
+  },
+  {
+   "line": 428,
+   "disposition": "published",
+   "variant": "neogeocd-shinsetsu-samurai-spirits-bushidou-retsuden"
+  },
+  {
+   "line": 429,
+   "disposition": "published",
+   "variant": "neogeocd-the-super-spy"
+  },
+  {
+   "line": 430,
+   "disposition": "published",
+   "variant": "neogeocd-twinkle-star-sprites",
+   "reasons": [
+    "Same Twinkle Star Sprites game on another platform; the Neo Geo CD hook calls itself that edition."
+   ]
+  },
+  {
+   "line": 431,
+   "disposition": "published",
+   "variant": "n3ds-alchemic-dungeons-eshop"
+  },
+  {
+   "line": 432,
+   "disposition": "published",
+   "variant": "n3ds-crimson-shroud-eshop"
+  },
+  {
+   "line": 433,
+   "disposition": "published",
+   "variant": "n3ds-culdcept-revolt"
+  },
+  {
+   "line": 434,
+   "disposition": "published",
+   "variant": "n3ds-dragon-ball-z-extreme-butoden"
+  },
+  {
+   "line": 435,
+   "disposition": "published",
+   "variant": "n3ds-etrian-mystery-dungeon"
+  },
+  {
+   "line": 436,
+   "disposition": "published",
+   "variant": "n3ds-etrian-odyssey-iv-legends-of-the-titan"
+  },
+  {
+   "line": 437,
+   "disposition": "published",
+   "variant": "n3ds-etrian-odyssey-v-beyond-the-myth"
+  },
+  {
+   "line": 438,
+   "disposition": "published",
+   "variant": "n3ds-ever-oasis"
+  },
+  {
+   "line": 439,
+   "disposition": "published",
+   "variant": "n3ds-fantasy-life"
+  },
+  {
+   "line": 440,
+   "disposition": "published",
+   "variant": "n3ds-final-fantasy-explorers"
+  },
+  {
+   "line": 441,
+   "disposition": "published",
+   "variant": "n3ds-fire-emblem-fates-birthright"
+  },
+  {
+   "line": 442,
+   "disposition": "published",
+   "variant": "n3ds-heroes-of-ruin"
+  },
+  {
+   "line": 443,
+   "disposition": "published",
+   "variant": "n3ds-kid-icarus-uprising"
+  },
+  {
+   "line": 444,
+   "disposition": "published",
+   "variant": "n3ds-the-legend-of-zelda-ocarina-of-time-3d"
+  },
+  {
+   "line": 445,
+   "disposition": "published",
+   "variant": "n3ds-liberation-maiden-eshop"
+  },
+  {
+   "line": 446,
+   "disposition": "published",
+   "variant": "n3ds-little-battlers-experience"
+  },
+  {
+   "line": 447,
+   "disposition": "published",
+   "variant": "n3ds-monster-hunter-4-ultimate"
+  },
+  {
+   "line": 448,
+   "disposition": "published",
+   "variant": "n3ds-pokemon-super-mystery-dungeon"
+  },
+  {
+   "line": 449,
+   "disposition": "published",
+   "variant": "n3ds-pokemon-x"
+  },
+  {
+   "line": 450,
+   "disposition": "published",
+   "variant": "n3ds-quest-of-dungeons-eshop"
+  },
+  {
+   "line": 451,
+   "disposition": "published",
+   "variant": "n3ds-radiant-historia-perfect-chronology"
+  },
+  {
+   "line": 452,
+   "disposition": "published",
+   "variant": "n3ds-rune-factory-4"
+  },
+  {
+   "line": 453,
+   "disposition": "published",
+   "variant": "n3ds-sadame-eshop"
+  },
+  {
+   "line": 454,
+   "disposition": "published",
+   "variant": "n3ds-shin-megami-tensei-devil-summoner-soul-hackers"
+  },
+  {
+   "line": 455,
+   "disposition": "published",
+   "variant": "n3ds-shin-megami-tensei-iv-apocalypse"
+  },
+  {
+   "line": 456,
+   "disposition": "published",
+   "variant": "ps3-armored-core-for-answer"
+  },
+  {
+   "line": 457,
+   "disposition": "published",
+   "variant": "segacd-sonic-megamix-unl"
+  },
+  {
+   "line": 458,
+   "disposition": "published",
+   "variant": "sega32x-after-burner-complete"
+  },
+  {
+   "line": 459,
+   "disposition": "published",
+   "variant": "sega32x-stellar-assault"
+  },
+  {
+   "line": 460,
+   "disposition": "published",
+   "variant": "tg-cd-blood-gear"
+  },
+  {
+   "line": 461,
+   "disposition": "published",
+   "variant": "tg-cd-browning"
+  },
+  {
+   "line": 462,
+   "disposition": "published",
+   "variant": "tg-cd-dungeon-explorer-ii"
+  },
+  {
+   "line": 463,
+   "disposition": "published",
+   "variant": "tg-cd-gate-of-thunder-fact-fadt"
+  },
+  {
+   "line": 464,
+   "disposition": "published",
+   "variant": "tg-cd-kaze-kiri-ninja-action"
+  },
+  {
+   "line": 465,
+   "disposition": "published",
+   "variant": "tg-cd-lords-of-thunder"
+  },
+  {
+   "line": 466,
+   "disposition": "published",
+   "variant": "tg-cd-mad-stalker-full-metal-force"
+  },
+  {
+   "line": 467,
+   "disposition": "published",
+   "variant": "supergrafx-1941-counter-attack"
+  },
+  {
+   "line": 468,
+   "disposition": "published",
+   "variant": "supergrafx-aldynes-the-misson-code-for-rage-crisis"
+  },
+  {
+   "line": 469,
+   "disposition": "published",
+   "variant": "supergrafx-battle-ace"
+  },
+  {
+   "line": 470,
+   "disposition": "published",
+   "variant": "supergrafx-daimakaimura"
+  },
+  {
+   "line": 471,
+   "disposition": "published",
+   "variant": "supergrafx-madou-king-granzort"
+  },
+  {
+   "line": 472,
+   "disposition": "published",
+   "variant": "supergrafx-r-type-unfinished-hack"
+  },
+  {
+   "line": 473,
+   "disposition": "published",
+   "variant": "supergrafx-rta2"
+  },
+  {
+   "line": 474,
+   "disposition": "published",
+   "variant": "arcade-2020bb"
+  },
+  {
+   "line": 475,
+   "disposition": "published",
+   "variant": "arcade-3countb"
+  },
+  {
+   "line": 476,
+   "disposition": "published",
+   "variant": "arcade-alpham2"
+  },
+  {
+   "line": 477,
+   "disposition": "published",
+   "variant": "arcade-androdun"
+  },
+  {
+   "line": 478,
+   "disposition": "published",
+   "variant": "arcade-aof"
+  },
+  {
+   "line": 479,
+   "disposition": "published",
+   "variant": "arcade-aof2"
+  },
+  {
+   "line": 480,
+   "disposition": "published",
+   "variant": "arcade-aof3"
+  },
+  {
+   "line": 481,
+   "disposition": "published",
+   "variant": "arcade-bangbead"
+  },
+  {
+   "line": 482,
+   "disposition": "published",
+   "variant": "arcade-bjourney"
+  },
+  {
+   "line": 483,
+   "disposition": "published",
+   "variant": "arcade-blazstar"
+  },
+  {
+   "line": 484,
+   "disposition": "published",
+   "variant": "arcade-breakrev"
+  },
+  {
+   "line": 485,
+   "disposition": "published",
+   "variant": "arcade-bstars"
+  },
+  {
+   "line": 486,
+   "disposition": "published",
+   "variant": "arcade-bstars2"
+  },
+  {
+   "line": 487,
+   "disposition": "published",
+   "variant": "arcade-burningf"
+  },
+  {
+   "line": 488,
+   "disposition": "published",
+   "variant": "arcade-crswd2bl"
+  },
+  {
+   "line": 489,
+   "disposition": "published",
+   "variant": "arcade-crsword"
+  },
+  {
+   "line": 490,
+   "disposition": "published",
+   "variant": "arcade-doubledr"
+  },
+  {
+   "line": 491,
+   "disposition": "published",
+   "variant": "arcade-eightman"
+  },
+  {
+   "line": 492,
+   "disposition": "published",
+   "variant": "arcade-fatfursp"
+  },
+  {
+   "line": 493,
+   "disposition": "published",
+   "variant": "arcade-fatfury1"
+  },
+  {
+   "line": 494,
+   "disposition": "published",
+   "variant": "arcade-fatfury3"
+  },
+  {
+   "line": 495,
+   "disposition": "published",
+   "variant": "arcade-ganryu"
+  },
+  {
+   "line": 496,
+   "disposition": "published",
+   "variant": "arcade-garou"
+  },
+  {
+   "line": 497,
+   "disposition": "published",
+   "variant": "arcade-goalx3"
+  },
+  {
+   "line": 498,
+   "disposition": "published",
+   "variant": "arcade-gpilots"
+  },
+  {
+   "line": 499,
+   "disposition": "published",
+   "variant": "arcade-irrmaze"
+  },
+  {
+   "line": 500,
+   "disposition": "published",
+   "variant": "arcade-kabukikl"
+  },
+  {
+   "line": 501,
+   "disposition": "published",
+   "variant": "arcade-karnovr"
+  },
+  {
+   "line": 502,
+   "disposition": "published",
+   "variant": "arcade-kof2000"
+  },
+  {
+   "line": 503,
+   "disposition": "published",
+   "variant": "arcade-kof2001"
+  },
+  {
+   "line": 504,
+   "disposition": "published",
+   "variant": "arcade-kof2002"
+  },
+  {
+   "line": 505,
+   "disposition": "published",
+   "variant": "arcade-kof2003"
+  },
+  {
+   "line": 506,
+   "disposition": "published",
+   "variant": "arcade-kof94"
+  },
+  {
+   "line": 507,
+   "disposition": "published",
+   "variant": "arcade-kof95"
+  },
+  {
+   "line": 508,
+   "disposition": "published",
+   "variant": "arcade-kof96"
+  },
+  {
+   "line": 509,
+   "disposition": "published",
+   "variant": "arcade-kof97"
+  },
+  {
+   "line": 510,
+   "disposition": "published",
+   "variant": "arcade-kof98"
+  },
+  {
+   "line": 511,
+   "disposition": "published",
+   "variant": "arcade-kof99"
+  },
+  {
+   "line": 512,
+   "disposition": "published",
+   "variant": "arcade-kotm"
+  },
+  {
+   "line": 513,
+   "disposition": "published",
+   "variant": "arcade-kotm2"
+  },
+  {
+   "line": 514,
+   "disposition": "published",
+   "variant": "arcade-lastblad"
+  },
+  {
+   "line": 515,
+   "disposition": "published",
+   "variant": "arcade-lastbld2"
+  },
+  {
+   "line": 516,
+   "disposition": "published",
+   "variant": "arcade-lbowling"
+  },
+  {
+   "line": 517,
+   "disposition": "published",
+   "variant": "arcade-lresort"
+  },
+  {
+   "line": 518,
+   "disposition": "published",
+   "variant": "arcade-magdrop2"
+  },
+  {
+   "line": 519,
+   "disposition": "published",
+   "variant": "arcade-magdrop3"
+  },
+  {
+   "line": 520,
+   "disposition": "published",
+   "variant": "arcade-maglord"
+  },
+  {
+   "line": 521,
+   "disposition": "published",
+   "variant": "arcade-matrim"
+  },
+  {
+   "line": 522,
+   "disposition": "published",
+   "variant": "arcade-mslug"
+  },
+  {
+   "line": 523,
+   "disposition": "published",
+   "variant": "arcade-mslug3"
+  },
+  {
+   "line": 524,
+   "disposition": "published",
+   "variant": "arcade-mslug4"
+  },
+  {
+   "line": 525,
+   "disposition": "published",
+   "variant": "arcade-mslug5"
+  },
+  {
+   "line": 526,
+   "disposition": "published",
+   "variant": "arcade-mslugx"
+  },
+  {
+   "line": 527,
+   "disposition": "published",
+   "variant": "arcade-mutnat"
+  },
+  {
+   "line": 528,
+   "disposition": "published",
+   "variant": "arcade-nam1975"
+  },
+  {
+   "line": 529,
+   "disposition": "published",
+   "variant": "arcade-ncombat"
+  },
+  {
+   "line": 530,
+   "disposition": "published",
+   "variant": "arcade-ncommand"
+  },
+  {
+   "line": 531,
+   "disposition": "published",
+   "variant": "arcade-neobombe"
+  },
+  {
+   "line": 532,
+   "disposition": "published",
+   "variant": "arcade-neodrift"
+  },
+  {
+   "line": 533,
+   "disposition": "published",
+   "variant": "arcade-neomrdo"
+  },
+  {
+   "line": 534,
+   "disposition": "published",
+   "variant": "arcade-nitd"
+  },
+  {
+   "line": 535,
+   "disposition": "published",
+   "variant": "arcade-overtop"
+  },
+  {
+   "line": 536,
+   "disposition": "published",
+   "variant": "arcade-panicbom"
+  },
+  {
+   "line": 537,
+   "disposition": "published",
+   "variant": "arcade-pbobbl2n"
+  },
+  {
+   "line": 538,
+   "disposition": "published",
+   "variant": "arcade-pbobblen"
+  },
+  {
+   "line": 539,
+   "disposition": "published",
+   "variant": "arcade-preisle2"
+  },
+  {
+   "line": 540,
+   "disposition": "published",
+   "variant": "arcade-pulstar"
+  },
+  {
+   "line": 541,
+   "disposition": "published",
+   "variant": "arcade-rbff1"
+  },
+  {
+   "line": 542,
+   "disposition": "published",
+   "variant": "arcade-rbff2"
+  },
+  {
+   "line": 543,
+   "disposition": "published",
+   "variant": "arcade-rbffspec"
+  },
+  {
+   "line": 544,
+   "disposition": "published",
+   "variant": "arcade-roboarmy"
+  },
+  {
+   "line": 545,
+   "disposition": "published",
+   "variant": "arcade-rotd"
+  },
+  {
+   "line": 546,
+   "disposition": "published",
+   "variant": "arcade-samsh5fe"
+  },
+  {
+   "line": 547,
+   "disposition": "published",
+   "variant": "arcade-samsho"
+  },
+  {
+   "line": 548,
+   "disposition": "published",
+   "variant": "arcade-samsho2"
+  },
+  {
+   "line": 549,
+   "disposition": "published",
+   "variant": "arcade-samsho3"
+  },
+  {
+   "line": 550,
+   "disposition": "published",
+   "variant": "arcade-samsho4"
+  },
+  {
+   "line": 551,
+   "disposition": "published",
+   "variant": "arcade-sdodgeb"
+  },
+  {
+   "line": 552,
+   "disposition": "published",
+   "variant": "arcade-sengoku"
+  },
+  {
+   "line": 553,
+   "disposition": "published",
+   "variant": "arcade-sengoku2"
+  },
+  {
+   "line": 554,
+   "disposition": "published",
+   "variant": "arcade-sengoku3"
+  },
+  {
+   "line": 555,
+   "disposition": "published",
+   "variant": "arcade-shocktr2"
+  },
+  {
+   "line": 556,
+   "disposition": "published",
+   "variant": "arcade-shocktro"
+  },
+  {
+   "line": 557,
+   "disposition": "published",
+   "variant": "arcade-socbrawl"
+  },
+  {
+   "line": 558,
+   "disposition": "published",
+   "variant": "arcade-sonicwi2"
+  },
+  {
+   "line": 559,
+   "disposition": "published",
+   "variant": "arcade-sonicwi3"
+  },
+  {
+   "line": 560,
+   "disposition": "published",
+   "variant": "arcade-spinmast"
+  },
+  {
+   "line": 561,
+   "disposition": "published",
+   "variant": "arcade-ssideki4"
+  },
+  {
+   "line": 562,
+   "disposition": "published",
+   "variant": "arcade-strhoop"
+  },
+  {
+   "line": 563,
+   "disposition": "published",
+   "variant": "arcade-superspy"
+  },
+  {
+   "line": 564,
+   "disposition": "published",
+   "variant": "arcade-svc"
+  },
+  {
+   "line": 565,
+   "disposition": "published",
+   "variant": "arcade-tophuntr"
+  },
+  {
+   "line": 566,
+   "disposition": "published",
+   "variant": "arcade-trally"
+  },
+  {
+   "line": 567,
+   "disposition": "published",
+   "variant": "arcade-turfmast"
+  },
+  {
+   "line": 568,
+   "disposition": "published",
+   "variant": "arcade-twinspri",
+   "reasons": [
+    "twinspri is the Twinkle Star Sprites romset; the hook describes the same versus shmup."
+   ]
+  },
+  {
+   "line": 569,
+   "disposition": "merged",
+   "variant": "arcade-viewpoin",
+   "mergedInto": 570,
+   "reasons": [
+    "Same platform and match key as line 570 (library copy of the same edition); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 570,
+   "disposition": "published",
+   "variant": "arcade-viewpoin"
+  },
+  {
+   "line": 571,
+   "disposition": "published",
+   "variant": "arcade-wakuwak7"
+  },
+  {
+   "line": 572,
+   "disposition": "published",
+   "variant": "arcade-wjammers"
+  },
+  {
+   "line": 573,
+   "disposition": "published",
+   "variant": "arcade-zedblade"
+  },
+  {
+   "line": 574,
+   "disposition": "published",
+   "variant": "arcade-zupapa"
+  },
+  {
+   "line": 575,
+   "disposition": "published",
+   "variant": "arcade-1941"
+  },
+  {
+   "line": 576,
+   "disposition": "published",
+   "variant": "arcade-3wonders"
+  },
+  {
+   "line": 577,
+   "disposition": "published",
+   "variant": "arcade-captcomm"
+  },
+  {
+   "line": 578,
+   "disposition": "published",
+   "variant": "arcade-cawing"
+  },
+  {
+   "line": 579,
+   "disposition": "published",
+   "variant": "arcade-dino"
+  },
+  {
+   "line": 580,
+   "disposition": "published",
+   "variant": "arcade-dynwar"
+  },
+  {
+   "line": 581,
+   "disposition": "published",
+   "variant": "arcade-ffight"
+  },
+  {
+   "line": 582,
+   "disposition": "published",
+   "variant": "arcade-forgottn"
+  },
+  {
+   "line": 583,
+   "disposition": "published",
+   "variant": "arcade-ghouls"
+  },
+  {
+   "line": 584,
+   "disposition": "published",
+   "variant": "arcade-knights"
+  },
+  {
+   "line": 585,
+   "disposition": "merged",
+   "variant": "arcade-kod",
+   "mergedInto": 586,
+   "reasons": [
+    "Same platform and match key as line 586 (library copy of the same edition); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 586,
+   "disposition": "published",
+   "variant": "arcade-kod"
+  },
+  {
+   "line": 587,
+   "disposition": "published",
+   "variant": "arcade-mbombrd"
+  },
+  {
+   "line": 588,
+   "disposition": "published",
+   "variant": "arcade-megaman"
+  },
+  {
+   "line": 589,
+   "disposition": "published",
+   "variant": "arcade-mercs"
+  },
+  {
+   "line": 590,
+   "disposition": "published",
+   "variant": "arcade-msword"
+  },
+  {
+   "line": 591,
+   "disposition": "published",
+   "variant": "arcade-mtwins"
+  },
+  {
+   "line": 592,
+   "disposition": "published",
+   "variant": "arcade-nemo"
+  },
+  {
+   "line": 593,
+   "disposition": "published",
+   "variant": "arcade-pang3"
+  },
+  {
+   "line": 594,
+   "disposition": "published",
+   "variant": "arcade-pnickj"
+  },
+  {
+   "line": 595,
+   "disposition": "published",
+   "variant": "arcade-punisher"
+  },
+  {
+   "line": 596,
+   "disposition": "published",
+   "variant": "arcade-sf2"
+  },
+  {
+   "line": 597,
+   "disposition": "published",
+   "variant": "arcade-sf2ce"
+  },
+  {
+   "line": 598,
+   "disposition": "published",
+   "variant": "arcade-sf2hf"
+  },
+  {
+   "line": 599,
+   "disposition": "published",
+   "variant": "arcade-slammast"
+  },
+  {
+   "line": 600,
+   "disposition": "published",
+   "variant": "arcade-strider"
+  },
+  {
+   "line": 601,
+   "disposition": "published",
+   "variant": "arcade-unsquad"
+  },
+  {
+   "line": 602,
+   "disposition": "published",
+   "variant": "arcade-varth"
+  },
+  {
+   "line": 603,
+   "disposition": "published",
+   "variant": "arcade-willow"
+  },
+  {
+   "line": 604,
+   "disposition": "published",
+   "variant": "arcade-wof"
+  },
+  {
+   "line": 605,
+   "disposition": "published",
+   "variant": "arcade-1944"
+  },
+  {
+   "line": 606,
+   "disposition": "published",
+   "variant": "arcade-19xx"
+  },
+  {
+   "line": 607,
+   "disposition": "published",
+   "variant": "arcade-armwar"
+  },
+  {
+   "line": 608,
+   "disposition": "published",
+   "variant": "arcade-avsp"
+  },
+  {
+   "line": 609,
+   "disposition": "published",
+   "variant": "arcade-batcir"
+  },
+  {
+   "line": 610,
+   "disposition": "published",
+   "variant": "arcade-csclub"
+  },
+  {
+   "line": 611,
+   "disposition": "published",
+   "variant": "arcade-cybots"
+  },
+  {
+   "line": 612,
+   "disposition": "published",
+   "variant": "arcade-ddsom"
+  },
+  {
+   "line": 613,
+   "disposition": "merged",
+   "variant": "arcade-ddtod",
+   "mergedInto": 614,
+   "reasons": [
+    "Same platform and match key as line 614 (library copy of the same edition); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 614,
+   "disposition": "published",
+   "variant": "arcade-ddtod"
+  },
+  {
+   "line": 615,
+   "disposition": "published",
+   "variant": "arcade-dimahoo"
+  },
+  {
+   "line": 616,
+   "disposition": "published",
+   "variant": "arcade-dstlku"
+  },
+  {
+   "line": 617,
+   "disposition": "published",
+   "variant": "arcade-ecofghtr"
+  },
+  {
+   "line": 618,
+   "disposition": "merged",
+   "variant": "arcade-gigawing",
+   "mergedInto": 619,
+   "reasons": [
+    "Same platform and match key as line 619 (library copy of the same edition); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 619,
+   "disposition": "published",
+   "variant": "arcade-gigawing"
+  },
+  {
+   "line": 620,
+   "disposition": "published",
+   "variant": "arcade-hsf2"
+  },
+  {
+   "line": 621,
+   "disposition": "published",
+   "variant": "arcade-megaman2"
+  },
+  {
+   "line": 622,
+   "disposition": "merged",
+   "variant": "arcade-mmatrix",
+   "mergedInto": 623,
+   "reasons": [
+    "Same platform and match key as line 623 (library copy of the same edition); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 623,
+   "disposition": "published",
+   "variant": "arcade-mmatrix"
+  },
+  {
+   "line": 624,
+   "disposition": "published",
+   "variant": "arcade-mpang"
+  },
+  {
+   "line": 625,
+   "disposition": "published",
+   "variant": "arcade-msh"
+  },
+  {
+   "line": 626,
+   "disposition": "published",
+   "variant": "arcade-mshvsf"
+  },
+  {
+   "line": 627,
+   "disposition": "published",
+   "variant": "arcade-mvsc"
+  },
+  {
+   "line": 628,
+   "disposition": "published",
+   "variant": "arcade-nwarru"
+  },
+  {
+   "line": 629,
+   "disposition": "published",
+   "variant": "arcade-progearu"
+  },
+  {
+   "line": 630,
+   "disposition": "published",
+   "variant": "arcade-pzloop2"
+  },
+  {
+   "line": 631,
+   "disposition": "published",
+   "variant": "arcade-ringdest"
+  },
+  {
+   "line": 632,
+   "disposition": "published",
+   "variant": "arcade-sfa"
+  },
+  {
+   "line": 633,
+   "disposition": "published",
+   "variant": "arcade-sfa2"
+  },
+  {
+   "line": 634,
+   "disposition": "published",
+   "variant": "arcade-sfa3"
+  },
+  {
+   "line": 635,
+   "disposition": "published",
+   "variant": "arcade-sfz2al"
+  },
+  {
+   "line": 636,
+   "disposition": "published",
+   "variant": "arcade-sgemf"
+  },
+  {
+   "line": 637,
+   "disposition": "published",
+   "variant": "arcade-spf2t"
+  },
+  {
+   "line": 638,
+   "disposition": "published",
+   "variant": "arcade-ssf2"
+  },
+  {
+   "line": 639,
+   "disposition": "published",
+   "variant": "arcade-ssf2t"
+  },
+  {
+   "line": 640,
+   "disposition": "published",
+   "variant": "arcade-vhunt2"
+  },
+  {
+   "line": 641,
+   "disposition": "published",
+   "variant": "arcade-vsav2"
+  },
+  {
+   "line": 642,
+   "disposition": "published",
+   "variant": "arcade-vsavu"
+  },
+  {
+   "line": 643,
+   "disposition": "published",
+   "variant": "arcade-xmcota"
+  },
+  {
+   "line": 644,
+   "disposition": "published",
+   "variant": "arcade-xmvsf"
+  },
+  {
+   "line": 645,
+   "disposition": "published",
+   "variant": "arcade-jojo"
+  },
+  {
+   "line": 646,
+   "disposition": "published",
+   "variant": "arcade-jojoba"
+  },
+  {
+   "line": 647,
+   "disposition": "published",
+   "variant": "arcade-redearth"
+  },
+  {
+   "line": 648,
+   "disposition": "published",
+   "variant": "arcade-sfiii"
+  },
+  {
+   "line": 649,
+   "disposition": "published",
+   "variant": "arcade-sfiii2"
+  },
+  {
+   "line": 650,
+   "disposition": "published",
+   "variant": "arcade-sfiii3"
+  },
+  {
+   "line": 651,
+   "disposition": "published",
+   "variant": "arcade-akatana"
+  },
+  {
+   "line": 652,
+   "disposition": "published",
+   "variant": "arcade-alcon"
+  },
+  {
+   "line": 653,
+   "disposition": "published",
+   "variant": "arcade-batrideru"
+  },
+  {
+   "line": 654,
+   "disposition": "published",
+   "variant": "arcade-batsugun"
+  },
+  {
+   "line": 655,
+   "disposition": "published",
+   "variant": "arcade-bbakraid"
+  },
+  {
+   "line": 656,
+   "disposition": "published",
+   "variant": "arcade-bgaregga"
+  },
+  {
+   "line": 657,
+   "disposition": "published",
+   "variant": "arcade-ddonpach"
+  },
+  {
+   "line": 658,
+   "disposition": "published",
+   "variant": "arcade-ddp3"
+  },
+  {
+   "line": 659,
+   "disposition": "published",
+   "variant": "arcade-ddpdfk"
+  },
+  {
+   "line": 660,
+   "disposition": "published",
+   "variant": "arcade-ddpsdoj"
+  },
+  {
+   "line": 661,
+   "disposition": "published",
+   "variant": "arcade-deathsml"
+  },
+  {
+   "line": 662,
+   "disposition": "published",
+   "variant": "arcade-dfeveron"
+  },
+  {
+   "line": 663,
+   "disposition": "published",
+   "variant": "arcade-dfkbl"
+  },
+  {
+   "line": 664,
+   "disposition": "published",
+   "variant": "arcade-dogyuun"
+  },
+  {
+   "line": 665,
+   "disposition": "published",
+   "variant": "arcade-donpachi"
+  },
+  {
+   "line": 666,
+   "disposition": "published",
+   "variant": "arcade-dsmbl"
+  },
+  {
+   "line": 667,
+   "disposition": "published",
+   "variant": "arcade-espgal"
+  },
+  {
+   "line": 668,
+   "disposition": "published",
+   "variant": "arcade-espgal2"
+  },
+  {
+   "line": 669,
+   "disposition": "published",
+   "variant": "arcade-esprade"
+  },
+  {
+   "line": 670,
+   "disposition": "edited",
+   "variant": "arcade-feversos",
+   "edited": [
+    "flag -duplicate"
+   ],
+   "reasons": [
+    "The 'duplicate' flag was relative to the curator's library; Fever SOS is a distinct world-release romset."
+   ]
+  },
+  {
+   "line": 671,
+   "disposition": "published",
+   "variant": "arcade-fireshrk"
+  },
+  {
+   "line": 672,
+   "disposition": "published",
+   "variant": "arcade-fixeight"
+  },
+  {
+   "line": 673,
+   "disposition": "published",
+   "variant": "arcade-fshark"
+  },
+  {
+   "line": 674,
+   "disposition": "published",
+   "variant": "arcade-futari15"
+  },
+  {
+   "line": 675,
+   "disposition": "published",
+   "variant": "arcade-futaribl"
+  },
+  {
+   "line": 676,
+   "disposition": "published",
+   "variant": "arcade-grindstm"
+  },
+  {
+   "line": 677,
+   "disposition": "published",
+   "variant": "arcade-guwange"
+  },
+  {
+   "line": 678,
+   "disposition": "published",
+   "variant": "arcade-hellfire"
+  },
+  {
+   "line": 679,
+   "disposition": "published",
+   "variant": "arcade-ibara"
+  },
+  {
+   "line": 680,
+   "disposition": "published",
+   "variant": "arcade-ibarablk"
+  },
+  {
+   "line": 681,
+   "disposition": "published",
+   "variant": "arcade-ket"
+  },
+  {
+   "line": 682,
+   "disposition": "published",
+   "variant": "arcade-mmpork"
+  },
+  {
+   "line": 683,
+   "disposition": "published",
+   "variant": "arcade-mushisam"
+  },
+  {
+   "line": 684,
+   "disposition": "published",
+   "variant": "arcade-outzone"
+  },
+  {
+   "line": 685,
+   "disposition": "published",
+   "variant": "arcade-pinkswts"
+  },
+  {
+   "line": 686,
+   "disposition": "published",
+   "variant": "arcade-sstriker"
+  },
+  {
+   "line": 687,
+   "disposition": "published",
+   "variant": "arcade-tigerh"
+  },
+  {
+   "line": 688,
+   "disposition": "published",
+   "variant": "arcade-truxton"
+  },
+  {
+   "line": 689,
+   "disposition": "published",
+   "variant": "arcade-truxton2"
+  },
+  {
+   "line": 690,
+   "disposition": "published",
+   "variant": "arcade-twincobr"
+  },
+  {
+   "line": 691,
+   "disposition": "published",
+   "variant": "arcade-twinhawk"
+  },
+  {
+   "line": 692,
+   "disposition": "published",
+   "variant": "arcade-vimana"
+  },
+  {
+   "line": 693,
+   "disposition": "published",
+   "variant": "arcade-zerowing"
+  },
+  {
+   "line": 694,
+   "disposition": "published",
+   "variant": "arcade-asurabld"
+  },
+  {
+   "line": 695,
+   "disposition": "published",
+   "variant": "arcade-asurabus"
+  },
+  {
+   "line": 696,
+   "disposition": "published",
+   "variant": "arcade-bmaster"
+  },
+  {
+   "line": 697,
+   "disposition": "published",
+   "variant": "arcade-boogwing"
+  },
+  {
+   "line": 698,
+   "disposition": "published",
+   "variant": "arcade-cyvern"
+  },
+  {
+   "line": 699,
+   "disposition": "published",
+   "variant": "arcade-dmnfrnt"
+  },
+  {
+   "line": 700,
+   "disposition": "published",
+   "variant": "arcade-dolphin"
+  },
+  {
+   "line": 701,
+   "disposition": "published",
+   "variant": "arcade-dragnblz"
+  },
+  {
+   "line": 702,
+   "disposition": "published",
+   "variant": "arcade-dragngun"
+  },
+  {
+   "line": 703,
+   "disposition": "published",
+   "variant": "arcade-grdians"
+  },
+  {
+   "line": 704,
+   "disposition": "published",
+   "variant": "arcade-gunforceu"
+  },
+  {
+   "line": 705,
+   "disposition": "published",
+   "variant": "arcade-gunfrontj"
+  },
+  {
+   "line": 706,
+   "disposition": "published",
+   "variant": "arcade-metalb"
+  },
+  {
+   "line": 707,
+   "disposition": "published",
+   "variant": "arcade-metamrph"
+  },
+  {
+   "line": 708,
+   "disposition": "published",
+   "variant": "arcade-mysticri"
+  },
+  {
+   "line": 709,
+   "disposition": "published",
+   "variant": "arcade-nbbatman"
+  },
+  {
+   "line": 710,
+   "disposition": "published",
+   "variant": "arcade-nslasheru"
+  },
+  {
+   "line": 711,
+   "disposition": "published",
+   "variant": "arcade-orlegend"
+  },
+  {
+   "line": 712,
+   "disposition": "published",
+   "variant": "arcade-rohga"
+  },
+  {
+   "line": 713,
+   "disposition": "published",
+   "variant": "arcade-rtypeleo"
+  },
+  {
+   "line": 714,
+   "disposition": "published",
+   "variant": "arcade-s1945ii"
+  },
+  {
+   "line": 715,
+   "disposition": "published",
+   "variant": "arcade-s1945iii"
+  },
+  {
+   "line": 716,
+   "disposition": "published",
+   "variant": "arcade-shogwarr"
+  },
+  {
+   "line": 717,
+   "disposition": "published",
+   "variant": "arcade-soldivid"
+  },
+  {
+   "line": 718,
+   "disposition": "published",
+   "variant": "arcade-theglad"
+  },
+  {
+   "line": 719,
+   "disposition": "published",
+   "variant": "arcade-uccops"
+  },
+  {
+   "line": 720,
+   "disposition": "published",
+   "variant": "arcade-viostorm"
+  },
+  {
+   "line": 721,
+   "disposition": "published",
+   "variant": "arcade-wolffang"
+  },
+  {
+   "line": 722,
+   "disposition": "published",
+   "variant": "arcade-xexex"
+  },
+  {
+   "line": 723,
+   "disposition": "published",
+   "variant": "arcade-astorm"
+  },
+  {
+   "line": 724,
+   "disposition": "published",
+   "variant": "arcade-candance"
+  },
+  {
+   "line": 725,
+   "disposition": "published",
+   "variant": "arcade-dariusg"
+  },
+  {
+   "line": 726,
+   "disposition": "published",
+   "variant": "arcade-darkedge"
+  },
+  {
+   "line": 727,
+   "disposition": "published",
+   "variant": "arcade-dbreed"
+  },
+  {
+   "line": 728,
+   "disposition": "published",
+   "variant": "arcade-dsaber"
+  },
+  {
+   "line": 729,
+   "disposition": "published",
+   "variant": "arcade-dungeonm"
+  },
+  {
+   "line": 730,
+   "disposition": "published",
+   "variant": "arcade-dynagear"
+  },
+  {
+   "line": 731,
+   "disposition": "published",
+   "variant": "arcade-ga2"
+  },
+  {
+   "line": 732,
+   "disposition": "published",
+   "variant": "arcade-gaia"
+  },
+  {
+   "line": 733,
+   "disposition": "published",
+   "variant": "arcade-gatedoom"
+  },
+  {
+   "line": 734,
+   "disposition": "published",
+   "variant": "arcade-kov7sprt"
+  },
+  {
+   "line": 735,
+   "disposition": "published",
+   "variant": "arcade-mystwarr"
+  },
+  {
+   "line": 736,
+   "disposition": "published",
+   "variant": "arcade-rfjets"
+  },
+  {
+   "line": 737,
+   "disposition": "published",
+   "variant": "arcade-shadfrce"
+  },
+  {
+   "line": 738,
+   "disposition": "published",
+   "variant": "arcade-suikoenb"
+  },
+  {
+   "line": 739,
+   "disposition": "published",
+   "variant": "arcade-vasara"
+  },
+  {
+   "line": 740,
+   "disposition": "published",
+   "variant": "arcade-wizdfire"
+  },
+  {
+   "line": 741,
+   "disposition": "published",
+   "variant": "arcade-capsnk"
+  },
+  {
+   "line": 742,
+   "disposition": "published",
+   "variant": "arcade-ggx"
+  },
+  {
+   "line": 743,
+   "disposition": "published",
+   "variant": "arcade-mbaa"
+  },
+  {
+   "line": 744,
+   "disposition": "published",
+   "variant": "arcade-soulsurf"
+  },
+  {
+   "line": 745,
+   "disposition": "published",
+   "variant": "arcade-zerogu2"
+  },
+  {
+   "line": 746,
+   "disposition": "published",
+   "variant": "arcade-fvipers"
+  },
+  {
+   "line": 747,
+   "disposition": "published",
+   "variant": "arcade-von2"
+  },
+  {
+   "line": 748,
+   "disposition": "published",
+   "variant": "arcade-von4"
+  },
+  {
+   "line": 749,
+   "disposition": "published",
+   "variant": "arcade-astrass"
+  },
+  {
+   "line": 750,
+   "disposition": "published",
+   "variant": "arcade-sokyugrt"
+  },
+  {
+   "line": 751,
+   "disposition": "published",
+   "variant": "arcade-rumblef2"
+  },
+  {
+   "line": 752,
+   "disposition": "published",
+   "variant": "gba-2467-super-robot-taisen-original-generation-jam-project"
+  },
+  {
+   "line": 753,
+   "disposition": "published",
+   "variant": "gba-2580-super-robot-taisen-original-generation-2-independent"
+  },
+  {
+   "line": 754,
+   "disposition": "published",
+   "variant": "gba-bookworm"
+  },
+  {
+   "line": 755,
+   "disposition": "published",
+   "variant": "gba-castlevania-aria-of-sorrow"
+  },
+  {
+   "line": 756,
+   "disposition": "published",
+   "variant": "gba-castlevania-circle-of-the-moon"
+  },
+  {
+   "line": 757,
+   "disposition": "published",
+   "variant": "gba-celias-stupid"
+  },
+  {
+   "line": 758,
+   "disposition": "published",
+   "variant": "gba-chuchu-rocket"
+  },
+  {
+   "line": 759,
+   "disposition": "published",
+   "variant": "gba-duel-masters-sempai-legends"
+  },
+  {
+   "line": 760,
+   "disposition": "published",
+   "variant": "gba-duel-masters-shadow-of-the-code"
+  },
+  {
+   "line": 761,
+   "disposition": "published",
+   "variant": "gba-dynasty-warriors-advance"
+  },
+  {
+   "line": 762,
+   "disposition": "published",
+   "variant": "gba-f-zero-gp-legend"
+  },
+  {
+   "line": 763,
+   "disposition": "published",
+   "variant": "gba-f-zero-maximum-velocity"
+  },
+  {
+   "line": 764,
+   "disposition": "published",
+   "variant": "gba-final-fantasy-tactics-advance"
+  },
+  {
+   "line": 765,
+   "disposition": "published",
+   "variant": "gba-fire-emblem-cerulean-crescent"
+  },
+  {
+   "line": 766,
+   "disposition": "published",
+   "variant": "gba-fire-emblem-dream-of-five-definitive-edition-v1-7-6"
+  },
+  {
+   "line": 767,
+   "disposition": "published",
+   "variant": "gba-fire-emblem-justice-and-pride-final"
+  },
+  {
+   "line": 768,
+   "disposition": "published",
+   "variant": "gba-fire-emblem-project-ember"
+  },
+  {
+   "line": 769,
+   "disposition": "published",
+   "variant": "gba-fire-emblem-requiem"
+  },
+  {
+   "line": 770,
+   "disposition": "published",
+   "variant": "gba-fire-emblem-shackled-power"
+  },
+  {
+   "line": 771,
+   "disposition": "published",
+   "variant": "gba-fire-emblem-souls-of-the-forest"
+  },
+  {
+   "line": 772,
+   "disposition": "published",
+   "variant": "gba-fire-emblem-the-four-kings"
+  },
+  {
+   "line": 773,
+   "disposition": "published",
+   "variant": "gba-fire-emblem-the-last-promise"
+  },
+  {
+   "line": 774,
+   "disposition": "published",
+   "variant": "gba-fire-emblem-the-morrows-golden-country-complete"
+  },
+  {
+   "line": 775,
+   "disposition": "published",
+   "variant": "gba-fire-emblem-the-road-to-ruin"
+  },
+  {
+   "line": 776,
+   "disposition": "published",
+   "variant": "gba-fire-emblem-the-sacred-stones"
+  },
+  {
+   "line": 777,
+   "disposition": "edited",
+   "variant": "gba-fire-emblem-the-sun-gods-wrath",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+   ]
+  },
+  {
+   "line": 778,
+   "disposition": "published",
+   "variant": "gba-fire-emblem-vision-quest"
+  },
+  {
+   "line": 779,
+   "disposition": "published",
+   "variant": "gba-kingdom-hearts-chain-of-memories-venom"
+  },
+  {
+   "line": 780,
+   "disposition": "published",
+   "variant": "gba-the-lord-of-the-rings-the-return-of-the-king"
+  },
+  {
+   "line": 781,
+   "disposition": "published",
+   "variant": "gba-the-lord-of-the-rings-the-two-towers"
+  },
+  {
+   "line": 782,
+   "disposition": "published",
+   "variant": "gba-mario-power-tennis"
+  },
+  {
+   "line": 783,
+   "disposition": "published",
+   "variant": "gba-mega-man-battle-chip-challenge"
+  },
+  {
+   "line": 784,
+   "disposition": "published",
+   "variant": "gba-mega-man-battle-network-6-cybeast-gregar"
+  },
+  {
+   "line": 785,
+   "disposition": "published",
+   "variant": "gba-metroid-zero-mission"
+  },
+  {
+   "line": 786,
+   "disposition": "published",
+   "variant": "gba-metroid-fusion"
+  },
+  {
+   "line": 787,
+   "disposition": "published",
+   "variant": "gba-onimusha-tactics"
+  },
+  {
+   "line": 788,
+   "disposition": "edited",
+   "variant": "gba-poke47-more-with-followers",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 789,
+   "disposition": "published",
+   "variant": "gba-pokemon-emerald-version"
+  },
+  {
+   "line": 790,
+   "disposition": "edited",
+   "variant": "gba-pokemon-firered-version",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Shares one variant with the original-revision copy (revision tags do not change identity), so the revision-specific wording is removed."
+   ]
+  },
+  {
+   "line": 791,
+   "disposition": "merged",
+   "variant": "gba-pokemon-firered-version",
+   "mergedInto": 790,
+   "reasons": [
+    "Same platform and match key as line 790 (library copy of the same edition); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 792,
+   "disposition": "published",
+   "variant": "gba-pokemon-leafgreen-version"
+  },
+  {
+   "line": 793,
+   "disposition": "published",
+   "variant": "gba-pokemon-advanced-adventure-2018-final"
+  },
+  {
+   "line": 794,
+   "disposition": "published",
+   "variant": "gba-pokemon-aesthetic-red"
+  },
+  {
+   "line": 795,
+   "disposition": "published",
+   "variant": "gba-pokemon-all-in-version"
+  },
+  {
+   "line": 796,
+   "disposition": "published",
+   "variant": "gba-pokemon-amethyst"
+  },
+  {
+   "line": 797,
+   "disposition": "published",
+   "variant": "gba-pokemon-ash-gray-newerest-edition"
+  },
+  {
+   "line": 798,
+   "disposition": "published",
+   "variant": "gba-pokemon-blazing-emerald"
+  },
+  {
+   "line": 799,
+   "disposition": "published",
+   "variant": "gba-pokemon-clover"
+  },
+  {
+   "line": 800,
+   "disposition": "published",
+   "variant": "gba-pokemon-colors"
+  },
+  {
+   "line": 801,
+   "disposition": "published",
+   "variant": "gba-pokemon-crestfall"
+  },
+  {
+   "line": 802,
+   "disposition": "published",
+   "variant": "gba-pokemon-crystal-advance-redux"
+  },
+  {
+   "line": 803,
+   "disposition": "published",
+   "variant": "gba-pokemon-dark-rising-2-final"
+  },
+  {
+   "line": 804,
+   "disposition": "published",
+   "variant": "gba-pokemon-dark-rising-origins"
+  },
+  {
+   "line": 805,
+   "disposition": "edited",
+   "variant": "gba-pokemon-dark-rising",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Speculated about which release the curator's file is; removed."
+   ]
+  },
+  {
+   "line": 806,
+   "disposition": "published",
+   "variant": "gba-pokemon-dark-violet-2022-update"
+  },
+  {
+   "line": 807,
+   "disposition": "published",
+   "variant": "gba-pokemon-dreamstone-mysteries"
+  },
+  {
+   "line": 808,
+   "disposition": "published",
+   "variant": "gba-pokemon-elysium-part-a"
+  },
+  {
+   "line": 809,
+   "disposition": "published",
+   "variant": "gba-pokemon-emerald-blitz"
+  },
+  {
+   "line": 810,
+   "disposition": "edited",
+   "variant": "gba-pokemon-emerald-rogue-v2-2-1-ex",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 811,
+   "disposition": "published",
+   "variant": "gba-pokemon-emerald-seaglass"
+  },
+  {
+   "line": 812,
+   "disposition": "published",
+   "variant": "gba-pokemon-exceeded"
+  },
+  {
+   "line": 813,
+   "disposition": "published",
+   "variant": "gba-pokemon-fire-of-sky"
+  },
+  {
+   "line": 814,
+   "disposition": "published",
+   "variant": "gba-pokemon-firered-rocket-edition"
+  },
+  {
+   "line": 815,
+   "disposition": "merged",
+   "variant": "gba-pokemon-firered-rocket-edition",
+   "mergedInto": 814,
+   "reasons": [
+    "Same platform and match key as line 814 (library copy of the same edition); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 816,
+   "disposition": "published",
+   "variant": "gba-pokemon-fluvio"
+  },
+  {
+   "line": 817,
+   "disposition": "published",
+   "variant": "gba-pokemon-forbidden-memories"
+  },
+  {
+   "line": 818,
+   "disposition": "published",
+   "variant": "gba-pokemon-gs-chronicles"
+  },
+  {
+   "line": 819,
+   "disposition": "published",
+   "variant": "gba-pokemon-gaia"
+  },
+  {
+   "line": 820,
+   "disposition": "published",
+   "variant": "gba-pokemon-ghost-grey-version"
+  },
+  {
+   "line": 821,
+   "disposition": "published",
+   "variant": "gba-pokemon-glazed"
+  },
+  {
+   "line": 822,
+   "disposition": "published",
+   "variant": "gba-pokemon-heart-and-soul"
+  },
+  {
+   "line": 823,
+   "disposition": "published",
+   "variant": "gba-pokemon-hearth"
+  },
+  {
+   "line": 824,
+   "disposition": "published",
+   "variant": "gba-pokemon-hodgepodge-platoon"
+  },
+  {
+   "line": 825,
+   "disposition": "published",
+   "variant": "gba-pokemon-inkwell"
+  },
+  {
+   "line": 826,
+   "disposition": "published",
+   "variant": "gba-pokemon-johto-adventures-rebirth-alpha-2-1"
+  },
+  {
+   "line": 827,
+   "disposition": "published",
+   "variant": "gba-pokemon-lazarus"
+  },
+  {
+   "line": 828,
+   "disposition": "published",
+   "variant": "gba-pokemon-legends-delta-beta"
+  },
+  {
+   "line": 829,
+   "disposition": "published",
+   "variant": "gba-pokemon-life-va1-9"
+  },
+  {
+   "line": 830,
+   "disposition": "published",
+   "variant": "gba-pokemon-light-and-shadow"
+  },
+  {
+   "line": 831,
+   "disposition": "published",
+   "variant": "gba-pokemon-liquid-crystal"
+  },
+  {
+   "line": 832,
+   "disposition": "published",
+   "variant": "gba-pokemon-lithium"
+  },
+  {
+   "line": 833,
+   "disposition": "published",
+   "variant": "gba-pokemon-mega-mirage-of-tales-a-new-age-dawns-v2-1u2"
+  },
+  {
+   "line": 834,
+   "disposition": "edited",
+   "variant": "gba-pokemon-monster-hunter",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+   ]
+  },
+  {
+   "line": 835,
+   "disposition": "published",
+   "variant": "gba-pokemon-mystery-dungeon-red-rescue-team"
+  },
+  {
+   "line": 836,
+   "disposition": "published",
+   "variant": "gba-pokemon-mystery-dungeon-rogue-rescue-team"
+  },
+  {
+   "line": 837,
+   "disposition": "published",
+   "variant": "gba-pokemon-nameless"
+  },
+  {
+   "line": 838,
+   "disposition": "edited",
+   "variant": "gba-pokemon-noon",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+   ]
+  },
+  {
+   "line": 839,
+   "disposition": "published",
+   "variant": "gba-pokemon-null"
+  },
+  {
+   "line": 840,
+   "disposition": "published",
+   "variant": "gba-pokemon-odyssey"
+  },
+  {
+   "line": 841,
+   "disposition": "published",
+   "variant": "gba-pokemon-oops-all-eevees"
+  },
+  {
+   "line": 842,
+   "disposition": "published",
+   "variant": "gba-pokemon-palimpsest"
+  },
+  {
+   "line": 843,
+   "disposition": "published",
+   "variant": "gba-pokemon-perfect-emerald"
+  },
+  {
+   "line": 844,
+   "disposition": "published",
+   "variant": "gba-pokemon-petalburg-dynasty"
+  },
+  {
+   "line": 845,
+   "disposition": "published",
+   "variant": "gba-pokemon-pinball-ruby-and-sapphire"
+  },
+  {
+   "line": 846,
+   "disposition": "published",
+   "variant": "gba-pokemon-pisces"
+  },
+  {
+   "line": 847,
+   "disposition": "published",
+   "variant": "gba-pokemon-r-o-w-e"
+  },
+  {
+   "line": 848,
+   "disposition": "published",
+   "variant": "gba-pokemon-royal-sapphire"
+  },
+  {
+   "line": 849,
+   "disposition": "published",
+   "variant": "gba-pokemon-saiph-2020-final"
+  },
+  {
+   "line": 850,
+   "disposition": "published",
+   "variant": "gba-pokemon-scorched-silver"
+  },
+  {
+   "line": 851,
+   "disposition": "published",
+   "variant": "gba-pokemon-snakewood"
+  },
+  {
+   "line": 852,
+   "disposition": "merged",
+   "variant": "gba-pokemon-sors",
+   "mergedInto": 853,
+   "reasons": [
+    "Same platform and match key as line 853 (library copy of the same edition); that record's prose describes the game."
+   ]
+  },
+  {
+   "line": 853,
+   "disposition": "published",
+   "variant": "gba-pokemon-sors"
+  },
+  {
+   "line": 854,
+   "disposition": "published",
+   "variant": "gba-pokemon-soulgold"
+  },
+  {
+   "line": 855,
+   "disposition": "published",
+   "variant": "gba-pokemon-sunset"
+  },
+  {
+   "line": 856,
+   "disposition": "published",
+   "variant": "gba-pokemon-synthesis"
+  },
+  {
+   "line": 857,
+   "disposition": "edited",
+   "variant": "gba-pokemon-tre-johto",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+   ]
+  },
+  {
+   "line": 858,
+   "disposition": "published",
+   "variant": "gba-pokemon-the-pit"
+  },
+  {
+   "line": 859,
+   "disposition": "published",
+   "variant": "gba-pokemon-the-unown-king"
+  },
+  {
+   "line": 860,
+   "disposition": "published",
+   "variant": "gba-pokemon-ultra-shiny-gold-sigma"
+  },
+  {
+   "line": 861,
+   "disposition": "published",
+   "variant": "gba-pokemon-ultra-violet"
+  },
+  {
+   "line": 862,
+   "disposition": "published",
+   "variant": "gba-pokemon-unbound"
+  },
+  {
+   "line": 863,
+   "disposition": "published",
+   "variant": "gba-pokemon-valiant"
+  },
+  {
+   "line": 864,
+   "disposition": "published",
+   "variant": "gba-pokemon-vega-fairy-edition-ex"
+  },
+  {
+   "line": 865,
+   "disposition": "published",
+   "variant": "gba-pokemon-wild-indigo"
+  },
+  {
+   "line": 866,
+   "disposition": "published",
+   "variant": "gba-pokemon-wishes-of-tomorrow"
+  },
+  {
+   "line": 867,
+   "disposition": "published",
+   "variant": "gba-pokemon-dreams"
+  },
+  {
+   "line": 868,
+   "disposition": "published",
+   "variant": "gba-powder"
+  },
+  {
+   "line": 869,
+   "disposition": "published",
+   "variant": "gba-rebelstar-tactical-command"
+  },
+  {
+   "line": 870,
+   "disposition": "published",
+   "variant": "gba-sd-gundam-force"
+  },
+  {
+   "line": 871,
+   "disposition": "published",
+   "variant": "gba-shining-soul-ii"
+  },
+  {
+   "line": 872,
+   "disposition": "published",
+   "variant": "gba-sonic-battle"
+  },
+  {
+   "line": 873,
+   "disposition": "published",
+   "variant": "gba-supermetroid-gba-edition"
+  },
+  {
+   "line": 874,
+   "disposition": "published",
+   "variant": "gba-warioware-inc-mega-microgame"
+  },
+  {
+   "line": 875,
+   "disposition": "published",
+   "variant": "gba-yggdra-union-well-never-fight-alone"
+  },
+  {
+   "line": 876,
+   "disposition": "published",
+   "variant": "gba-zone-of-the-enders-the-fist-of-mars"
+  },
+  {
+   "line": 877,
+   "disposition": "published",
+   "variant": "ngp-bikkuriman-2000-viva-pocket-festival"
+  },
+  {
+   "line": 878,
+   "disposition": "published",
+   "variant": "ngp-biomotor-unitron"
+  },
+  {
+   "line": 879,
+   "disposition": "published",
+   "variant": "ngp-crush-roller"
+  },
+  {
+   "line": 880,
+   "disposition": "published",
+   "variant": "ngp-dark-arms-beast-buster-1999"
+  },
+  {
+   "line": 881,
+   "disposition": "published",
+   "variant": "ngp-densetsu-no-ogre-battle-gaiden-zenobia-no-ouji"
+  },
+  {
+   "line": 882,
+   "disposition": "published",
+   "variant": "ngp-dive-alert-beckys-version"
+  },
+  {
+   "line": 883,
+   "disposition": "edited",
+   "variant": "ngp-dive-alert-burn-hen",
+   "edited": [
+    "flag -duplicate"
+   ],
+   "reasons": [
+    "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
+   ]
+  },
+  {
+   "line": 884,
+   "disposition": "published",
+   "variant": "ngp-dive-alert-matts-version"
+  },
+  {
+   "line": 885,
+   "disposition": "edited",
+   "variant": "ngp-dive-alert-rebecca-hen",
+   "edited": [
+    "flag -duplicate"
+   ],
+   "reasons": [
+    "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
+   ]
+  },
+  {
+   "line": 886,
+   "disposition": "published",
+   "variant": "ngp-dokodemo-mahjong"
+  },
+  {
+   "line": 887,
+   "disposition": "published",
+   "variant": "ngp-dynamite-slugger"
+  },
+  {
+   "line": 888,
+   "disposition": "published",
+   "variant": "ngp-evolution-eternal-dungeons-va1"
+  },
+  {
+   "line": 889,
+   "disposition": "published",
+   "variant": "ngp-fantastic-night-dreams-cotton"
+  },
+  {
+   "line": 890,
+   "disposition": "published",
+   "variant": "ngp-faselei"
+  },
+  {
+   "line": 891,
+   "disposition": "published",
+   "variant": "ngp-ganbare-neo-poke-kun-kari"
+  },
+  {
+   "line": 892,
+   "disposition": "published",
+   "variant": "ngp-gears-of-fate-thor"
+  },
+  {
+   "line": 893,
+   "disposition": "published",
+   "variant": "ngp-infinity-cure"
+  },
+  {
+   "line": 894,
+   "disposition": "published",
+   "variant": "ngp-king-of-fighters-r-1-pocket-fighting-series"
+  },
+  {
+   "line": 895,
+   "disposition": "published",
+   "variant": "ngp-the-king-of-fighters-battle-de-paradise"
+  },
+  {
+   "line": 896,
+   "disposition": "published",
+   "variant": "ngp-koi-koi-mahjong"
+  },
+  {
+   "line": 897,
+   "disposition": "published",
+   "variant": "ngp-magical-drop-pocket"
+  },
+  {
+   "line": 898,
+   "disposition": "published",
+   "variant": "ngp-mezase-kanji-ou"
+  },
+  {
+   "line": 899,
+   "disposition": "published",
+   "variant": "ngp-mizuki-shigeru-no-youkai-shashinkan"
+  },
+  {
+   "line": 900,
+   "disposition": "published",
+   "variant": "ngp-neo-baccarat-pocket-casino-series"
+  },
+  {
+   "line": 901,
+   "disposition": "published",
+   "variant": "ngp-neo-dragons-wild-pocket-casino-series"
+  },
+  {
+   "line": 902,
+   "disposition": "published",
+   "variant": "ngp-neo-mystery-bonus-pocket-casino-series"
+  },
+  {
+   "line": 903,
+   "disposition": "published",
+   "variant": "ngp-neogeo-cup-98"
+  },
+  {
+   "line": 904,
+   "disposition": "published",
+   "variant": "ngp-neogeo-cup-98-plus-color-pocket-sports-series"
+  },
+  {
+   "line": 905,
+   "disposition": "published",
+   "variant": "ngp-pac-man"
+  },
+  {
+   "line": 906,
+   "disposition": "published",
+   "variant": "ngp-pachi-slot-aruze-oukoku-porcano-2"
+  },
+  {
+   "line": 907,
+   "disposition": "published",
+   "variant": "ngp-pachi-slot-aruze-oukoku-pocket-dekahel-2"
+  },
+  {
+   "line": 908,
+   "disposition": "published",
+   "variant": "ngp-pachi-slot-aruze-oukoku-pocket-delsol-2"
+  },
+  {
+   "line": 909,
+   "disposition": "published",
+   "variant": "ngp-pachi-slot-aruze-oukoku-pocket-hanabi"
+  },
+  {
+   "line": 910,
+   "disposition": "published",
+   "variant": "ngp-pachi-slot-aruze-oukoku-pocket-ohanabi"
+  },
+  {
+   "line": 911,
+   "disposition": "published",
+   "variant": "ngp-pachi-slot-aruze-oukoku-pocket-ward-of-lights"
+  },
+  {
+   "line": 912,
+   "disposition": "published",
+   "variant": "ngp-pachi-slot-aruze-oukoku-pocket-e-cup"
+  },
+  {
+   "line": 913,
+   "disposition": "published",
+   "variant": "ngp-party-mail"
+  },
+  {
+   "line": 914,
+   "disposition": "published",
+   "variant": "ngp-pocket-love-if"
+  },
+  {
+   "line": 915,
+   "disposition": "published",
+   "variant": "ngp-puzzle-link"
+  },
+  {
+   "line": 916,
+   "disposition": "published",
+   "variant": "ngp-puzzle-link-2"
+  },
+  {
+   "line": 917,
+   "disposition": "edited",
+   "variant": "ngp-renketsu-puzzle-tsunagete-pon",
+   "edited": [
+    "flag -duplicate"
+   ],
+   "reasons": [
+    "The hook identifies it as the Japanese release of this work.",
+    "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
+   ]
+  },
+  {
+   "line": 918,
+   "disposition": "edited",
+   "variant": "ngp-renketsu-puzzle-tsunagete-pon-color",
+   "edited": [
+    "flag -duplicate"
+   ],
+   "reasons": [
+    "The hook identifies it as the Japanese release of this work.",
+    "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
+   ]
+  },
+  {
+   "line": 919,
+   "disposition": "published",
+   "variant": "ngp-snk-gals-fighters"
+  },
+  {
+   "line": 920,
+   "disposition": "published",
+   "variant": "ngp-snk-vs-capcom-card-fighters-2-expand-edition"
+  },
+  {
+   "line": 921,
+   "disposition": "published",
+   "variant": "ngp-snk-vs-capcom-card-fighters-clash-capcom-version"
+  },
+  {
+   "line": 922,
+   "disposition": "published",
+   "variant": "ngp-snk-vs-capcom-card-fighters-clash-snk-version"
+  },
+  {
+   "line": 923,
+   "disposition": "edited",
+   "variant": "ngp-snk-vs-capcom-gekitotsu-card-fighters-capcom-supporter-version",
+   "edited": [
+    "flag -duplicate"
+   ],
+   "reasons": [
+    "The hook identifies it as the Japanese release of this work.",
+    "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
+   ]
+  },
+  {
+   "line": 924,
+   "disposition": "edited",
+   "variant": "ngp-snk-vs-capcom-gekitotsu-card-fighters-snk-supporter-version",
+   "edited": [
+    "flag -duplicate"
+   ],
+   "reasons": [
+    "The hook identifies it as the Japanese release of this work.",
+    "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
+   ]
+  },
+  {
+   "line": 925,
+   "disposition": "published",
+   "variant": "ngp-samurai-shodown-pocket-fighting-series"
+  },
+  {
+   "line": 926,
+   "disposition": "published",
+   "variant": "ngp-shanghai-mini"
+  },
+  {
+   "line": 927,
+   "disposition": "edited",
+   "variant": "ngp-shinki-sekai-evolution-hateshinai-dungeon",
+   "edited": [
+    "flag -duplicate"
+   ],
+   "reasons": [
+    "The hook identifies it as the Japanese release of this work.",
+    "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
+   ]
+  },
+  {
+   "line": 928,
+   "disposition": "published",
+   "variant": "ngp-shougi-no-tatsujin"
+  },
+  {
+   "line": 929,
+   "disposition": "published",
+   "variant": "ngp-shougi-no-tatsujin-color"
+  },
+  {
+   "line": 930,
+   "disposition": "published",
+   "variant": "ngp-sonic-the-hedgehog-pocket-adventure"
+  },
+  {
+   "line": 931,
+   "disposition": "published",
+   "variant": "ngp-soreike-hanafuda-doujou"
+  },
+  {
+   "line": 932,
+   "disposition": "published",
+   "variant": "ngp-super-real-mahjong-premium-collection"
+  },
+  {
+   "line": 933,
+   "disposition": "edited",
+   "variant": "ngp-tsunagete-pon-2",
+   "edited": [
+    "flag -duplicate"
+   ],
+   "reasons": [
+    "The hook identifies it as the Japanese release of this work.",
+    "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
+   ]
+  },
+  {
+   "line": 934,
+   "disposition": "excluded",
+   "reasons": [
+    "Library-maintenance note about an extra copy pending cleanup; not a game description, and its short name is not a verified alias."
+   ]
+  },
+  {
+   "line": 935,
+   "disposition": "edited",
+   "variant": "ngp-bakumatsu-rouman-tokubetsu-hen-gekka-no-kenshi-tsuki-ni-saku-hana-chiri-yuku-hana",
+   "edited": [
+    "flag -duplicate"
+   ],
+   "reasons": [
+    "The hook identifies it as the Japanese release of this work.",
+    "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
+   ]
+  },
+  {
+   "line": 936,
+   "disposition": "published",
+   "variant": "ngp-baseball-stars"
+  },
+  {
+   "line": 937,
+   "disposition": "published",
+   "variant": "ngp-baseball-stars-color"
+  },
+  {
+   "line": 938,
+   "disposition": "published",
+   "variant": "ngp-big-bang-pro-wrestling"
+  },
+  {
+   "line": 939,
+   "disposition": "published",
+   "variant": "ngp-bust-a-move-pocket"
+  },
+  {
+   "line": 940,
+   "disposition": "excluded",
+   "reasons": [
+    "Library-maintenance note about an extra copy pending cleanup; not a game description, and its short name is not a verified alias."
+   ]
+  },
+  {
+   "line": 941,
+   "disposition": "published",
+   "variant": "ngp-cool-boarders-pocket"
+  },
+  {
+   "line": 942,
+   "disposition": "published",
+   "variant": "ngp-cool-cool-jam"
+  },
+  {
+   "line": 943,
+   "disposition": "published",
+   "variant": "ngp-delta-warp"
+  },
+  {
+   "line": 944,
+   "disposition": "published",
+   "variant": "ngp-densha-de-go-2-on-neo-geo-pocket"
+  },
+  {
+   "line": 945,
+   "disposition": "excluded",
+   "reasons": [
+    "Library-maintenance note about an extra copy pending cleanup; not a game description, and its short name is not a verified alias."
+   ]
+  },
+  {
+   "line": 946,
+   "disposition": "published",
+   "variant": "ngp-fatal-fury-f-contact"
+  },
+  {
+   "line": 947,
+   "disposition": "published",
+   "variant": "ngp-kikou-seiki-unitron-sono-tsuide-hikari-umareru-chi-yori"
+  },
+  {
+   "line": 948,
+   "disposition": "published",
+   "variant": "ngp-king-of-fighters-r-2"
+  },
+  {
+   "line": 949,
+   "disposition": "published",
+   "variant": "ngp-the-last-blade-beyond-the-destiny"
+  },
+  {
+   "line": 950,
+   "disposition": "published",
+   "variant": "ngp-melon-chan-no-seichou-nikki"
+  },
+  {
+   "line": 951,
+   "disposition": "published",
+   "variant": "ngp-memories-off-pure"
+  },
+  {
+   "line": 952,
+   "disposition": "published",
+   "variant": "ngp-metal-slug-1st-mission"
+  },
+  {
+   "line": 953,
+   "disposition": "published",
+   "variant": "ngp-metal-slug-2nd-mission"
+  },
+  {
+   "line": 954,
+   "disposition": "published",
+   "variant": "ngp-neo-21-real-casino-series"
+  },
+  {
+   "line": 955,
+   "disposition": "published",
+   "variant": "ngp-neo-cherry-master-real-casino-series"
+  },
+  {
+   "line": 956,
+   "disposition": "published",
+   "variant": "ngp-neo-cherry-master-color-real-casino-series"
+  },
+  {
+   "line": 957,
+   "disposition": "published",
+   "variant": "ngp-neo-derby-champ-daiyosou"
+  },
+  {
+   "line": 958,
+   "disposition": "published",
+   "variant": "ngp-neo-poke-pro-yakyuu"
+  },
+  {
+   "line": 959,
+   "disposition": "published",
+   "variant": "ngp-neo-turf-masters"
+  },
+  {
+   "line": 960,
+   "disposition": "published",
+   "variant": "ngp-nigeronpa"
+  },
+  {
+   "line": 961,
+   "disposition": "published",
+   "variant": "ngp-oekaki-puzzle"
+  },
+  {
+   "line": 962,
+   "disposition": "published",
+   "variant": "ngp-pachi-slot-aruze-oukoku-pocket-azteca"
+  },
+  {
+   "line": 963,
+   "disposition": "published",
+   "variant": "ngp-pachinko-hisshou-guide-pocket-parlor"
+  },
+  {
+   "line": 964,
+   "disposition": "excluded",
+   "reasons": [
+    "Library-maintenance note about an extra copy pending cleanup; not a game description, and its short name is not a verified alias."
+   ]
+  },
+  {
+   "line": 965,
+   "disposition": "published",
+   "variant": "ngp-picture-puzzle"
+  },
+  {
+   "line": 966,
+   "disposition": "published",
+   "variant": "ngp-pocket-reversi"
+  },
+  {
+   "line": 967,
+   "disposition": "published",
+   "variant": "ngp-pocket-tennis-pocket-sports-series"
+  },
+  {
+   "line": 968,
+   "disposition": "published",
+   "variant": "ngp-pocket-tennis-color-pocket-sports-series"
+  },
+  {
+   "line": 969,
+   "disposition": "published",
+   "variant": "ngp-puyo-pop"
+  },
+  {
+   "line": 970,
+   "disposition": "edited",
+   "variant": "ngp-puzzle-bobble-mini",
+   "edited": [
+    "flag -duplicate"
+   ],
+   "reasons": [
+    "The hook identifies it as the Japanese/European release of Bust-a-Move Pocket.",
+    "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
+   ]
+  },
+  {
+   "line": 971,
+   "disposition": "published",
+   "variant": "ngp-rockman-battle-and-fighters"
+  },
+  {
+   "line": 972,
+   "disposition": "published",
+   "variant": "ngp-samurai-shodown-2-pocket-fighting-series"
+  },
+  {
+   "line": 973,
+   "disposition": "excluded",
+   "reasons": [
+    "Library-maintenance note about an extra copy pending cleanup; not a game description, and its short name is not a verified alias."
+   ]
+  },
+  {
+   "line": 974,
+   "disposition": "excluded",
+   "reasons": [
+    "Library-maintenance note about an extra copy pending cleanup; not a game description, and its short name is not a verified alias."
+   ]
+  },
+  {
+   "line": 975,
+   "disposition": "published",
+   "variant": "ngp-snk-vs-capcom-the-match-of-the-millennium"
+  },
+  {
+   "line": 976,
+   "disposition": "published",
+   "variant": "saturn-gungriffon"
+  },
+  {
+   "line": 977,
+   "disposition": "published",
+   "variant": "gba-final-fantasy-vi-advance"
+  },
+  {
+   "line": 978,
+   "disposition": "published",
+   "variant": "gba-final-fantasy-iv-advance"
+  },
+  {
+   "line": 979,
+   "disposition": "published",
+   "variant": "gba-final-fantasy-v-advance"
+  },
+  {
+   "line": 980,
+   "disposition": "published",
+   "variant": "gba-final-fantasy-i-and-ii-dawn-of-souls"
+  },
+  {
+   "line": 981,
+   "disposition": "published",
+   "variant": "gba-sword-of-mana"
+  },
+  {
+   "line": 982,
+   "disposition": "published",
+   "variant": "nds-pokemon-origin-heartgold-english-patched"
+  },
+  {
+   "line": 983,
+   "disposition": "published",
+   "variant": "nds-the-legend-of-zelda-spirit-tracks-dpad-patched-qol"
+  },
+  {
+   "line": 984,
+   "disposition": "published",
+   "variant": "ps2-armored-core-2-true-analogs-v1-0"
+  },
+  {
+   "line": 985,
+   "disposition": "published",
+   "variant": "tg-cd-exile-un-working-designs"
+  },
+  {
+   "line": 986,
+   "disposition": "published",
+   "variant": "ps2-chain-dive-v1-0-translation"
+  },
+  {
+   "line": 987,
+   "disposition": "published",
+   "variant": "ps2-dragon-ball-z-budokai-2"
+  },
+  {
+   "line": 988,
+   "disposition": "published",
+   "variant": "ps2-dragon-ball-z-budokai-3"
+  },
+  {
+   "line": 989,
+   "disposition": "edited",
+   "variant": "ps2-dynasty-warriors-5-xtreme-legends",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Refers to the curator's own library contents; removed."
+   ]
+  },
+  {
+   "line": 990,
+   "disposition": "published",
+   "variant": "ps2-psi-ops-the-mindgate-conspiracy"
+  },
+  {
+   "line": 991,
+   "disposition": "published",
+   "variant": "ps2-sakura-wars-so-long-my-love-english-voice-over"
+  },
+  {
+   "line": 992,
+   "disposition": "edited",
+   "variant": "ps2-samurai-warriors-2-xtreme-legends",
+   "edited": [
+    "hook",
+    "flag -base SW2 not in library",
+    "flag +needs SW2 disc for full content"
+   ],
+   "reasons": [
+    "Refers to the curator's own library contents; removed."
+   ]
+  },
+  {
+   "line": 993,
+   "disposition": "published",
+   "variant": "ps2-sky-odyssey"
+  },
+  {
+   "line": 994,
+   "disposition": "published",
+   "variant": "ps2-warriors-orochi-2"
+  },
+  {
+   "line": 995,
+   "disposition": "published",
+   "variant": "wii-castle-of-shikigami-iii"
+  },
+  {
+   "line": 996,
+   "disposition": "published",
+   "variant": "wii-geometry-wars-galaxies"
+  },
+  {
+   "line": 997,
+   "disposition": "edited",
+   "variant": "wii-sin-and-punishment-star-successor",
+   "edited": [
+    "controls"
+   ],
+   "reasons": [
+    "Control note referred to the curator's own testing setup."
+   ]
+  },
+  {
+   "line": 998,
+   "disposition": "published",
+   "variant": "wii-super-smash-bros-brawl"
+  },
+  {
+   "line": 999,
+   "disposition": "published",
+   "variant": "wii-tatsunoko-vs-capcom-ultimate-all-stars"
+  },
+  {
+   "line": 1000,
+   "disposition": "published",
+   "variant": "pcengine-contra"
+  },
+  {
+   "line": 1001,
+   "disposition": "published",
+   "variant": "pcengine-santatlantean"
+  },
+  {
+   "line": 1002,
+   "disposition": "published",
+   "variant": "pcengine-atlantean"
+  },
+  {
+   "line": 1003,
+   "disposition": "edited",
+   "variant": "genesis-cave-story-doukutsu",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+   ]
+  },
+  {
+   "line": 1004,
+   "disposition": "published",
+   "variant": "genesis-fifa-soccer-2020-v2-3"
+  },
+  {
+   "line": 1005,
+   "disposition": "published",
+   "variant": "genesis-goldenaxeiii-new-character-hack"
+  },
+  {
+   "line": 1006,
+   "disposition": "published",
+   "variant": "genesis-langrisser-hikari-ii-t-chi"
+  },
+  {
+   "line": 1007,
+   "disposition": "published",
+   "variant": "genesis-mortal-kombat-3-mini-hack"
+  },
+  {
+   "line": 1008,
+   "disposition": "published",
+   "variant": "genesis-rock-n-roll-racing-hack-v16"
+  },
+  {
+   "line": 1009,
+   "disposition": "published",
+   "variant": "genesis-s3complete"
+  },
+  {
+   "line": 1010,
+   "disposition": "published",
+   "variant": "genesis-s3k-thechallenges"
+  },
+  {
+   "line": 1011,
+   "disposition": "published",
+   "variant": "genesis-sor2-bk3boss-hack"
+  },
+  {
+   "line": 1012,
+   "disposition": "published",
+   "variant": "genesis-sor2-streetfighter-v1"
+  },
+  {
+   "line": 1013,
+   "disposition": "published",
+   "variant": "genesis-sor2-streetfighter-v2"
+  },
+  {
+   "line": 1014,
+   "disposition": "published",
+   "variant": "genesis-sor2-streetfighter-v3"
+  },
+  {
+   "line": 1015,
+   "disposition": "published",
+   "variant": "genesis-sor2-streetfighter-v4"
+  },
+  {
+   "line": 1016,
+   "disposition": "published",
+   "variant": "genesis-sor2-tmnt-hack"
+  },
+  {
+   "line": 1017,
+   "disposition": "published",
+   "variant": "genesis-sor3-extreme-v042-hack"
+  },
+  {
+   "line": 1018,
+   "disposition": "published",
+   "variant": "genesis-sonic-2-recreation-part-one"
+  },
+  {
+   "line": 1019,
+   "disposition": "published",
+   "variant": "genesis-sonic-bash-v2"
+  },
+  {
+   "line": 1020,
+   "disposition": "edited",
+   "variant": "genesis-sonic-classic-heroes",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+   ]
+  },
+  {
+   "line": 1021,
+   "disposition": "published",
+   "variant": "genesis-sonic-pixel-perfect-ultimate-version"
+  },
+  {
+   "line": 1022,
+   "disposition": "published",
+   "variant": "genesis-sonic-the-hedgehog-the-lost-worlds"
+  },
+  {
+   "line": 1023,
+   "disposition": "published",
+   "variant": "genesis-sonic-the-hedgehog-3-in-1"
+  },
+  {
+   "line": 1024,
+   "disposition": "published",
+   "variant": "genesis-sonic2battlerace"
+  },
+  {
+   "line": 1025,
+   "disposition": "published",
+   "variant": "genesis-sonic2cl"
+  },
+  {
+   "line": 1026,
+   "disposition": "published",
+   "variant": "genesis-street-fighter-ii-sce-improvement"
+  },
+  {
+   "line": 1027,
+   "disposition": "published",
+   "variant": "genesis-super-street-fighter-ii-improvement"
+  },
+  {
+   "line": 1028,
+   "disposition": "published",
+   "variant": "genesis-super-monaco-gp2019"
+  },
+  {
+   "line": 1029,
+   "disposition": "published",
+   "variant": "genesis-the-bare-knuckle-3-project",
+   "reasons": [
+    "Two builds of the same gsaurus project; the 2018 entry calls itself the earlier build."
+   ]
+  },
+  {
+   "line": 1030,
+   "disposition": "edited",
+   "variant": "genesis-the-bare-knuckle-iii-project",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Library storage advice; removed.",
+    "Two builds of the same gsaurus project; the 2018 entry calls itself the earlier build."
+   ]
+  },
+  {
+   "line": 1031,
+   "disposition": "published",
+   "variant": "genesis-the-streets-of-rage-3-project"
+  },
+  {
+   "line": 1032,
+   "disposition": "published",
+   "variant": "genesis-uefa-euro-2004-portugal"
+  },
+  {
+   "line": 1033,
+   "disposition": "published",
+   "variant": "genesis-umkt-5149"
+  },
+  {
+   "line": 1034,
+   "disposition": "published",
+   "variant": "genesis-ultimate-mortal-kombat-3-hack-ver-0-71-by-nemesis-c"
+  },
+  {
+   "line": 1035,
+   "disposition": "published",
+   "variant": "genesis-ultimate-mortal-kombat-3-mini-v13"
+  },
+  {
+   "line": 1036,
+   "disposition": "published",
+   "variant": "genesis-wolfenstein-3d-fv11-fix"
+  },
+  {
+   "line": 1037,
+   "disposition": "published",
+   "variant": "genesis-yoshi-sonic2beta"
+  },
+  {
+   "line": 1038,
+   "disposition": "published",
+   "variant": "genesis-bahamut-senki-t-eng"
+  },
+  {
+   "line": 1039,
+   "disposition": "published",
+   "variant": "genesis-barver-battle-saga-tai-kong-zhan-shi-english-translation"
+  },
+  {
+   "line": 1040,
+   "disposition": "edited",
+   "variant": "genesis-issdx-real-hack",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "First-person research note; restated neutrally."
+   ]
+  },
+  {
+   "line": 1041,
+   "disposition": "published",
+   "variant": "genesis-ktesonic"
+  },
+  {
+   "line": 1042,
+   "disposition": "published",
+   "variant": "genesis-prince-of-persia-2-remastered-edition"
+  },
+  {
+   "line": 1043,
+   "disposition": "published",
+   "variant": "genesis-sonic2xl"
+  },
+  {
+   "line": 1044,
+   "disposition": "edited",
+   "variant": "genesis-sonic-6",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Taste framing addressed to the curator, and a note about which dump the curator holds; the description of the game is kept."
+   ]
+  },
+  {
+   "line": 1045,
+   "disposition": "published",
+   "variant": "genesis-sor2-sw"
+  },
+  {
+   "line": 1046,
+   "disposition": "published",
+   "variant": "genesis-sor2u-pw"
+  },
+  {
+   "line": 1047,
+   "disposition": "published",
+   "variant": "genesis-super-hang-on-enhanced"
+  },
+  {
+   "line": 1048,
+   "disposition": "published",
+   "variant": "genesis-tecmo-cup-italian-translation"
+  },
+  {
+   "line": 1049,
+   "disposition": "published",
+   "variant": "genesis-tougiou-king-colossus-english-translation"
+  },
+  {
+   "line": 1050,
+   "disposition": "published",
+   "variant": "ps2-armored-trooper-votoms-v0-9-translation"
+  },
+  {
+   "line": 1051,
+   "disposition": "published",
+   "variant": "ps2-cowboy-bebop-tsuitou-no-yakyoku-v1-0-0-translation"
+  },
+  {
+   "line": 1052,
+   "disposition": "published",
+   "variant": "ps2-fullmetal-alchemist-and-the-broken-angel"
+  },
+  {
+   "line": 1053,
+   "disposition": "published",
+   "variant": "ps2-gun"
+  },
+  {
+   "line": 1054,
+   "disposition": "edited",
+   "variant": "ps2-soulcalibur-iii-arcade-edition-deluxe-v1-21-hack",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Refers to the curator's own library contents; removed."
+   ]
+  },
+  {
+   "line": 1055,
+   "disposition": "published",
+   "variant": "ps2-unlimited-saga"
+  },
+  {
+   "line": 1056,
+   "disposition": "published",
+   "variant": "ps2-genji-dawn-of-the-samurai"
+  },
+  {
+   "line": 1057,
+   "disposition": "published",
+   "variant": "ps2-god-of-war-ii"
+  },
+  {
+   "line": 1058,
+   "disposition": "published",
+   "variant": "ps2-spartan-total-warrior"
+  },
+  {
+   "line": 1059,
+   "disposition": "published",
+   "variant": "ps2-gungrave"
+  },
+  {
+   "line": 1060,
+   "disposition": "published",
+   "variant": "ps2-gungrave-overdose"
+  },
+  {
+   "line": 1061,
+   "disposition": "published",
+   "variant": "ps2-ghost-in-the-shell-stand-alone-complex"
+  },
+  {
+   "line": 1062,
+   "disposition": "published",
+   "variant": "ps2-gauntlet-dark-legacy"
+  },
+  {
+   "line": 1063,
+   "disposition": "published",
+   "variant": "ps2-gauntlet-seven-sorrows"
+  },
+  {
+   "line": 1064,
+   "disposition": "edited",
+   "variant": "ps2-marvel-ultimate-alliance-2",
+   "edited": [
+    "hook",
+    "flag -unverified dump"
+   ],
+   "reasons": [
+    "Described byte checks of the curator's private copy and its dump status; removed, with the dump-status flag."
+   ]
+  },
+  {
+   "line": 1065,
+   "disposition": "published",
+   "variant": "ps2-marvel-nemesis-rise-of-the-imperfects"
+  },
+  {
+   "line": 1066,
+   "disposition": "published",
+   "variant": "ps2-marvel-ultimate-alliance"
+  },
+  {
+   "line": 1067,
+   "disposition": "published",
+   "variant": "psvita-borderlands-2"
+  },
+  {
+   "line": 1068,
+   "disposition": "published",
+   "variant": "psvita-toukiden-2"
+  },
+  {
+   "line": 1069,
+   "disposition": "published",
+   "variant": "psvita-bloodstained-curse-of-the-moon"
+  },
+  {
+   "line": 1070,
+   "disposition": "published",
+   "variant": "psvita-catherine-full-body-english-v1-0-en-dub"
+  },
+  {
+   "line": 1071,
+   "disposition": "published",
+   "variant": "psvita-damascus-gear-operation-tokyo"
+  },
+  {
+   "line": 1072,
+   "disposition": "published",
+   "variant": "psvita-dragon-quest-builders"
+  },
+  {
+   "line": 1073,
+   "disposition": "published",
+   "variant": "psvita-dynasty-warriors-next"
+  },
+  {
+   "line": 1074,
+   "disposition": "published",
+   "variant": "psvita-earth-defense-force-2"
+  },
+  {
+   "line": 1075,
+   "disposition": "edited",
+   "variant": "psvita-muramasa-rebirth",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Described the contents of the curator's private copy; removed."
+   ]
+  },
+  {
+   "line": 1076,
+   "disposition": "published",
+   "variant": "psvita-ninja-gaiden-sigma-plus"
+  },
+  {
+   "line": 1077,
+   "disposition": "published",
+   "variant": "psvita-street-fighter-x-tekken"
+  },
+  {
+   "line": 1078,
+   "disposition": "published",
+   "variant": "psvita-ninja-gaiden-sigma-2-plus"
+  },
+  {
+   "line": 1079,
+   "disposition": "published",
+   "variant": "psvita-injustice-gods-among-us-ultimate-edition"
+  },
+  {
+   "line": 1080,
+   "disposition": "published",
+   "variant": "psvita-shinobido-2-revenge-of-zen"
+  },
+  {
+   "line": 1081,
+   "disposition": "edited",
+   "variant": "psvita-call-of-duty-black-ops-declassified",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Refers to the curator's own library contents; removed."
+   ]
+  },
+  {
+   "line": 1082,
+   "disposition": "published",
+   "variant": "psvita-the-binding-of-isaac-rebirth"
+  },
+  {
+   "line": 1083,
+   "disposition": "published",
+   "variant": "psvita-arkham-origins-blackgate"
+  },
+  {
+   "line": 1084,
+   "disposition": "published",
+   "variant": "psvita-samurai-warriors-4"
+  },
+  {
+   "line": 1085,
+   "disposition": "published",
+   "variant": "psvita-assassins-creed-chronicles"
+  },
+  {
+   "line": 1086,
+   "disposition": "published",
+   "variant": "psvita-samurai-warriors-chronicles-3"
+  },
+  {
+   "line": 1087,
+   "disposition": "published",
+   "variant": "psvita-samurai-shodown-v-special"
+  },
+  {
+   "line": 1088,
+   "disposition": "published",
+   "variant": "psvita-demons-tier"
+  },
+  {
+   "line": 1089,
+   "disposition": "published",
+   "variant": "psvita-dungeon-hunter-alliance"
+  },
+  {
+   "line": 1090,
+   "disposition": "published",
+   "variant": "psvita-touhou-genso-wanderer"
+  },
+  {
+   "line": 1091,
+   "disposition": "published",
+   "variant": "nds-dynasty-warriors-ds-fighters-battle"
+  },
+  {
+   "line": 1092,
+   "disposition": "edited",
+   "variant": "psp-castlevania-the-dracula-x-chronicles",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Refers to the curator's own library contents; removed."
+   ]
+  },
+  {
+   "line": 1093,
+   "disposition": "published",
+   "variant": "psp-dungeon-explorer-warriors-of-ancient-arts"
+  },
+  {
+   "line": 1094,
+   "disposition": "edited",
+   "variant": "psx-dynasty-warriors",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+   ]
+  },
+  {
+   "line": 1095,
+   "disposition": "edited",
+   "variant": "gba-anguna-warriors-of-virtue",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+   ]
+  },
+  {
+   "line": 1096,
+   "disposition": "edited",
+   "variant": "xbox-jsrf-jet-set-radio-future",
+   "edited": [
+    "hook",
+    "flag -not tested on Thor"
+   ],
+   "reasons": [
+    "Taste-fit framing, the curator's scraping state and a device-specific flag; the gameplay description is kept."
+   ]
+  },
+  {
+   "line": 1097,
+   "disposition": "edited",
+   "variant": "sega32x-chaotix-complete-hack",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Referred to the archive the curator received; restated as the release archive."
+   ]
+  },
+  {
+   "line": 1098,
+   "disposition": "published",
+   "variant": "ps2-baldurs-gate-dark-alliance"
+  },
+  {
+   "line": 1099,
+   "disposition": "published",
+   "variant": "ps2-baldurs-gate-dark-alliance-ii"
+  },
+  {
+   "line": 1100,
+   "disposition": "published",
+   "variant": "psp-phantasy-star-portable-2-infinity-v2-translation"
+  },
+  {
+   "line": 1101,
+   "disposition": "published",
+   "variant": "arcade-agallet"
+  },
+  {
+   "line": 1102,
+   "disposition": "published",
+   "variant": "arcade-theroes"
+  },
+  {
+   "line": 1103,
+   "disposition": "edited",
+   "variant": "psx-harmful-park-v1-1-translation",
+   "edited": [
+    "hook"
+   ],
+   "reasons": [
+    "Referred to the archive the curator received; restated as the patch archive."
+   ]
+  }
+ ]
+}

@@ -156,23 +156,12 @@ interface GameDao {
     suspend fun allSessions(): List<SessionEntity>
 
     /**
-     * Sessions that may belong to the journal week `[from, to)`: started in it, or started earlier and ended (or still open)
-     * after [from]. The journal decides which of them count ([io.github.esko997.sortie.data.journal.weekPlay]).
-     */
-    @Query("SELECT * FROM sessions WHERE startedAt < :to AND (startedAt >= :from OR endedAt IS NULL OR endedAt > :from) ORDER BY startedAt, rowId")
-    fun sessionsTouching(from: Long, to: Long): Flow<List<SessionEntity>>
-
-    /**
      * Completed (ended, not abandoned) sessions that started at or after [from], oldest first: the mecha companion's play credit
      * ([io.github.esko997.sortie.mecha.MechaStore], wired in SortieApp). Re-emits whenever the sessions table changes; apps and
      * shortcuts are filtered by the caller.
      */
     @Query("SELECT * FROM sessions WHERE startedAt >= :from AND endedAt IS NOT NULL AND abandoned = 0 ORDER BY startedAt, rowId")
     fun completedSessionsFrom(from: Long): Flow<List<SessionEntity>>
-
-    /** Shown games whose title matches [pattern] (a LIKE pattern built with [likeEscape]), for the journal's game link. */
-    @Query("SELECT * FROM games WHERE variantOf IS NULL AND title LIKE :pattern ESCAPE '\\' ORDER BY sortTitle LIMIT :limit")
-    suspend fun titleMatches(pattern: String, limit: Int): List<GameEntity>
 
     @Insert
     suspend fun insertSessions(s: List<SessionEntity>): List<Long>

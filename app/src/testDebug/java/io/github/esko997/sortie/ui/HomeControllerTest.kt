@@ -97,21 +97,22 @@ class HomeControllerTest {
         assertFalse("Back finished Sortie", activity.isFinishing)
         assertFalse("Back moved Sortie's task behind other apps", shadowOf(activity).isTaskMovedToBack)
         compose.onNodeWithText("Sort").assertIsDisplayed()
-        // and Home still answers the controller afterwards
-        assertEquals(listOf("Apps"), walk(DOWN))
+        // Home still answers the controller: the library remains reachable.
+        pressUntil(DOWN, firstTile)
     }
 
     /**
-     * The header opens with Home and the first D-pad press lands on its first action. Walking the header does not fold it;
+     * The header opens with Home and its actions remain reachable from the controller. Walking the header does not fold it;
      * Down reaches the tiles, which folds it to the strip. Up from the first row opens it again with the focus on the chosen
      * sort (the row just above the grid), never on the strip, and Down goes back into the tiles, folding it again.
      */
     @Test
     fun enteringTheTilesFoldsTheHeaderAndUpFromTheFirstRowOpensItOnTheSort() {
         awaitHome()
-        assertEquals(listOf("Apps", "Hangar", "Apps"), walk(DOWN, RIGHT, LEFT))
+        focusHeader()
+        assertEquals(listOf("Search", "Apps"), walk(RIGHT, LEFT))
         assertTrue("choosing a header action folded the header", sortRowShown())
-        pressUntil(DOWN, firstTile)
+        repeat(4) { if (!shown(SHOW_HEADER)) walk(DOWN) }
         assertFalse("the sort row is still shown while browsing the tiles", sortRowShown())
         assertTrue("the folded strip has no chevron", shown(SHOW_HEADER))
 
@@ -131,7 +132,6 @@ class HomeControllerTest {
         awaitHome()
         pad.press(DOWN)
         compose.waitForIdle()
-        pressUntil(DOWN, "Manual")
         pressUntil(RIGHT, HIDE_HEADER)
         assertEquals(listOf(SHOW_HEADER), walk(A))
         assertFalse(sortRowShown())
@@ -185,18 +185,48 @@ class HomeControllerTest {
         assertTrue("Back from the system opened the folded header", shown(SHOW_HEADER))
     }
 
-    /** The header's Hangar button opens the Hangar from the controller; B closes it and the focus is back on the button. */
+    /** Reach the header regardless of which row spatial focus chooses first in this layout. */
+    private fun focusHeader() {
+        pad.press(DOWN)
+        compose.waitForIdle()
+        pressUntil(UP, "Apps")
+    }
+
+    /** Walks the header to Extras and opens its menu with A: the focus lands on the menu's first entry. */
+    private fun openExtras() {
+        focusHeader()
+        assertEquals(listOf("Search", "Extras"), walk(RIGHT, RIGHT))
+        pad.press(A)
+        compose.waitForIdle()
+        compose.waitUntil(5_000) { pad.focusedLabel() == "Tonight" }
+    }
+
+    /** B closes the Extras menu and the focus is back on the Extras button, where the header walk carries on. */
     @Test
-    fun hangarButtonOpensTheHangarAndBReturnsToIt() {
+    fun extrasMenuClosesWithBAndReturnsToTheButton() {
         awaitHome()
-        assertEquals(listOf("Apps", "Hangar"), walk(DOWN, RIGHT))
+        openExtras()
+        assertEquals(listOf("Hangar", "Magazines"), walk(DOWN, DOWN))
+        pad.press(B)
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Tonight").fetchSemanticsNodes().isEmpty() }
+        compose.mainClock.advanceTimeBy(500)
+        compose.waitForIdle()
+        assertEquals("Extras", pad.focusedLabel())
+        assertEquals(listOf("Settings"), walk(RIGHT))
+    }
+
+    /** Extras → Hangar opens the Hangar from the controller; B closes it and the focus is back on Extras. */
+    @Test
+    fun hangarFromExtrasOpensTheHangarAndBReturnsToExtras() {
+        awaitHome()
+        openExtras()
+        assertEquals(listOf("Hangar"), walk(DOWN))
         pad.press(A)
         compose.waitUntil(5_000) { listOf("Workshop", "Gallery").all { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() } }
         pad.press(B)
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Workshop").fetchSemanticsNodes().isEmpty() }
         compose.mainClock.advanceTimeBy(500) // the button takes the focus back once the Hangar's window is gone
         compose.waitForIdle()
-        assertEquals("Hangar", pad.focusedLabel())
-        assertEquals(listOf("Library setup"), walk(RIGHT))
+        assertEquals("Extras", pad.focusedLabel())
     }
 }

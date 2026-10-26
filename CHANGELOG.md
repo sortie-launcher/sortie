@@ -1,6 +1,29 @@
 # Changelog
 
 ## Unreleased
+- Home's header shows the amber Split-S mark instead of the word "Sortie" and keeps four actions: Apps, Search, Extras and
+  Settings. Extras holds Tonight, the Hangar and Magazines; B returns the focus to Extras. Library setup and the manual
+  (no longer a 📖 button) are in Settings; an empty library still offers Set up library on Home.
+- One bookmark per game replaces the weekly journal and the per-game *Where was I?* and mapping notes. Save replaces it,
+  Cancel keeps it, Clear then Remove deletes it; it shows on the game page and the companion. *What it needs*, reference
+  cards, clippings and Finished/Shelved are unchanged. Older writing is first saved, readable, to `sortie/archive/`
+  (Markdown plus exact JSON); *Where was I?* notes become bookmarks, journal screenshots are left in place, and nothing is
+  rewritten if the archive cannot be written. Older backups are archived the same way on restore.
+- Optional, nonmodal bookmark card after a game you started has closed: no focus or keyboard until **Leave a note** (or
+  L2), once per session, never on a temporary Home, switcher or companion view or a quick exit, and only with Shizuku.
+  Settings → Bookmarks turns it off.
+- Tonight (Extras → Tonight): one saved set per local date of up to five of your games, shown one at a time, each with
+  the rule and data behind it (pick up again, Field Notes article, familiar ground, something different, wild card, or a
+  labelled discovery fallback). No setup, reroll or network; the set survives restarts, re-indexing and new play, and a
+  pick that becomes unplayable is shown disabled. A set that cannot be saved is reported rather than shown.
+- The curated guide now ships in the app: 1,054 works in 1,074 platform/edition variants built from 1,102 authored
+  records, with stable portable IDs and strict matching (hacks, translations and other editions never inherit a retail
+  entry). A card's `guide.json` still wins; the bundled guide fills only empty hooks, control notes and flags, carries no
+  fit scores or taste tags, and is never changed by bookmarks. docs/formats/guide.md.
+- Magazine articles can include an experimental horizontal picture sequence of 2–12 captioned panels: swipe or tap on
+  wide screens, L2 to browse with ←/→ and R2 to open, stacked pictures on narrow screens. docs/formats/README.md.
+- Backups now carry bookmarks and the bookmark setting instead of journal entries and notes. Reference images, the
+  `sortie/archive/` folder and old journal screenshots must still be copied separately; Tonight's picks stay on the device.
 - Hold and carry Rivet, then flick toward the other screen to throw him across with momentum and a weighted landing.
   Gentle edge handoffs still work. He only crosses into an active Sortie view with a safe perch: no opening apps over
   games, no new permissions, and no background animation loop. Single-screen releases stay local; Animate off skips flight.

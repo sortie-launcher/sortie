@@ -19,6 +19,7 @@ import io.github.esko997.sortie.data.backup.BackupManager
 import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.db.SortieDb
 import io.github.esko997.sortie.data.folders.FolderRepository
+import io.github.esko997.sortie.data.guide.CuratedGuide
 import io.github.esko997.sortie.data.index.DeviceState
 import io.github.esko997.sortie.data.index.Indexer
 import io.github.esko997.sortie.data.magazine.BundledMagazines
@@ -26,9 +27,12 @@ import io.github.esko997.sortie.data.magazine.MagazineGames
 import io.github.esko997.sortie.data.magazine.MagazineRepository
 import io.github.esko997.sortie.data.manifest.ManifestStore
 import io.github.esko997.sortie.data.setup.LibrarySetupStore
+import io.github.esko997.sortie.data.tonight.Tonight
+import io.github.esko997.sortie.data.tonight.TonightStore
 import io.github.esko997.sortie.data.user.PlayLog
 import io.github.esko997.sortie.data.user.UserStore
 import io.github.esko997.sortie.launch.LaunchManager
+import io.github.esko997.sortie.launch.SessionEndWatch
 import io.github.esko997.sortie.mecha.MechaStore
 import io.github.esko997.sortie.mecha.PlaySession
 import io.github.esko997.sortie.shell.ScreenMover
@@ -37,7 +41,14 @@ import io.github.esko997.sortie.stats.DeviceStatsMonitor
 import io.github.esko997.sortie.ui.SwitcherHost
 import java.io.File
 import java.io.IOException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 /** Hand-rolled service locator; small enough that a DI framework would be more code than it saves. */
 class SortieApp :
@@ -57,9 +68,20 @@ class SortieApp :
         val user = UserStore(File(sortieDir, "user.json"), mayCreateDirectory = { pinnedSortieDir(app) == null })
         val playLog = PlayLog(db.games(), File(sortieDir, "playlog.jsonl"), manifests.snapshot.value.device.device)
         val mecha = MechaStore(app) { from -> db.games().completedSessionsFrom(from).map { rows -> rows.map { it.toPlaySession() } } }
-        val indexer = Indexer(db.games(), manifests)
+        val indexer = Indexer(db.games(), manifests, CuratedGuide.forApp(app))
         val magazines = MagazineRepository(sortieDir, BundledMagazines.forApp(app))
         val magazineGames = MagazineGames(db.games()) { manifests.snapshot.value.systems }
+
+        /** Tonight's daily sets; app-private, so each device keeps its own (see data.tonight.TonightStore). */
+        val tonight = Tonight(
+            app,
+            db.games(),
+            user.data,
+            { manifests.snapshot.value.systems },
+            magazines,
+            magazineGames,
+            TonightStore(File(app.filesDir, "tonight.json"))
+        )
 
         /** Editor of the card's library manifests, shared by Library setup, imports and the launcher's remembered Open with… choice. */
         val librarySetup = LibrarySetupStore(sortieDir, manifests)
@@ -82,8 +104,39 @@ class SortieApp :
             availableLaunchables = { apps.apps.value.mapTo(HashSet()) { it.id } + shortcuts.shortcuts.value.map { it.id } }
         )
 
+        /** Whether a game Sortie started has really ended, for the bookmark invitation (see [SessionEndWatch]). */
+        val sessionEnds = SessionEndWatch()
+
         init {
             SwitcherHost(this).install() // overlay switcher when the draw-over-apps grant exists; activity route otherwise
+            watchGameSessions()
+        }
+
+        /**
+         * Each new game session is watched, and its own task identified from the task list in the seconds after its launch
+         * (only with Shizuku; without it nothing is identified and no invitation is ever offered). Any other new session (an
+         * app, a shortcut, a game whose emulator package is unknown) ends the previous watch: nothing can then prompt for it.
+         */
+        private fun watchGameSessions() {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            scope.launch {
+                playLog.current.filterNotNull().distinctUntilChanged { a, b -> a.gameId == b.gameId && a.startedAt == b.startedAt }.collect { s ->
+                    val pkg = s.profileId?.let { manifests.snapshot.value.profiles[it]?.`package` }?.takeIf { it.isNotBlank() }
+                    if (!LibraryItem.isGameId(s.gameId) || pkg == null) {
+                        sessionEnds.stop()
+                        return@collect
+                    }
+                    sessionEnds.started(s.gameId, s.startedAt, pkg)
+                    scope.launch {
+                        var waited = 0L
+                        for (at in SessionEndWatch.IDENTIFY_DELAYS_MS) {
+                            delay(at - waited)
+                            waited = at
+                            if (sessionEnds.identify(s.gameId, s.startedAt, screenMover.taskSnapshot())) break
+                        }
+                    }
+                }
+            }
         }
 
         /**

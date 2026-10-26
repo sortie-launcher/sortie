@@ -137,6 +137,21 @@ class ScreenMover internal constructor(
      */
     suspend fun appTasks(): List<RootTask> = if (!ready) emptyList() else rootTasks().filter { switchable(it.component) }
 
+    /**
+     * Every task, or null when the list cannot be trusted as evidence: Shizuku not ready, the shell service not bound, a non-zero
+     * exit, or nothing parsed (a real list always holds at least the home task). [rootTasks] reads such failures as "no tasks",
+     * which is fine for showing a switcher but must never be taken to mean a game has gone.
+     */
+    suspend fun taskSnapshot(): List<RootTask>? {
+        if (!ready) return null
+        val reply = exec("cmd activity stack list")
+        if (reply.substringBefore('\n').trim() != "0") return null
+        return parseRootTasks(reply.substringAfter('\n')).takeIf { it.isNotEmpty() }
+    }
+
+    /** The [appTasks] subset of a [taskSnapshot]. */
+    fun switchableOf(tasks: List<RootTask>): List<RootTask> = tasks.filter { switchable(it.component) }
+
     private fun switchable(component: String): Boolean {
         if ('/' !in component || isLauncher(component)) return false
         return !component.startsWith(context.packageName) || BuiltinApp.of(context.packageName, component) != null

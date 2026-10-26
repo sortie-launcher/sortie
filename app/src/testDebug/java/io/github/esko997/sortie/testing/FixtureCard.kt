@@ -61,6 +61,9 @@ object FixtureCard {
         write(root, "$issue/lead.png", pattern(960, 400, 0x0F766E))
         write(root, "$issue/portrait.png", pattern(240, 360, 0x7C3AED))
         write(root, "$issue/wide.png", pattern(1200, 400, 0xBE123C))
+        write(root, "$issue/seq-1.png", pattern(480, 270, 0x15803D))
+        write(root, "$issue/seq-2.png", pattern(240, 360, 0xA16207))
+        write(root, "$issue/seq-3.png", pattern(640, 240, 0x1E40AF))
         write(root, "sortie/magazines/field-notes-007/media/cover.png", pattern(300, 400, 0x1D4ED8))
         root.walkTopDown().forEach { it.setLastModified(FILE_TIME) }
         return File(root, "sortie")

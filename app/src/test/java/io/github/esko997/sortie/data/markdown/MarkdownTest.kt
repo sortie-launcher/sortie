@@ -51,6 +51,50 @@ class MarkdownTest {
     }
 
     @Test
+    fun consecutiveSequenceImagesFormOneSequenceAndAnythingElseEndsIt() {
+        val md = """
+            Before
+            ![First, credit: A](media/1.webp "sequence")
+            ![Second, credit: B](media/2.webp "sequence")
+            ![Third](media/3.webp "sequence")
+
+            ![Next run one](media/4.webp "sequence")
+            ![Next run two](media/5.webp "sequence")
+            ![Plain picture](media/6.webp)
+            ![](media/7.webp "sequence")
+            After
+        """.trimIndent()
+        assertEquals(
+            listOf(
+                MdBlock.Paragraph("Before"),
+                MdBlock.Sequence(
+                    listOf(
+                        MdBlock.Image("First, credit: A", "media/1.webp"),
+                        MdBlock.Image("Second, credit: B", "media/2.webp"),
+                        MdBlock.Image("Third", "media/3.webp")
+                    )
+                ),
+                // a blank line starts a new sequence
+                MdBlock.Sequence(listOf(MdBlock.Image("Next run one", "media/4.webp"), MdBlock.Image("Next run two", "media/5.webp"))),
+                MdBlock.Image("Plain picture", "media/6.webp"),
+                // a lone panel is an ordinary picture, and the marker title is never its caption
+                MdBlock.Image("", "media/7.webp"),
+                MdBlock.Paragraph("After")
+            ),
+            parseMarkdown(md)
+        )
+        assertEquals(listOf("media/1.webp", "media/2.webp", "media/3.webp"), parseMarkdown(md)[1].images.map { it.src })
+    }
+
+    @Test
+    fun otherImageTitlesStayCaptionsAndNeverGroup() {
+        assertEquals(
+            listOf(MdBlock.Image("", "media/a.webp"), MdBlock.Image("Sequence", "media/b.webp")),
+            parseMarkdown("![](media/a.webp \"sequence\")\n![](media/b.webp \"Sequence\")")
+        )
+    }
+
+    @Test
     fun htmlStaysLiteralText() {
         assertEquals(listOf(MdBlock.Paragraph("<script>alert(1)</script> <img src=x>")), parseMarkdown("<script>alert(1)</script>\n<img src=x>"))
     }

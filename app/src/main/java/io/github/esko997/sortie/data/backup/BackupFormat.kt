@@ -3,6 +3,8 @@ package io.github.esko997.sortie.data.backup
 import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.manifest.BrowseChromeMode
 import io.github.esko997.sortie.data.manifest.UserData
+import io.github.esko997.sortie.data.user.LegacyNotes
+import io.github.esko997.sortie.data.user.LegacyUserMigration
 import io.github.esko997.sortie.mecha.MechaState
 import io.github.esko997.sortie.stats.CompanionView
 import io.github.esko997.sortie.stats.perfInterval
@@ -16,8 +18,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
 
 /**
- * A Sortie backup (docs/formats/user.md): every device-side preference (user.json, including layout, dock and per-game
- * annotations), the closed play sessions from the database and, from version 2, the Hangar companion's save. Not included:
+ * A Sortie backup (docs/formats/user.md): every device-side preference (user.json, including layout, dock, controller entries
+ * and bookmarks), the closed play sessions from the database and, from version 2, the Hangar companion's save. Not included:
  * ROMs, art, emulator saves, the game index (rebuilt from the card), manifests, playlog.jsonl, and anything Android owns
  * (shortcut pins, permissions, default home).
  */
@@ -84,8 +86,12 @@ fun buildBackup(user: UserData, sessions: List<SessionEntity>, mecha: MechaState
 fun encodeBackup(backup: BackupFile): String = backupJson.encodeToString(BackupFile.serializer(), backup)
 
 sealed interface ParsedBackup {
-    /** [openIgnored]: sessions without an end in the file; they are dropped, never imported as "currently playing". */
-    data class Valid(val backup: BackupFile, val openIgnored: Int) : ParsedBackup
+    /**
+     * [openIgnored]: sessions without an end in the file; they are dropped, never imported as "currently playing". [legacy]:
+     * journal entries and game notes of an older Sortie found in the file's `user` section. They are not part of [backup] (its
+     * "where was I?" notes are already its bookmarks) and must be archived before the restore replaces user.json.
+     */
+    data class Valid(val backup: BackupFile, val openIgnored: Int, val legacy: LegacyNotes? = null) : ParsedBackup
 
     data class Invalid(val reason: String) : ParsedBackup
 }
@@ -112,11 +118,14 @@ fun parseBackup(text: String): ParsedBackup {
     }
     if (version < 1) return ParsedBackup.Invalid("Unsupported backup format version $version.")
     // a restore replaces every preference, so a file missing its sections must not pass as an all-defaults backup
-    if (root["user"] !is JsonObject || root["sessions"] !is JsonArray) {
+    val userSection = root["user"] as? JsonObject
+    if (userSection == null || root["sessions"] !is JsonArray) {
         return ParsedBackup.Invalid("The backup is incomplete (no preferences or no play history section); it is damaged or hand-edited.")
     }
+    // an older Sortie's journal and notes would otherwise be dropped silently as unknown keys
+    val migrated = LegacyUserMigration.migrate(userSection)
     val backup = try {
-        backupJson.decodeFromJsonElement(BackupFile.serializer(), root)
+        backupJson.decodeFromJsonElement(BackupFile.serializer(), JsonObject(root + ("user" to migrated.user)))
     } catch (e: SerializationException) {
         return ParsedBackup.Invalid("The backup is damaged: ${e.message?.lineSequence()?.firstOrNull() ?: "unreadable field"}.")
     } catch (e: IllegalArgumentException) {
@@ -132,7 +141,7 @@ fun parseBackup(text: String): ParsedBackup {
         if (problem != null) return ParsedBackup.Invalid("Session ${i + 1} in the backup $problem; the file is damaged. Nothing was changed.")
     }
     val openIgnored = backup.sessions.count { it.endedAt == null }
-    return ParsedBackup.Valid(backup.copy(user = backup.user.clamped(), sessions = backup.sessions.filter { it.endedAt != null }), openIgnored)
+    return ParsedBackup.Valid(backup.copy(user = backup.user.clamped(), sessions = backup.sessions.filter { it.endedAt != null }), openIgnored, migrated.legacy)
 }
 
 /** The same bounds the UserStore setters enforce, so a hand-edited backup cannot store a layout the UI cannot show. */

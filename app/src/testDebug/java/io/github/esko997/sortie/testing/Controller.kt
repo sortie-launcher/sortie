@@ -28,15 +28,11 @@ class Controller {
 
     private fun press(code: Int) {
         val root = keyWindow()
-        if (root.isInTouchMode) {
-            if (!touchMode) {
-                leaveTouchMode(root) // a window opened after the controller was in use
-            } else if (code in DPAD) {
-                leaveTouchMode(root)
-                touchMode = false
-                idle()
-                return
-            }
+        if (root.isInTouchMode && code in DPAD) {
+            leaveTouchMode(root)
+            touchMode = false
+            idle()
+            return
         }
         fun send(action: Int, key: Int): Boolean {
             val t = SystemClock.uptimeMillis()
@@ -72,7 +68,10 @@ class Controller {
         val params = list("mParams").map { it as WindowManager.LayoutParams }
         val i = params.indices.filter { params[it].flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE == 0 }
             .maxWithOrNull(compareBy({ params[it].type }, { it })) ?: error("no window takes key input")
-        return roots[i]!!.javaClass.getMethod("getView").invoke(roots[i]) as View
+        val root = roots[i]!!.javaClass.getMethod("getView").invoke(roots[i]) as View
+        // Real Android carries non-touch mode into a newly focused dialog before its first key or focus observation.
+        if (!touchMode && root.isInTouchMode) leaveTouchMode(root)
+        return root
     }
 
     private fun leaveTouchMode(root: View) {
@@ -88,6 +87,7 @@ class Controller {
         const val A = KeyEvent.KEYCODE_BUTTON_A
         const val B = KeyEvent.KEYCODE_BUTTON_B
         const val SELECT = KeyEvent.KEYCODE_BUTTON_SELECT
+        const val L2 = KeyEvent.KEYCODE_BUTTON_L2
         const val R2 = KeyEvent.KEYCODE_BUTTON_R2
         private val DPAD = setOf(UP, DOWN, LEFT, RIGHT)
         private val FALLBACK = mapOf(

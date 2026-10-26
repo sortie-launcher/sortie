@@ -80,7 +80,7 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
                     // on Home L1/R1 page the sort modes, or the consoles while "By Console" is the sort
                     val delta = if (key == Hotkeys.Key.NEXT_FOLDER) 1 else -1
                     if (vm.user.value.homeSort == "console") vm.cycleHomeConsole(delta) else vm.cycleHomeSort(delta, SORTS.map { it.first })
-                } else if (route != "library" && route != "journal" && route != "reference/{id}" && systems.isNotEmpty()) {
+                } else if (route != "library" && route != "tonight" && route != "reference/{id}" && systems.isNotEmpty()) {
                     val cur = nav.currentBackStackEntry?.arguments?.getString("id")
                     val i = systems.indexOfFirst { it.def.id == cur }
                     val next = when {
@@ -131,12 +131,20 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
                     onFolder = { nav.navigate("folder/$it") },
                     onGame = { nav.navigate("game/${enc(it)}") },
                     onSearch = { nav.navigate("search") },
-                    onDiagnostics = { nav.navigate("settings") },
+                    onSettings = { nav.navigate("settings") },
                     onApps = { nav.navigate("apps") },
-                    onManual = { nav.navigate("manual") },
                     onMagazines = { openApp(BuiltinApp.MAGAZINES) },
-                    onJournal = { nav.navigate("journal") },
+                    onTonight = { nav.navigate("tonight") },
                     onLibrary = { nav.navigate("library") }
+                )
+            }
+            composable("tonight") {
+                TonightScreen(
+                    vm,
+                    onGame = { nav.navigate("game/${enc(it)}") },
+                    onArticle = { issue, article ->
+                        openBuiltin(context, BuiltinApp.MAGAZINES, view.display?.displayId ?: Display.DEFAULT_DISPLAY, ReaderLocation(issue, article))
+                    }
                 )
             }
             composable("system/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
@@ -180,7 +188,6 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
             composable("backup") { BackupScreen(vm) }
             composable("cocoon-import") { CocoonImportScreen(graph) }
             composable("manual") { ManualScreen() }
-            composable("journal") { JournalScreen(graph, onGame = openIndexedGame) }
             composable("reference/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
                 val id = entry.arguments?.getString("id") ?: return@composable
                 ReferenceCardsScreen(graph, id)

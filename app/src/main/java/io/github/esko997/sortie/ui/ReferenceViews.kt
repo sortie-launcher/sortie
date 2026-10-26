@@ -88,6 +88,7 @@ import coil3.size.Precision
 import coil3.size.Scale
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.markdown.MdBlock
+import io.github.esko997.sortie.data.markdown.images
 import io.github.esko997.sortie.data.markdown.parseMarkdown
 import io.github.esko997.sortie.data.reference.ReferenceCard
 import io.github.esko997.sortie.data.reference.ReferenceCards
@@ -341,12 +342,16 @@ internal fun MarkdownBlock(b: MdBlock, modifier: Modifier = Modifier) {
             Box(Modifier.width(3.dp).fillMaxHeight().background(Amber))
             Text(inlineText(b.text), style = body, fontStyle = FontStyle.Italic, modifier = Modifier.padding(start = 12.dp))
         }
-        is MdBlock.Image -> Text(
-            "Image not included: " + b.caption.ifBlank { b.src },
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = modifier.padding(bottom = 10.dp)
-        )
+        is MdBlock.Image, is MdBlock.Sequence -> Column(modifier) {
+            b.images.forEach { image ->
+                Text(
+                    "Image not included: " + image.caption.ifBlank { image.src },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 10.dp)
+                )
+            }
+        }
         MdBlock.Rule -> Box(modifier.padding(vertical = 12.dp).fillMaxWidth().height(1.dp).background(Hairline))
     }
 }

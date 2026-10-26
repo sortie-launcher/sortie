@@ -1,6 +1,8 @@
 package io.github.esko997.sortie.data.user
 
+import io.github.esko997.sortie.data.manifest.ControllerSupport
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import io.github.esko997.sortie.data.manifest.GameBookmark
 import io.github.esko997.sortie.data.manifest.UserData
 import java.io.File
 import java.nio.file.Files
@@ -13,6 +15,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -73,11 +78,104 @@ class UserStoreTest {
     fun commitWritesBeforePublishing() = runBlocking {
         val file = fresh()
         val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        val note = GameAnnotation(returnNote = "Chapter 3, by the well")
+        val note = GameAnnotation(ControllerSupport.POINTER)
         store.saveGameAnnotation("snes/a.sfc", note)
         assertEquals(note, UserStore(file).data.value.gameAnnotations["snes/a.sfc"])
-        store.saveGameAnnotation("snes/a.sfc", GameAnnotation(returnNote = "  "))
+        store.saveGameAnnotation("snes/a.sfc", GameAnnotation())
         assertEquals(emptyMap<String, GameAnnotation>(), UserStore(file).data.value.gameAnnotations)
+    }
+
+    /** One bookmark per game: a save replaces the previous text, is trimmed and timed; a blank save (Clear) removes it. */
+    @Test
+    fun bookmarkSaveReplacesAndBlankRemoves() = runBlocking {
+        val file = fresh()
+        var now = 1_000L
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO), clock = { now })
+        store.saveBookmark("snes/a.sfc", "  World 2, the ice cave  ")
+        assertEquals(mapOf("snes/a.sfc" to GameBookmark("World 2, the ice cave", 1_000)), UserStore(file).data.value.bookmarks)
+        now = 2_000
+        store.saveBookmark("snes/a.sfc", "World 3 boss")
+        assertEquals(mapOf("snes/a.sfc" to GameBookmark("World 3 boss", 2_000)), UserStore(file).data.value.bookmarks)
+        store.saveBookmark("snes/a.sfc", " \n ")
+        assertEquals(emptyMap<String, GameBookmark>(), UserStore(file).data.value.bookmarks)
+    }
+
+    /** An over-long bookmark is refused whole: the saved one stays as it was, nothing is truncated. */
+    @Test
+    fun overLongBookmarkIsRefusedAndTheSavedOneKept() = runBlocking {
+        val file = fresh()
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        store.saveBookmark("snes/a.sfc", "keep me")
+        assertTrue(runCatching { store.saveBookmark("snes/a.sfc", "x".repeat(2_001)) }.isFailure)
+        assertEquals("keep me", UserStore(file).data.value.bookmarks["snes/a.sfc"]?.text)
+    }
+
+    /**
+     * An older user.json: its journal, mapping notes and "where was I?" notes are archived (readable and exact) before the file
+     * is rewritten; the note becomes the bookmark, the controller entry stays, unknown fields of the journal survive in the archive.
+     */
+    @Test
+    fun legacyUserJsonIsArchivedThenMigrated() = runBlocking {
+        val file = fresh()
+        file.writeText(LEGACY)
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO), clock = { 5_000L })
+        val loaded = store.data.value
+        assertEquals(mapOf("snes/a.sfc" to GameBookmark("World 3, before the boss")), loaded.bookmarks)
+        assertEquals(mapOf("snes/a.sfc" to GameAnnotation(ControllerSupport.GAMEPAD)), loaded.gameAnnotations)
+        assertEquals(setOf("snes/a.sfc"), loaded.favourites)
+        val archive = File(file.parentFile, "archive")
+        val md = archive.listFiles { f -> f.name.endsWith(".md") }!!.single().readText()
+        assertTrue(md, "World 3, before the boss" in md && "Y is jump" in md && "First airborne build." in md)
+        assertTrue(md, "sortie/journal/media/entry/shot.png" in md)
+        val exact = Json.parseToJsonElement(archive.listFiles { f -> f.name.endsWith(".json") }!!.single().readText()).jsonObject
+        val entry = (exact["journalEntries"] as JsonArray).single().jsonObject
+        assertEquals("kept", (entry["futureField"] as JsonPrimitive).content)
+        // the rewrite drops the legacy fields; a reload neither loses the bookmark nor archives a second copy
+        withTimeout(5_000) { store.written.first() }
+        val rewritten = Json.parseToJsonElement(file.readText()).jsonObject
+        assertFalse("journalEntries" in rewritten)
+        assertFalse("returnNote" in rewritten.toString() || "mappingNotes" in rewritten.toString())
+        assertEquals(loaded, UserStore(file).data.value)
+        assertEquals(2, archive.list()!!.size)
+    }
+
+    /** Until the archive can be written, user.json keeps its old writing: every save fails and leaves the file as it was. */
+    @Test
+    fun unarchivableLegacyWritingBlocksEverySave() = runBlocking {
+        val file = fresh()
+        file.writeText(LEGACY)
+        val bytes = file.readBytes()
+        val blocked = Files.createTempFile("sortie", "not-a-folder").toFile() // a file where the archive folder should be
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO), archiveDir = File(blocked, "archive"))
+        assertEquals("World 3, before the boss", store.data.value.bookmarks["snes/a.sfc"]?.text)
+        assertTrue(runCatching { store.commit { it.copy(homeSort = "custom") } }.isFailure)
+        assertTrue(runCatching { store.saveBookmark("snes/a.sfc", "new") }.isFailure)
+        assertArrayEquals(bytes, file.readBytes())
+        assertNotNull(store.writeError.value)
+        assertFalse(store.reloadable()) // loaded and owned: no restart loop
+        assertEquals("World 3, before the boss", store.data.value.bookmarks["snes/a.sfc"]?.text)
+    }
+
+    /**
+     * Exports and safety copies hold the migrated state, which lacks the old writing: the gate they call first refuses while the
+     * archive cannot be written, and passes (writing it) once it can, so a backup never silently leaves that writing out.
+     */
+    @Test
+    fun legacyArchiveGateRefusesUntilTheArchiveIsWritten() = runBlocking {
+        val file = fresh()
+        file.writeText(LEGACY)
+        val blocked = File(file.parentFile, "archive-parent")
+        assertTrue(blocked.createNewFile()) // a file where the archive's parent folder should be
+        val archive = File(blocked, "archive")
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO), archiveDir = archive)
+        assertTrue(runCatching { store.ensureLegacyArchived() }.isFailure)
+        assertTrue(runCatching { store.ensureLegacyArchived() }.isFailure) // still pending: every caller keeps being refused
+        assertTrue(blocked.delete())
+        store.ensureLegacyArchived()
+        assertTrue(archive.listFiles { f -> f.name.endsWith(".md") }!!.single().readText().contains("First airborne build."))
+        store.ensureLegacyArchived() // nothing left to archive
+        // a current user.json never has anything to archive
+        UserStore(fresh(), CoroutineScope(SupervisorJob() + Dispatchers.IO)).ensureLegacyArchived()
     }
 
     /** An ordinary edit made while a durable write is in flight is neither lost nor reordered under the durable result. */
@@ -85,7 +183,7 @@ class UserStoreTest {
     fun editDuringDurableWriteIsKept() = runBlocking {
         val file = fresh()
         val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        val note = GameAnnotation(mappingNotes = "Y = jump")
+        val note = GameAnnotation(ControllerSupport.TOUCH)
         store.commit { base ->
             store.setDockSlot(0, "app:org.ppsspp.ppsspp") // lands after the durable op read its base
             base.copy(gameAnnotations = base.gameAnnotations + ("snes/a.sfc" to note))
@@ -105,11 +203,11 @@ class UserStoreTest {
         val failure = runCatching {
             store.commit { base ->
                 store.setHomeSort("custom")
-                base.copy(gameAnnotations = mapOf("snes/a.sfc" to GameAnnotation(mappingNotes = "Y = jump")))
+                base.copy(bookmarks = mapOf("snes/a.sfc" to GameBookmark("World 2")))
             }
         }.exceptionOrNull()
         assertNotNull(failure)
-        assertEquals(emptyMap<String, GameAnnotation>(), store.data.value.gameAnnotations)
+        assertEquals(emptyMap<String, GameBookmark>(), store.data.value.bookmarks)
         assertEquals("custom", store.data.value.homeSort)
         assertNotNull(store.writeError.value)
     }
@@ -239,5 +337,15 @@ class UserStoreTest {
             opened = true
             while (queue.isNotEmpty()) queue.removeFirst().run()
         }
+    }
+
+    private companion object {
+        val LEGACY = """
+            {"favourites": ["snes/a.sfc"],
+             "gameAnnotations": {"snes/a.sfc": {"controller": "gamepad", "returnNote": "World 3, before the boss", "mappingNotes": "Y is jump"}},
+             "journalEntries": [{"id": "entry", "date": "2026-10-24", "text": "First airborne build.", "gameId": "snes/a.sfc",
+               "attachments": [{"path": "journal/media/entry/shot.png", "name": "Garage", "width": 1280, "height": 720}],
+               "futureField": "kept"}]}
+        """.trimIndent()
     }
 }

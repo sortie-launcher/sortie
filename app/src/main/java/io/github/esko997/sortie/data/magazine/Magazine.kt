@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.data.magazine
 
 import io.github.esko997.sortie.data.markdown.MdBlock
+import io.github.esko997.sortie.data.markdown.images
 import io.github.esko997.sortie.data.markdown.parseMarkdown
 import java.io.File
 import java.io.IOException
@@ -469,7 +470,7 @@ internal fun readArticle(issueDir: File, article: MagazineArticle): ArticleConte
         if (file.length() > MAX_ARTICLE_BYTES) return ArticleContent.Failed("${article.body} is larger than ${MAX_ARTICLE_BYTES / 1024} KB.")
         val blocks = parseMarkdown(file.readText())
         if (blocks.isEmpty()) return ArticleContent.Failed("${article.body} is empty.")
-        val images = blocks.filterIsInstance<MdBlock.Image>().associate { b ->
+        val images = blocks.flatMap { it.images }.associate { b ->
             b.src to (imageIn(issueDir, b.src) ?: IssueImage(b.src, null, "Image left out: only pictures inside this issue's folder are shown"))
         }
         ArticleContent.Ready(blocks, images)

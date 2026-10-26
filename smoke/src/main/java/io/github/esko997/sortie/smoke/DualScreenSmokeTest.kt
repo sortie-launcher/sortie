@@ -72,7 +72,9 @@ class DualScreenSmokeTest {
         val navigation = mainTasks().single()
         shell("am start --display $PRIMARY -n $MAIN --ez switcher true")
         awaitText("Running", "the activity switcher")
-        device.findObject(By.pkg(PKG).text("Sortie").displayId(PRIMARY)).click()
+        awaitText("Sortie", "the switcher's return control")
+        val control = screenNodes(PRIMARY).first { it.text == "Sortie" }
+        shell("input -d $PRIMARY tap ${control.centerX} ${control.centerY}")
         awaitNavigationOn(PRIMARY)
         assertEquals("the existing navigation task is reused", navigation.id, mainTasks().single().id)
     }
@@ -225,7 +227,12 @@ class DualScreenSmokeTest {
                 tasks().filter { it.component == MAGAZINES }.let { it.size == 1 && it[0].display == second && it[0].visible }
             }
             awaitText("reader menu", "the article, still open after the move", second)
-            title?.let { t -> await("the same article (\"$t\") on display $second") { device.hasObject(By.pkg(PKG).textContains(t).displayId(second)) } }
+            // A portrait lead image can push the heading below the smaller viewport. Reader tools expose the actual title
+            // without changing the saved reading position; the contents kicker (platform/game) is not article identity.
+            shell("input -d $second keyevent KEYCODE_BUTTON_SELECT")
+            awaitText(title, "the same article's reader tools", second)
+            shell("input -d $second keyevent KEYCODE_BACK")
+            awaitText("reader menu", "the article after closing its tools", second)
             awaitNavigationOn(PRIMARY)
             await("the controller following the reader to display $second") { focusedDisplay() == second }
 
@@ -290,8 +297,8 @@ class DualScreenSmokeTest {
         tasks().filter { it.component == component }.forEach { shell("am stack remove ${it.id}") }
     }
 
-    /** Walks the reader on [display] from its shelf to the first article of the issue the shelf focuses; returns its title if found. */
-    private fun openFirstArticle(display: Int): String? {
+    /** Walks from the shelf to the focused issue's first article; returns its semantic heading, never the platform kicker. */
+    private fun openFirstArticle(display: Int): String {
         awaitText("scrapbook", "the magazine shelf", display) // shelf hints: A open · Select scrapbook · B close
         shell("input keyevent KEYCODE_BUTTON_A")
         awaitText("shelf", "an issue's contents", display) // contents hints: A open · B shelf
@@ -308,7 +315,8 @@ class DualScreenSmokeTest {
                 contentsState(display).let { it != null && it != before }
             }
         }
-        val title = screenNodes(display).firstOrNull { it.inFocusedClickable && it.text != "01" && (it.text?.length ?: 0) > 3 }?.text
+        val title = screenNodes(display).firstOrNull { it.inFocusedClickable && it.heading && it.text != null }?.text
+            ?: error("the focused article has no heading: ${texts(display)}")
         // One A must open the focused article; retrying would hide a real activation regression.
         shell("input keyevent KEYCODE_BUTTON_A")
         awaitText("reader menu", "an article", display)
@@ -324,7 +332,15 @@ class DualScreenSmokeTest {
         return "focus=$focused $lines"
     }
 
-    private data class ScreenNode(val text: String?, val top: Int, val focusedBounds: String?, val inFocusedClickable: Boolean)
+    private data class ScreenNode(
+        val text: String?,
+        val top: Int,
+        val focusedBounds: String?,
+        val inFocusedClickable: Boolean,
+        val heading: Boolean,
+        val centerX: Int,
+        val centerY: Int
+    )
 
     /**
      * Read one accessibility-tree snapshot, not UiObject2 handles that refresh themselves later. Compose can remove a
@@ -343,7 +359,17 @@ class DualScreenSmokeTest {
                 val text = node.text?.toString()?.takeIf(String::isNotBlank)
                 if (text != null || node.isFocused) {
                     node.getBoundsInScreen(bounds)
-                    nodes.add(ScreenNode(text, bounds.top, if (node.isFocused) bounds.toShortString() else null, focusedClickable))
+                    nodes.add(
+                        ScreenNode(
+                            text,
+                            bounds.top,
+                            if (node.isFocused) bounds.toShortString() else null,
+                            focusedClickable,
+                            node.isHeading,
+                            bounds.centerX(),
+                            bounds.centerY()
+                        )
+                    )
                 }
             }
             for (i in 0 until node.childCount) node.getChild(i)?.let { visit(it, focusedClickable) }

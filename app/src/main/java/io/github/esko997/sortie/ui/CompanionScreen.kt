@@ -88,6 +88,8 @@ import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import io.github.esko997.sortie.data.manifest.GameBookmark
+import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.mecha.MechaProp
 import io.github.esko997.sortie.mecha.MechaSpotKind
 import io.github.esko997.sortie.mecha.ui.MechaPresence
@@ -225,7 +227,7 @@ fun CompanionScreen(displayId: Int) {
 }
 
 /**
- * The selected game (with its description, the user's notes and play stats mirrored from the detail screen, so they can be
+ * The selected game (with its description, the user's bookmark and play stats mirrored from the detail screen, so they can be
  * read without leaving the list), else a rotating hero ([Selection.panel]); composed while no session is open, or while the
  * navigation shows another game than the one being played.
  */
@@ -240,7 +242,7 @@ private fun HeroPanel(graph: SortieApp.Graph) {
     val palette = rememberPalette(g?.cover ?: g?.screenshot)
     LaunchedEffect(palette) { Selection.heroPalette.value = palette }
     val selectedGame = g != null && g.id == selected?.id
-    val notes = if (g != null && selectedGame) rememberAnnotation(graph, g.id) else null
+    val notes = if (g != null && selectedGame) rememberPersonal(graph, g.id) else null
     val detail = if (g != null && selectedGame) {
         val stats by produceState<PlayStat?>(null, g.id) { value = graph.db.games().playStat(g.id) }
         listOfNotNull(
@@ -266,11 +268,17 @@ private fun HeroPanel(graph: SortieApp.Graph) {
     }
 }
 
-/** The user's annotation for [id], live (an edit on the other screen shows at once); null while none is recorded. */
+/** The user's own record of one game: its bookmark (the reminder of where they are) and controller requirement. */
+private data class Personal(val annotation: GameAnnotation?, val bookmark: GameBookmark?) {
+    fun isEmpty(): Boolean = annotation?.isEmpty() != false && bookmark?.text.isNullOrBlank()
+}
+
+/** The user's bookmark and controller entry for [id], live (an edit on the other screen shows at once). */
 @Composable
-private fun rememberAnnotation(graph: SortieApp.Graph, id: String): GameAnnotation? {
-    val flow = remember(id) { graph.user.data.map { it.gameAnnotations[id] }.distinctUntilChanged() }
-    return flow.collectAsState(graph.user.data.value.gameAnnotations[id]).value
+private fun rememberPersonal(graph: SortieApp.Graph, id: String): Personal {
+    val read = { u: UserData -> Personal(u.gameAnnotations[id], u.bookmarks[id]) }
+    val flow = remember(id) { graph.user.data.map(read).distinctUntilChanged() }
+    return flow.collectAsState(read(graph.user.data.value)).value
 }
 
 /** Keyed by the displayed game so a rotating hero cannot retarget a button press halfway through a gesture. */
@@ -346,7 +354,7 @@ private fun NowPlaying(graph: SortieApp.Graph, session: SessionEntity) {
             metadata = g?.let { gameLine(graph, it) },
             status = status,
             detail = g?.controls?.let { "Controls: $it" },
-            notes = rememberAnnotation(graph, id),
+            notes = rememberPersonal(graph, id),
             action = {
                 if (picked != null) ReferenceEntryButton(cards.size) { ReferenceSelection.show(id, session.startedAt, picked.id) }
             },
@@ -401,7 +409,7 @@ private fun Panel(
     metadata: String? = null,
     status: String? = null,
     detail: String? = null,
-    notes: GameAnnotation? = null,
+    notes: Personal? = null,
     action: @Composable () -> Unit = {},
     onTap: (() -> Unit)? = null,
     art: @Composable () -> Unit
@@ -448,13 +456,13 @@ private fun Panel(
         }
         action()
         if (lower) {
-            // the user's own notes ("where was I?" first) above the guide text, in one scrollable block
+            // the player's bookmark (where they are in the game) above the guide text, in one scrollable block
             Column(
                 Modifier.weight(0.5f).fillMaxWidth().padding(horizontal = 72.dp)
                     .mechaObstacle("companion:detail", interactive = true)
                     .verticalScroll(rememberScrollState())
             ) {
-                if (notes != null && hasNotes) GameAnnotationSummary(notes, Modifier.padding(bottom = 12.dp))
+                if (notes != null && hasNotes) GamePersonalSummary(notes.annotation, notes.bookmark, Modifier.padding(bottom = 12.dp))
                 if (!detail.isNullOrEmpty()) {
                     Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

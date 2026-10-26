@@ -73,8 +73,8 @@ import kotlinx.coroutines.delay
 
 /**
  * A game's page: cover, title and facts, then two action groups — launching (Play, Launch with…, favourite, Want to play) and
- * the quieter personal ones (notes, reference cards, shelf) — followed by magazine features, badges, other versions and the
- * description. Wide screens keep the cover beside a scrolling column; portrait and narrow ones put a small cover beside the
+ * the quieter personal ones (bookmark, controller needs, reference cards, shelf) — followed by magazine features, badges, other
+ * versions and the description. Wide screens keep the cover beside a scrolling column; portrait and narrow ones put a small cover beside the
  * title and let the whole page scroll, so the actions get the full width. Select opens and closes Launch with….
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -95,34 +95,53 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
     // the cover's backdrop arrives a moment after the page: blend into it instead of snapping (read only while drawing)
     val backdrop = animateColorAsState(palette?.backdrop ?: Ink, tween(BACKDROP_BLEND_MS), label = "detailBackdrop")
     val launchFocus = remember { FocusRequester() }
-    val notesFocus = remember { FocusRequester() }
+    val bookmarkFocus = remember { FocusRequester() }
+    val controllerFocus = remember { FocusRequester() }
     val profilesButton = remember { FocusRequester() }
     var profilesFocused by remember { mutableStateOf(false) }
     val annotation = user.gameAnnotations[game.id] ?: GameAnnotation()
-    // the notes editor replaces the cover and info (full width, usable on the narrow bottom screen too); kept across recreation
-    var editing by rememberSaveable(game.id) { mutableStateOf(false) }
-    var fromEditor by remember(game.id) { mutableStateOf(false) }
+    val bookmark = user.bookmarks[game.id]
+    // an editor replaces the cover and info (full width, usable on the narrow bottom screen too); kept across recreation
+    var editing by rememberSaveable(game.id) { mutableStateOf<String?>(null) }
+    var fromEditor by remember(game.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(game.id) { Selection.set(game) }
+    // "Leave a note" on the post-session invitation opens this game's bookmark editor here
+    LaunchedEffect(game.id) {
+        graph.sessionEnds.editorRequest.collect { id ->
+            if (id == game.id) {
+                editing = EDIT_BOOKMARK
+                graph.sessionEnds.editorOpened(id)
+            }
+        }
+    }
     androidx.compose.runtime.DisposableEffect(game.id) {
         vm.gamePage = game.id
         onDispose { if (vm.gamePage == game.id) vm.gamePage = null }
     }
     val exitNotice by vm.exitNotice.collectAsState()
     LaunchedEffect(game.id, editing) {
-        if (!editing) runCatching { (if (fromEditor) notesFocus else launchFocus).requestFocus() }
+        if (editing == null) {
+            runCatching {
+                when (fromEditor) {
+                    EDIT_BOOKMARK -> bookmarkFocus
+                    EDIT_CONTROLLER -> controllerFocus
+                    else -> launchFocus
+                }.requestFocus()
+            }
+        }
     }
     // Y favourites, R2 toggles Want to play and Select opens/closes Launch with… only outside the editor: there the claims are
     // dropped, so these keys reach nothing
     val hotkeys = LocalHotkeys.current
     androidx.compose.runtime.DisposableEffect(hotkeys, editing) {
-        val claims = !editing
+        val claims = editing == null
         val keys = setOf(Hotkeys.Key.FAVOURITE, Hotkeys.Key.WANT_TO_PLAY, Hotkeys.Key.CONTEXT)
         if (claims) hotkeys.handle(keys)
         onDispose { if (claims) hotkeys.release(keys) }
     }
     LaunchedEffect(hotkeys, game.id) {
         hotkeys.events.collect {
-            if (editing) return@collect
+            if (editing != null) return@collect
             when (it) {
                 Hotkeys.Key.FAVOURITE -> vm.toggleFavourite(game.id)
                 Hotkeys.Key.WANT_TO_PLAY -> toggleWantToPlay(vm, game.id, context)
@@ -136,19 +155,17 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
         }
     }
     Column(Modifier.fillMaxSize().drawBehind { drawRect(backdrop.value) }) {
-        if (editing) {
-            GameAnnotationEditor(
-                gameId = game.id,
-                current = annotation,
-                guideControls = game.controls,
-                accent = accent,
-                save = { vm.saveGameAnnotation(game.id, it) },
-                onClose = {
-                    fromEditor = true
-                    editing = false
-                },
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp)
-            )
+        editing?.let { which ->
+            val close = {
+                fromEditor = which
+                editing = null
+            }
+            val editor = Modifier.weight(1f).fillMaxWidth().padding(16.dp)
+            if (which == EDIT_CONTROLLER) {
+                ControllerEditor(game.id, annotation, game.controls, accent, save = { vm.saveGameAnnotation(game.id, it) }, onClose = close, modifier = editor)
+            } else {
+                BookmarkEditor(game.id, displayTitle(game), bookmark, accent, save = { vm.saveBookmark(game.id, it) }, onClose = close, modifier = editor)
+            }
             HintBar("↕" to "move", "A" to "select / type", "B" to "cancel")
             return@Column
         }
@@ -193,7 +210,7 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
-            GameAnnotationSummary(annotation, Modifier.padding(top = 8.dp))
+            GamePersonalSummary(annotation, bookmark, Modifier.padding(top = 8.dp))
             // launching: the loudest group, sized so it stays on one line from the Nova's 640 dp up
             FlowRow(
                 Modifier.padding(top = 14.dp),
@@ -308,12 +325,13 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
             // the personal group: quieter, after the shelf summary it edits
             GameProgressSection(graph, game.id, Modifier.padding(top = 12.dp), accent = accent) {
                 GamePageButton(
-                    if (annotation.isEmpty()) "Add notes" else "Edit notes",
-                    { editing = true },
+                    if (bookmark == null) "Leave a note" else "Edit bookmark",
+                    { editing = EDIT_BOOKMARK },
                     accent,
-                    Modifier.focusRequester(notesFocus),
+                    Modifier.focusRequester(bookmarkFocus),
                     quiet = true
                 )
+                GamePageButton("What it needs", { editing = EDIT_CONTROLLER }, accent, Modifier.focusRequester(controllerFocus), quiet = true)
                 GamePageButton("Reference cards", onReference, accent, quiet = true)
             }
             FeaturedIn(graph, game, accent, onArticle)
@@ -360,6 +378,10 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
         HintBar("A" to "play", "Y" to "favourite", "R2" to "want to play", "Select" to "launch with…", "B" to "back")
     }
 }
+
+/** Which editor replaces the page ([DetailScreen]'s saved `editing`). */
+private const val EDIT_BOOKMARK = "bookmark"
+private const val EDIT_CONTROLLER = "controller"
 
 /** How long a game page keeps saying its emulator closed right after starting. */
 private const val EXIT_NOTICE_MS = 12_000L

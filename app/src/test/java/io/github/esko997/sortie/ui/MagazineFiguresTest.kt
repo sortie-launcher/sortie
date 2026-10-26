@@ -67,4 +67,17 @@ class MagazineFiguresTest {
         assertEquals(382.5f, box.height, 0.01f)
         assertEquals(200f, unknownFigureBox(column, maxHeight = 200f).height, 0.01f)
     }
+
+    @Test
+    fun aSwipedSequenceRestsOnTheNearestPanelWithinItsPanels() {
+        val step = 600f // panel width plus gap, in px
+        assertEquals(0, nearestPanel(0, step, 4))
+        assertEquals(0, nearestPanel(299, step, 4))
+        assertEquals(1, nearestPanel(301, step, 4))
+        assertEquals(3, nearestPanel(1800, step, 4))
+        // overscroll or a stale position from a longer sequence stays on a real panel
+        assertEquals(3, nearestPanel(5000, step, 4))
+        assertEquals(0, nearestPanel(-40, step, 4))
+        assertEquals(0, nearestPanel(900, 0f, 4)) // not laid out yet
+    }
 }

@@ -193,12 +193,12 @@ private fun ItemListScreen(
     var sheet by remember { mutableStateOf<LibraryItem?>(null) }
     val grid = user.browseLayout == "grid"
     BrowseLayoutHotkey(vm, grid)
-    val shown = remember(items, minFit, onDeviceOnly, notesOnly, startedOnly, saves, user.gameAnnotations) {
+    val shown = remember(items, minFit, onDeviceOnly, notesOnly, startedOnly, saves, user.bookmarks) {
         items.filter { item ->
             when (item) {
                 is LibraryItem.Game -> item.game.let {
-                    val personal = user.gameAnnotations[it.id]
-                    val hasNotes = it.handWritten || personal?.mappingNotes?.isNotBlank() == true || personal?.returnNote?.isNotBlank() == true
+                    // a hand-written guide entry or the player's own bookmark
+                    val hasNotes = it.handWritten || it.id in user.bookmarks
                     (!onDeviceOnly || !it.placeholder) && it.fit >= minFit && (!notesOnly || hasNotes) && (!startedOnly || it.saveStem() in saves)
                 }
                 else -> minFit == 0 && !notesOnly && !startedOnly // fit, notes and saves are game properties

@@ -42,9 +42,31 @@ import java.io.File
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
-/** A picture of the open article, in reading order: the lead image (key "hero") or a Markdown image (key "b" + block index). */
-internal class ArticleFigure(val key: String, val file: File, val caption: String, val size: IntSize?)
+/**
+ * A picture of the open article, in reading order: the lead image (key "hero"), a Markdown image (key "b" + block index) or a
+ * panel of a picture sequence (key "b" + block index + "." + panel index, [inSequence]).
+ */
+internal class ArticleFigure(val key: String, val file: File, val caption: String, val size: IntSize?, val inSequence: Boolean = false)
+
+/** The full-screen viewer's key for panel [panel] of the sequence at body block [block]. */
+internal fun sequencePanelKey(block: Int, panel: Int): String = "b$block.$panel"
+
+/** A sequence panel takes this share of the reading row, so its neighbours peek in at both sides and the row reads as a row. */
+internal const val SEQUENCE_PANEL_SHARE = 0.78f
+
+/** Space between two sequence panels, in dp. */
+internal const val SEQUENCE_GAP = 14f
+
+/** A sequence's picture height limit, as a share of the reader's height: room stays for the captions and the text around it. */
+internal const val SEQUENCE_HEIGHT_SHARE = 0.55f
+
+/**
+ * The panel a horizontal sequence rests on: [scroll] px into the row whose panels start [step] px apart (each panel centred
+ * at its own scroll offset), clamped to the [count] panels.
+ */
+internal fun nearestPanel(scroll: Int, step: Float, count: Int): Int = if (step <= 0f || count <= 0) 0 else (scroll / step).roundToInt().coerceIn(0, count - 1)
 
 /** An image file's pixel size, read from its header without decoding it; null when it is not a readable image. Blocking. */
 internal fun imageSize(file: File): IntSize? {

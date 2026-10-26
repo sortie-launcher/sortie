@@ -22,8 +22,9 @@ data class ReaderLocation(val issue: String? = null, val article: String? = null
 
 /**
  * Reading memory across leaving and re-entering the magazines (the screen's own saved state covers recreation and the screen
- * swap): each article's scroll position and whether it was read to the end, the article to continue, and which issue and
- * contents entry had the focus. App-private preferences keyed by issue and article id; not part of user.json or backups.
+ * swap): each article's scroll position and whether it was read to the end, the panel chosen in each picture sequence, the
+ * article to continue, and which issue and contents entry had the focus. App-private preferences keyed by issue and article id;
+ * not part of user.json or backups.
  * Open it off the main thread ([open]): the first read waits for the file.
  */
 class MagazineReadingStore(private val prefs: SharedPreferences) {
@@ -42,6 +43,14 @@ class MagazineReadingStore(private val prefs: SharedPreferences) {
         putInt("pos:$issue/$article:o", position.offset)
         if (atEnd) putBoolean("done:$issue/$article", true)
     }
+
+    /**
+     * The panel last chosen in the article's picture sequence at body block [block] (0 when none was). A later revision that
+     * moves the sequence may hand it another sequence's choice; the reader clamps it to that sequence's panels.
+     */
+    fun sequencePanel(issue: String, article: String, block: Int): Int = prefs.getInt("seq:$issue/$article:$block", 0).coerceAtLeast(0)
+
+    fun saveSequencePanel(issue: String, article: String, block: Int, panel: Int) = prefs.edit { putInt("seq:$issue/$article:$block", panel) }
 
     /** The article last opened, to offer on the shelf. */
     fun resume(): ReaderLocation? {

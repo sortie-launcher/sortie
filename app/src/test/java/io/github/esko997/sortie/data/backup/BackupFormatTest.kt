@@ -1,11 +1,10 @@
 package io.github.esko997.sortie.data.backup
 
 import io.github.esko997.sortie.data.db.SessionEntity
-import io.github.esko997.sortie.data.journal.JournalAttachment
-import io.github.esko997.sortie.data.journal.JournalEntry
 import io.github.esko997.sortie.data.magazine.MagazineClipping
 import io.github.esko997.sortie.data.manifest.ControllerSupport
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import io.github.esko997.sortie.data.manifest.GameBookmark
 import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.data.reference.ReferenceCard
 import io.github.esko997.sortie.data.user.GameProgress
@@ -25,7 +24,9 @@ class BackupFormatTest {
         browseChrome = "compact",
         layout = listOf("system:snes", "folder:want-to-play", "ps2/Armored Core 3 (USA).chd"),
         dock = listOf("app:org.ppsspp.ppsspp", "", "", "", ""),
-        gameAnnotations = mapOf("ps2/Armored Core 3 (USA).chd" to GameAnnotation(ControllerSupport.GAMEPAD, "L2/R2 strafe", "Mission 12, garage")),
+        gameAnnotations = mapOf("ps2/Armored Core 3 (USA).chd" to GameAnnotation(ControllerSupport.GAMEPAD)),
+        bookmarks = mapOf("ps2/Armored Core 3 (USA).chd" to GameBookmark("Mission 12, garage", 1_700_000_000_000)),
+        bookmarkInvitation = false,
         gameProgress = mapOf("snes/Super Metroid (USA).sfc" to GameProgress("finished", "2026-10-24", "Worth returning to.")),
         magazineClippings = listOf(
             MagazineClipping(
@@ -40,16 +41,6 @@ class BackupFormatTest {
         ),
         referenceCards = mapOf(
             "ps2/Armored Core 3 (USA).chd" to listOf(ReferenceCard(id = "reference", title = "Garage", body = "# Loadout\nKeep spare energy."))
-        ),
-        journalEntries = listOf(
-            JournalEntry(
-                id = "entry",
-                date = "2026-10-24",
-                text = "First airborne build.",
-                gameId = "ps2/Armored Core 3 (USA).chd",
-                sessionStartedAt = 1_000_000,
-                attachments = listOf(JournalAttachment(path = "journal/media/entry/screenshot.png", name = "Garage screenshot"))
-            )
         )
     )
 
@@ -67,6 +58,32 @@ class BackupFormatTest {
         assertEquals(listOf(BackupSession("a", "p", 1_000_000, 1_000_000 + 30 * 60000)), parsed.backup.sessions)
         assertEquals("psx/Running.chd", parsed.backup.openSessionExcluded?.gameId)
         assertEquals(0, parsed.openIgnored)
+    }
+
+    /**
+     * A backup from before bookmarks: nothing of its journal or notes is dropped silently. "Where was I?" becomes the bookmark,
+     * the controller entry stays, and the journal and mapping notes come back as [ParsedBackup.Valid.legacy] for archiving.
+     */
+    @Test
+    fun anOlderBackupsJournalAndNotesAreCarriedForArchiving() {
+        val text = """{"format": "sortie-backup", "version": 2, "createdAt": 1, "sessions": [], "user": {
+            "gameAnnotations": {"a/b": {"controller": "touch", "returnNote": "World 2", "mappingNotes": "L = map"},
+                                "c/d": {"mappingNotes": "R = run"}},
+            "journalEntries": [{"id": "e", "date": "2026-10-01", "text": "Long night."}]}}"""
+        val parsed = valid(text)
+        assertEquals(mapOf("a/b" to GameBookmark("World 2")), parsed.backup.user.bookmarks)
+        assertEquals(mapOf("a/b" to GameAnnotation(ControllerSupport.TOUCH)), parsed.backup.user.gameAnnotations)
+        val legacy = parsed.legacy!!
+        assertEquals(1, legacy.journalEntries)
+        assertEquals(setOf("a/b", "c/d"), legacy.games.keys)
+        assertEquals("R = run", legacy.games["c/d"]?.mappingNotes)
+        assertEquals("1 journal entry, 1 \"where was I?\" note and 2 mapping notes", legacy.describe())
+    }
+
+    /** A current backup has nothing to archive. */
+    @Test
+    fun aCurrentBackupHasNoLegacyNotes() {
+        assertNull(valid(encodeBackup(buildBackup(user, emptyList(), null, 1, "thor", "0.0.1"))).legacy)
     }
 
     @Test
@@ -103,6 +120,8 @@ class BackupFormatTest {
             """{"favourites": []}""",
             """{"format": "sortie-backup"}""",
             """{"format": "sortie-backup", "version": ${BackupFile.VERSION + 1}, "createdAt": 1, "user": {}, "sessions": []}""",
+            """{"format": "sortie-backup", "version": 0, "createdAt": 1, "user": {}, "sessions": []}""",
+            """{"format": "sortie-backup", "version": -1, "createdAt": 1, "user": {"journalEntries": [{"text": "x"}]}, "sessions": []}""",
             """{"format": "sortie-backup", "version": 1, "user": {}, "sessions": []}""",
             """{"format": "sortie-backup", "version": 1, "createdAt": 1, "user": {}, "sessions": [{"gameId": "a", "startedAt": 5000, "endedAt": 10}]}""",
             """{"format": "sortie-backup", "version": 1, "createdAt": 1, "user": {}, "sessions": [{"gameId": "", "startedAt": 5000, "endedAt": 6000}]}"""

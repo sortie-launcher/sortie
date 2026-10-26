@@ -54,8 +54,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.esko997.sortie.data.manifest.BOOKMARK_MAX_CHARS
 import io.github.esko997.sortie.data.manifest.ControllerSupport
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import io.github.esko997.sortie.data.manifest.GameBookmark
 import kotlinx.coroutines.launch
 
 /** Input sources of a physical controller: their D-pad leaves a text field instead of moving its caret. */
@@ -94,111 +96,90 @@ fun ControllerBadge(annotation: GameAnnotation, modifier: Modifier = Modifier) {
     )
 }
 
-/** Badge, "where was I?" note and personal mapping notes, each only when recorded; nothing at all for an empty annotation. */
+/**
+ * The user's own record of a game, each part only when there is one: the controller requirement and the bookmark. Nothing at
+ * all for a game with neither. The bookmark leads in the accent colour, as the thing to read before playing.
+ */
 @Composable
-fun GameAnnotationSummary(annotation: GameAnnotation, modifier: Modifier = Modifier) {
-    if (annotation.isEmpty()) return
+fun GamePersonalSummary(annotation: GameAnnotation?, bookmark: GameBookmark?, modifier: Modifier = Modifier) {
+    val controller = annotation?.controller ?: ControllerSupport.UNKNOWN
+    val text = bookmark?.text?.takeIf { it.isNotBlank() }
+    if (controller == ControllerSupport.UNKNOWN && text == null) return
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (annotation.controller != ControllerSupport.UNKNOWN) {
+        if (text != null) BookmarkBlock(text)
+        if (controller != ControllerSupport.UNKNOWN) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ControllerBadge(annotation)
-                Text(
-                    "  " + annotation.controller.label,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                ControllerBadge(annotation ?: GameAnnotation())
+                Text("  " + controller.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        if (annotation.returnNote.isNotBlank()) NoteBlock("Where was I?", annotation.returnNote, Amber)
-        if (annotation.mappingNotes.isNotBlank()) NoteBlock("My mapping", annotation.mappingNotes, MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
-private fun NoteBlock(heading: String, text: String, colour: Color) {
-    Column {
-        Text(heading, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = colour)
+private fun BookmarkBlock(text: String) {
+    Column(Modifier.semantics(mergeDescendants = true) {}) {
+        Text("Bookmark", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Amber)
         Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
 /**
- * Edits [current] as a draft: nothing is written until Save, Cancel (or B) drops the draft, Clear empties it (Save then
- * removes the entry). Drafts survive activity recreation (saved state). [save] returns null once user.json holds the change,
- * else the reason it is not on the card; the editor then stays open with the draft and says so. [guideControls] — the
- * guide's hand-written controls — is shown read-only for reference and never edited here.
+ * Edits a game's one bookmark as a draft: nothing is written until Save, which replaces the saved text (a blank draft removes
+ * it: Clear empties the draft, Save then confirms). Cancel or B leaves the saved bookmark exactly as it was. Drafts survive
+ * activity recreation and the X swap (saved state). [save] returns null once user.json holds the change, else why not; the
+ * editor then stays open with the draft. The field takes focus when the editor opens: the editor is only ever opened on purpose.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun GameAnnotationEditor(
+fun BookmarkEditor(
     gameId: String,
-    current: GameAnnotation,
-    guideControls: String?,
+    gameTitle: String,
+    current: GameBookmark?,
     accent: Color,
-    save: suspend (GameAnnotation) -> String?,
+    save: suspend (String) -> String?,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var controllerKey by rememberSaveable(gameId) { mutableStateOf(current.controller.key) }
-    var returnNote by rememberSaveable(gameId) { mutableStateOf(current.returnNote) }
-    var mapping by rememberSaveable(gameId) { mutableStateOf(current.mappingNotes) }
+    val saved = current?.text.orEmpty()
+    var text by rememberSaveable(gameId) { mutableStateOf(saved) }
     var error by rememberSaveable(gameId) { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
-    val draft = GameAnnotation(ControllerSupport.entries.firstOrNull { it.key == controllerKey } ?: ControllerSupport.UNKNOWN, mapping, returnNote)
-    val changed = draft.normalised() != current.normalised()
+    val draft = text.trim()
+    val tooLong = draft.length > BOOKMARK_MAX_CHARS
+    val changed = draft != saved
     val scope = rememberCoroutineScope()
-    val first = remember { FocusRequester() }
-    val chosenSupport = remember { FocusRequester() }
+    val field = remember { FocusRequester() }
     val saveFocus = remember { FocusRequester() }
     val cancelFocus = remember { FocusRequester() }
-    // A failed write leaves the saved annotation unchanged; keep the draft retryable.
-    val canSave = !saving && (changed || error != null)
-    LaunchedEffect(gameId) { runCatching { first.requestFocus() } }
+    // a failed write leaves the saved bookmark unchanged; keep the draft retryable
+    val canSave = !saving && !tooLong && (changed || error != null)
+    LaunchedEffect(gameId) { runCatching { field.requestFocus() } }
     BackHandler { if (!saving) onClose() }
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Notes & controls", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        FieldLabel("Where was I?")
+        Text("Bookmark", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(gameTitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // Down from the field reaches Save while there is something to save, never Cancel/Clear by accident
         NoteField(
-            returnNote,
-            { returnNote = it },
-            "Level, boss, save slot, what to do next",
-            Modifier.focusRequester(first),
+            text,
+            { text = it },
+            "Where you are and what to do next: level, boss, save slot",
+            Modifier.focusRequester(field),
             enabled = !saving,
-            down = chosenSupport
-        )
-        FieldLabel("What it needs")
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            ControllerSupport.entries.forEach { option ->
-                val interaction = remember { MutableInteractionSource() }
-                FilterChip(
-                    selected = draft.controller == option,
-                    enabled = !saving,
-                    onClick = { controllerKey = option.key },
-                    label = { Text(if (option == ControllerSupport.UNKNOWN) "Not set" else option.badge) },
-                    modifier = (if (draft.controller == option) Modifier.focusRequester(chosenSupport) else Modifier)
-                        .focusGlow(interaction.collectIsFocusedAsState().value, FilterChipDefaults.shape, accent),
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = accent.copy(alpha = 0.25f), selectedLabelColor = accent),
-                    interactionSource = interaction
-                )
-            }
-        }
-        Text(draft.controller.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        FieldLabel("My mapping notes")
-        // Down from the last note reaches Save, never Cancel/Clear all by accident; with Save disabled nothing is unsaved
-        NoteField(
-            mapping,
-            { mapping = it },
-            "Buttons you remapped, hotkeys, emulator settings",
-            enabled = !saving,
-            up = chosenSupport,
             down = if (canSave) saveFocus else cancelFocus
         )
-        guideControls?.let {
-            Text("Guide controls: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        Text(
+            when {
+                tooLong -> "${draft.length} / $BOOKMARK_MAX_CHARS characters: shorten it to save."
+                saved.isEmpty() -> "One bookmark per game. It shows on this page and on the companion screen."
+                else -> "Saving replaces the current bookmark. Cancel keeps it as it is."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = if (tooLong) Color(0xFFF87171) else MaterialTheme.colorScheme.onSurfaceVariant
+        )
         error?.let {
             Text(
-                "Not saved to the card: $it — Save retries; Cancel discards this draft.",
+                "Not saved to the card: $it — Save retries; Cancel keeps the saved bookmark.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFFF87171)
             )
@@ -221,7 +202,7 @@ fun GameAnnotationEditor(
                 modifier = Modifier.focusRequester(saveFocus).focusGlow(saveInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape, accent),
                 colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Ink),
                 interactionSource = saveInteraction
-            ) { Text(if (saving) "Saving…" else "Save") }
+            ) { Text(if (saving) "Saving…" else if (draft.isEmpty() && saved.isNotEmpty()) "Remove bookmark" else "Save") }
             OutlinedButton(
                 onClick = onClose,
                 enabled = !saving,
@@ -231,14 +212,94 @@ fun GameAnnotationEditor(
             ) { Text("Cancel") }
             OutlinedButton(
                 onClick = {
-                    controllerKey = ControllerSupport.UNKNOWN.key
-                    returnNote = ""
-                    mapping = ""
+                    text = ""
+                    runCatching { field.requestFocus() }
                 },
-                enabled = !saving && !draft.isEmpty(),
+                enabled = !saving && text.isNotEmpty(),
                 modifier = Modifier.focusGlow(clearInteraction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape, accent),
                 interactionSource = clearInteraction
-            ) { Text("Clear all") }
+            ) { Text("Clear") }
+        }
+    }
+}
+
+/**
+ * Edits what [gameId] needs beyond the built-in controller as a draft: nothing is written until Save; Cancel (or B) drops it.
+ * [save] returns null once user.json holds the change, else the reason. [guideControls] — the guide's hand-written controls —
+ * is shown read-only for reference and never edited here.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ControllerEditor(
+    gameId: String,
+    current: GameAnnotation,
+    guideControls: String?,
+    accent: Color,
+    save: suspend (GameAnnotation) -> String?,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var controllerKey by rememberSaveable(gameId) { mutableStateOf(current.controller.key) }
+    var error by rememberSaveable(gameId) { mutableStateOf<String?>(null) }
+    var saving by remember { mutableStateOf(false) }
+    val draft = GameAnnotation(ControllerSupport.entries.firstOrNull { it.key == controllerKey } ?: ControllerSupport.UNKNOWN)
+    val scope = rememberCoroutineScope()
+    val chosen = remember { FocusRequester() }
+    val canSave = !saving && (draft != current || error != null)
+    LaunchedEffect(gameId) { runCatching { chosen.requestFocus() } }
+    BackHandler { if (!saving) onClose() }
+    Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("What it needs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            ControllerSupport.entries.forEach { option ->
+                val interaction = remember { MutableInteractionSource() }
+                FilterChip(
+                    selected = draft.controller == option,
+                    enabled = !saving,
+                    onClick = { controllerKey = option.key },
+                    label = { Text(if (option == ControllerSupport.UNKNOWN) "Not set" else option.badge) },
+                    modifier = (if (draft.controller == option) Modifier.focusRequester(chosen) else Modifier)
+                        .focusGlow(interaction.collectIsFocusedAsState().value, FilterChipDefaults.shape, accent),
+                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = accent.copy(alpha = 0.25f), selectedLabelColor = accent),
+                    interactionSource = interaction
+                )
+            }
+        }
+        Text(draft.controller.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        guideControls?.let {
+            Text("Guide controls: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        error?.let {
+            Text(
+                "Not saved to the card: $it — Save retries; Cancel discards this change.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFFF87171)
+            )
+        }
+        FlowRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val saveInteraction = remember { MutableInteractionSource() }
+            val cancelInteraction = remember { MutableInteractionSource() }
+            Button(
+                onClick = {
+                    saving = true
+                    scope.launch {
+                        val failure = save(draft)
+                        saving = false
+                        error = failure
+                        if (failure == null) onClose()
+                    }
+                },
+                enabled = canSave,
+                modifier = Modifier.focusGlow(saveInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape, accent),
+                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Ink),
+                interactionSource = saveInteraction
+            ) { Text(if (saving) "Saving…" else "Save") }
+            OutlinedButton(
+                onClick = onClose,
+                enabled = !saving,
+                modifier = Modifier.focusGlow(cancelInteraction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape, accent),
+                interactionSource = cancelInteraction
+            ) { Text("Cancel") }
         }
     }
 }

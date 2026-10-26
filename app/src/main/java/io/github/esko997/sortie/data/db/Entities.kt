@@ -24,6 +24,8 @@ data class GameEntity(
     val genre: String?,
     val players: String?,
     val playersMax: Int,
+    // editorial fields: guide.json, with gaps filled from the bundled curated catalogue (see data.guide.GuidePrecedence);
+    // a catalogue-only game has fit 0 and no tags
     val fit: Int,
     val hook: String?,
     // flags and tags are comma-joined, lower-case
@@ -40,7 +42,7 @@ data class GameEntity(
     val addedAt: Long,
     // id of the file shown instead of this one (disc 1 of a set, or the preferred container format); null = shown
     val variantOf: String? = null,
-    /** Hand-written control notes from guide.json (see GuideEntry.controls). */
+    /** Hand-written control notes from guide.json or the bundled catalogue (see GuideEntry.controls). */
     val controls: String? = null
 )
 
@@ -49,7 +51,7 @@ data class GameEntity(
 data class IndexMetaEntity(
     @PrimaryKey val systemId: String,
     val gamelistMtime: Long,
-    /** guide.json's stamp plus the hack classification rules (see Indexer.metaStamp); either changing rebuilds the system's rows. */
+    /** guide.json's stamp, the bundled catalogue's digest and the hack rules (see Indexer.metaStamp); any change rebuilds the system's rows. */
     val guideStamp: String,
     val mediaStamp: Long
 )

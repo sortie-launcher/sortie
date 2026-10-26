@@ -32,7 +32,10 @@ Canonical inputs (read-only for Sortie; the folder names below are examples, eac
   developer, publisher, genre, players). Only `<path>`, `<name>` and the listed fields are used.
 - `scraped-esde/downloaded_media/<system>/{covers,screenshots,marquees,...}/<stem>.png|jpg`.
 - `sortie/guide.json` : optional taste layer from a desktop guide builder (fit 1-5, hook, flags,
-  tags) keyed by system + filename.
+  tags) keyed by system + filename. It takes precedence over the bundled curated guide.
+- APK asset `guide/catalog.json` : the bundled curated guide (authored hooks, flags and a few control notes; no fit or
+  tags), keyed by stable portable work/variant IDs and matched conservatively to local files; it only fills what
+  `guide.json` leaves empty (formats/guide.md, `data/guide/CuratedGuide.kt`).
 - `sortie/systems.json`, `sortie/launchers.json`, `sortie/folders.json`, `sortie/device.json` :
   see docs/formats.
 - APK assets at `magazines/<issue-id>/` (only in builds made with a magazine content directory; see RELEASE.md) and
@@ -45,6 +48,8 @@ Outputs (owned by Sortie, append-only or small):
 - `sortie/playlog.jsonl` : one line per session (see formats).
 - `sortie/user.json` : favourites, per-game overrides, hidden entries, home sort and custom layout, list/grid choices,
   header/hint density, switcher, companion and device-stats preferences, opted-in launcher shortcuts (see formats/user.md).
+- App-private `files/tonight.json` : each local date's saved Tonight set (newest two dates; device-local, not on the card
+  and not in backups; see Feature set → Tonight).
 
 Entities: System, Game (a launchable file with metadata), App (an installed Android app treated as
 a launchable), Folder (a system folder, a smart folder, or a manual folder), LaunchProfile.
@@ -64,6 +69,14 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Quick exit: an emulator gone within 3 s of the start, with no Home press since, ends the session uncounted (no Room
   row; `playlog.jsonl` end has `quickExit: true`) and says so beside Play for 12 s (a toast off the page), naming a
   RetroArch core or game switch (`launch/QuickExit.kt`, LAUNCHERS.md). No automatic retry.
+- Bookmarks: one text bookmark per game (`user.bookmarks`), edited on the game page (Save replaces, Cancel/B keeps, Clear then
+  Save removes) and shown there and on the companion. They replace the former journal and personal mapping/"where was I?"
+  notes; older writing is archived readable under `sortie/archive/` before migration (formats/user.md). After a game really
+  ends (`launch/SessionEndWatch.kt`: its own task, identified through Shizuku after launch, absent from a trustworthy task
+  list) the navigation offers a nonmodal invitation once, never on transient Home/switcher/companion visits, quick exits or
+  without Shizuku; Settings → Bookmarks turns it off. The return check runs when the navigation is resumed and focused with
+  no switcher overlay open (the non-focusable overlay's dismissal counts, with no polling); Not now or the 45 s timeout ends that
+  session's invitation for good. Curated hooks and other guide text are never edited or overridden by bookmarks.
 - Diagnostics: launch log with the exact intent and its adb equivalent; "why did this fail".
 
 ### Smart folders (M2)
@@ -150,16 +163,19 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   focus glow. Wide windows retain wrapping actions. Settings choices accept direct taps while A still cycles the row.
 - Focus feedback is a finite flare and spring settling to a steady glow, with a held-confirm press state cleared on
   key release, focus loss or window-focus loss. Navigation, image zoom and ambient palette changes are finite transitions;
-  hidden ambient changes snap without animating. Home's clock and journal/companion elapsed timers pause while hidden.
-- Game detail groups primary and personal actions separately, scales the cover to the available width, and expands
+  hidden ambient changes snap without animating. Home's clock and the companion's elapsed timer pause while hidden.
+- Game detail groups primary and personal (bookmark, What it needs, reference cards, shelf) actions separately, scales the cover to the available width, and expands
   launch choices beside the actions. Select toggles that panel; closing from its list restores the opener's focus.
   Artwork-derived accents meet 4.5:1 contrast against both the backdrop and Ink.
 - Launcher shortcuts are opt-in: Apps lists only `user.shortcuts` (pinned to Sortie or added with "Add shortcut from…" are
   opted in automatically; "Browse all shortcuts…" toggles the rest). Smart folders see a shortcut only if it is opted in,
   favourited or placed on home.
-- Home has a direct Manual book button beside Settings and a Magazines entry.
+- Home's header: the Split-S mark (`R.drawable.sortie_mark`, content description "Sortie", not a control) instead of a
+  heading, the clock and count, then Apps, Search, Extras and Settings. Extras is a context sheet: Tonight, Hangar (when
+  a mecha stage hosts Home) and Magazines; A opens, B/Cancel closes and returns focus to Extras, as does the Hangar's
+  closing. Library setup and the manual live in Settings; the empty library keeps its Set up/Manage library button.
 - Built-in apps: Magazines and Performance have separate non-exported, singleTask activities and distinct task affinities.
-  Apps and screen-targeted pickers offer both; Home's Magazines and game-detail Featured in use the same reader host.
+  Apps and screen-targeted pickers offer both; Home's Extras → Magazines and game-detail Featured in use the same reader host.
   Two-screen entry asks here/other; single-screen entry opens directly. Reopen resumes one instance; X moves only that
   built-in with saved state. The switcher includes these two named tasks but still excludes Sortie's HOME/companion/anchors.
   Every activity owns its hotkey dispatcher, so visible windows never consume each other's controller events.
@@ -181,6 +197,11 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   width. A tap, or R2 on the picture most in view (hinted), opens a full-screen viewer over the unmoved article: pinch,
   double tap, A and L2/R2 zoom, D-pad pans when zoomed, Left/Right and L1/R1 step pictures, Y toggles the caption, B/Back/tap
   closes. It is a dialog of the reader's window, so it opens on the reader's display; the companion shows no pictures.
+  Picture sequences (experimental; syntax in formats/README.md): 2–12 captioned panels in one horizontal row on a view at
+  least 560 dp wide (chosen panel centred, up to 55% of the view's height, every panel measured up front so the article
+  never moves), stacked as ordinary figures when narrower. Touch swipes settle on a panel; a tap chooses and opens it.
+  L2 browses the sequence most in view: ←/→ choose a panel instead of paging, R2 opens it, ↑/↓ still scroll, L2/B or
+  scrolling it out of view stop. The chosen panel is saved with the reading position; browsing is never restored.
   While an issue is open, the other display shows section jumps/current heading, article selection and previous/next controls.
   The panel follows navigation across X; session-owned actions reject stale taps, and leaving the issue clears the panel.
   Its bottom-left + opens an app picker for that display; launching returns controller focus to the reader. B or Close
@@ -191,6 +212,37 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   overlay from both reader placements, and B returned to the article; denying overlay permission used the ordinary
   switcher page instead. Video playback/DRM was not exercised. Shizuku authorization had to be renewed after an earlier
   uninstall/reinstall: Android's package-permission listing alone did not establish Shizuku authorization.
+
+### Tonight
+
+- One saved set per local date of up to five distinct games, shown one at a time (`ui/TonightScreen.kt`): a gameplay
+  screenshot (the cover when there is none), title, curated hook (`GameEntity.hook`), the rule's reason, and Play, Details
+  and — for a Field Notes pick — Read article, which opens that exact article. Chips along the top or L1/R1 move between
+  picks; B leaves. No grid, no setup, no questions, no reroll, no network, no timer.
+- Roles and rules (`data/tonight/TonightPicker.kt`), filled resume → Field Notes → familiar → different, then fallbacks,
+  then random: **Pick up again** — bookmarked games first, then the most recently played; **From Field Notes** — an
+  article reference that resolves (through `MagazineGames.resolve`, the article library lookup) to exactly one available
+  file, unread articles first; **Familiar ground** — unplayed, same developer as (else same genre as) one of the five
+  most-played games; **Something different** — unplayed, on a system and in a genre the history has never touched (else
+  one of the two); **Wild card** — a random draw. Ties follow an order seeded by the date. Reasons state the rule and the
+  data it used (dates, play time, bookmark, article), never a guess such as session length.
+- A role with nothing to work with (no history yet, no playable Field Notes game) becomes a labelled **Discovery** pick
+  saying why: Want to play first, then unplayed games with a hand-written guide note, then the best metadata rating, then
+  any unplayed game. Never the same id or cleaned title twice; hidden, Finished/Shelved, placeholder, arriving and missing
+  files are left out at selection, so a small library gets fewer picks.
+- `data/tonight/TonightStore.kt`: the first visit of a date chooses and saves the set (picks, reasons, article) to the
+  app-private `tonight.json` (fsynced, replaced by rename) before showing it; later visits, restarts, re-indexes and new
+  history reuse it. If that write fails the screen reports it and shows no set (retry by reopening); an unpersisted
+  selection is never presented as the day's set. An unreadable `tonight.json` is discarded, so that day's set is chosen
+  again. While indexing runs nothing is chosen. The visit date lives in a navigation-scoped view model, so Details and
+  back keep it across midnight; a cold process start uses the current date and never restores yesterday's. The newest
+  two dates are kept. A saved pick that can no longer be played (left the index, hidden since, not copied, arriving,
+  missing) stays in place, disabled, saying why. An empty result (nothing playable yet, e.g. before the first index) is
+  not saved, so a later visit that day can choose.
+- Layout: Play/Details/Read article stay outside the scrolling text; the text area is D-pad focusable when it overflows
+  and resets per pick; the hook is a three-line excerpt (full text on the game page).
+- Navigation: `TonightScreen(vm, onGame, onArticle)` — `onGame` opens the game page, `onArticle(issueId, articleId)`
+  the magazine reader at that article; the visit's pick and focused control survive both round trips.
 
 ### Hangar companion (experimental)
 
@@ -270,7 +322,7 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   room; he drops in there through the facing edge at the same fraction of the width. A move before the hold is a swipe and
   is never consumed, so a scroll that starts on him still scrolls; after the hold every change of that finger is consumed.
   The tap target is the exposed art widened to the frame where that touches no control (at least 40 dp each way, which
-  every place he stands guarantees). **Hangar** in Home's header stays the controller route (focus returns to it on close).
+  every place he stands guarantees). **Extras → Hangar** on Home stays the controller route (focus returns to Extras on close).
   The Hangar holds Animate and Hide/Show companion. Reader Select → Visit the hangar keeps its controller access. The
   Hangar dialog stays mounted while its rename field uses the keyboard.
 - A carried release also estimates velocity from a bounded, preallocated recent-sample buffer, including Android's
@@ -343,7 +395,8 @@ Home's systems and folders; Move · Remove on Custom home tiles) · B back · X 
 search (on Home) / other screen (switcher) · Start search (not available while Sortie is the home app: Android intercepts it) ·
 Select launch-profile sheet (detail) / list↔grid (Home, system and folder lists, search, Apps) / close app (switcher) · L1/R1
 previous/next system (lists) / sort (Home) / console (By Console) / Perf page (overlay switcher) · R2 Want to play toggle
-(games, detail) · hold R1 favourite (games, apps, shortcuts) / random game (system and folder tiles) · Home (physical) app
+(games, detail) · L2 leave a note (while the post-session bookmark invitation shows) / browse the picture sequence in view
+(magazine article) · hold R1 favourite (games, apps, shortcuts) / random game (system and folder tiles) · Home (physical) app
 switcher when Shizuku is available, including while reading. Moving a Custom home tile: D-pad one slot per press, A drop,
 B cancel. Long press = hold A for touch. Compact hint bars keep the main buttons and list the rest under Controls.
 
@@ -360,9 +413,10 @@ Code map (`app/src/main/java/io/github/esko997/sortie/`):
 - `data/manifest/` JSON models and the hot-reloading `ManifestStore`; `data/setup/` on-device Library setup (presets,
   merge-preserving transactional manifest commits); `data/index/` incremental indexer, disc/duplicate variants and BIOS/save
   state; `data/db/` Room; `data/folders/` smart-folder rule engine; `data/user/` `user.json` and `playlog.jsonl`;
-  `data/backup/` export/restore; `data/magazine/`, `data/reference/`, `data/journal/` the reading, reference-card and
-  journal features; `data/apps/` installed apps and launcher shortcuts.
-- `launch/` intent building and launching with fallbacks; `shell/` the Shizuku user service, screen mover, app switcher and
+  `data/backup/` export/restore; `data/magazine/`, `data/reference/` the reading and reference-card features (`data/user/LegacyNotes.kt`
+  archives and migrates the former journal and notes); `data/guide/` the bundled curated guide and its precedence;
+  `data/tonight/` Tonight's picker and daily store; `data/apps/` installed apps and launcher shortcuts.
+- `launch/` intent building and launching with fallbacks (`SessionEndWatch.kt` decides when a game really ended); `shell/` the Shizuku user service, screen mover, app switcher and
   device-stats probe; `stats/` device-stats model, formatting and the poller; `ui/` Compose screens (`ManualScreen` renders
   `assets/MANUAL.md`; `DeviceStatsViews.kt` the stats strips and overlay line).
 - `design/` library module (`:design`, still package `io.github.esko997.sortie.ui`): theme colours, `SortieTheme`, the

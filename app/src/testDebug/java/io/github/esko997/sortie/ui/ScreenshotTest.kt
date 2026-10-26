@@ -158,6 +158,8 @@ abstract class ScreenshotTest(private val device: String) {
     @Test
     fun hangarWorkshop() {
         awaitHome()
+        compose.onNodeWithText("Extras").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Hangar").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Hangar").performClick()
         await("Workshop", "Gallery")
         capture("hangar-workshop")

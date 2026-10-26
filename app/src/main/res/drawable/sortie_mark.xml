@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The approved amber Split-S (branding/mark.svg), cropped to its strokes: Home's identity in place of the "Sortie" heading. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="47dp" android:height="40dp" android:viewportWidth="94" android:viewportHeight="80">
+    <group android:translateY="-8">
+        <path android:fillColor="#F2B134"
+            android:pathData="M28 8H94L80 26H36L28 36H66L74 44H8L4 40Z M16 52H82L86 56L62 88H0L14 70H54L62 60H24Z" />
+    </group>
+</vector>

@@ -10,12 +10,12 @@ import java.util.Locale
  * - the card's configurable `hackRegex` against the file name, and again with version numbers removed from its bracketed
  *   qualifiers, so a rule naming "(true analogs)" also covers "(True Analogs v1.03)";
  * - a qualifier that names the word hack, as in "(v1.21 Hack)" or "[Hack by X]" (not ".hack" or "hacker");
- * - a guide.json flag that says so ([FLAGS]).
+ * - a guide flag that says so ([FLAGS]), from guide.json or the bundled curated guide the indexer combines with it.
  * Descriptions and guide hooks are never read: "hacking" or "analog controls" in retail prose says nothing about the file, and an
  * unrecognised qualifier is not evidence of anything.
  */
 object HackMarks {
-    /** guide.json flags that mark a patched build, compared lower-case. */
+    /** Guide flags that mark a patched build, compared lower-case. */
     private val FLAGS = setOf("hack", "fan translation", "translation")
 
     private val GROUP = Regex("""([(\[])([^()\[\]]*)([)\]])""")

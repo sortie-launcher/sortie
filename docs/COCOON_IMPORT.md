@@ -127,10 +127,9 @@ folder until you are sure.
 
 ## Play history
 
-Sortie derives "last played", play counts and the journal's per-day play time from individual sessions
-(`GameDao.playStats()` uses `MAX(startedAt)`; `JournalWeek` spreads a session's time over the days it covered). Cocoon's
-gamelists only hold lifetime totals (`playcount`, `lastplayed`, `cocoon:playtime`); a session made up from them would move
-"last played", put all historic minutes on one day and collapse the play count to 1. So the totals are shown in the preview
+Sortie derives "last played", play counts and play time from individual sessions (`GameDao.playStats()` uses
+`MAX(startedAt)`). Cocoon's gamelists only hold lifetime totals (`playcount`, `lastplayed`, `cocoon:playtime`); a session
+made up from them would move "last played", put all historic minutes on one moment and collapse the play count to 1. So the totals are shown in the preview
 and never imported. Real sessions come only from a backup's play history, deduplicated by game and start time, with the
 launch profile matched by emulator package where Sortie has one. Imported sessions earn the Hangar companion salvage only
 if they started after the companion was set up on this device, and never twice (`MechaState.credited`, keyed by game and

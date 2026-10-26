@@ -163,6 +163,16 @@ fun SettingsScreen(
                     }
                 }
             }
+            settingsGroup("Bookmarks") {
+                row {
+                    Toggle(
+                        "Offer a bookmark after playing",
+                        user.bookmarkInvitation,
+                        detail = "When a game you started from Sortie has closed, a small card asks whether to leave a note; no dialog or keyboard " +
+                            "until you choose Leave a note. Needs Shizuku to tell a closed game from a visit to Home"
+                    ) { vm.setBookmarkInvitation(it) }
+                }
+            }
             settingsGroup("Device stats") {
                 row {
                     val mode = DeviceStatsMode.of(user.deviceStats)
@@ -224,7 +234,7 @@ fun SettingsScreen(
                 }
             }
             settingsGroup("Help") {
-                row { FocusRow(onClick = onManual) { Line("Manual", "Controls, home, lists, the companion screen, the switcher") } }
+                row { FocusRow(onClick = onManual) { Line("Sortie manual", "How to use Sortie: controls, Home, lists, the companion screen, the switcher") } }
                 row { FocusRow(onClick = onBackup) { Line("Backup and restore", "Export preferences, notes and play history to a file; restore one") } }
                 row {
                     FocusRow(onClick = onImportCocoon) {
