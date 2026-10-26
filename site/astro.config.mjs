@@ -91,7 +91,8 @@ export default defineConfig({
             { label: 'Releases and beta status', slug: 'project/release' },
             { label: 'Changelog', slug: 'project/changelog' },
             { label: 'Specification', slug: 'project/spec' },
-            { label: 'Now playing (scope note)', slug: 'project/now-playing' },
+            { label: 'Testing and platform failures', slug: 'project/hardening' },
+            { label: 'RetroArch controls (unimplemented proposal)', slug: 'project/now-playing' },
             ...pages
               .filter((p) => p.provenance)
               .map((p) => ({

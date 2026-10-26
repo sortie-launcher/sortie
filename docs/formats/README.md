@@ -6,24 +6,33 @@ Before a location is remembered, Sortie looks for an existing `sortie/device.jso
 remembered volume does not cause a silent fallback to a different library.
 
 Game folders can be on internal storage or a removable card independently of the configuration folder. Library setup writes
-the core configuration itself; desktop tools are optional. Files are JSON, UTF-8, with no trailing commas. Unknown keys are
-ignored so files can evolve. For the normal on-device path, start with the [beginner guide](../GETTING_STARTED.md).
+the core configuration itself; desktop tools are optional. Files are JSON, UTF-8, with no trailing commas. Unknown object
+keys are ignored, but recognised fields still need the right types. See the individual pages for required fields and defaults;
+the schemas do not promise to preserve unknown keys when rewritten. Start with the [beginner guide](../GETTING_STARTED.md).
 
 | File | Owner | Purpose |
 |---|---|---|
-| `device.json` | Library screen or desktop | which roots, screens and emulators this device has |
-| `systems.json` | Library screen or desktop | system folders: id, label, roots, extensions, default profile |
-| `launchers.json` | Library screen or desktop | launch profiles: how to start a file with an app |
-| `folders.json` | desktop | smart and manual folders |
-| `guide.json` | desktop (optional) | taste layer: fit, hook, flags, tags per game; the app's bundled curated guide fills its gaps ([guide.md](guide.md)) |
+| `device.json` | Library setup or desktop | effective root, display preferences and optional save/BIOS checks ([device.md](device.md)) |
+| `systems.json` | Library setup, import or desktop | system folders, metadata paths and fallback profiles ([systems.md](systems.md)) |
+| `launchers.json` | Library setup, import, remembered chooser choice or desktop | launch profiles ([launchers.md](launchers.md)) |
+| `folders.json` | import or desktop | smart and manual folder definitions ([folders.md](folders.md)) |
+| `guide.json` | desktop (optional) | local editorial fit, hook, flags and tags; the bundled guide fills eligible gaps ([guide.md](guide.md)) |
 | `user.json` | device | bookmarks, favourites, queue, shelves/verdicts, reference-card metadata, clippings, overrides and interface preferences ([user.md](user.md)) |
-| `playlog.jsonl` | device | one JSON object per play session, append-only |
+| `playlog.jsonl` | device | append-only start/end event mirror, not the authoritative history ([playlog.md](playlog.md)) |
 | `backups/pre-restore-<time>.json`, `backups/pre-cocoon-import-<time>.json` | device | safety copy taken before each restore or Cocoon import; same format as an exported backup ([format](user.md#backup-export-and-restore)) |
 | `archive/personal-notes-<hash>.md` and `.json` | device | readable and structured archive of notes/journal entries from older versions, written before migration ([user.md](user.md#older-personal-notes-archive)) |
 | `logos/<systemId>.png` | desktop (optional) | system logos for the home tiles; transparent PNG, ~512 px wide |
 | `magazines/<issue-id>/issue.json` | user/desktop | offline magazine issue, with local `articles/` and `media/` |
+| `reference/` | device | imported reference images; metadata is in `user.json` |
+| `journal/media/` | device (legacy) | retained screenshots from the retired journal; not embedded in backups |
 
-See `../../examples/card/sortie/` for a complete minimal card (two systems, four profiles, four folders).
+See the [example configuration](../../examples/card/sortie/) for JSON structure. Use Library setup's current presets for
+emulator profiles; an example file is not a compatibility guarantee.
+
+Manifest edits reload while Sortie is running. `user.json` is different: it is loaded at startup and owned by the running
+app, so do not edit or sync competing copies over it while Sortie is saving. Private app storage also holds the authoritative
+play history, Hangar save, magazine reading positions and Tonight's daily sets; copying this folder alone is not a complete
+backup. See [backup export and restore](user.md#backup-export-and-restore).
 
 ## Modified-game marks
 
@@ -94,23 +103,27 @@ stable `id` matching `[A-Za-z0-9][A-Za-z0-9_-]{0,119}` and a nonempty `title`. U
 across issues; the publisher rejects conflicting identities. Repeated references within an issue combine their `matchNames`.
 `systemId`, `edition` and `matchNames` are optional. An absent platform is informational only and never matches a local file.
 
-Platforms match local system IDs case-insensitively. The portable `arcade` platform also covers systems whose generation is
-`arcade`; use verified ROM-set aliases such as `wjammers` rather than a private arcade-folder name. Matching compares equal
-names after ordinary punctuation, accent, region, language, disc, revision and reprint normalization. Meaningful edition,
-hack and translation qualifiers remain distinct. `edition` is a reader-facing description, **not a matching rule**:
-put meaningful distinctions in the title or explicit aliases too. There is no fuzzy or series-wide matching.
+Platforms match local system IDs case-insensitively. The portable `arcade` platform covers systems whose generation is
+`arcade` and the conventional IDs `arcade`, `fbneo`, `mame`, `neogeo`, `cps1`, `cps2`, `cps3`. Use verified ROM-set aliases such
+as `wjammers` rather than a private arcade-folder name. Matching compares equal names after ordinary punctuation, accent,
+region, language, disc, revision and reprint normalization. Meaningful edition, hack and translation qualifiers remain
+distinct. `edition` is a reader-facing description, **not a matching rule**: put meaningful distinctions in the title or
+explicit aliases too. There is no fuzzy or series-wide matching.
 
-Scraped titles are only a fallback for opaque serial/title-ID filenames or arcade sets, and never erase hack/edition
-qualifiers. Multiple local copies remain explicit choices. Availability checks only candidate files and excludes
-placeholders, zero-byte, missing/unreadable and still-copying files. A local match is not an emulator compatibility claim.
+Scraped titles are only a fallback for unqualified opaque serial/title-ID filenames or arcade sets, never for games marked
+as hacks. Matching does not inspect ROM contents or distinguish a patch absent from its filename. Multiple local copies
+remain explicit choices. Availability checks only candidate files and excludes placeholders, zero-byte, missing/unreadable
+files and recognised Syncthing transfers. Other in-place copying is not detected. A local match is not an emulator
+compatibility claim.
 The reader exposes All/On this device lists and game pages link back through Featured in; personal library tags are unchanged.
 
 ### Files, updates and reading state
 
 **Every path is issue-root-relative**, including Markdown images. No URLs, absolute paths, dot/empty segments, backslashes,
 colons, control characters or symlinks escaping the issue. `issue.json` is limited to 256 KiB and each body to 1 MiB.
-Unsafe paths and missing/unreadable/oversized required bodies reject the issue. Empty bodies or files removed after loading
-fail only that article; missing optional pictures leave text readable.
+Unsafe manifest paths and missing/unreadable/oversized required bodies reject the issue. Unsafe inline Markdown image paths
+omit that image, not the issue. Empty bodies or files removed after loading fail only that article; missing optional pictures
+leave text readable. Paths are at most 240 characters and cannot begin with `~`.
 
 Markdown supports headings `#`–`###`, paragraphs, `-` bullets, `>` quotes, `---` rules, bold/italic and links rendered with their
 URLs as text. Images must occupy their own line: `![Caption and credit](media/picture.webp)`. HTML is plain text, not executed.
@@ -120,6 +133,10 @@ Pictures are laid out from their pixel size: 1.6:1 or wider may use the full rea
 measure; height stops at 70% of the view (lead `image` 55%). A picture enlarged two or more screen pixels per image pixel
 snaps to a whole multiple and is drawn unsmoothed, so supply pixel art at its native size rather than pre-enlarged. The
 caption (alt text, or `imageCaption` for the lead) sits under the picture and in the full-screen viewer.
+
+Tap a picture, or use R2 on the picture in view, to open the full-screen viewer on the reader's screen. A or double-tap
+toggles zoom; L2/R2 or a pinch zooms out/in. The D-pad pans when zoomed; at fit size, left/right changes pictures.
+L1/R1 always changes pictures, Y toggles the caption, and B/Back or a single tap closes without moving the article.
 
 **Picture sequences (experimental).** Two to twelve image lines in a row, with no blank line between, each titled exactly
 `sequence`, form one horizontal sequence of captioned panels inside the article:

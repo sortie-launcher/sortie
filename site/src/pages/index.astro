@@ -6,14 +6,15 @@ import '@fontsource/lato/900-italic.css';
 import { Image } from 'astro:assets';
 import { getEntry, render } from 'astro:content';
 import mark from '../assets/brand/mark.svg?raw';
-import companionBottom from '../assets/hero/companion-bottom.png';
-import companionTop from '../assets/hero/companion-top.png';
+import companionBottom from '../assets/repo/docs/screenshots/readme/companion-bottom.png';
+import companionTop from '../assets/repo/docs/screenshots/readme/companion-top.png';
 import gameDetail from '../assets/repo/docs/screenshots/readme/game-detail.png';
 import home from '../assets/repo/docs/screenshots/readme/home.png';
 import library from '../assets/repo/docs/screenshots/readme/library.png';
 import magazine from '../assets/repo/docs/screenshots/readme/magazine.png';
 import setup from '../assets/repo/docs/screenshots/readme/setup.png';
 import tonight from '../assets/repo/docs/screenshots/readme/tonight.png';
+import hangar from '../assets/repo/docs/screenshots/readme/hangar.png';
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const RELEASES = 'https://github.com/sortie-launcher/sortie/releases';
@@ -48,7 +49,7 @@ const provenanceHref = page('project/screenshots');
 
 const title = 'Sortie: an offline, controller-first game launcher for Android handhelds';
 const description =
-	'Sortie lists the games already on your Android handheld, starts them in the emulators you installed, and keeps notes, backlog and play history beside them. No internet permission.';
+	'Sortie lists the games already on your Android handheld, starts them in the emulators you installed, and keeps bookmarks, backlog and play history beside them. No internet permission.';
 const canonical = new URL(base, Astro.site).href;
 ---
 
@@ -100,8 +101,8 @@ const canonical = new URL(base, Astro.site).href;
 						<a class="button" href={page('getting-started')}>Read the getting started guide</a>
 					</div>
 					<p class="disclosure">
-						<strong>Sortie is built in collaboration with AI.</strong> The code, documentation and the optional Field
-						Notes magazine are written with AI assistance.
+						<strong>Sortie is built in collaboration with AI.</strong> The code, documentation, bundled game guide
+						and Field Notes magazine are written with AI assistance.
 					</p>
 				</div>
 
@@ -113,7 +114,7 @@ const canonical = new URL(base, Astro.site).href;
 									src={companionTop}
 									widths={[480, 720, 960, 1280]}
 									sizes="(min-width: 64rem) 34rem, 92vw"
-									alt="Top screen: a PlayStation 2 grid of box art with Armored Core 3 focused, filter buttons above and controller hints below"
+									alt="AYN Thor top screen: a PS2 grid with Armored Core 3 focused, a folded filter header and compact controller hints"
 									loading="eager"
 									fetchpriority="high"
 								/>
@@ -127,7 +128,7 @@ const canonical = new URL(base, Astro.site).href;
 									src={companionBottom}
 									widths={[400, 640, 960, 1280]}
 									sizes="(min-width: 64rem) 22rem, 60vw"
-									alt="Bottom screen at the same moment: the companion panel showing Armored Core 3's art, platform, year, developer, a Want to play button and its description"
+									alt="AYN Thor bottom screen: Armored Core 3's art and guide hook, Want to play, the notification bell and app starter, with Rivet beside the battery indicator"
 									loading="eager"
 								/>
 							</div>
@@ -135,7 +136,7 @@ const canonical = new URL(base, Astro.site).href;
 						</div>
 					</div>
 					<figcaption>
-						Earlier emulator capture: the controller browses on top, the companion follows below.
+						AYN Thor, signed beta 2136: browse on top, with the focused game's details below.
 					</figcaption>
 				</figure>
 			</section>
@@ -157,8 +158,8 @@ const canonical = new URL(base, Astro.site).href;
 						alt="Sortie on a Retroid Pocket Nova: Apps, Search, Extras and Settings above a Generation-sorted library, with Rivet perched on a system tile"
 					/>
 					<figcaption>
-						Nova, signed beta 2136, with an existing library and artwork. Tonight and game details below are from
-						the same session; the dual-screen and setup examples are older emulator captures.
+						Nova, signed beta 2136, with an existing library and artwork. The tour uses current Nova and Thor
+						captures; first-run setup uses a disposable Android emulator.
 						Art is bring-your-own. <a href={provenanceHref}>Capture notes and image credits</a>.
 					</figcaption>
 				</figure>
@@ -182,7 +183,7 @@ const canonical = new URL(base, Astro.site).href;
 						src={library}
 						widths={[640, 960, 1280]}
 						sizes="(min-width: 64rem) 42rem, 96vw"
-						alt="A PlayStation 2 grid of box art with Pick one, Fit 4+, notes, started and on device filters, and controller hints along the bottom"
+						alt="Game Boy Color grid on Nova with Pick one, Fit 4+, notes, started and on device filters; games without artwork have text tiles"
 					/>
 				</article>
 
@@ -213,7 +214,7 @@ const canonical = new URL(base, Astro.site).href;
 						<h3>A guide already on board</h3>
 						<p>
 							Bundled recommendations, control notes and cautions appear for games the guide covers. Matching respects
-							platforms and editions; a patched game does not borrow the original's entry.
+							platforms and filename edition labels; it cannot identify an unlabelled patch from the game's contents.
 						</p>
 					</div>
 					<div class="feature-aside">
@@ -227,13 +228,13 @@ const canonical = new URL(base, Astro.site).href;
 						<h3>Keep track of a game</h3>
 						<p>
 							<strong>Play</strong> follows your game's emulator choice, then the system default and fallback list.
-							<strong>Launch with…</strong> picks one for that game. Play time adds up on the game page; one text
-							bookmark keeps your place: save slot, next objective, whatever you'll need next time. Saving replaces it.
+							<strong>Launch with…</strong> saves a per-game choice and starts it immediately. Play time adds up on
+							the game page; one bookmark keeps your place: save slot, next objective, whatever you'll need next time.
 						</p>
 						<p>
-							<kbd>R2</kbd> adds a game to <em>Want to play</em>; hold <kbd>A</kbd> to favourite or pin it. Mark games
-							Finished or Shelved with a short verdict, and keep reference cards: controls, a move list, a photo of a map.
-							It all stays on the device.
+							<kbd>R2</kbd> adds a game to <em>Want to play</em>; the star favourites it. Hold <kbd>A</kbd> on a
+							browse tile to favourite or pin it. Mark games Finished or Shelved with a short verdict, and keep reference
+							cards: controls, a move list, a photo of a map. It all stays on the device.
 						</p>
 					</div>
 					<Image
@@ -280,9 +281,9 @@ const canonical = new URL(base, Astro.site).href;
 					<div class="feature-text">
 						<h3>Read about games</h3>
 						<p>
-							<strong>Field Notes</strong> is an optional offline games magazine, published separately. Sortie
-							remembers your place, shows which featured games are on your device and links to their pages. Highlight a
-							passage, add a note, keep it in your scrapbook. Tap a picture or press <kbd>R2</kbd> to zoom it full screen.
+							<strong>Field Notes</strong> is an offline games magazine, bundled with signed releases and also available
+							separately. Sortie remembers your place and links featured games to local copies. Highlight a passage,
+							add a note or clip an article to your scrapbook. Tap a picture or press <kbd>R2</kbd> to view it full screen.
 						</p>
 						<p>
 							<strong>Extras → Magazines</strong> or <strong>Apps → Magazines</strong> opens a separate reader window.
@@ -295,7 +296,7 @@ const canonical = new URL(base, Astro.site).href;
 						src={magazine}
 						widths={[640, 960, 1280]}
 						sizes="(min-width: 64rem) 42rem, 96vw"
-						alt="A Field Notes article titled Armored Core 3: Weight, Wages and the Repair Bill, with a credited game screenshot, a standfirst and controller hints for paging, highlighting and clipping"
+						alt="Counting the Directory from Field Notes 011 on Nova: article text, local game matches, Highlight a passage, Clip article and current reader controls"
 					/>
 				</article>
 
@@ -336,21 +337,26 @@ const canonical = new URL(base, Astro.site).href;
 						<p><a href={cocoonHref}>Moving from Cocoon</a></p>
 					</div>
 				</article>
-				<article class="feature feature-split">
+				<article class="feature">
 					<div class="feature-text">
 						<h3>A little company</h3>
 						<p>
 							<strong>Rivet</strong>, the optional Hangar companion, roams Home's margins. Pet him, carry him or
 							flick him toward the other screen. He crosses only when a visible Sortie surface has room, never over a game.
 						</p>
-					</div>
-					<div class="feature-aside">
 						<p>
 							<strong>Extras → Hangar</strong> lets you mix parts, spend salvage from completed play sessions,
 							stop his motion or hide him. No daily check-in; backups carry his name, parts and progress.
 						</p>
 						<p><a href={page('manual') + '#hangar-companion-experimental'}>Hangar controls</a></p>
 					</div>
+					<Image
+						class="shot"
+						src={hangar}
+						widths={[640, 960, 1280]}
+						sizes="(min-width: 64rem) 42rem, 96vw"
+						alt="Hangar Workshop on Nova: the companion, name field, salvage credits and part categories; no credits spent for this capture"
+					/>
 				</article>
 			</section>
 
@@ -400,8 +406,8 @@ const canonical = new URL(base, Astro.site).href;
 				<div class="get-cta">
 					<h2 id="get-title">Get Sortie</h2>
 					<p>
-						Signed beta APKs are published on GitHub Releases when a change to the main branch passes its checks. There
-						is no store, account or auto-updater: install a newer APK over the old one, and never uninstall to update.
+						Signed beta APKs are published on GitHub Releases when app changes on main pass their checks; website-only
+						changes do not publish an APK. There is no store, account or auto-updater. Install over the old copy—never uninstall to update.
 					</p>
 					<div class="actions">
 						<a class="button primary" href={RELEASES}>Get the beta on GitHub Releases</a>

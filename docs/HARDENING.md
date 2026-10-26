@@ -1,17 +1,22 @@
 # Hardening: UI stress and known platform failures
 
-Sortie lives between games, video apps, two screens and vendor software it does not control. This page covers the stress
-harness used to find where that breaks, the invariants it checks, and the failures found so far with their causes.
+This is the current testing reference plus a historical record of failures and bounded device checks, not a proposal or a
+claim that every release passed a hardware soak. "Fixed" describes code retained in main; recorded device results apply
+only to the builds and conditions named below. The stress harness has a known reader/Hangar entry-point gap noted below.
 
 ## Running the stress harness
+
+Use an authorised, idle test device with disposable data or verified backups; the harness takes over input and can
+force-stop apps. Follow the workspace's device-access locking rules before any ADB access and retain that lock through
+teardown. The script does not acquire a device lease for you.
 
 ```
 tools/stress/ui-stress.py --serial SERIAL --minutes 90 [--seed N] [--no-kill] [--out DIR]
 ```
 
 adb runs inside the `ubuntu` distrobox by default; set `SORTIE_ADB_WRAPPER=""` to call adb directly. Displays (and their
-physical ids for screenshots) and the card's `sortie/` folder are discovered. Everything is seeded: the seed is printed
-and part of the output folder name, so a run can be replayed. No ROM is selected automatically.
+physical ids for screenshots) and the card's `sortie/` folder are discovered. Random choices use the printed seed,
+also included in the output folder name; timing and device state still affect replay. No ROM is selected automatically.
 
 The default run excludes emulator apps and game launches. `--game-rom /absolute/path/to/disposable.gb` opts into
 RetroArch and the game scenario. Use a disposable ROM **and disposable or verified-backed-up save/state directories**:
@@ -20,20 +25,22 @@ RetroArch can write battery saves even without in-game progress. Other emulator 
 Scenarios (weighted, random): Home and the switcher overlay with D-pad/A/B/Y/Select inside it (A, Y and Select only while
 the overlay is up); rapid Home; X screen swaps (single, double, triple, only with a second display); launching apps on
 either display; an explicitly opted-in RetroArch game with Sortie's default flags; moving tasks; Recents; Back bursts; controller bursts on Sortie;
-force-stopping Sortie; "clear all"; sleep/wake; launching then pressing Home and X before the app has drawn; trim-memory;
-the magazine reader (shelf → last issue → article, reading, X and L1/R1 mid-article, reader menu); the Hangar (Workshop,
-Gallery, X while open). Reader and Hangar steps return Sortie to its Home route, bring navigation to the top display
-(X) and locate controls with `uiautomator`. That dumps the *active* window, which on two screens can be the companion's
-carousel below, so the harness first taps Home's top-left corner on the top display. `--no-kill` drops the force-stop
-scenarios for single-process leak runs. Single-screen runs do not inject X. The reader opens the visible `01` article
-ordinal by touch; if it is off screen, that attempt is skipped rather than confirming an unknown restored selection.
+force-stopping Sortie; "clear all"; sleep/wake; launching then pressing Home and X before the app has drawn; trim-memory.
+`--no-kill` drops force-stop scenarios for single-process leak runs. Single-screen runs do not inject X.
+
+**Current coverage gap:** the reader and Hangar scenarios still look for direct **Magazines** and **Hangar** controls
+on Home (`sc_reader`, `sc_hangar`), but current Home puts both under **Extras**. Those entry attempts return without
+exercising the surfaces; a clean run is not reader/Hangar coverage. The older runs below did exercise the former Home.
+Their scripted paths are shelf → issue → visible `01` article, reading and screen swaps, and Hangar → Gallery → Back.
+They use `uiautomator`, first tapping Home's top-left corner so the active accessibility window is navigation rather than
+the other display's companion. An absent article ordinal is skipped rather than blindly activating a restored selection.
 
 Where `uiautomator dump` cannot work, the run logs one `skip` event with reason `uiautomator unavailable` and leaves out
 the reader and Hangar scenarios; the rest run as usual. It is declared on "null root node" or after three dumps in a row
-that produce no hierarchy; a single failed dump is logged as `uiautomator dump failed` and retried later. The Retroid
-Pocket Nova is such a device: every dump, for every app, fails with "null root node returned by UiTestAutomationBridge",
-most likely because Retroid's Game Assistant accessibility service (`com.rp.gameassistant`) is bound. Check the Nova
-with screenshots and key input instead.
+that produce no hierarchy; a single failed dump is logged as `uiautomator dump failed` and retried later. In the recorded
+Nova stress runs, dumps failed with "null root node returned by UiTestAutomationBridge". The bound Retroid Game Assistant
+accessibility service was suspected, not established as the cause. This is not a permanent limitation of every Nova
+configuration; record actual dump availability for each run.
 
 Safety is limited: the card's `user.json`, `systems.json`, `launchers.json`, `folders.json` and `device.json` are copied
 first and restored if changed (L1/R1 on Home legitimately changes the saved sort). Media volume and stay-awake settings
@@ -60,6 +67,9 @@ anomaly), `logcat.txt`, and `anomalies/<n>/` with both screens, task/focus dumps
 
 ## Findings
 
+The following device observations were recorded during the 25–26 October 2026 hardening work unless a different date or
+build is stated. They are not new tests of the current documentation revision.
+
 ### Single-screen built-in X could activate the focused control (fixed)
 
 Built-in windows only claimed the screen-swap hotkey when a second display existed. An unhandled X from Android's virtual
@@ -69,7 +79,7 @@ with no other screen it leaves the current page alone. The regression checks tha
 On the Nova, injected X left the focused issue on the shelf; one subsequent A opened its contents. A one-minute run of
 the safer default harness discovered no ROM, launched only Clock/Settings/Chrome, injected no X and recorded no anomalies.
 Its five guarded card files and the play log matched their pre-run bytes afterward. Reader/Hangar coverage was skipped
-there because the vendor accessibility service prevents UI dumps; the default-mode smoke is not evidence for those paths.
+because UI dumps were unavailable; the default-mode smoke is not evidence for those paths.
 
 The stress harness also used to discover a user's first Game Boy ROM and launch it automatically. Its emulator rewrote a
 battery-save file during that run; no pre-run device copy existed, so unchanged content could not be established. The
@@ -166,7 +176,7 @@ removed them and the next Home created new ones. Any app's window churn can stil
   across launches.
 - DocumentsUI (RecyclerView animation `IllegalArgumentException`) and PermissionController (Back during a permission
   prompt, NPE) crashed under Back bursts.
-- The Thor's card-level `ra-gambatte` profile still carries `CLEAR_TASK`, which can hang RetroArch's activity teardown
+- The Thor's card-level `ra-gambatte` profile in that run still carried `CLEAR_TASK`, which can hang RetroArch's activity teardown
   (see LAUNCHERS.md); Sortie never overwrites custom profiles.
 
 ### Checked and clean
@@ -233,8 +243,11 @@ SQLite), indexer and stores under Robolectric with native graphics, against a fi
 Re-record after an intended visual change, look at every changed image, and commit them with the change:
 
 ```
-flock /tmp/sortie-gradle.lock distrobox enter ubuntu -- bash -c 'cd <worktree> && ./gradlew :app:recordRoborazziDebug'
+./gradlew :app:recordRoborazziDebug
 ```
+
+Run from the repository root with the same JDK/SDK used for builds; use the shared Gradle lock where the workspace requires
+one. The `ubuntu` distrobox is a maintainer environment, not a prerequisite for screenshot recording.
 
 Production seams: `uiNow` in `ui/Components.kt`, the wall clock behind Home's clock and "last played"; and the finite
 focus flare/spring (`design/…/Focus.kt`) use the composition's frame clock, which tests drive. Compact Home captures
@@ -334,9 +347,9 @@ every check reads the task list (`cmd activity stack list`), the focused display
 tree of one display. `tools/emulator/smoke.sh` prepares the emulator and runs it; `.github/workflows/emulator.yml` runs that
 script on demand (Actions > emulator > Run workflow, or `gh workflow run emulator.yml --ref BRANCH`), on pull requests
 labelled `emulator`, and on pull requests that touch the code it exercises: the app's `ui/`, `launch/`, `shell/` and
-`stats/` packages, `MainActivity`, `CompanionActivity`, `SecondaryHomeActivity`, `AnchorActivity`, the app manifest,
-`mecha/src/main/`, `design/src/main/`, `app/build.gradle.kts`, `gradle/libs.versions.toml`, `smoke/`, `tools/emulator/` or
-the workflow itself. Docs, unit tests and the site alone don't run it. A run takes about 5 minutes
+`stats/` packages, `MainActivity`, `CompanionActivity`, `SecondaryHomeActivity`, `AnchorActivity`, `BuiltinActivity`,
+`BuiltinApps`, `StateHandoff`, the app manifest, `mecha/src/main/`, `design/src/main/`, `app/build.gradle.kts`,
+`gradle/libs.versions.toml`, `smoke/`, `tools/emulator/` or the workflow itself. Docs, unit tests and the site alone don't run it. Recorded run times were about 5 minutes
 once the booted AVD is cached (build 2, emulator boot and setup 2, the tests under 1) and about 8 when it has to create
 the AVD; the cache is saved right after the first boot, before the tests change the emulator.
 
@@ -368,8 +381,9 @@ Covered:
 
 Not covered: everything that needs Shizuku (the switcher overlay, moving, swapping and closing tasks through it, the AYN panel guard).
 Shizuku is a third-party APK whose server must be started and Sortie authorised in Shizuku's own dialog for the current
-installation (an Android permission grant is not enough); there is no headless path, so those stay hardware checks
-(`ui-stress.py`). Also not covered: launching games, the Hangar, touch on the companion, vendor firmware.
+installation (an Android permission grant is not enough). The CI harness does not configure it, so those remain
+authorised hardware checks (`ui-stress.py`). Also not covered by this emulator smoke: launching games, the Hangar,
+touch on the companion and vendor firmware.
 
 The second screen is the emulator's own virtual display (`adb emu multidisplay add 1 1240 1080 369 1739`: the emulator's
 default flags plus FLAG_PRESENTATION, which Sortie looks for). An overlay display (`settings put global

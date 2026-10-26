@@ -1,14 +1,6 @@
 {
  "profiles": [
   {
-   "id": "armsx2",
-   "label": "ARMSX2",
-   "package": "come.nanodata.armsx2",
-   "activity": "com.armsx2.MainActivity",
-   "action": "android.intent.action.VIEW",
-   "data": "file://${file}"
-  },
-  {
    "id": "armsx2-uri",
    "label": "ARMSX2 (content URI)",
    "package": "come.nanodata.armsx2",

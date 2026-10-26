@@ -13,7 +13,6 @@ import GithubSlugger from 'github-slugger';
 import { toString } from 'mdast-util-to-string';
 import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
-import sharp from 'sharp';
 import { unified } from 'unified';
 import { visitParents } from 'unist-util-visit-parents';
 
@@ -26,7 +25,6 @@ const CONTENT_DIR = join(SITE_DIR, 'src/content/docs');
 const ASSET_DIR = join(SITE_DIR, 'src/assets/repo'); // optimised copies for inline images
 const PUBLIC_REPO_DIR = join(SITE_DIR, 'public/repo'); // full-size originals that inline images link to
 const BRAND_DIR = join(SITE_DIR, 'src/assets/brand');
-const HERO_DIR = join(SITE_DIR, 'src/assets/hero');
 
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|svg)$/i;
 // Tags GitHub would render as HTML. Anything else in angle brackets (`<name>`, `<issue-id>`) is placeholder text.
@@ -52,6 +50,7 @@ function pageList() {
     { src: 'docs/LAUNCHERS.md', slug: 'reference/launchers' },
     { src: 'docs/formats/README.md', slug: 'reference/formats', label: 'Overview', order: 0 },
     { src: 'docs/RELEASE.md', slug: 'project/release' },
+    { src: 'docs/HARDENING.md', slug: 'project/hardening' },
     { src: 'CHANGELOG.md', slug: 'project/changelog' },
     { src: 'docs/SPEC.md', slug: 'project/spec' },
     { src: 'docs/NOW_PLAYING.md', slug: 'project/now-playing' },
@@ -309,7 +308,7 @@ class Sync {
   }
 
   async run() {
-    for (const dir of [CONTENT_DIR, ASSET_DIR, PUBLIC_REPO_DIR, BRAND_DIR, HERO_DIR]) rmSync(dir, { recursive: true, force: true });
+    for (const dir of [CONTENT_DIR, ASSET_DIR, PUBLIC_REPO_DIR, BRAND_DIR]) rmSync(dir, { recursive: true, force: true });
     mkdirSync(CONTENT_DIR, { recursive: true });
     for (const page of this.pages) this.page(page);
 
@@ -325,7 +324,6 @@ class Sync {
     }
     cpSync(join(REPO_DIR, 'branding/icon.svg'), join(SITE_DIR, 'public/favicon.svg'));
     cpSync(join(REPO_DIR, 'branding/social-preview.png'), join(SITE_DIR, 'public/social-preview.png'));
-    await splitCompanion();
 
     if (this.errors.length) {
       throw new Error(`sync-docs: ${this.errors.length} problem(s) in the repository docs:\n  ${this.errors.join('\n  ')}`);
@@ -365,22 +363,6 @@ function findDestination(slice, type) {
     end++;
   }
   return { start: at, end };
-}
-
-/**
- * The README's dual-screen capture is two displays stacked into one image (see PROVENANCE.md). The landing page shows
- * them as two screens again: the top display is the first 720 rows, the bottom display the rest.
- */
-async function splitCompanion() {
-  const src = join(REPO_DIR, 'docs/screenshots/readme/companion.png');
-  mkdirSync(HERO_DIR, { recursive: true });
-  const { width, height } = await sharp(src).metadata();
-  const topHeight = 720;
-  await sharp(src).extract({ left: 0, top: 0, width, height: topHeight }).png().toFile(join(HERO_DIR, 'companion-top.png'));
-  await sharp(src)
-    .extract({ left: 0, top: topHeight, width, height: height - topHeight })
-    .png()
-    .toFile(join(HERO_DIR, 'companion-bottom.png'));
 }
 
 export async function syncDocs() {

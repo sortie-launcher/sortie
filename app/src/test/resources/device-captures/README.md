@@ -1,12 +1,14 @@
 # Device captures
 
-Shell output recorded on real hardware, replayed by the tests in `app/src/test/java/io/github/esko997/sortie/shell/Replay*Test.kt`:
-ScreenMover and TaskSwitcher run against it through a fake shell that records the commands they issue.
+Historical shell output recorded on real hardware, replayed by `Replay*Test.kt` and `DeviceStatsProbeTest.kt` in
+`app/src/test/java/io/github/esko997/sortie/shell/`. ScreenMover and TaskSwitcher use a fake shell that records their
+commands; stats tests parse captured probe readings. These are parser/decision fixtures, not proof that the current APK
+was tested on each device. UI screenshot goldens are separate, under `app/src/testDebug/screenshots/`.
 
 Devices, all Android 13 (SDK 33):
 
 - `thor/`: AYN Thor. Display 0 is the top screen (1920×1080), display 4 the bottom one (1240×1080).
-- `dmg/`: AYANEO Pocket DMG, a single 1240×1080 screen (display 0).
+- `dmg/`: AYANEO Pocket DMG, display 0. Its native panel is 1080×1240; the task capture is rotated to 1240×1080 landscape.
 - `nova/`: Retroid Pocket Nova, a single 1280×960 screen (device stats only).
 
 ## Captures
@@ -25,7 +27,7 @@ All `stack-list.txt` files are `adb shell cmd activity stack list`, verbatim apa
 | `dmg/home-app-under-game` | RetroArch running; Sortie and another HOME app's leftover task share the home root task under it. |
 | `thor/device-stats` | `probe-1.txt`, `probe-2.txt`: the device-stats probe (`DeviceStatsProbe.SCRIPT`, before it named the cores) run twice, two seconds apart, idle with the fan stopped. `probe-detail.txt`: the Perf view's probe (`DETAIL_SCRIPT`, every thermal zone), idle, fan at 300. |
 | `dmg/device-stats` | `probe.txt`: the same probe on the DMG, which has no fan node. `probe-detail.txt`: the detail probe. |
-| `nova/device-stats` | `probe-detail.txt`: the detail probe on the Retroid Pocket Nova (Android 13, the Thor's SoC; it has the same fan node, stopped). |
+| `nova/device-stats` | `probe-detail.txt`: the detail probe on the Retroid Pocket Nova; it reports the same fan node used on Thor, stopped in this sample. |
 
 `thor/panel-stuck` also has what the panel probe (`ScreenMover.PANEL_PROBE`) reads:
 
@@ -41,8 +43,8 @@ The `device-stats` captures are the probe's output verbatim (`adb shell` with th
 kernel counters, clocks, thermal-zone names and readings. `DeviceStatsProbeTest` parses them and also runs the real script
 in a local `sh` against a fake `/proc` and `/sys`.
 
-`home-activities.txt` per device is not a capture: the HOME and SECONDARY_HOME activities the package manager would report,
-reconstructed from the components the captures show and Sortie's manifest.
+`thor/home-activities.txt` and `dmg/home-activities.txt` are not captures: they list the HOME and SECONDARY_HOME activities
+the package manager would report, reconstructed from the components the captures show and Sortie's manifest.
 
 ## Sanitizing
 
@@ -53,11 +55,16 @@ file paths are in any capture.
 
 ## Adding a capture
 
-1. Record the state on the device, e.g. `adb shell cmd activity stack list > stack-list.txt` (and the three `dumpsys`
-   outputs plus `pidof com.odin.dualscreen.assistant` for a panel state).
+Use an authorised, idle device and follow the workspace's exclusive device-access locking procedure, including for
+read-only ADB. Preserve the existing fixtures as historical evidence; a changed firmware or state warrants a new fixture.
+
+1. Record the state on the selected device, e.g. `adb -s SERIAL shell cmd activity stack list > stack-list.txt`.
+   For a panel state, also capture `dumpsys connectivity`, `dumpsys window displays`, `dumpsys window windows` and
+   `pidof com.odin.dualscreen.assistant`. Record the date, Android/firmware version, display orientation and relevant app
+   version alongside the new fixture's description.
 2. Put it in `<device>/<what-it-shows>/` and trim it to what the code reads, as above.
 3. Rename third-party packages to `example.*`, reusing the names already here for the same app.
-4. Check that nothing private is left; this must print nothing:
+4. Review every retained line for private data, then run this supplementary check from the repository root; it must print nothing:
 
    ```sh
    grep -rniE --include='*.txt' '([0-9]{1,3}\.){3}[0-9]{1,3}|/home/|/storage/|@[a-z0-9-]+\.[a-z]|serial' app/src/test/resources/device-captures

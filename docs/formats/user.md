@@ -1,7 +1,12 @@
 # user.json (device-owned)
 
-Written by Sortie in the active configuration folder (`sortie/user.json`, atomically via `user.json.tmp`); desktop tools should treat it as device-owned.
-Every key is optional; unknown keys are ignored.
+Written by Sortie in the active configuration folder (`sortie/user.json`, atomically via `user.json.tmp`); desktop tools
+should treat it as device-owned. It is loaded at process startup, not hot-reloaded. Do not replace it under a running
+Sortie; use backup restore for a supported transfer of preferences and history.
+
+Every top-level key is optional. Unknown keys are ignored on read and are not preserved by the typed writer. Incorrect
+types can prevent the whole file from loading; an existing unreadable or malformed file is not overwritten with defaults.
+The limits below describe values saved by the app's editors, not a general validator for hand-written JSON.
 
 ```json
 {
@@ -31,13 +36,13 @@ Every key is optional; unknown keys are ignored.
 | `gridHorizontal` | bool | false | grids scroll sideways as rows of tiles, suited to wide screens |
 | `gridRows` | int | 3 | preferred rows in a sideways grid (2–6); more rows = smaller tiles |
 | `appColumns` | int | 8 | Apps screen tiles per row (4–14) |
-| `gridColumns` | 2..10 | `5` | columns of every grid (home and browse screens) |
+| `gridColumns` | 2..10 | `5` | columns in vertical home/game grids; Apps uses `appColumns`, sideways grids use `gridRows` |
 | `browseLayout` | `"list"` \| `"grid"` | `"list"` | view of the browse screens (system lists, folders, search, Apps); Select toggles it there. One setting for all of them, separate from `homeLayout` |
 | `browseChrome` | `"auto"` \| `"expanded"` \| `"compact"` | `"auto"` | header and controller hints on Home and every browse screen (system lists, folders, search, Apps); one setting for all of them, cycled in Settings → Header and hints. `auto` is compact when the window itself is under 600 dp tall or wide, divided by a font scale above 1 (measured, whatever the device), otherwise expanded. Compact folds the header into a strip while browsing (tap, pull down or Up from the first row reveals it) and shows one row of hints with a Controls button listing every command. A missing or unknown value reads as `auto`; Sortie and backup restore save only the three known values |
 | `homeSort` | `"alpha"` \| `"count"` \| `"generation"` \| `"custom"` \| `"console"` | `"alpha"` | home order. The first three are generated and fixed and list systems only: by label, by game count (descending) or grouped by the system's `generation` (`8-bit` … `128-bit` ascending, then the rest in `systems.json` order). `custom` shows `layout`; `console` is By Console (a console strip, that console's games below). Unknown values read as `alpha` |
 | `layout` | tile ids, in order | `[]` | the custom home. Ids: `system:<systemId>`, `folder:<folderId>`, `apps` (the built-in Apps folder), `continue` (the last game played), a game id, `app:<pkg>`, `shortcut:<pkg>/<shortcutId>`. Continue, every smart folder (including Want to play) and Apps always show on Custom and cannot be removed: those missing here are shown anyway, Continue first and the rest after the saved ids (folders in `folders.json` order, then Apps). Moving any tile saves the full displayed order here. Ids that no longer resolve are skipped when rendering but kept here |
 | `shortcuts` | shortcut ids | `[]` | launcher shortcuts listed on the Apps screen. Shortcuts pinned to Sortie or added with "Add shortcut from…" are added automatically; others are opted in from "Browse all shortcuts…". Smart folders see only shortcuts that are opted in, favourited or placed on home |
-| `systemProfiles` | system id → profile id | `{}` | per-system default launcher chosen in Settings → Default launcher per system (or remembered from a fallthrough chooser pick, see LAUNCHERS.md); overrides the system's `profiles` order. "Manifest default" removes the entry |
+| `systemProfiles` | system id → profile id | `{}` | per-system default launcher chosen in Settings → Default launcher per system (or remembered from a fallthrough chooser pick, see [launchers.json](launchers.md)); tried after a per-game override and before the system's `profiles`. "Manifest default" removes the entry |
 | `heroRotation` | bool | true | the idle companion screen rotates suggested games (and the ambient tint they drive) |
 | `overlaySwitcher` | bool | true | the Home-key switcher draws overlay windows over running games (needs *Display over other apps*); false or no grant uses Sortie's normal switcher screen, which has no Perf page |
 | `deviceStats` | `"off"` \| `"companion"` \| `"overlay"` \| `"both"` | `"off"` | where device stats (CPU, GPU, RAM, temperatures, fan) show: companion-screen side strips, the switcher overlay's title line, both or nowhere. Unknown values read as `off` |
@@ -103,7 +108,8 @@ and verdict. Unknown future statuses are preserved but do not enter either shelf
 Each card has a stable `id`, `title`, Markdown `body`, nullable `image`, imported filename `source`, and `created`/`updated`
 epoch milliseconds. `source` is informational, never reopened. Empty per-game lists are removed from the map.
 Images use paths relative to `sortie/`: `reference/<game-key>/<card-id>.<png|jpg|webp|gif>`, where `game-key` is the first
-20 lowercase hex characters of the game id's SHA-1. Readers and writers reject paths outside this shape and symlink escapes.
+20 lowercase hex characters of the game id's SHA-1. Paths must match this shape; all symlinks beneath `sortie/` are rejected,
+even when their target stays inside it.
 Metadata commits precede deletion of owned images; original picker files are never deleted.
 
 Limits: 200 cards per game, 120 title characters, 100,000 body characters, 256 KiB UTF-8 Markdown imports and 24 MiB images
@@ -133,11 +139,11 @@ exist, counters in range) before the restore is offered; a bad one rejects the w
 (`files/mecha/pet.txt`) is not backed up.
 
 Each closed session contains `gameId`, `profileId`, `startedAt`, `endedAt` and `abandoned`. Identity is `(gameId, startedAt)`,
-not a database row ID. Unfinished sessions are never imported. Files over 64 MB, unsupported formats/versions, missing required
+not a database row ID. Unfinished sessions are never imported. Files over 64 MiB, unsupported formats/versions, missing required
 sections or invalid session timestamps are rejected before any writes; a missing `user` object is never interpreted as defaults.
 
 Restore requires confirmation and no open play session. It first fsyncs the current preferences, history and companion to
-`<card>/sortie/backups/pre-restore-<yyyyMMdd-HHmmss>.json` in the same format. Failure to save that copy prevents the restore.
+`backups/pre-restore-<yyyyMMdd-HHmmss>.json` beneath the active configuration folder in the same format. Failure to save that copy prevents the restore.
 Then the companion is restored, before any history is merged: a backup's `mecha` replaces the device's save, keeping every
 session either side already credited as credited; a backup without one keeps the device's companion and marks the sessions it
 merges as credited (they earned their salvage where they were played). No session earns salvage twice. If a later step fails,
@@ -166,3 +172,7 @@ these fields.
 Excluded: ROMs, artwork, emulator saves, the rebuilt game index, library configuration files, `playlog.jsonl`, magazine
 reading positions, Tonight's saved daily sets, Android shortcut pins, permissions and default-home selection. Stored
 app/shortcut IDs are retained, but may require reinstalling or re-pinning their source before they resolve on another device.
+
+Game records still use exact `<systemId>/<filename>` IDs after restore; they are not rematched to renamed files, another
+container format or another system ID. Profile overrides also require matching IDs in the destination's `launchers.json`.
+Keep those identities stable when moving a library.

@@ -7,10 +7,10 @@ all-files access Sortie already uses; Cocoon does not have to be installed or ru
 
 Step-by-step pictures for first-time users: [Getting started → Coming from Cocoon](GETTING_STARTED.md#coming-from-cocoon).
 
-**Evidence and pictures:** the walkthrough uses an Android 13 emulator and an invented Cocoon library, not a physical
-device. Its captures predate the current Home header and import count/default-preservation fixes. Later single-screen and
-Thor import checks are recorded under [Acceptance check on a device](#acceptance-check-on-a-device), with their limits;
-they do not prove emulator compatibility. [Capture details](screenshots/cocoon/PROVENANCE.md).
+**Evidence and pictures:** the walkthrough was captured on 26 October 2026 with signed beta 2138 on an Android 13
+emulator and an invented Cocoon library. It shows the current preview, import result and Home, not a physical device or
+an emulator-compatibility test. Dated hardware checks remain under [Acceptance check on a device](#acceptance-check-on-a-device).
+[Capture details and preservation checks](screenshots/cocoon/PROVENANCE.md).
 
 Code: `app/src/main/java/io/github/esko997/sortie/data/cocoon/` and `ui/CocoonImportScreen.kt`; tests and fixtures under
 `app/src/test/.../data/cocoon/` and `app/src/test/resources/cocoon/`.
@@ -59,10 +59,10 @@ files or the import; Sortie never downloads it.
 | Play sessions | sessions in Sortie's play database, with their real start and end times | yes |
 | Per-game emulator choices | `profileOverrides` in `user.json`, only where you have none | yes |
 
-Not imported: Cocoon's lifetime play counts and play time (shown in the preview only; see "Play history"), themes,
-wallpapers, widgets, grid placement, custom display names and per-game "launch on external display". DroidDeck pins belong
-to the launcher that requested them, so the result lists the DroidDeck games to pin again from DroidDeck once Sortie is the
-home app.
+Not imported: Cocoon's lifetime play counts and play time (shown in the preview only; see "Play history"), descriptions,
+ratings, themes, wallpapers, widgets, grid placement, custom display names and per-game "launch on external display".
+DroidDeck pins belong to the launcher that requested them, so the result lists the DroidDeck games to pin again from
+DroidDeck once Sortie is the home app.
 
 ## What it never changes
 
@@ -112,8 +112,9 @@ bookmarks, favourites, hidden games and emulator choices. It also puts the compa
 salvage gained since; sessions already credited stay credited. It is not a full rollback:
 
 - systems and launch profiles added to `systems.json`/`launchers.json`, media folders set on existing systems, and
-  `cocoon-<n>` folders in `folders.json` stay; remove them in Library setup or by editing those files. A removed old
-  default Favourites entry is not brought back, and is not needed;
+  `cocoon-<n>` folders in `folders.json` stay. Library setup can remove systems; removing imported custom folders, unused
+  launch profiles or media links requires editing those files. A removed old default Favourites entry is not brought back
+  and is not needed;
 - copied artwork stays in the media folders;
 - imported play sessions stay, because a restore only adds sessions and never deletes existing ones.
 
@@ -146,19 +147,20 @@ Sortie derives "last played", play counts and play time from individual sessions
 made up from them would move "last played", put all historic minutes on one moment and collapse the play count to 1. So the totals are shown in the preview
 and never imported. Real sessions come only from a backup's play history, deduplicated by game and start time, with the
 launch profile matched by emulator package where Sortie has one. Imported sessions earn the Hangar companion salvage only
-if they started after the companion was set up on this device, and never twice (`MechaState.credited`, keyed by game and
-start time).
+if they started at or after the companion was set up on this device, and never twice (`MechaState.processedSessions`,
+keyed by game and start time).
 
 ## How it works (developers)
 
 ### Finding Cocoon's folder
 
 Candidates are `<volume>/Cocoon` for `/storage/emulated/0` and every readable `/storage/<volume-id>`, then any directory up
-to two levels deep on each volume (skipping `Android/` and dot directories). A candidate counts only when one of its
-`gamelists/<platform>/gamelist.xml` files starts with a `<cocoon:` tag: an ES-DE tree has the same layout with plain files
-and must not be offered. A tree picked with `OpenDocumentTree` on `com.android.externalstorage.documents` is converted to a
-path (`primary:` → `/storage/emulated/0`, `<volume-id>:` → `/storage/<volume-id>`) and read with plain file APIs. The folder
-used is stored as `cocoonDir` in `user.json` ([formats/user.md](formats/user.md)).
+to two levels deep on each volume (skipping top-level `Android/` and dot directories). A candidate counts only when one of
+its `gamelists/<platform>/gamelist.xml` files contains `<cocoon:` within its first 512 bytes: an ordinary ES-DE tree has the
+same layout but no Cocoon tags and is not offered. A tree picked with `OpenDocumentTree` on
+`com.android.externalstorage.documents` is converted to a path (`primary:` → `/storage/emulated/0`,
+`<volume-id>:` → `/storage/<volume-id>`) and read with plain file APIs. The chosen folder is stored as `cocoonDir` in
+`user.json` after an import ([formats/user.md](formats/user.md)).
 
 ### Cocoon's files
 
@@ -200,12 +202,12 @@ least one of its file names, and other directories holding at least 10 % of them
 `CocoonPlanner` then:
 
 1. maps a found directory already in a configured system to that system, unchanged, but only when that system's `id` or
-   `folder` is in the platform's alias group (a system `md` rooted at `roms/megadrive` is not recognised for `genesis`, and
-   that platform's entries are then reported as not found);
-2. lets an unowned directory be claimed by the platform with most games there, only when the directory is named for the
-   platform's alias group, or at least half its files are that platform's games and its name is not another ES-DE system
-   name (the list in ES-DE's Android `es_systems.xml`). Shared romset names (ZX Spectrum ports of arcade games, Game Gear
-   and Genesis titles) therefore cannot hand a whole folder to the wrong system;
+   `folder` is in the platform's alias group. A custom `md` system whose `folder` is also `md` is not recognised for
+   `genesis` merely because its root path ends in `megadrive`;
+2. lets an unowned directory be claimed by the platform with most matching games there, only when the directory is named
+   for that platform's alias group, or at least half its files are that platform's games and its name is not another known
+   system. Known names include ES-DE's Android systems, presets, aliases and the current configuration. Shared romset names
+   therefore cannot by themselves hand a differently named system folder to the wrong platform;
 3. creates one system per claimed id: the preset id from the alias table, else the platform id, else `<platform>-cocoon`
    when that id is taken. Presets keep their profiles with Cocoon's emulator first and add matched file extensions, such
    as `.7z`, so the index can retain those games. To avoid exposing individual disc tracks as games, track types are not
@@ -214,9 +216,11 @@ least one of its file names, and other directories holding at least 10 % of them
    files' extensions and Cocoon's emulator, or Open with… when there is none. `media` is an existing ES-DE
    `scraped-esde/downloaded_media/<name>` under the card root when present, else `sortie/media/<systemId>`; `gamelist` is
    set only when an ES-DE gamelist exists there (Cocoon's own gamelists are not used as Sortie gamelists);
-4. matches each entry only within its platform's alias group, then by exact case. The platform's own folders and those of
-   its preset alias are equal candidates (a file in both `tg16/` and `pcengine/` is ambiguous). Several equal candidates
-   make an entry ambiguous; ambiguous and missing entries are listed and their flags dropped, never guessed.
+4. matches only within the platform's alias group. The first nonempty tier wins: platform/preset-owned roots with an
+   exact-case filename, those roots with a case-insensitive match, other alias roots with exact case, then other alias
+   roots ignoring case. The platform and its preset alias are equally preferred (`tg16` and `pcengine`, for example).
+   Hits with the same Sortie game ID collapse to one; different IDs left in the winning tier are ambiguous. Ambiguous and
+   missing entries are listed and their flags dropped, never guessed.
 
 Android apps from a backup become `app:<package>` ids. Ids are checked against Sortie's index after the systems step, so
 Sortie's extension and skip rules apply.
@@ -238,6 +242,8 @@ between files) → re-index. Everything before the artwork copy runs to completi
 stops the import and reports what was already done.
 
 ### Acceptance check on a device
+
+The results below are historical checks of the builds described, not a test report for every subsequent release.
 
 Hash file contents, not metadata: `find <cocoon> -type f -exec sha256sum {} \; | sort -k2` before and after an import of
 every category (and a re-run) must match, and Cocoon must still open its library. While Cocoon is installed its own process
@@ -270,8 +276,8 @@ already-imported favourites, hidden entries and folders correctly. A separate, d
 The chooser recipient was a file manager, not an emulator: these checks prove dispatch and persistence, not game/core
 compatibility. The test library was removed and the original card configuration, preferences and private database restored.
 All 1,338 original Cocoon files remained present; only Cocoon's own database log changed. Real artwork references to an
-absent volume could not be copied, so artwork copying used the isolated fixture. Removable-card mapping and dual-display
-behavior still need a dual-screen device check; the production handheld was not used for this regression round.
+absent volume could not be copied, so artwork copying used the isolated fixture. That round did not exercise removable-card
+mapping or dual-display behavior; the later Thor check below covers repeat-import preservation on a removable-card layout.
 
 A later Thor follow-up exercised the signed in-place upgrade and two imports against a removable-card library. All 26,486
 Cocoon source files remained byte-identical, as did the library configuration and preferences; the safety snapshots retained

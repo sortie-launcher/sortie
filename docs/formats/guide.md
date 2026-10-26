@@ -1,9 +1,9 @@
 # guide.json and the bundled curated guide
 
-An optional editorial layer: short recommendations, fit scores, cautions, tags and control notes. It has two sources:
-the card's `guide.json`, which Sortie reads from its active configuration folder but never generates or downloads, and the
-[curated guide bundled with the app](#bundled-curated-guide), which needs no file at all. Neither is required to browse or
-launch games.
+An optional editorial layer: short recommendations, fit scores, cautions, tags and control notes. It has two
+sources: the local `guide.json`, which Sortie reads from its active configuration folder but never generates or downloads,
+and the [curated guide bundled with the app](#bundled-curated-guide), which needs no local file. Neither is required to browse
+or launch games. Here, “authored” and “generated” describe entry classification and precedence, not human versus AI authorship.
 
 `guide.json` entries are keyed by the exact local game ID, `<systemId>/<filename>`, including the filename's extension.
 
@@ -20,12 +20,16 @@ launch games.
 
 | Field | Meaning |
 |---|---|
-| `fit` | Curator's 1–5 taste-fit score; `0` means no score. This is not an objective review rating or a compatibility result. |
+| `fit` | Curator's 1–5 taste-fit score; `0` (default) means no score. This is not an objective review rating or a compatibility result. Keep values in 0–5; the JSON model itself does not clamp them. |
 | `hook` | Short editorial recommendation shown on the game page. |
 | `controls` | Optional control notes; see below. |
 | `flags` | Short cautions such as pacing, difficulty or unusual controls. |
 | `tags` | Editorial labels available to folder rules. |
 | `auto` | `false` for an individually authored/curated entry; `true` (the default) for an automatically generated entry. This controls precedence and the notes filter, not whether a human or AI wrote the prose. |
+
+`hook` and `controls` default to empty strings; `flags` and `tags` to empty lists. The index stores flags and tags as
+lowercase comma-separated labels, so avoid commas within a label. `built` is optional text (default empty) used in the
+index's change stamp, not a required date format.
 
 Bookmarks, controller requirements and Finished/Shelved verdicts belong to the reader's [user data](user.md), not this editorial file.
 
@@ -74,10 +78,11 @@ only when the source prose itself establishes the identity.
 
 Matching is the [magazine reference rule](README.md#portable-game-references): same platform, equal names after
 punctuation, accent, region, language, disc, revision and reprint normalisation, with edition, hack and translation
-qualifiers kept word for word. So `Alundra (USA) (Rev 1).chd` takes the Alundra prose and `Alundra (USA) (Un-Working
-Designs).chd` takes only the Un-Working Designs prose; a hack, a translation, another patch version or another platform
-never inherits a retail entry. Disc 2 of a set shares the game's prose. Scraped titles count only for serial-named files and
-arcade sets, never for hacks. A file that two variants could claim gets neither unless exactly one matches its file name.
+qualifiers retained after normalisation. So `Alundra (USA) (Rev 1).chd` takes the Alundra prose and
+`Alundra (USA) (Un-Working Designs).chd` takes only matching Un-Working Designs prose. Disc 2 of a set shares the game's
+prose. Scraped titles count only for unqualified serial-named files and arcade sets, never for games marked as hacks.
+A file that two variants could claim gets neither unless exactly one matches its filename. Matching does not inspect ROM
+contents: an unqualified filename can still match retail prose even if a guide flag marks that file as modified.
 
 ### Precedence
 
@@ -95,7 +100,7 @@ next ordinary scan re-indexes cached games with the new prose. Nothing is writte
 ### Building the catalogue
 
 `tools/guide/import-blurbs.py SOURCE.jsonl` rebuilds `app/src/main/assets/guide/catalog.json` and
-`tools/guide/import-report.json` from the curator's private authored source (read-only) and the editorial decisions in
+`tools/guide/import-report.json` from the private AI-assisted editorial source (read-only) and the decisions in
 `tools/guide/curation.json`; `--check` verifies that the committed files are current. Every source record is accounted for
 in the report by its line in the source snapshot, never by file name or a per-record digest (a digest of one short record
 would let anyone confirm guesses about its private fields): published as written, edited (with the reason), merged into the
