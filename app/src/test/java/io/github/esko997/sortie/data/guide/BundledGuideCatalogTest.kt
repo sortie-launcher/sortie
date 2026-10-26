@@ -1,26 +1,46 @@
 package io.github.esko997.sortie.data.guide
 
 import java.io.File
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.decodeFromStream
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Exercises the shipped catalog through the same parser/resolver as a user's library, without a private guide.json. */
 class BundledGuideCatalogTest {
-    private val bytes = File("src/main/assets/${CuratedGuide.ASSET}").readBytes()
-    private val catalog = CuratedCatalog.parse(bytes)
+    @Serializable
+    private data class PrivacyCatalog(val entries: List<PrivacyEntry>)
 
+    /** Decode only forbidden fields; publication provenance is skipped rather than retained as a second complete JSON tree. */
+    @Serializable
+    private data class PrivacyEntry(
+        val fit: JsonElement = ABSENT,
+        val tags: JsonElement = ABSENT,
+        val auto: JsonElement = ABSENT,
+        val path: JsonElement = ABSENT,
+        val minutes: JsonElement = ABSENT,
+        val device: JsonElement = ABSENT
+    )
+
+    @OptIn(ExperimentalSerializationApi::class)
     @Test
     fun `public catalog contains no personal scores or paths`() {
-        val raw = Json.parseToJsonElement(bytes.decodeToString()).jsonObject
-        for (value in raw.getValue("entries").jsonArray) {
-            val entry = value.jsonObject
-            assertTrue("no private editorial fields", entry.keys.intersect(setOf("fit", "tags", "auto", "path", "minutes", "device")).isEmpty())
+        val privacy = asset.inputStream().use { Json { ignoreUnknownKeys = true }.decodeFromStream(PrivacyCatalog.serializer(), it) }
+        for (entry in privacy.entries) {
+            assertSame("no fit score", ABSENT, entry.fit)
+            assertSame("no personal tags", ABSENT, entry.tags)
+            assertSame("no local authorship marker", ABSENT, entry.auto)
+            assertSame("no local path", ABSENT, entry.path)
+            assertSame("no personal minutes", ABSENT, entry.minutes)
+            assertSame("no device identifier", ABSENT, entry.device)
         }
         val privatePath = Regex("""/(?:var/)?home/|/storage/|/sdcard/""")
         val privateWording = Regex("""\byour (?:library|lane|list|genres|tastes?)\b|pending cleanup|supplied archive""", RegexOption.IGNORE_CASE)
@@ -60,5 +80,11 @@ class BundledGuideCatalogTest {
             assertEquals(ids.distinct().singleOrNull(), matched?.id)
             assertNull(catalog.match("unknown-user-system", "user-renamed-rom", listOf(fingerprint)))
         }
+    }
+
+    private companion object {
+        val ABSENT = JsonPrimitive("absent")
+        val asset = File("src/main/assets/${CuratedGuide.ASSET}")
+        val catalog: CuratedCatalog by lazy { asset.inputStream().use { CuratedCatalog.parse(it) } }
     }
 }

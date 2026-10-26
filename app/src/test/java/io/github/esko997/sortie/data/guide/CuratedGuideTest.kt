@@ -1,6 +1,8 @@
 package io.github.esko997.sortie.data.guide
 
 import io.github.esko997.sortie.data.manifest.GuideEntry
+import java.io.FilterInputStream
+import java.security.MessageDigest
 import java.util.Locale
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -149,10 +151,37 @@ class CuratedGuideTest {
         assertNotEquals(a.stamp, catalog(entry().copy(hook = "Corrected text.")).stamp)
         assertNotEquals(a.stamp, CuratedCatalog.EMPTY.stamp)
         var reads = 0
-        val guide = CuratedGuide { reads++; bytes(entry()) }
+        val guide = CuratedGuide { reads++; catalog(entry()) }
         val first = guide.catalog
         assertSame(first, guide.catalog)
         assertEquals(1, reads)
+    }
+
+    @Test
+    fun `stream parsing preserves unicode and revision digest while skipping nested provenance`() {
+        val game = entry().copy(hook = "Étoiles — 冒険")
+        val source = bytes(game).decodeToString().dropLast(1) +
+            ""","provenance":{"citations":[{"text":"${"é".repeat(8193)}"}]}}"""
+        val encoded = source.toByteArray()
+        val fragmented = object : FilterInputStream(encoded.inputStream()) {
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int = super.read(buffer, offset, minOf(length, 3))
+        }
+        val parsed = fragmented.use { CuratedCatalog.parse(it) }
+        val hash = MessageDigest.getInstance("SHA-256").digest(encoded).joinToString("") { "%02x".format(it) }
+        assertEquals("shared-blurbs:1:one:$hash", parsed.stamp)
+        assertEquals(game, parsed.match("genesis", "Sonic (USA).md"))
+        assertThrows(IllegalArgumentException::class.java) {
+            encoded.copyOf(encoded.size - 1).inputStream().use { CuratedCatalog.parse(it) }
+        }
+    }
+
+    @Test
+    fun `repeated evidence for the same identity is not a collision`() {
+        val game = entry(aliases = listOf("GAME (USA).ISO", "game (usa).iso", "game (usa)"))
+            .copy(fingerprints = listOf(fingerprint, fingerprint))
+        val c = catalog(game)
+        assertEquals(game.id, c.match("genesis", "Game (USA).iso")?.id)
+        assertEquals(game.id, c.match("genesis", "Renamed.md", listOf(observed, observed))?.id)
     }
 
     @Test

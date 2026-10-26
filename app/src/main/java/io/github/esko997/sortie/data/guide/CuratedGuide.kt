@@ -1,13 +1,18 @@
 package io.github.esko997.sortie.data.guide
 
 import android.content.Context
+import android.content.res.AssetManager
 import android.util.Log
 import io.github.esko997.sortie.data.manifest.GuideEntry
 import java.io.File
+import java.io.InputStream
+import java.security.DigestInputStream
 import java.security.MessageDigest
 import java.util.Locale
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromStream
 
 @Serializable
 data class CuratedCatalogFile(val schemaVersion: Int = 0, val revision: String = "", val entries: List<CuratedEntry> = emptyList())
@@ -62,46 +67,56 @@ class CuratedCatalog private constructor(val revision: String, private val diges
     private data class AliasKey(val system: String, val alias: String)
     private data class FingerprintKey(val system: String, val payload: PayloadFingerprint)
 
-    private val byAlias = HashMap<AliasKey, MutableSet<CuratedEntry>>()
-    private val byFingerprint = HashMap<FingerprintKey, MutableSet<CuratedEntry>>()
+    // A key needs only one entry index, or AMBIGUOUS: retaining a hash set for every alias wastes most of its capacity.
+    private val byAlias = HashMap<AliasKey, Int>()
+    private val byFingerprint = HashMap<FingerprintKey, Int>()
     private val fingerprintSystems = HashSet<String>()
 
     init {
-        for (entry in entries) {
+        for ((index, entry) in entries.withIndex()) {
             val system = platform(entry.system)
-            for (alias in entry.aliases) byAlias.getOrPut(AliasKey(system, alias.lowercase(Locale.ROOT))) { LinkedHashSet() }.add(entry)
+            for (alias in entry.aliases) register(byAlias, AliasKey(system, alias.lowercase(Locale.ROOT)), index)
             for (fingerprint in entry.fingerprints) {
                 val key = fingerprint.key() ?: continue
-                byFingerprint.getOrPut(FingerprintKey(system, key)) { LinkedHashSet() }.add(entry)
+                register(byFingerprint, FingerprintKey(system, key), index)
                 fingerprintSystems.add(system)
             }
         }
     }
 
-    private fun aliases(system: String, fileName: String): Set<CuratedEntry> {
+    private fun <K> register(index: MutableMap<K, Int>, key: K, entry: Int) {
+        val previous = index.putIfAbsent(key, entry)
+        if (previous != null && previous != entry) index[key] = AMBIGUOUS
+    }
+
+    private fun aliases(system: String, fileName: String): Int? {
         val folded = fileName.lowercase(Locale.ROOT)
-        val full = byAlias[AliasKey(system, folded)].orEmpty()
+        val full = byAlias[AliasKey(system, folded)]
         // A curated extensionless alias may cross known containers, but never turns a patch/sidecar into its retail game.
         if (folded.substringAfterLast('.', "") !in ROM_EXTENSIONS) return full
-        val stem = byAlias[AliasKey(system, folded.substringBeforeLast('.'))].orEmpty()
-        if (full.isEmpty()) return stem
-        if (stem.isEmpty()) return full
-        return full + stem
+        val stem = byAlias[AliasKey(system, folded.substringBeforeLast('.'))]
+        if (full == null) return stem
+        if (stem == null) return full
+        return if (full == stem) full else AMBIGUOUS
     }
 
     internal fun match(systemId: String, fileName: String, fingerprints: List<PayloadFingerprint> = emptyList()): CuratedEntry? {
         val system = platform(systemId)
-        val identified = fingerprints.flatMap { byFingerprint[FingerprintKey(system, it)].orEmpty() }.distinctBy { it.id }
-        // Conflicting verified identities never fall back to a more convenient filename.
-        if (identified.isNotEmpty()) return identified.singleOrNull()
-        return aliases(system, fileName).singleOrNull()
+        var identified: Int? = null
+        for (fingerprint in fingerprints) {
+            val candidate = byFingerprint[FingerprintKey(system, fingerprint)] ?: continue
+            // Conflicting verified identities never fall back to a more convenient filename.
+            if (candidate == AMBIGUOUS || (identified != null && identified != candidate)) return null
+            identified = candidate
+        }
+        return entries.getOrNull(identified ?: aliases(system, fileName) ?: AMBIGUOUS)
     }
 
     /** Called only for rows whose size/mtime/path or metadata changed, on the indexer's IO dispatcher. */
     internal fun matchFile(systemId: String, file: File): CuratedEntry? {
         val system = platform(systemId)
         val named = aliases(system, file.name)
-        if (named.size == 1) return named.single()
+        if (named != null && named != AMBIGUOUS) return entries[named]
         if (system !in fingerprintSystems) return null
         val fingerprints = CartridgeFingerprints.read(system, file)
         return match(system, file.name, fingerprints)
@@ -109,6 +124,7 @@ class CuratedCatalog private constructor(val revision: String, private val diges
 
     companion object {
         private const val TAG = "CuratedGuide"
+        private const val AMBIGUOUS = -1
         private val json = Json { ignoreUnknownKeys = true }
         private val UUID = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
         private val ARCADE = setOf("arcade", "mame", "fbneo", "neogeo", "cps1", "cps2", "cps3", "toaplan-cave-stg", "stv", "model2", "naomi", "atomiswave")
@@ -132,8 +148,13 @@ class CuratedCatalog private constructor(val revision: String, private val diges
             !(alias.length >= 2 && alias[0].isLetter() && alias[1] == ':') &&
             alias.split('/').all { it.isNotEmpty() && it != "." && it != ".." }
 
-        fun parse(bytes: ByteArray): CuratedCatalog {
-            val file = json.decodeFromString(CuratedCatalogFile.serializer(), bytes.decodeToString())
+        fun parse(bytes: ByteArray): CuratedCatalog = bytes.inputStream().use(::parse)
+
+        /** Decode directly from UTF-8; ignored public provenance never needs a whole-file byte array or UTF-16 string. */
+        @OptIn(ExperimentalSerializationApi::class)
+        fun parse(input: InputStream): CuratedCatalog {
+            val digest = MessageDigest.getInstance("SHA-256")
+            val file = json.decodeFromStream(CuratedCatalogFile.serializer(), DigestInputStream(input, digest))
             require(file.schemaVersion == 1) { "unsupported shared blurb schema ${file.schemaVersion}" }
             require(file.revision.isNotBlank()) { "missing shared blurb revision" }
             val ids = HashSet<String>()
@@ -144,35 +165,42 @@ class CuratedCatalog private constructor(val revision: String, private val diges
                 require(entry.fingerprints.all { it.key() != null }) { "unsupported or unverified fingerprint for ${entry.id}" }
             }
             require(file.entries.all { it.parentId == null || (it.parentId != it.id && it.parentId in ids) }) { "invalid shared blurb parent" }
-            val digest = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
-            return CuratedCatalog(file.revision, digest, file.entries)
+            val hash = digest.digest().joinToString("") { "%02x".format(it) }
+            return CuratedCatalog(file.revision, hash, file.entries)
         }
 
-        fun load(bytes: ByteArray?): CuratedCatalog {
-            if (bytes == null) return EMPTY
-            return try {
-                parse(bytes)
-            } catch (e: Exception) {
-                Log.w(TAG, "bundled shared blurbs unreadable; continuing without them", e)
-                EMPTY
-            }
+        fun load(input: InputStream): CuratedCatalog = try {
+            parse(input)
+        } catch (e: Exception) {
+            Log.w(TAG, "bundled shared blurbs unreadable; continuing without them", e)
+            EMPTY
         }
     }
 }
 
-/** Read once on first use, off the main thread. */
-class CuratedGuide(private val read: () -> ByteArray?) {
-    val catalog: CuratedCatalog by lazy { CuratedCatalog.load(read()) }
+/** Read once on first use, off the main thread. The immutable APK catalog is shared across application graphs. */
+class CuratedGuide(load: () -> CuratedCatalog) {
+    val catalog: CuratedCatalog by lazy(load)
 
     companion object {
         const val ASSET = "game-blurbs.json"
+        private var appCatalog: CuratedCatalog? = null
 
-        fun forApp(context: Context): CuratedGuide = CuratedGuide {
-            try {
-                context.assets.open(ASSET).use { it.readBytes() }
+        fun forApp(context: Context): CuratedGuide {
+            val assets = context.assets
+            return CuratedGuide { bundled(assets) }
+        }
+
+        @Synchronized
+        private fun bundled(assets: AssetManager): CuratedCatalog {
+            appCatalog?.let { return it }
+            val loaded = try {
+                assets.open(ASSET).use { CuratedCatalog.load(it) }
             } catch (e: java.io.IOException) {
-                null
+                CuratedCatalog.EMPTY
             }
+            appCatalog = loaded
+            return loaded
         }
     }
 }

@@ -161,7 +161,9 @@ the private note import. The exporter never downloads ROMs, contacts a matching 
   notes filter; filling only controls or flags does not change that classification;
 - with no local entry, the shared note has fit 0 and no taste tags.
 
-The app caches the immutable catalog. Its per-system index stamp includes the catalog format, revision and asset digest;
+The app streams the APK JSON and content digest without retaining the complete source text, then shares one immutable
+catalog across its application graphs until process exit. Public provenance remains in the asset, not the runtime model.
+Its per-system index stamp includes the catalog format, revision and asset digest;
 startup checks for a changed stamp on IO. An app/catalog update refreshes or retires obsolete shared prose on the next
 normal scan, without a force-rescan or an idle ROM walk when the stamp is unchanged. It rebuilds from the original local
 guide and shared catalog rather than mistaking a previous shared hook for a personal override. Nothing is written to the card.

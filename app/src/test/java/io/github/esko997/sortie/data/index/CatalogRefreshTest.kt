@@ -5,6 +5,7 @@ import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.db.IndexMetaEntity
 import io.github.esko997.sortie.data.db.NameRow
 import io.github.esko997.sortie.data.db.Signature
+import io.github.esko997.sortie.data.guide.CuratedCatalog
 import io.github.esko997.sortie.data.guide.CuratedCatalogFile
 import io.github.esko997.sortie.data.guide.CuratedEntry
 import io.github.esko997.sortie.data.guide.CuratedGuide
@@ -95,7 +96,7 @@ class CatalogRefreshTest {
             }
         }
         val bytes = Json.encodeToString(CuratedCatalogFile.serializer(), CuratedCatalogFile(1, revision, entries)).toByteArray()
-        return CuratedGuide { bytes }
+        return CuratedGuide { CuratedCatalog.parse(bytes) }
     }
 
     @Test

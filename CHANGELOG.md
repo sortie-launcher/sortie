@@ -34,6 +34,8 @@ for published builds.
   Expand coverage to 10,135 release identities across 41 canonical platforms, including older consoles, computers and
   arcade games. Notes favor concise, concrete play advice over marketing copy; uncertain prototype/patch details remain
   explicit. Six Neo Geo Pocket prototypes have independently verified payload fingerprints and MAME cross-references.
+  Stream the catalog and its digest from the APK, share one immutable process cache, and use compact ambiguity indexes
+  instead of retaining full JSON copies or allocating a set for every alias.
 - Limit the companion screen's curated blurb to two lines with an ellipsis, keeping long recommendations from crowding
   the art and controls. The game detail page still shows the full, unchanged blurb.
 - Refresh the README, website, onboarding, manual and format references for Quiet Home, Tonight, bookmarks and their
