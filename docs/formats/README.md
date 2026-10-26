@@ -15,7 +15,7 @@ ignored so files can evolve. For the normal on-device path, start with the [begi
 | `systems.json` | Library screen or desktop | system folders: id, label, roots, extensions, default profile |
 | `launchers.json` | Library screen or desktop | launch profiles: how to start a file with an app |
 | `folders.json` | desktop | smart and manual folders |
-| `guide.json` | desktop (optional) | taste layer: fit, hook, flags, tags per game |
+| `guide.json` | desktop (optional) | taste layer: fit, hook, flags, tags per game; the app's bundled curated guide fills its gaps ([guide.md](guide.md)) |
 | `user.json` | device | favourites, overrides, hidden entries, home sort and custom layout, list/grid and header/hint choices, switcher, companion and device-stats preferences, opted-in shortcuts ([user.md](user.md)) |
 | `playlog.jsonl` | device | one JSON object per play session, append-only |
 | `backups/pre-restore-<time>.json`, `backups/pre-cocoon-import-<time>.json` | device | safety copy taken before each restore or Cocoon import; same format as an exported backup ([format](user.md#backup-export-and-restore)) |
@@ -26,8 +26,8 @@ See `../../examples/card/sortie/` for a complete minimal card (two systems, four
 
 ## Modified-game marks
 
-The indexer's `hack` flag drives the **hack** mark on game tiles and list rows. Positive evidence is a `guide.json`
-entry whose `flags` contains `hack`, `translation` or `fan translation` (case-insensitive), the word `hack` in a
+The indexer's `hack` flag drives the **hack** mark on game tiles and list rows. Positive evidence is a guide entry (from
+`guide.json` or the [bundled curated guide](guide.md#bundled-curated-guide)) whose `flags` contains `hack`, `translation` or `fan translation` (case-insensitive), the word `hack` in a
 bracketed filename qualifier, or `systems.json`'s `library.hackRegex`. The configured expression is also tried after
 removing version numbers inside qualifiers, so a rule for `(True Analogs)` covers `(True Analogs v1.03)`.
 
@@ -119,6 +119,24 @@ Pictures are laid out from their pixel size: 1.6:1 or wider may use the full rea
 measure; height stops at 70% of the view (lead `image` 55%). A picture enlarged two or more screen pixels per image pixel
 snaps to a whole multiple and is drawn unsmoothed, so supply pixel art at its native size rather than pre-enlarged. The
 caption (alt text, or `imageCaption` for the lead) sits under the picture and in the full-screen viewer.
+
+**Picture sequences (experimental).** Two to twelve image lines in a row, with no blank line between, each titled exactly
+`sequence`, form one horizontal sequence of captioned panels inside the article:
+
+```markdown
+![First panel caption and credit.](media/route-1.webp "sequence")
+![Second panel caption and credit.](media/route-2.webp "sequence")
+```
+
+A blank line or any other line ends the sequence. Every panel needs its own caption; the title is only the marker and is
+never shown. Use a sequence when the order of the pictures is the point (a route, a build, before and after), not as a
+gallery. On a screen at least 560 dp wide, Sortie shows one row with the chosen panel centred and its neighbours at the
+sides, at up to 55% of the view's height; a swipe or tap chooses a panel. With a controller, L2 browses the sequence in
+view: ←/→ choose a panel instead of turning the page, R2 opens it full screen, ↑/↓ keep scrolling, and L2 or B stop. On a
+narrower screen the panels stack as ordinary pictures. The chosen panel is remembered with the reading position. Readers
+without sequence support, including Markdown previews, show the same lines as separate captioned pictures, so the pack
+stays readable and keeps schema version 2. The publication tool rejects a single panel, more than twelve panels and
+panels without captions.
 
 APK packs come from a separate content directory with a reproducible `catalog.json`, bundled only when a build is given
 `-PsortieMagazinesDir`; the default build has none. The build checks the catalog against the digest pinned in

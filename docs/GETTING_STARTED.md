@@ -13,11 +13,12 @@ account, an AI service or any other launcher to follow it.
    **Coming from Cocoon?** [Import your Cocoon library](#coming-from-cocoon) instead.
 5. [Start a game, then come back](#launch-play-and-come-back).
 
-Everything after that is optional. The [full manual](../app/src/main/assets/MANUAL.md) is also built into the app: the
-book button beside **Settings** on Home, or **Settings → Manual**.
+Everything after that is optional. The [full manual](../app/src/main/assets/MANUAL.md) is also built into the app:
+**Settings → Sortie manual**.
 
-The walkthrough pictures are earlier captures from an Android 13 emulator, made before the Hangar companion and the
-compact header existed. Open an image to see it full-size; Android's own Settings screens vary by device.
+The walkthrough pictures are earlier captures from an Android 13 emulator, made before the Hangar companion, the
+compact header and the current Home header (Split-S mark, **Extras**) existed, so some buttons look different now. Open
+an image to see it full-size; Android's own Settings screens vary by device.
 [Capture details and image credits](screenshots/readme/PROVENANCE.md).
 
 ## Words you'll meet
@@ -138,7 +139,7 @@ Open Sortie. The first screen says **Let Sortie see your games**.
 2. Turn on **Allow access to manage all files** (the wording can differ slightly by device).
 3. Go back. Sortie opens.
 
-Sortie needs this to read your game folders and to keep its settings and your notes in a `sortie` folder. It is the only
+Sortie needs this to read your game folders and to keep its settings and your bookmarks in a `sortie` folder. It is the only
 permission the basics need. If Android opens a different page, go to **Settings → Apps → Special app access → All files
 access → Sortie** yourself. Sortie checks again every time you return to it; if you ever turn the switch off, this screen
 comes back.
@@ -230,7 +231,7 @@ only.
 
 ![Home in the Custom sort after importing: a Continue tile from an imported play session, the imported folder Pocket Picks with 3 games, and Favourites with 3](screenshots/cocoon/cocoon-12-home-grid.png)
 
-Then open **Library setup** and check each new system: install any emulator marked *not installed*, and if a system
+Then open **Settings → Library and emulators** and check each new system: install any emulator marked *not installed*, and if a system
 indexed no games, compare its **File types** with your files (for example `.7z` or `.zip`) and add the missing ending.
 Finally [start one game per system](#launch-play-and-come-back): the emulators' own settings, cores and BIOS files are
 untouched, but only playing proves a game runs. The pictures above come from an Android 13 emulator with an invented
@@ -260,7 +261,7 @@ The full reference, including how folders and emulators are matched: [Import fro
 
 ## Add your first system
 
-Press **Set up library** (later the button reads **Library setup** on Home, or use **Settings → Library and emulators**).
+Press **Set up library** (once you have games, use **Settings → Library and emulators** instead).
 The Library setup screen lists your systems; it starts empty.
 
 1. **Add a system…** shows a list of common systems. Under each name Sortie says what it found on your device, for
@@ -307,8 +308,8 @@ You can leave Library setup while it saves or indexes; the work carries on. Repe
 
 ## Launch, play and come back
 
-1. Under **Try a launch**, choose a game. Its page opens with **Play**, **Launch with…**, **Add notes**, **Reference
-   cards**, a ☆ favourite button and **+ Want to play**.
+1. Under **Try a launch**, choose a game. Its page opens with **Play**, **Launch with…**, a ☆ favourite button,
+   **+ Want to play**, **Leave a note** (the game's bookmark), **What it needs** and **Reference cards**.
 
    ![The plain first-game page for ucity, with the Play button and no downloaded box art](screenshots/readme/first-game-page.png)
 
@@ -341,7 +342,8 @@ reordering in Library setup; pick **Manifest default** there to go back to the l
 
 **Your first library will look plain.** Without extra files, games appear with tidied-up file names (`ucity` in this
 example), no box art, no descriptions and no ratings. That is expected: Sortie has no internet access and does not fetch
-any of these.
+any of these. Games covered by Sortie's built-in curated guide do get a short hand-written hook straight away; most games
+aren't covered, and that is expected too.
 
 ### Want box art?
 
@@ -381,8 +383,10 @@ Sortie never downloads artwork, but it reads what these leave behind:
 
 Home has five sorts. **Alphabetical**, **Game count** and **Generation** show your systems. **Custom** holds **Continue**,
 **Apps**, built-in shelves such as **Favourites** and **Want to play**, plus anything you *Add to home*. **By Console** shows
-one console's games at a time. The header has **Apps**, **Hangar**, **Library setup**, **Search**, **Magazines**,
-**Journal**, a book button (manual) and **Settings**. The manual covers every screen in detail.
+one console's games at a time. The header starts with the amber Split-S mark, then has **Apps**, **Search**, **Extras**
+and **Settings**. **Extras** holds **Tonight** (up to five suggestions from your own library, chosen once a day),
+**Hangar** and **Magazines**. **Settings** holds **Library and emulators** and the **Sortie manual**, which covers every
+screen in detail.
 
 **Magazines** and **Performance** are built-in apps with their own windows. On two screens, choose where to open one;
 **X / Other screen** then moves just that window, not the launcher or the other app. **Close** closes only that window.
@@ -406,13 +410,14 @@ enable only the extras you want. No Shizuku, Home role, overlay permission or se
 
 | Feature | What it needs | Where to set it up |
 |---|---|---|
-| **Browse, set up, launch, search, favourites, Want to play, Finished/Shelved, notes, reference cards, journal, backup** | All files access only | Built in |
-| **Hangar companion** (experimental): a small mech that roams Home's margins and earns salvage for new parts from your play time | Nothing | On by default. **Hangar** in Home's header (or hold him) opens it; Workshop can stop his motion or hide him |
+| **Browse, set up, launch, search, favourites, Want to play, Finished/Shelved, bookmarks, reference cards, Tonight, the built-in curated guide, backup** | All files access only | Built in |
+| **Hangar companion** (experimental): a small mech that roams Home's margins and earns salvage for new parts from your play time | Nothing | On by default. **Extras → Hangar** on Home (or hold him) opens it; Workshop can stop his motion or hide him |
+| **Bookmark card after playing**: asks whether to leave a bookmark once a game you started has closed | **Shizuku** (without it, leave bookmarks from the game page) | On by default; **Settings → Bookmarks** turns it off |
 | **BIOS missing** hint on a system tile | A BIOS folder chosen in Sortie; only for systems whose preset lists BIOS files (for example Atari Lynx, Sega CD, PC Engine CD, Neo Geo CD, Famicom Disk System, Amiga) | **Library setup → BIOS and save folders** |
 | **Started** filter (games with saves, marked with a disk icon) | The emulators' save folders chosen in Sortie | **Library setup → BIOS and save folders** |
 | **Sortie as Home screen**: Home button returns to Sortie | Default Home app role | **Settings → Default home app** |
 | **Launcher shortcuts** from other apps (**Apps → Browse all shortcuts…**, accepting "add to home" requests) | Default Home app role | **Apps** screen |
-| **Companion on a second screen** (art and notes of the focused game, *Now playing*, dock, **+** app starter, or the Perf page) | A device with a second display | Automatic while Sortie is open. With the Home role, the second screen also falls back to the companion when it is empty |
+| **Companion on a second screen** (art, hook and bookmark of the focused game, *Now playing*, dock, **+** app starter, or the Perf page) | A device with a second display | Automatic while Sortie is open. With the Home role, the second screen also falls back to the companion when it is empty |
 | **X screen swap** | A second display | Built in |
 | **Switcher**: list running apps, bring one to front, move it to the other screen, close it | **Shizuku** installed, running and allowing Sortie | Shizuku's own app, then **Settings → Diagnostics → Allow Sortie in Shizuku** |
 | **Home key opens the switcher** | Default Home app role **and** Shizuku | Both of the above |
@@ -422,18 +427,18 @@ enable only the extras you want. No Shizuku, Home role, overlay permission or se
 | **Automatic fixes**: play time keeps running when Home only brings up the switcher over a game; other launchers' leftover windows are closed so a finished game returns to Sortie; on the AYN Thor, the Thor button's panel is restarted before it jams | Shizuku | Automatic |
 | **Radial keyboard** for typing with the sticks | Enabling it as an Android keyboard | **Settings → Enable radial keyboard…**, then **Choose keyboard…** |
 | **Box art, screenshots, game descriptions** | ES-DE-style `gamelist.xml` and media folders on storage, linked by hand in `systems.json`; or artwork copied by **Import from Cocoon** | Prepared files: [systems.md](formats/systems.md), or [Coming from Cocoon](#coming-from-cocoon) |
-| **Fit stars, hooks, cautions, tags, control notes** | A `guide.json` file | Prepared file: [guide.md](formats/guide.md) |
+| **Fit stars, tags and your own hooks, cautions and control notes** | A `guide.json` file; it takes precedence over the built-in curated guide, which fills only its gaps | Prepared file: [guide.md](formats/guide.md) |
 | **Smart folders** (rule-based shelves such as "added this month, never played") | A `folders.json` file | Prepared file: [folders.md](formats/folders.md) |
 | **System logos** on Home tiles | PNG files in `sortie/logos/` | Prepared files: [formats](formats/README.md) |
-| **Magazines**, with a full-screen picture viewer (tap a picture, or **R2**) | Included in the signed releases; extra issue packs can be copied into `sortie/magazines/` | **Home → Magazines** or **Apps → Magazines**; opens as its own app on either screen; packs: [formats](formats/README.md#magazine-packs-version-2) |
+| **Magazines**, with a full-screen picture viewer (tap a picture, or **R2**) and experimental picture sequences | Included in the signed releases; extra issue packs can be copied into `sortie/magazines/` | **Extras → Magazines** on Home or **Apps → Magazines**; opens as its own app on either screen; packs: [formats](formats/README.md#magazine-packs-version-2) |
 | **Performance app** | No extra permission to open; Shizuku supplies additional hardware readings | **Apps → Performance**, or **Open app…** on the chosen screen; B/Close closes only this window |
 | **Custom emulators** not in Sortie's list | A launch profile in `launchers.json` | Prepared file: [launchers.md](formats/launchers.md), [LAUNCHERS.md](LAUNCHERS.md) |
 
 **Shizuku in brief.** Shizuku is a separate app with its own setup guide at [shizuku.rikka.app](https://shizuku.rikka.app/).
 On a device without root it is started through Android's *Wireless debugging* (Sortie's **Settings → Diagnostics → Wireless
 debugging** opens that page) and usually has to be started again after every reboot. If you skip it, the basics still
-work; you lose the switcher, moving other apps between screens, the bell, device stats beyond RAM and battery temperature
-and the automatic fixes above, and returning to Sortie always ends the current play session. **X** still swaps Sortie's
+work; you lose the switcher, moving other apps between screens, the bell, device stats beyond RAM and battery temperature,
+the bookmark card after playing and the automatic fixes above, and returning to Sortie always ends the current play session. **X** still swaps Sortie's
 own screens without it.
 
 **"Prepared files" means exactly that.** Apart from what [Import from Cocoon](#coming-from-cocoon) brings over (artwork,
@@ -461,9 +466,10 @@ and its emulators. Every game belongs to exactly one system. A *smart folder* is
 time, how long since you played…) in a prepared `folders.json`; a game can appear in many. **Favourites**, **Want to play**,
 **Finished** and **Shelved** are built-in shelves you fill yourself, no files needed.
 
-**Editorial fit versus your verdict.** *Fit* stars, hooks and cautions come from a guide someone wrote (`guide.json`).
-They describe how well a game suits that guide's taste, not a review score or a compatibility promise. Your own notes,
-*Where was I?*, *What it needs*, and Finished/Shelved verdicts are yours and never change the guide.
+**Editorial fit versus your verdict.** *Fit* stars, hooks and cautions come from a guide someone wrote: the curated guide
+built into Sortie (hooks, badges and a few control notes, no fit stars) or a `guide.json` on your card. They describe how
+well a game suits that guide's taste, not a review score or a compatibility promise. Your bookmarks, *What it needs* and
+Finished/Shelved verdicts are yours and never change either guide.
 
 **Game references versus local files.** Magazines and articles talk about games whether or not you have them. *Games
 mentioned* lists games linked by an issue's editors; **On this device** filters to ones found in your library.
@@ -471,10 +477,10 @@ Choosing a mention opens a game page or the article, never starts a game. A loca
 not that it will run.
 
 **Optional content is optional.** Signed releases include the magazine issues; a build made without them has an empty
-shelf. Guides, artwork and smart folders exist only if someone prepared them for your library. A missing optional file
-just leaves that part empty.
+shelf. Every build includes the curated guide, which covers only some games. A `guide.json`, artwork and smart folders exist
+only if someone prepared them for your library. A missing optional file just leaves that part empty.
 
-**Your state and shared content are kept apart.** Your favourites, queue, shelves, notes, reference cards, journal, play
+**Your state and shared content are kept apart.** Your favourites, queue, shelves, bookmarks, reference cards, play
 history and Hangar companion are yours (`user.json`, Sortie's own database and the companion's save; export them with
 **Backup and restore**). Shared content such as guides, magazines and logos is read, never rewritten with your personal
 data. A Cocoon library can be [imported](#coming-from-cocoon) without changing Cocoon's files; other launchers are not
@@ -510,7 +516,7 @@ files with the same name in different folders of one system appear as one game.
 
 **I removed the memory card.** Sortie keeps its list of games and does not start a new library elsewhere; systems and
 games on that card may be missing until it is back. Reinsert the card, re-index, and if Library setup offers **Try again**,
-choose it. **Do not set up the library again on other storage**: your notes and preferences are in the original `sortie`
+choose it. **Do not set up the library again on other storage**: your bookmarks and preferences are in the original `sortie`
 folder (shown under **Library setup → Where these settings live**).
 
 **Library setup says a settings file can't be used, or that settings changed on the card.** Sortie will not overwrite a
@@ -529,6 +535,11 @@ never uninstall Sortie for this.
 **Hide *N* games** switch keep games out of folders and shelves. There is currently no button to undo it inside Sortie;
 undoing it means editing the `hidden` list in `user.json` ([user.md](formats/user.md)).
 
+**Where did my journal and *Where was I?* notes go?** One bookmark per game replaced them. Before removing them from its
+settings, Sortie saved all of that writing, readable, in `sortie/archive/` (a `personal-notes-….md` file you can open with
+any text editor, plus a `.json` copy). *Where was I?* notes became bookmarks; journal screenshots stay in
+`sortie/journal/media/`. See the manual's *Older journal and notes* section.
+
 **Import from Cocoon doesn't list my Cocoon folder.** Sortie only offers folders whose gamelists carry Cocoon's own tags,
 so an ES-DE folder isn't offered. Type the folder's path (for example `/storage/emulated/0/Cocoon`) or pick it with the
 file browser.
@@ -545,10 +556,11 @@ For one game's choice, use **Launch with…** on its game page.
 ## Going further
 
 - **The [manual](../app/src/main/assets/MANUAL.md)** (also built in): every screen, the companion, the Hangar, the
-  switcher and Perf page, device stats, magazines, reference cards, the journal, backups and the radial keyboard.
-- **Backups:** **Settings → Backup and restore → Export backup…** saves your personal data, including the Hangar
-  companion, to a file. Reference images and journal screenshots are not in it: to keep them and your library setup,
-  copy the whole `sortie` folder.
+  switcher and Perf page, device stats, Tonight, bookmarks, the curated guide, magazines, reference cards, backups and the
+  radial keyboard.
+- **Backups:** **Settings → Backup and restore → Export backup…** saves your personal data, including bookmarks and the
+  Hangar companion, to a file. Reference images, the `sortie/archive/` folder of older notes and old journal screenshots are
+  not in it: to keep them and your library setup, copy the whole `sortie` folder too.
 - **Artwork and descriptions** from ES-DE-style gamelists and media folders: [systems.json](formats/systems.md) and
   [device.json](formats/device.md).
 - **Guides, smart folders, launch profiles and every other file:** [docs/formats/](formats/README.md), with a complete

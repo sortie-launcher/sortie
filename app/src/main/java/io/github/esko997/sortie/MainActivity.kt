@@ -12,22 +12,29 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import io.github.esko997.sortie.shell.TaskSwitcher
 import io.github.esko997.sortie.ui.AmbientBackground
+import io.github.esko997.sortie.ui.BookmarkInvitationHost
 import io.github.esko997.sortie.ui.Hotkeys
 import io.github.esko997.sortie.ui.LocalHotkeys
 import io.github.esko997.sortie.ui.Selection
@@ -99,6 +106,15 @@ class MainActivity : ComponentActivity() {
         hotkeys.handle(setOf(Hotkeys.Key.SWAP_SCREENS))
         lifecycleScope.launch { hotkeys.events.collect { if (it == Hotkeys.Key.SWAP_SCREENS) swapScreens() } }
         setContent {
+            val lifecycleState by lifecycle.currentStateFlow.collectAsState()
+            val windowFocused = LocalWindowInfo.current.isWindowFocused
+            val switcher by graph.switcher.state.collectAsState()
+            val overlayOpen = switcher.open && switcher.overlay
+            // The non-focusable switcher overlay can hide a resumed, focused navigation window.
+            // Its dismissal is a return even when Android sends no new lifecycle or focus callback.
+            LaunchedEffect(lifecycleState, windowFocused, overlayOpen) {
+                if (lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && windowFocused && !overlayOpen) vm.onForeground(taskId)
+            }
             SortieTheme {
                 AmbientBackground {
                     Surface(
@@ -111,7 +127,13 @@ class MainActivity : ComponentActivity() {
                             nav = controller
                             onDispose { nav = null }
                         }
-                        CompositionLocalProvider(LocalHotkeys provides hotkeys) { SortieNav(vm, controller) }
+                        CompositionLocalProvider(LocalHotkeys provides hotkeys) {
+                            // the post-session bookmark invitation floats over the navigation, never inside a screen
+                            Box(Modifier.fillMaxSize()) {
+                                SortieNav(vm, controller)
+                                BookmarkInvitationHost(vm, controller)
+                            }
+                        }
                     }
                 }
             }
@@ -200,7 +222,6 @@ class MainActivity : ComponentActivity() {
             homeResumed(this@MainActivity)
             navigationShown()
         }
-        vm.onForeground() // closes an open play session when we come back from an emulator
         showCompanion()
     }
 

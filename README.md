@@ -1,8 +1,10 @@
 <img src="branding/logo.svg" alt="Sortie" width="420">
 
 **An offline, controller-first game launcher for Android handhelds.** Sortie lists the games already on your device,
-starts them in the emulators you've installed, and keeps notes, backlog and play history beside them. It has no
-internet permission and never downloads games, BIOS files, emulators or artwork.
+starts them in the emulators you've installed, and keeps a bookmark per game, your backlog and play history beside them.
+A curated guide of short hand-written game notes ships inside the app, and **Tonight** picks up to five of your own games
+each day from your history and library metadata. It has no internet permission and never downloads games, BIOS files,
+emulators or artwork.
 
 > [!IMPORTANT]
 > **Sortie is built in collaboration with AI.** The code, the documentation and the optional Field Notes magazine are
@@ -10,7 +12,8 @@ internet permission and never downloads games, BIOS files, emulators or artwork.
 
 <img src="docs/screenshots/readme/home.png" alt="Sortie on a Retroid Pocket Nova: Home in By Console mode, a PlayStation 2 game grid with Armored Core 3 focused, the folded header and compact controller hints with a Controls button" width="100%">
 
-<sub>Captured on a Retroid Pocket Nova running signed beta 2115, with an existing library and artwork.
+<sub>Captured on a Retroid Pocket Nova running signed beta 2115, with an existing library and artwork, before Home's header
+gained the Split-S mark and Extras menu.
 [Capture notes and image credits](docs/screenshots/readme/PROVENANCE.md).</sub>
 
 ### **[Documentation → sortie-launcher.github.io/sortie](https://sortie-launcher.github.io/sortie/)**

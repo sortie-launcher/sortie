@@ -9,15 +9,16 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Controller grammar (docs/SPEC.md): A select · B back · X swap screens · Y favourite · Start search · Select context menu ·
- * L1/R1 previous/next folder · R2 Want to play. A and B are handled by the framework (focus click / back); the rest arrive here
- * as events that the current screen interprets. Keeping it an event bus avoids every screen owning a key handler. R2 on a game
- * tile or row never gets here: the focused tile consumes it (`Modifier.wantToPlayKey`); the event serves the game detail screen.
+ * L1/R1 previous/next folder · R2 Want to play · L2 leave a note (only while the post-session bookmark invitation shows). A and B
+ * are handled by the framework (focus click / back); the rest arrive here as events that the current screen interprets. Keeping
+ * it an event bus avoids every screen owning a key handler. R2 on a game tile or row never gets here: the focused tile consumes
+ * it (`Modifier.wantToPlayKey`); the event serves the game detail screen.
  *
  * One instance per activity window, provided to its screens through [LocalHotkeys]: Sortie's navigation and a built-in app can
  * be visible on two screens at once, and a key that reaches one window must never also act in the other.
  */
 class Hotkeys {
-    enum class Key { SEARCH, FAVOURITE, CONTEXT, SWAP_SCREENS, PREV_FOLDER, NEXT_FOLDER, WANT_TO_PLAY }
+    enum class Key { SEARCH, FAVOURITE, CONTEXT, SWAP_SCREENS, PREV_FOLDER, NEXT_FOLDER, WANT_TO_PLAY, NOTE }
 
     private val _events = MutableSharedFlow<Key>(extraBufferCapacity = 8)
     val events: SharedFlow<Key> = _events
@@ -84,6 +85,7 @@ class Hotkeys {
             KeyEvent.KEYCODE_BUTTON_L1 -> Key.PREV_FOLDER
             KeyEvent.KEYCODE_BUTTON_R1 -> Key.NEXT_FOLDER
             KeyEvent.KEYCODE_BUTTON_R2 -> Key.WANT_TO_PLAY
+            KeyEvent.KEYCODE_BUTTON_L2 -> Key.NOTE
             else -> null
         }
     }

@@ -7,6 +7,10 @@ import io.github.esko997.sortie.data.db.IndexMetaEntity
 import io.github.esko997.sortie.data.db.SQLITE_CHUNK
 import io.github.esko997.sortie.data.db.Signature
 import io.github.esko997.sortie.data.gamelist.GamelistParser
+import io.github.esko997.sortie.data.guide.CuratedCatalog
+import io.github.esko997.sortie.data.guide.CuratedGuide
+import io.github.esko997.sortie.data.guide.GuidePrecedence
+import io.github.esko997.sortie.data.magazine.SystemFamilies
 import io.github.esko997.sortie.data.manifest.GuideEntry
 import io.github.esko997.sortie.data.manifest.LibraryRules
 import io.github.esko997.sortie.data.manifest.ManifestStore
@@ -21,13 +25,16 @@ import kotlinx.coroutines.withContext
 
 /**
  * Builds the games table from the card. Incremental: a file whose (path, size, mtime) signature is unchanged keeps its row
- * unless the system's metadata (gamelist mtime, guide and hack-rules stamp, media folder mtime) or its folder changed; rows for files that
- * disappeared are deleted. Never runs when the card cannot be read, so an unmounted card or a missing permission cannot empty
- * the index. The same holds per system: a configured folder that is missing or unreadable is not an empty folder, so while any
- * of a system's folders is unavailable none of its rows are deleted (files found elsewhere are still added and updated), and
- * the report says which folder is unavailable.
+ * unless the system's metadata (gamelist mtime, guide, bundled catalogue and hack-rules stamp, media folder mtime) or its folder
+ * changed; rows for files that disappeared are deleted. Never runs when the card cannot be read, so an unmounted card or a
+ * missing permission cannot empty the index. The same holds per system: a configured folder that is missing or unreadable is
+ * not an empty folder, so while any of a system's folders is unavailable none of its rows are deleted (files found elsewhere are
+ * still added and updated), and the report says which folder is unavailable.
+ *
+ * Editorial fields (fit, hook, flags, tags, controls, hand-written) come from the card's guide.json and, where it leaves gaps,
+ * from the [curated] catalogue bundled with the app; see [GuidePrecedence].
  */
-class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
+class Indexer(private val dao: GameDao, private val manifests: ManifestStore, private val curated: CuratedGuide) {
     data class Report(val systems: Int, val files: Int, val updated: Int, val removed: Int, val millis: Long, val problems: List<String>, val variants: Int = 0)
 
     private val lock = Mutex()
@@ -46,9 +53,11 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
         var removed = 0
         var variants = 0
         val problems = mutableListOf<String>()
+        val catalog = curated.catalog
+        val families = SystemFamilies(snap.systems)
         for (sys in snap.systems) {
             try {
-                val r = indexSystem(root, sys, snap.guide, snap.guideStamp, snap.library, force)
+                val r = indexSystem(root, sys, snap.guide, snap.guideStamp, catalog, families, snap.library, force)
                 files += r.files
                 updated += r.updated
                 removed += r.removed
@@ -74,12 +83,14 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
         sys: SystemDef,
         guide: Map<String, GuideEntry>,
         guideStamp: String,
+        catalog: CuratedCatalog,
+        families: SystemFamilies,
         rules: LibraryRules,
         force: Boolean
     ): SystemResult {
         val gamelistFile = sys.gamelist?.let { resolve(root, it) }?.takeIf { it.isFile }
         val mediaDir = sys.media?.let { resolve(root, it) }?.takeIf { it.isDirectory }
-        val meta = IndexMetaEntity(sys.id, gamelistFile?.lastModified() ?: 0L, metaStamp(guideStamp, rules), mediaDir?.lastModified() ?: 0L)
+        val meta = IndexMetaEntity(sys.id, gamelistFile?.lastModified() ?: 0L, metaStamp(guideStamp, catalog.stamp, rules), mediaDir?.lastModified() ?: 0L)
         val metaChanged = force || dao.meta(sys.id) != meta
         val existing = dao.signatures(sys.id).associateBy { it.id }
         val scan = scan(root, sys, rules)
@@ -92,8 +103,15 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
             val sig = existing[fd.id]
             val stem = fd.file.name.substringBeforeLast('.')
             val gl = gamelist[fd.file.name]
-            val g = guide[fd.id]
+            val external = guide[fd.id]
             val title = gl?.name?.takeIf { it.isNotBlank() } ?: cleanTitle(stem)
+            // an individually authored guide.json entry is complete; otherwise the bundled catalogue may fill its gaps
+            val bundled = if (external?.auto == false) {
+                null
+            } else {
+                catalog.match(sys.id, fd.file.name, title, HackMarks.isHack(fd.file.name, hackRx, external), families)?.variant
+            }
+            val g = GuidePrecedence.effective(external, bundled)
             rows += GameEntity(
                 id = fd.id, systemId = sys.id, folder = sys.folder, fileName = fd.file.name, path = fd.file.path, size = fd.size, mtime = fd.mtime,
                 title = title, sortTitle = sortKey(title), desc = gl?.desc, rating = gl?.rating, year = gl?.releaseYear,
@@ -176,10 +194,11 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore) {
         internal fun resolve(cardRoot: File, path: String): File = if (path.startsWith("/")) File(path) else File(cardRoot, path)
 
         /**
-         * The stored guide stamp: guide.json's own stamp plus the hack rules ([HackMarks.stamp]), so an app upgrade that changes
-         * the rules or a new `hackRegex` reclassifies cached rows on the next ordinary pass, not only after a forced rescan.
+         * The stored guide stamp: guide.json's own stamp, the bundled curated catalogue's ([CuratedCatalog.stamp], its content
+         * digest) and the hack rules ([HackMarks.stamp]), so an app upgrade that changes the shipped prose or the rules, or a new
+         * `hackRegex`, rebuilds cached rows on the next ordinary pass, not only after a forced rescan.
          */
-        internal fun metaStamp(guideStamp: String, rules: LibraryRules): String = "$guideStamp|${HackMarks.stamp(rules)}"
+        internal fun metaStamp(guideStamp: String, curatedStamp: String, rules: LibraryRules): String = "$guideStamp|$curatedStamp|${HackMarks.stamp(rules)}"
 
         /** Lists every root of [sys] once (immediate files only). Missing and unreadable roots are recorded, never read as empty. */
         internal fun scan(cardRoot: File, sys: SystemDef, rules: LibraryRules): Scan {

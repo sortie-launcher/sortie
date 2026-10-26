@@ -201,6 +201,23 @@ class MagazinePackTest {
     }
 
     @Test
+    fun sequencePanelsResolveLikeAnyOtherPicture() {
+        val magazines = tmp.newFolder("magazines")
+        val dir = writeIssue(magazines, "field-notes-001", issueJson())
+        File(tmp.root, "secret.webp").writeBytes(byteArrayOf(9))
+        File(dir, "media/one.webp").writeBytes(byteArrayOf(1))
+        File(dir, "articles/a-one.md").writeText(
+            "Intro\n\n![One](media/one.webp \"sequence\")\n![Escape](../../secret.webp \"sequence\")\n![Gone](media/gone.webp \"sequence\")\n"
+        )
+        val issue = readShelf(magazines).issues.single()
+        val content = readArticle(issue.dir, issue.issue.articles.single()) as ArticleContent.Ready
+        assertEquals(3, (content.blocks[1] as MdBlock.Sequence).panels.size)
+        assertEquals(File(issue.dir, "media/one.webp").canonicalFile, content.images.getValue("media/one.webp").file)
+        assertTrue(content.images.getValue("../../secret.webp").problem!!.contains("inside this issue"))
+        assertTrue(content.images.getValue("media/gone.webp").problem!!.contains("missing"))
+    }
+
+    @Test
     fun symlinksCannotLeadOutOfTheIssue() {
         val outside = tmp.newFolder("outside")
         File(outside, "a-one.md").writeText("# Not part of the issue")

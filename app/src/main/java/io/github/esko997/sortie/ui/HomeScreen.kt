@@ -3,6 +3,7 @@ package io.github.esko997.sortie.ui
 import android.view.Display
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,11 +60,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.esko997.sortie.R
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
@@ -151,8 +154,10 @@ private class HomeTile(
  * Home: systems in one of three generated, fixed orders (alphabetical, game count, generation) or the custom layout, which
  * also holds Continue, every smart folder and Apps ([HomeIds.custom]) plus the systems, games, apps and shortcuts the user placed.
  * Custom tiles have an edit mode: hold A → Move lifts the tile, the D-pad moves it one slot per press, A drops (persisted via
- * `setLayout`), B cancels; touch drops it on the tapped tile. The header and sort row fold to one strip (title, clock, count,
+ * `setLayout`), B cancels; touch drops it on the tapped tile. The header and sort row fold to one strip (mark, clock, count,
  * sort, Search, chevron) while browsing the tiles ([BrowseChrome]); Up from the first row opens them on the chosen sort.
+ * The header's actions are Apps, Search, Extras (a menu: [onTonight], the Hangar where the companion lives, [onMagazines])
+ * and Settings, which also holds Library setup and the manual. [onLibrary] is the empty library's way forward.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -162,11 +167,10 @@ fun HomeScreen(
     onFolder: (String) -> Unit,
     onGame: (String) -> Unit,
     onSearch: () -> Unit,
-    onDiagnostics: () -> Unit,
+    onSettings: () -> Unit,
     onApps: () -> Unit,
-    onManual: () -> Unit,
+    onTonight: () -> Unit,
     onMagazines: () -> Unit,
-    onJournal: () -> Unit,
     onLibrary: () -> Unit
 ) {
     val systems by vm.systems.collectAsState()
@@ -383,13 +387,32 @@ fun HomeScreen(
         }
     }
     val stage = LocalMechaStage.current
-    // an empty library has nothing to browse: the header (Library setup, Apps, Magazines …) stays open
+    // an empty library has nothing to browse: the header (Apps, Search, Extras, Settings) stays open above the setup button
     val chrome = rememberBrowseChrome(user.browseChrome, pinned = total == 0)
     // Up from the grid's first row while the header is folded opens it on the chosen sort, the row just above the grid
     val sortFocus = remember { FocusRequester() }
-    // A controller user lands back on the Hangar button once the Hangar's window is gone (on the strip's chevron when the
-    // header has folded meanwhile, e.g. the Hangar was opened by tapping him); touch keeps touch mode.
-    val hangarButton = remember { FocusRequester() }
+    // The Extras button is the controller's way back after its menu: B or Cancel returns the focus to it, and so does the
+    // Hangar's window closing (on the strip's chevron when the header has folded meanwhile, e.g. the Hangar was opened by
+    // tapping him); touch keeps touch mode. A destination chosen from the menu takes the focus with it instead.
+    val extrasButton = remember { FocusRequester() }
+    val refocusExtras = {
+        if (inputModes.inputMode == InputMode.Keyboard) runCatching { (if (chrome.expanded) extrasButton else chrome.showFocus).requestFocus() }
+    }
+    var extrasOpen by remember { mutableStateOf(false) }
+    var extrasWasOpen by remember { mutableStateOf(false) }
+    var extrasChosen by remember { mutableStateOf(false) }
+    LaunchedEffect(extrasOpen) {
+        if (extrasOpen) {
+            extrasWasOpen = true
+            extrasChosen = false
+            return@LaunchedEffect
+        }
+        if (!extrasWasOpen) return@LaunchedEffect
+        extrasWasOpen = false
+        if (extrasChosen) return@LaunchedEffect
+        delay(60)
+        refocusExtras()
+    }
     val hangarOpen = stage?.hangarOpen == true
     var hangarWasOpen by remember { mutableStateOf(false) }
     LaunchedEffect(hangarOpen) {
@@ -400,12 +423,12 @@ fun HomeScreen(
         if (!hangarWasOpen) return@LaunchedEffect
         hangarWasOpen = false
         delay(60)
-        if (inputModes.inputMode == InputMode.Keyboard) runCatching { (if (chrome.expanded) hangarButton else chrome.showFocus).requestFocus() }
+        refocusExtras()
     }
     val identity: @Composable () -> Unit = {
         // the companion may stand just after the clock and game count when the header leaves room there, and poke them
         Row(Modifier.mechaSpot("home:identity", MechaSpotKind.BESIDE_END, props = setOf(MechaProp.POKE)), verticalAlignment = Alignment.CenterVertically) {
-            Text("Sortie", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            SortieMark(HEADER_MARK_HEIGHT)
             Spacer(Modifier.width(12.dp))
             Clock()
             Spacer(Modifier.width(12.dp))
@@ -418,21 +441,18 @@ fun HomeScreen(
     }
     val actions: @Composable () -> Unit = {
         GlowButton("Apps", onClick = onApps)
-        if (stage != null) GlowButton("Hangar", Modifier.focusRequester(hangarButton), onClick = stage::openHangar)
-        GlowButton("Library setup", onClick = onLibrary)
         GlowButton("Search", onClick = onSearch)
-        GlowButton("Magazines", onClick = onMagazines)
-        GlowButton("Journal", onClick = onJournal)
+        GlowButton("Extras", Modifier.focusRequester(extrasButton)) { extrasOpen = true }
+        // Settings and the chevron wrap together: the chevron always ends the header
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GlowButton("📖", Modifier.semantics { contentDescription = "Manual" }, onClick = onManual)
-            GlowButton("Settings", onClick = onDiagnostics)
+            GlowButton("Settings", onClick = onSettings)
             HideHeaderButton(chrome)
         }
     }
     val configuration = LocalConfiguration.current
     val short = configuration.screenHeightDp < SHORT_HEIGHT_DP
     val narrow = configuration.screenWidthDp < NARROW_WIDTH_DP
-    // the title on its own line and the actions on one scrolling line beneath, unless a short screen puts both on one line
+    // the mark on its own line and the actions on one scrolling line beneath, unless a short screen puts both on one line
     val actionsLine = narrow || (!short && configuration.screenWidthDp < WRAP_ACTIONS_MIN_WIDTH_DP)
 
     val empty = total == 0 && !index.running
@@ -447,7 +467,7 @@ fun HomeScreen(
                     Modifier.mechaObstacle("home:strip", interactive = true, solid = false),
                     actions = { GlowButton("Search", onClick = onSearch) }
                 ) {
-                    Text("Sortie", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+                    SortieMark(STRIP_MARK_HEIGHT)
                     Clock()
                     Text(
                         "$total games · $sortLabel",
@@ -542,7 +562,7 @@ fun HomeScreen(
                 )
                 GlowButton(if (manifest.systems.isEmpty()) "Set up library" else "Manage library", primary = true, onClick = onLibrary)
                 Text(
-                    "You can also use Apps, read Magazines or open the Manual without adding games.",
+                    "Without games you can still use Apps, read Magazines from Extras, or open the manual in Settings.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -691,6 +711,39 @@ fun HomeScreen(
         }
         ContextSheet(t.title, actions) { sheet = null }
     }
+
+    if (extrasOpen) {
+        // each choice is marked before the menu's close is handled, so the focus is not pulled back to Extras behind it
+        val choose = { go: () -> Unit ->
+            {
+                extrasChosen = true
+                go()
+            }
+        }
+        ContextSheet(
+            "Extras",
+            listOfNotNull(
+                SheetAction("Tonight", choose(onTonight)),
+                stage?.let { s -> SheetAction("Hangar", choose(s::openHangar)) },
+                SheetAction("Magazines", choose(onMagazines))
+            )
+        ) { extrasOpen = false }
+    }
+}
+
+/** The approved amber Split-S, cropped to its strokes ([R.drawable.sortie_mark]). */
+private const val MARK_ASPECT = 94f / 80f
+private val HEADER_MARK_HEIGHT = 30.dp
+private val STRIP_MARK_HEIGHT = 24.dp
+
+/** Home's identity in place of a "Sortie" heading: the Split-S at [height], read out as "Sortie". A mark, not a control. */
+@Composable
+private fun SortieMark(height: Dp) {
+    Image(
+        painterResource(R.drawable.sortie_mark),
+        contentDescription = "Sortie",
+        modifier = Modifier.height(height).aspectRatio(MARK_ASPECT)
+    )
 }
 
 /** Renders a [HomeTile] as a square tile (grid) or a row (list); [lifted] marks the tile being moved. */

@@ -2,20 +2,20 @@
 
 Sortie is an offline, controller-first game launcher. It lists the games already on your device and starts them with the
 emulators you have installed. Set up your library on the device (below), or use a library prepared on a computer.
-Preferences, personal game notes and play history live on the device. Sortie has no internet access and never downloads games,
+Preferences, bookmarks and play history live on the device. Sortie has no internet access and never downloads games,
 BIOS files or emulators.
 
 ## Getting started
 
 1. **All files access.** On first start Sortie asks for Android's *All files access*. It is needed to read your game folders
-   and to keep Sortie's settings and your notes. **Open settings** goes to the switch; if your device opens a different page,
+   and to keep Sortie's settings and your bookmarks. **Open settings** goes to the switch; if your device opens a different page,
    look for Settings → Apps → Special app access → All files access → Sortie. Everything else Sortie can ask for is optional.
 
 2. **Install your emulators first** and finish each one's own first-run setup. Sortie only starts emulators that are already
    installed. BIOS or firmware files, RetroArch cores (RetroArch → Online Updater) and emulator settings are set up inside
    each emulator; Sortie cannot do that for you and does not supply them.
 
-3. **Home → Library setup** (or **Settings → Library and emulators**) → **Add a system…**. Pick the kind of games, e.g.
+3. **Set up library** on Home (later **Settings → Library and emulators**) → **Add a system…**. Pick the kind of games, e.g.
    *PlayStation 2* or *Game Boy Advance*, or **Something else…** to name your own. Then:
    - **Add a folder…** and browse to the folder that holds the game files themselves, then **Use this folder**. Add as many
      folders as you need; they can be on internal storage or a memory card.
@@ -49,11 +49,11 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 ### Maintaining your library
 
 - Select a system in Library to rename it, add, replace or remove folders, change file types or reorder emulators. A system
-  keeps its identity when edited, so its favourites, notes and play history stay attached.
+  keeps its identity when edited, so its favourites, bookmarks and play history stay attached.
 - **BIOS and save folders** (optional): the BIOS folder lets Sortie mark games whose listed BIOS files are missing; save
   folders let the **💾 started** filter recognise games with saves. Emulators keep their own BIOS and save settings.
 - **Remove from library…** takes a system off Sortie's lists only. Game files, saves and BIOS files stay where they are;
-  favourites, notes and play history are kept and return if the games are added again under the same system.
+  favourites, bookmarks and play history are kept and return if the games are added again under the same system.
 - A library prepared on a computer keeps working. Library changes only what you edit; other systems and settings stay
   exactly as written. If a settings file can't be read, Sortie says so and will not save over it. If the settings changed
   on the card while you were editing, **Reload** keeps your draft and shows the current settings before you save again.
@@ -63,9 +63,9 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 ### Missing storage, permissions and failed launches
 
 - If the memory card holding your games or Sortie's **sortie** folder is removed, Sortie keeps its index of your games and
-  does not start a new library elsewhere. Until the card is back, its systems, games and the notes stored on it may be
+  does not start a new library elsewhere. Until the card is back, its systems, games and the bookmarks stored on it may be
   missing from the lists. **Reinsert the card** (or turn All files access back on), then re-index. Do not set the library up
-  again on other storage: your notes and preferences are in the original **sortie** folder.
+  again on other storage: your bookmarks and preferences are in the original **sortie** folder.
 - After reconnecting saved settings, **Library setup → Try again** may restart Sortie so every screen reads the restored
   library and preferences. Returning to Sortie can do the same. Changes made while storage is missing are not saved;
   Sortie will not replace a restored preferences file with the empty defaults it had while that file was unavailable.
@@ -88,6 +88,7 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 - **R2** on a game (in any list, grid or on Home) or on a game's page: add to / remove from *Want to play*, a queue separate
   from favourites. The *Want to play* folder is always on **Home → Custom**; launching a game keeps it queued
 - **Y** on Home: search. On a game's page: favourite
+- **L2**: while the after-playing bookmark card shows, leave a note. In a magazine article: browse the picture sequence in view
 - **Select**: list ↔ grid; on a game's page: "launch with…" (pick the launcher once)
 - **Home key**: the switcher (see below)
 - **Swipe down from the top edge**: the status bar
@@ -107,9 +108,13 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
   it, A drops it, B cancels. Existing pins keep their order. Smart folders, Apps and Continue can be moved but not removed.
 - **Apps** includes Sortie's built-in **Magazines** and **Performance**, installed apps and the shortcuts you have opted
   in to ("Browse all shortcuts…"). When another app offers to add a shortcut, Sortie names it and asks first: **Add** or **Cancel**.
-- **📖**, beside Settings, opens this manual directly. **Library setup** manages systems, folders and emulators; **Magazines**
-  opens the offline reading shelf; **Journal** opens your week in games.
+- The header starts with the amber Split-S mark (a screen reader reads it as "Sortie"; it is not a button), the clock and the
+  game count. Its buttons are **Apps**, **Search**, **Extras** and **Settings**.
+- **Extras** opens a short menu: **Tonight** (see below), **Hangar** (the companion's home) and **Magazines**. **A** opens the
+  focused choice; **B** or **Cancel** closes the menu and puts the focus back on Extras.
+- **Settings** holds **Library and emulators** and, under Help, **Sortie manual** (this manual).
 - With no games yet, Home shows **Set up library** (or **Manage library** when systems are set up but no games were found).
+  Apps, Magazines and the manual work without any games.
 
 ## Lists and grids
 
@@ -127,12 +132,13 @@ The small **hack** mark on game tiles and list rows identifies a hack, translati
 explicit guide flags and filename markers, not guesses from the description. A missing mark does not guarantee an
 unmodified release. The favourite star and personal controller-support badge remain separate.
 
-On narrow portrait screens, Home puts its actions on a sideways-scrolling row below the clock. Short landscape screens put
-that row beside the title, leaving room for tiles. Larger screens keep the wrapping header. Sort choices scroll sideways
+On narrow portrait screens, Home puts its actions on a sideways-scrolling row below the mark and clock. Short landscape
+screens put that row beside them, leaving room for tiles. Larger screens keep the wrapping header. Sort choices scroll sideways
 (touch or D-pad), and controller hints wrap as whole button/action pairs. Switching list/grid retains the selected tile.
 **Settings → Header and hints** can fold this header and the hints out of the way while you browse (see Settings).
 
-System and folder filter chips: **Fit 4+** (guide rating 4 or 5), **✍ notes** (guide or personal notes), **💾 started** (a save or state exists
+System and folder filter chips: **Fit 4+** (guide rating 4 or 5), **✍ notes** (a hand-written guide note, including the
+built-in curated guide, or your bookmark), **💾 started** (a save or state exists
 on the card), **on device** (hide placeholders for games not copied yet). **🎲 Pick one** opens a random game from what is shown.
 The title stays above these controls. On smaller screens, the controls wrap onto additional rows rather than shrinking.
 
@@ -152,7 +158,7 @@ Search accepts a title, tag, genre, developer or description fragment. Text is o
   With no results it goes to the filter buttons. **Up** from results reaches those buttons.
 - Open a game and return with **B**: your text, filters and browsing position remain.
 
-In multiline note, verdict and reference-card editors, controller Up/Down moves between fields and controls rather than moving
+In multiline bookmark, verdict and reference-card editors, controller Up/Down moves between fields and controls rather than moving
 the text caret. Down from the last field goes to **Save** when there are changes; Cancel and Clear remain deliberate choices.
 Touch and keyboard arrows still position the caret, and **A** on a text field brings up the keyboard.
 
@@ -184,8 +190,9 @@ only one of him.
   edge still hands him across. The receiving screen must already show Sortie and have room for him; he never opens
   anything over a game. Otherwise he stays on this screen. Animate off skips the flight.
   A quick swipe before picking him up still scrolls whatever is under him.
-- **Hangar** in Home's header opens the Hangar with the controller. In an article, **Select → Visit the hangar** also works.
-  **B** returns from Gallery to Workshop, then closes the Hangar without losing your place.
+- **Extras → Hangar** on Home opens the Hangar with the controller. In an article, **Select → Visit the hangar** also works.
+  **B** returns from Gallery to Workshop, then closes the Hangar without losing your place; on Home the focus returns to
+  **Extras**.
 - **Workshop** lets you name your companion, tune it, charge it, or put it to sleep. Charge and condition never run down
   while you are away, and neither can stop you playing or using the companion.
 - Choose a part slot and **Equip** an owned part, or wear a complete family set. Mixing families is encouraged.
@@ -202,7 +209,7 @@ Your companion survives app restarts and in-place updates, and **Backup and rest
 ## Built-in apps
 
 **Apps → Magazines** and **Apps → Performance** open as separate app windows, not pages inside the switcher.
-Home's **Magazines** button opens the same reader. With two screens, choose **Open here** or **Open on the other screen**;
+**Extras → Magazines** on Home opens the same reader. With two screens, choose **Open here** or **Open on the other screen**;
 on one screen it opens directly. The companion's **+** and the switcher's **Open app…** also list both built-ins and already
 know which screen you chose.
 
@@ -217,7 +224,7 @@ know which screen you chose.
 
 ## Offline magazines
 
-**Home → Magazines** opens illustrated offline zines: editorials, contents, gameplay and mechanics, history, reception and
+**Extras → Magazines** (or **Apps → Magazines**) opens illustrated offline zines: editorials, contents, gameplay and mechanics, history, reception and
 sources. Some Sortie builds include a set of issues; a build without them starts with an empty shelf. Either way you can add
 issue packs on the card yourself. Nothing is downloaded while reading.
 Pictures in issues belong to their rights holders and are credited in each issue’s sources.
@@ -232,6 +239,13 @@ Pictures in issues belong to their rights holders and are credited in each issue
   a zoomed picture; **Left/Right** (when not zoomed), **L1/R1** or **Previous/Next** step through the article's pictures;
   **Y** shows or hides the caption. **B**, Back, a single tap or **Close** returns to the article exactly where you were.
   On two-screen devices the picture opens on the screen you are reading on; the companion screen shows no pictures.
+- Some articles contain a **picture sequence** (experimental): two to twelve captioned pictures meant to be seen in order,
+  such as a route or a before and after. On a wide screen they form one row with the chosen picture in the middle and its
+  neighbours at the sides; swipe the row to choose a picture, or tap one to choose it and see it full screen. With a
+  controller, press **L2** while the hint bar offers **browse images**: **Left/Right** then choose a picture instead of
+  turning the page, **R2** opens the chosen one full screen, **Up/Down** still scroll, and **L2** or **B** stop browsing.
+  Browsing also stops when the sequence scrolls out of view. On a narrow screen the pictures are stacked like ordinary
+  pictures. The chosen picture is remembered with your reading position; browsing does not resume on its own.
 - **Games mentioned** in an issue lists games regardless of ownership. **All / On this device** toggles the local filter.
   A file still copying, a placeholder or an unreadable file is not counted as available; availability is not a compatibility promise.
 - **A** in an article opens its game references or a matching library page, never launches the game. Multiple local copies
@@ -268,9 +282,42 @@ The **Want to play** folder is always on **Home → Custom**, even when empty. I
 actions remove a queued game; launching it does not. Hidden games stay hidden; games temporarily missing from the library
 reappear when indexed again. The queue is saved on the card and included in backups.
 
+## Tonight
+
+**Extras → Tonight** on Home suggests up to five of your games for today, one at a time: a gameplay screenshot (or the
+cover), the title and system, why it was picked, a short excerpt of the guide's hook (the full text is on the game's page),
+and **Play**, **Details** and, for a Field Notes pick, **Read article**, which opens that exact article. The chips along the
+top, or **L1/R1**, move between the picks; when a pick's text is longer than the screen, move onto it and scroll with the
+D-pad. The buttons stay in view. **B** goes back. Returning from Details or the article (B) brings you back to the same pick.
+
+Each pick follows one plain rule, and its reason says which rule and what it used:
+- **Pick up again**: a game you have played, bookmarked games first, then the most recently played. Its bookmark is shown.
+- **From Field Notes**: a game here that a magazine article discusses, articles you haven't finished first.
+- **Familiar ground**: an unplayed game by the same developer as one of your five most-played games, or else in the same genre.
+- **Something different**: an unplayed game on a system and in a genre your play history hasn't touched, or else one of the two.
+- **Wild card**: today's random draw from the rest of your library.
+
+When a rule has nothing to work with (no play history yet, no playable Field Notes game), that pick is labelled
+**Discovery** and says why. It is then a Want to play game, else an unplayed game with a hand-written guide note, else the
+best-rated unplayed game in your library's metadata, else any unplayed game. No game appears twice. Hidden, Finished,
+Shelved, not-yet-copied, still-arriving and missing games are left out, so a small library gets fewer than five.
+
+There are no questions, settings or rerolls, and nothing is fetched: Sortie chooses from what it already knows. The first
+time you open Tonight on a date, it chooses that day's set and saves it on this device before showing it. Opening Tonight
+again that day, after a restart, a re-index or more play, shows the same set. While you stay in Tonight, including trips to
+Details and back, it keeps the date it opened on, even past midnight. Opening Tonight again later, or after Sortie has
+restarted, uses the current date: a new date gets its own set, never yesterday's. A saved pick that can no longer be played (removed, hidden since,
+not copied or missing) stays in its place, dimmed with the reason, instead of being replaced.
+
+- If the day's picks can't be saved, Tonight says so instead of showing a set it could not keep. Free some storage on the
+  device, then open Tonight again.
+- While the library is still indexing, Tonight waits for it to finish. If nothing can be played, it says so and saves
+  nothing, so a later visit that day can choose.
+- The saved picks stay inside the app on this device: they are not on the card and not in backups.
+
 ## A game's page
 
-Art, fit stars, hook, description, play time and (when written) control notes. **Play / A** launches with the first working
+Art, fit stars, hook, description, play time, your bookmark and (when written) control notes. **Play / A** launches with the first working
 launcher; **Select** lets you pick one for this game permanently. The order tried: this game's choice → the system default
 from Settings → the system's emulator list in Library setup. **Open with…** is used only if you explicitly choose it or add it
 to that list. A per-game or one-off chooser pick never changes the system default. A system whose first configured
@@ -280,13 +327,43 @@ Cancelling Android's app chooser does not start a play session. If nothing start
 If the emulator closes within about three seconds of starting and you did not press Home, the page says so next to
 **Play** for about twelve seconds (a short message elsewhere if you have left the page); Sortie does not retry by itself.
 
-**Add notes / Edit notes** opens your own notes and controls:
-- **Where was I?**: save slot, next objective or anything useful when returning.
-- **What it needs**: Pad OK, Pointer, Motion, Touch or Not set. This is your assessment, not an automatic compatibility test.
-- **My mapping notes**: your button bindings or emulator setup.
+**Leave a note** (or **Edit bookmark** once there is one) opens the game's **bookmark**: one short text about where you are
+and what to do next, such as the level, boss or save slot. Each game has one bookmark.
+- **Save** replaces the previous bookmark. **Cancel / B** keeps it exactly as it was.
+- **Clear**, then **Remove bookmark**, deletes it.
+- Up to 2,000 characters; a longer draft shows its length and can't be saved until shortened. Nothing is cut off.
+- If the card can't be written, the editor stays open with your draft and says so; **Save** tries again.
 
-**Save** writes to the card; **Cancel / B** discards the draft. **Clear all**, then Save, removes your entry. These notes do not
-change the desktop guide. The compact controller badge also appears beside the game in grids and lists.
+The bookmark shows on the game's page and on the companion screen, and Tonight's **Pick up again** favours bookmarked games.
+
+**What it needs** records your own assessment: Pad OK, Pointer, Motion, Touch or Not set. This is not an automatic
+compatibility test. The guide's control notes are shown beside it for reference and are never edited there. **Save**
+keeps the choice; **Cancel / B** discards it. The compact controller badge also appears beside the game in grids and lists.
+
+**After playing.** When a game you started from Sortie has closed, a small card at the bottom of Sortie's main screen can ask
+*Leave a text note about where you are in the game for when you return?* It is not a dialog: it takes no focus and opens no
+keyboard. **Leave a note** (or **L2**) opens that game's bookmark editor; **Not now** dismisses it, and so does launching
+something else or leaving it for 45 seconds. It appears at most once per session, only on the main screen (never on the
+companion screen, a built-in app, the switcher or a quick visit to Home while the game runs) and not when the game closed
+within about three seconds of starting. Telling a closed game from a visit to Home needs Shizuku: without it, or whenever
+Sortie can't be sure the game ended, no card appears and you leave bookmarks from the game's page. Turn the card off with
+**Settings → Bookmarks → Offer a bookmark after playing**.
+
+## The built-in curated guide
+
+Sortie comes with short, hand-written notes about more than a thousand games: a one-line hook, badges such as *hack*,
+*Japanese only* or *long*, and for a few games control notes. They attach to your own copies of those games automatically,
+on a fresh install with nothing to prepare, and show on the game page, the companion screen and Tonight.
+
+- Matching is deliberately strict. The system must match, and the title must be the same once region, language, disc and
+  revision labels are set aside. Hacks, translations, remakes and other editions only get notes written for them, and a
+  file that two entries could claim gets neither. Most games in a large library have no curated note; that is expected.
+- A **guide.json** on the card (prepared on a computer) always comes first. Its hand-written entries are used as they are;
+  the built-in guide only fills empty hooks, control notes and badges. The built-in guide has no fit stars or tags.
+- Updates to the built-in guide arrive with app updates and apply at the next index pass (**Library setup → Re-index every
+  system** runs one).
+- Your bookmarks, controller assessments, verdicts, reference cards and clippings are stored separately and never change
+  the guide's text, built in or on the card.
 
 ## Finished and Shelved
 
@@ -316,27 +393,27 @@ Cards are short references, not a PDF or web browser. Markdown images/links are 
 Imports over 256 KiB of Markdown or 24 MiB per image are refused. Each game can hold up to 200 cards, with 100,000 text
 characters per card. Missing images show an explanation; text remains available.
 
-## Weekly gaming journal
+## Older journal and notes (archive)
 
-**Home → Journal** shows Monday–Sunday weeks from Sortie's recorded play history. **L1/R1** or the week buttons browse;
-**This week** returns to today. Sessions crossing midnight are split across the relevant days. Unfinished sessions and
-sessions with an unknown length are labelled and add no invented play time.
+Earlier versions of Sortie had a weekly journal and, per game, *Where was I?* and *My mapping notes* fields. One bookmark per
+game replaces them. When Sortie finds that older writing in its settings file (or in a backup being restored), it first
+saves all of it, readable, in the **archive** folder inside the **sortie** folder:
+- a Markdown file named **personal-notes-**, followed by a code, with every note in full and the journal entries with their
+  dates, linked games and sessions, and the paths of their screenshots;
+- a JSON file of the same name holding the exact original data.
 
-- **A / tap** a day starts a dated note; choose a recorded session to write about that session. **New note** works without
-  any play history. You can change the date, optionally link a game, and write what happened or what you want to try next.
-- **Add screenshots…** lets you explicitly choose up to 12 pictures per note. Sortie copies those pictures onto the card;
-  it does not capture the screen or scan your gallery. Large images are resized to keep them practical on the handheld.
-- Open an attached picture to pan/zoom; **A** toggles zoom, **L2/R2** adjusts it, and **B** closes the viewer.
-- **Save** commits the note and opens its week, including future dates. **Cancel / B** discards the draft and newly imported
-  attachments. Editing or deleting a journal note does not change the recorded session. Deletion requires confirmation.
-
-Notes, references, shelf verdicts and clippings are yours, stored separately from the desktop-authored game guide.
+Only after both files are written does Sortie save its settings without the old fields. Each *Where was I?* note becomes
+that game's bookmark (a bookmark you already have is kept). Mapping notes and journal entries remain only in the archive:
+open the Markdown file with any text editor or file manager. Journal screenshots stay untouched in **sortie/journal/media/**.
+Your play history is not affected. If the archive can't be written (the card is full or read-only, for example), Sortie
+keeps the old settings file as it is and refuses to save settings, export or restore a backup or import from Cocoon,
+saying why, until the archive can be written.
 
 ## The other screen (companion)
 
-While you browse, the companion follows the focused game: art, hook, description, notes and play stats — read without leaving
-the list. This also works when another game is running behind Sortie. When you return to gameplay, it shows that game's timer,
-**Where was I?** reminder and control notes. With nothing selected or playing, it rotates through recommended unplayed games;
+While you browse, the companion follows the focused game: art, hook, description, your bookmark and play stats — read without
+leaving the list. This also works when another game is running behind Sortie. When you return to gameplay, it shows that
+game's timer, bookmark and the guide's control notes. With nothing selected or playing, it rotates through recommended unplayed games;
 tapping one opens it.
 The line below a game's title shows its platform, year, developer and genre when available, separately from the guide hook.
 
@@ -384,9 +461,10 @@ RAM and the battery temperature show. FPS and power draw are not shown.
 
 **Library and emulators** (systems, game folders, emulators, BIOS/save folders, re-index), **Default home app** (once you
 have games), layouts (home/browse grid, sideways grids, rows and columns, app tile density, header and hints), hero rotation,
-the overlay switcher, device stats, a default launcher per system, the optional **Radial keyboard**, **Backup and restore**,
-**Import from Cocoon…**, Diagnostics and this manual. Smart folders, guide notes, logos and custom launch profiles still
-come from a computer-prepared card if you use one.
+the overlay switcher, **Bookmarks** (whether to offer a bookmark after playing; on by default), device stats, a default
+launcher per system, the optional **Radial keyboard**, and under Help **Sortie manual** (this manual), **Backup and restore**,
+**Import from Cocoon…** and Diagnostics. Smart folders, a **guide.json**, logos and custom launch profiles still come from a
+computer-prepared card if you use one; the curated guide is built in.
 
 **Header and hints (Home and browse)** sets how much room Home, system lists, folders, search and Apps give their header
 and button hints: *Auto* (the default), *Expanded* or *Compact*; **A** cycles. *Auto* is compact when the window is short or
@@ -422,7 +500,7 @@ a fresh preview, and a broken library configuration must be repaired before impo
 ## Radial keyboard
 
 An optional Android keyboard, not a global controller shortcut. It works in normal text fields, including Chrome and Sortie's
-search and notes. In **Settings → Radial keyboard**, choose **Enable radial keyboard…**, enable **Sortie radial keyboard** in
+search and bookmarks. In **Settings → Radial keyboard**, choose **Enable radial keyboard…**, enable **Sortie radial keyboard** in
 Android's settings, then return and use **Choose keyboard…** to select it. Android shows its standard warning for third-party
 keyboards. Sortie does not enable or select it automatically.
 
@@ -450,21 +528,26 @@ permission. For other languages or a conventional layout, tap **Switch keyboard*
 
 ## Backup and restore
 
-In Settings, **Export backup…** saves your preferences, favourites, Want to play queue, Finished/Shelved status and verdicts,
-custom home, dock, game notes, reference-card text, magazine clippings, journal entries, completed play history and the Hangar
-companion (name, parts, salvage, bond) to a JSON file in a location you choose. An unfinished session is not included.
+In Settings, **Export backup…** saves your preferences (including the bookmark setting), favourites, Want to play queue,
+Finished/Shelved status and verdicts, custom home, dock, bookmarks, controller assessments (*What it needs*), reference-card
+text, magazine clippings, completed play history and the Hangar companion (name, parts, salvage, bond) to a JSON file in a
+location you choose. An unfinished session is not included.
 
 **Restore from backup…** previews the contents before asking for confirmation. Quit any running game and return to Sortie first.
 Restoring replaces preferences and the companion, but merges history: newer sessions stay, and restoring the same file twice does
 not duplicate them. No play session earns the companion salvage twice, whichever device it was credited on. A backup made by an
-older Sortie has no companion in it and leaves yours as it is.
+older Sortie has no companion in it and leaves yours as it is. A backup made before bookmarks may still hold journal entries
+and *Where was I?* or mapping notes: the preview says so, and restoring first saves that writing in **sortie/archive/** (see
+Older journal and notes) and turns *Where was I?* notes into bookmarks. If that archive can't be written, nothing is restored.
 A safety copy is saved first under **sortie/backups/** on the card. Restoring that copy recovers your previous preferences and
 companion (his parts and salvage roll back, but sessions already credited never pay again); it cannot remove history merged
 by a restore.
 
-Reference images and journal screenshots are **not embedded in the JSON backup**. Copy **sortie/reference/** and
-**sortie/journal/media/** alongside it to preserve those attachments. Restoring the JSON alone keeps the text and metadata,
-but images are unavailable until their files are copied back to the same relative paths.
+Some of your files are **not embedded in the JSON backup** and must be copied separately, keeping their paths inside the
+**sortie** folder: reference images (**sortie/reference/**), the archive of older notes (**sortie/archive/**) and old journal
+screenshots (**sortie/journal/media/**). Restoring the JSON alone keeps the reference-card text, but reference images are
+unavailable until their files are copied back to the same relative paths; the older notes and journal screenshots exist
+only in those folders.
 
 Backups do not contain ROMs, BIOS files, artwork, **emulator saves** (each emulator keeps its own; back those up from the
 emulator's folders), the game index (rebuilt from your folders), **playlog.jsonl**, or your library settings
@@ -473,10 +556,10 @@ copy the whole **sortie** folder shown in **Library setup → Where these settin
 
 Some state lives only inside the app: play-history statistics (Sortie's minutes and sessions come from its own database;
 completed sessions are in the backup, **playlog.jsonl** is only a copy for computers and is not read back), magazine reading
-positions (*Continue reading*, not exported), the remembered location of the **sortie** folder and the game index. Android owns
-shortcut pins, permissions (All files access, Shizuku, Display over other apps), the keyboard choice and the default home
-app; none of them are restored. Shortcut IDs remain in the backup, but missing shortcuts must be pinned again from their
-source app.
+positions (*Continue reading*, not exported), Tonight's saved picks, the remembered location of the **sortie** folder and the
+game index. Android owns shortcut pins, permissions (All files access, Shizuku, Display over other apps), the keyboard choice
+and the default home app; none of them are restored. Shortcut IDs remain in the backup, but missing shortcuts must be pinned
+again from their source app.
 
 **Updating Sortie** means opening a newer APK from the same sender and choosing *Update*: Android replaces the app and keeps
 its data. **Uninstalling** deletes the app-only state above and Android's grants for Sortie; files in the **sortie** folder and
@@ -487,5 +570,5 @@ refuses an update: ask whoever sent you the APK.
 
 An emulator/app launch starts a session; opening and cancelling the app chooser does not. Sessions end when the game's
 window is gone. A game whose emulator closed right after starting (see A game's page) is not recorded as played.
-Minutes, session counts and "last played" feed the *Continue* tile and personal history. The **💾 started**
+Minutes, session counts and "last played" feed the *Continue* tile, Tonight and personal history. The **💾 started**
 chip reads the save folders set in **Library setup → BIOS and save folders**, or on a computer-prepared card.

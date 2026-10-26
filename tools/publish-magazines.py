@@ -8,7 +8,8 @@ SOURCE_ROOT holds one folder per issue (<issue-id>/issue.json, articles/, media/
 with a revision and a rights notice; game references must be well formed and every reference id must have the same title,
 platform and edition in every article and issue (match names may differ; the app unions them). An optional "number" is a
 positive whole number; the number each issue shows (that one, else the id's trailing digits) must be unique. Paths must
-stay inside their issue, referenced files must exist and no private machine details may appear in published text.
+stay inside their issue, referenced files must exist and no private machine details may appear in published text. A picture
+sequence (consecutive image lines titled exactly "sequence") needs 2 to 12 panels, each with a caption.
 
 With --out, the validated packs are staged next to DIR and swapped in only when complete, together with catalog.json:
     {"format": 1, "digest": ..., "issues": [{"id", "revision", "digest", "files": [{"path", "size", "sha256"}]}]}
@@ -37,7 +38,11 @@ SLUG = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,79}\Z")
 REF_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,119}\Z")
 TRAILING_DIGITS = re.compile(r"[0-9]+\Z")
 INT_MAX = 2**31 - 1
-MD_IMAGE = re.compile(r"^\s*!\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)\s*$")
+# The app's image line (Markdown.kt IMAGE), matched against the trimmed line: alt text, issue-relative path, optional title.
+MD_IMAGE = re.compile(r"^!\[([^\]]*)\]\(\s*([^)\s]+)(?:\s+\"([^\"]*)\")?\s*\)$")
+LINE_BREAK = re.compile(r"\r\n|\n|\r")
+SEQUENCE_TITLE = "sequence"
+MAX_SEQUENCE = 12
 MAX_ISSUE_JSON = 256 * 1024
 MAX_ARTICLE = 1024 * 1024
 TEXT_SUFFIXES = {".json", ".md", ".txt"}
@@ -130,6 +135,30 @@ def check_refs(games, where, probs, refs_seen):
                 f"{where}, game {gid!r}",
                 f"title/systemId/edition {identity} differ from {first[0]} in {first[1]}",
             )
+
+
+def check_sequences(text, where, probs):
+    """Picture sequences as the readers group them: consecutive image lines titled exactly "sequence" (a blank or any other
+    line ends one). A lone panel would silently read as an ordinary picture, so it is an error, as are more than
+    MAX_SEQUENCE panels and a panel without a caption (alt text)."""
+    run = []
+
+    def close():
+        if len(run) == 1:
+            probs.error(where, f"line {run[0]}: a sequence needs at least two consecutive panels (no blank line between)")
+        elif len(run) > MAX_SEQUENCE:
+            probs.error(where, f"line {run[0]}: a sequence has {len(run)} panels; at most {MAX_SEQUENCE}")
+        run.clear()
+
+    for n, line in enumerate(LINE_BREAK.split(text.removeprefix("\ufeff")), 1):
+        im = MD_IMAGE.match(line.strip())
+        if im and im.group(3) == SEQUENCE_TITLE:
+            run.append(n)
+            if not im.group(1).strip():
+                probs.error(where, f"line {n}: a sequence panel needs a caption (its alt text)")
+        else:
+            close()
+    close()
 
 
 def scan_private(issue_dir, probs):
@@ -254,10 +283,11 @@ def validate_issue(issue_dir, probs, refs_seen, numbers_seen):
             text = f.read_text(encoding="utf-8")
             if not text.strip():
                 probs.error(where, f"{body} is empty")
-            for line in text.splitlines():
-                im = MD_IMAGE.match(line)
-                if im and check_file(issue_dir, im.group(1), f"{where} ({body})", probs, "image"):
-                    referenced.add(im.group(1))
+            check_sequences(text, f"{where} ({body})", probs)
+            for line in LINE_BREAK.split(text.removeprefix("\ufeff")):
+                im = MD_IMAGE.match(line.strip())
+                if im and check_file(issue_dir, im.group(2), f"{where} ({body})", probs, "image"):
+                    referenced.add(im.group(2))
     scan_private(issue_dir, probs)
     for rel in published_files(issue_dir, probs):
         if rel.startswith("media/") and rel not in referenced:

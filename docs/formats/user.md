@@ -44,18 +44,52 @@ Every key is optional; unknown keys are ignored.
 | `deviceStatsInterval` | `2` \| `5` \| `10` | `5` | seconds between device-stats reads while a stats surface is on a lit screen; other values read as 5 |
 | `perfInterval` | `1` \| `2` | `2` | seconds between reads while a Perf view (Performance app, switcher overlay page or companion Perf mode) is shown; other values read as 2 |
 | `companionView` | `"companion"` \| `"perf"` | `"companion"` | dual-screen devices: the other screen shows its usual panel or the Perf view. Unknown values read as `companion` |
-| `gameAnnotations` | game id → annotation | `{}` | personal controller requirements, mapping notes and return reminders; empty entries are removed |
+| `gameAnnotations` | game id → annotation | `{}` | personal controller requirement (`controller`); entries without one are removed |
+| `bookmarks` | game id → bookmark | `{}` | the one text bookmark per game: where the player is, for when they return; blank bookmarks are removed |
+| `bookmarkInvitation` | bool | true | after a game Sortie saw end, offer to leave its bookmark (see [Bookmarks](#bookmarks)) |
 | `gameProgress` | game id → progress | `{}` | explicit Finished/Shelved status, date and verdict; independent of favourites and queue |
 | `referenceCards` | game id → cards[] | `{}` | personal Markdown/image reference cards; image files live separately under `reference/` |
 | `magazineClippings` | clippings[] | `[]` | saved paragraph highlights and article recommendations, including copied excerpts and personal notes |
-| `journalEntries` | entries[] | `[]` | dated personal notes and attachment metadata; recorded sessions remain in Room, not this array |
 | `cocoonDir` | path \| absent | absent | Cocoon directory last imported from by "Import from Cocoon…"; offered first when the import is run again. Sortie only reads that directory |
 
-## Personal game notes
+## Controller requirement
 
-Each annotation holds `controller` (`unknown`, `gamepad`, `pointer`, `motion`, `touch`), `mappingNotes` and `returnNote`.
-Unknown future controller values read as `unknown`; missing text fields default to empty strings. Notes are trimmed on save.
-An annotation with no controller assessment and no text is removed. These device-owned notes never overwrite `guide.json`.
+Each annotation holds `controller` (`unknown`, `gamepad`, `pointer`, `motion`, `touch`). Unknown future values read as
+`unknown`; an annotation that is `unknown` is removed. It never overwrites the guide's `controls`.
+
+## Bookmarks
+
+`bookmarks[id]` holds `text` (trimmed, 1–2,000 characters) and `savedAt` (epoch milliseconds of the save; `0` when unknown,
+as for a bookmark migrated from an older `returnNote`). A game has at most one bookmark: Save replaces the previous text,
+Cancel/B leaves it unchanged, and saving an empty draft (Clear, then Save) removes the entry. Longer drafts are refused, never
+truncated. Bookmarks are personal and separate from the guide's authored blurbs, which they never change. The game page and
+the companion screen show the bookmark; the browse lists' ✍ notes filter includes games that have one.
+
+With `bookmarkInvitation` on, a small nonmodal card (*Leave a text note about where you are in the game for when you
+return?* — **Leave a note** / **Not now**, L2 leaves a note) appears over Sortie's navigation after a game Sortie launched has
+really ended. It takes no focus and opens no keyboard until **Leave a note**, which opens that game's bookmark editor. It is
+shown once per ended session, only on the focused, resumed navigation with no switcher open (never on the companion, a
+built-in app or a temporary Home), and counts as **Not now** after 45 seconds on screen or when anything else is launched.
+A later launch Sortie cannot watch (an app, a shortcut, a game opened through Android's chooser) ends the earlier game's watch.
+
+"Really ended" needs Shizuku. Shortly after a launch Sortie records the game's own task (the visible task of the launch
+profile's package); the game has ended when a later, successfully read task list (one that shows Sortie's own task) no
+longer holds that task. Returning to Home or the switcher while it runs, a failed or empty task read, a launch that never
+produced a visible task, a quick exit (closed within 3 seconds) and sessions without Shizuku never produce the card: a
+missed invitation is preferred to a wrong one. Nothing about the invitation is persisted.
+
+## Older personal notes (archive)
+
+Versions before bookmarks stored a weekly journal (`journalEntries`) and per-game `mappingNotes` and `returnNote` in this
+file. When such a `user.json` loads, or a backup holding them is restored, Sortie first writes all of that writing to
+`sortie/archive/personal-notes-<hash>.md` (readable: every note in full, journal entries with dates, linked game and session,
+screenshot paths and sizes) and `personal-notes-<hash>.json` (`format: "sortie-personal-notes-archive"`, `version` 1,
+`source`, `archivedAt`, plus the exact `gameNotes` and `journalEntries` values, unknown fields included). Both are fsynced;
+the hash is of the content, so the same writing is archived once. Only then is the migrated file written: `returnNote`
+becomes the game's bookmark (an existing bookmark wins), and `mappingNotes` and `journalEntries` are removed. If the archive
+cannot be written, `user.json` is not written at all (saves fail and say so), and backup export, restore and Cocoon import
+(whose safety copies would leave that writing out) are refused, until it can. Journal screenshot files under
+`journal/media/` are never moved or deleted.
 
 ## Finished and Shelved
 
@@ -83,21 +117,6 @@ characters are refused rather than truncated. Article clippings retain the first
 
 The saved text is the source locator: `block` alone never selects a changed paragraph. The scrapbook remains readable
 without its issue pack; returning to an absent/changed source reports that condition. Pack files remain read-only.
-
-## Weekly journal
-
-`JournalEntry` fields: UUID `id`, local ISO `date`, `text`, nullable `gameId` and `sessionStartedAt`, `attachments`, and
-`createdAt`/`updatedAt` epoch milliseconds. A linked session uses `(gameId, sessionStartedAt)`, never a Room row id.
-Invalid dates remain visible as undated entries. Entries may be dated independently of when they were written.
-
-Each attachment records `path`, `width`, `height`, `bytes` and original display `name`. The path is relative to `sortie/`:
-`journal/media/<entry-id>/<file-id>.<png|jpg|webp>`. Only explicitly picked pictures are imported, at most 12 per entry;
-path containment and symlink checks apply to reads, writes and deletion. Newly imported draft files are removed on cancel.
-Images are orientation-corrected and resized as needed, to at most 3,840 pixels per edge.
-
-The weekly view reads actual Room sessions, splitting valid durations at local midnight/week boundaries (including DST).
-Open, abandoned or reversed-clock sessions remain identifiable but contribute no guessed duration. Editing/deleting
-a journal entry never changes session history.
 
 ## Backup export and restore
 
@@ -133,9 +152,15 @@ Restoring the same backup twice adds no duplicate history. Restoring a safety co
 remove sessions merged by an earlier restore. Room is authoritative for play statistics; the append-only `playlog.jsonl`
 is never modified by restore.
 
-The four personal-data fields above are included in `user`. Reference images (`reference/`) and journal screenshots
-(`journal/media/`) are **not embedded**: copy these directories alongside the JSON, retaining their paths beneath `sortie/`.
-Missing attachments are reported by the viewers; their text/metadata is not silently discarded.
+Bookmarks, controller requirements, Finished/Shelved, reference cards and clippings are included in `user`. Reference images
+(`reference/`), the personal-notes archive (`archive/`) and old journal screenshots (`journal/media/`) are **not embedded**:
+copy these directories alongside the JSON, retaining their paths beneath `sortie/`. Missing reference images are reported by
+the viewer; their text/metadata is not silently discarded.
+
+A backup made by an older Sortie may still hold `journalEntries`, `mappingNotes` and `returnNote` in `user`. Its preview says
+so; restoring it first archives that writing as described under [Older personal notes](#older-personal-notes-archive) (failure
+to archive prevents the restore, nothing changed) and restores `returnNote` as the bookmark. Backups written now never hold
+these fields.
 
 Excluded: ROMs, artwork, emulator saves, the rebuilt game index, desktop manifests, `playlog.jsonl`, Android shortcut pins,
 permissions and default-home selection. Stored app/shortcut IDs are retained, but may require reinstalling or re-pinning

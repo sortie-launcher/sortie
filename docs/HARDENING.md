@@ -189,7 +189,8 @@ SQLite), indexer and stores under Robolectric with native graphics, against a fi
 
 - **Fixture** (`testing/FixtureCard.kt`, `resources/fixtures/`): a card with `device.json`, `systems.json` (three systems),
   `launchers.json`, `folders.json` (one folder), `user.json` (custom sort, five-column grid), six ROM stubs with generated PNG
-  covers and two magazine issues (No. 007 and No. 012, a long article with a lead, a portrait and a wide figure). The
+  covers and two magazine issues (No. 007 and No. 012, a long article with a lead, a portrait and a wide figure, and a short
+  note with a three-panel picture sequence). The
   Hangar save in `fixtures/app/` has the companion hidden and motion off, so no roaming mech is drawn on Home, the shelf or
   articles, and the Hangar's sprites hold still. `SortieCardRule` writes it, pins the card folder, fixes the displayed clock
   (09:41 UTC, `uiNow`) and hides the bundled Field Notes issues of `-PsortieMagazinesDir` builds, so every build shows the
@@ -200,11 +201,13 @@ SQLite), indexer and stores under Robolectric with native graphics, against a fi
   the generic controller fallbacks (A → DPAD_CENTER, B → BACK, Select → MENU) and the first D-pad press leaving touch mode.
 - **Interaction tests**: Home, Home, B keeps Sortie on Home; A/B return to the same tile; entering the grid folds the
   compact header, Up from its first row reveals the sort controls, and touch/pull/chevron reveal keeps controls reachable;
-  Expanded never folds. Controls retains secondary commands and restores controller focus after dismissal. Reader position
-  survives activity recreation; R2 opens the picture in view and B closes it with the article unmoved; Home's Hangar button
-  opens the Hangar and B puts the focus back on it; reader Select → Visit the hangar, B returns to the article.
+  Expanded never folds. Controls retains secondary commands and restores controller focus after dismissal. Home's Extras
+  menu closes with B back onto Extras, and Extras → Hangar opens the Hangar with B returning the focus to Extras. Reader
+  position survives activity recreation; R2 opens the picture in view and B closes it with the article unmoved; L2 browses
+  a picture sequence, → and R2 open the chosen panel, and the chosen panel (not browsing) survives recreation; repeated and
+  interrupted touch swipes each settle on a panel; reader Select → Visit the hangar, B returns to the article.
 - **Screenshots** (Roborazzi): Home with Auto's header open, always Expanded, and folded; a folded system list; the magazine
-  shelf, article at each figure and the Hangar Workshop (from Home's header); and
+  shelf, article at each figure and the Hangar Workshop (opened from Home's Extras menu); and
   the Perf page with fixed stats (`PerfScreenshotTest`: the overlay page everywhere, plus the companion's Perf mode and the
   scrolled-down details on the Thor's bottom screen) on the Thor's top
   (`w833dp-h421dp`) and bottom (`w538dp-h444dp`) screens, the DMG (`w480dp-h551dp`) and the Retroid Pocket Nova
@@ -217,6 +220,11 @@ SQLite), indexer and stores under Robolectric with native graphics, against a fi
   (never a control, a focused element or one under a finger), the lifecycle gate (`MechaLifeTest`: a ticker under
   `whileShown(mechaShown(...))` on virtual time does nothing while paused, stopped or on a dark display, without any Compose
   frame) and the backup round trip of the save without double credit (`MechaStoreTest`).
+- **Bookmarks, Tonight and the curated guide** (`app/src/test/`, plain JVM): legacy journal/notes migration and archive
+  gating (`LegacyNotesTest`, `UserStoreTest`, `BackupFormatTest`), when a watched game counts as ended
+  (`SessionEndWatchTest`), Tonight's rules and the saved daily set (`TonightPickerTest`, `TonightStoreTest`), catalogue
+  matching and precedence plus the shipped asset's accounting (`CuratedGuideTest`, `BundledGuideCatalogTest`), and
+  picture-sequence parsing and path resolution (`MarkdownTest`, `MagazinePackTest`).
 - **Compact browsing device smoke (DMG)**: tap and pull-to-reveal; controller grid entry and first-row Up on Home and a
   system list; Back to the remembered system tile; Controls dismissal back to its opener; a focused last row clear of the
   footer; the Search query still visible with filters folded; and persisted Auto / Expanded / Compact cycling. The four
@@ -232,11 +240,12 @@ Production seams: `uiNow` in `ui/Components.kt`, the wall clock behind Home's cl
 focus flare/spring (`design/…/Focus.kt`) use the composition's frame clock, which tests drive. Compact Home captures
 scroll the header toggle into view before tapping it and assert that the collapsed header is actually displayed.
 
-Full-polish hardware smoke covered the Nova and DMG: touch/controller browsing, held-confirm context menus, folding
-and pulling the header back, detail launch-choice focus restoration, direct Settings choices, magazine reading and
-zoom/return, journal/manual/reference views, and the DMG switcher/Perf overlay. Nova also exercised 1.3× font scale with
-Android animations disabled. Backup/import screens were inspected without running destructive operations.
-The four screenshot configurations cover Thor layouts; no Thor hardware deployment was part of this pass.
+Full-polish hardware smoke (before the current Home header and the removal of the journal) covered the Nova and DMG:
+touch/controller browsing, held-confirm context menus, folding and pulling the header back, detail launch-choice focus
+restoration, direct Settings choices, magazine reading and zoom/return, journal/manual/reference views, and the DMG
+switcher/Perf overlay. Nova also exercised 1.3× font scale with Android animations disabled. Backup/import screens were
+inspected without running destructive operations. The four screenshot configurations cover Thor layouts; no Thor hardware
+deployment was part of this pass.
 
 Background measurement over 64.8 seconds: Nova behind a running RetroArch game drew zero additional Sortie frames
 and used four CPU ticks; DMG behind Android Settings drew zero additional frames and used one tick. With 100 ticks/s,

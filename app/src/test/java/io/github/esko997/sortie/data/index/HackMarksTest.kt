@@ -88,11 +88,15 @@ class HackMarksTest {
     @Test
     fun `an upgrade or a new hackRegex changes the stored stamp, so cached rows are rebuilt`() {
         val guideStamp = "712800:1788220800000:2026-10-25"
+        val curated = "curated:none"
         // before this classifier the stored stamp was guide.json's own
-        assertNotEquals(guideStamp, Indexer.metaStamp(guideStamp, cardRules))
-        assertNotEquals(Indexer.metaStamp(guideStamp, cardRules), Indexer.metaStamp(guideStamp, LibraryRules()))
-        assertNotEquals(Indexer.metaStamp(guideStamp, cardRules), Indexer.metaStamp(guideStamp, cardRules.copy(hackRegex = "(?i)\\(hack\\)")))
+        assertNotEquals(guideStamp, Indexer.metaStamp(guideStamp, curated, cardRules))
+        assertNotEquals(Indexer.metaStamp(guideStamp, curated, cardRules), Indexer.metaStamp(guideStamp, curated, LibraryRules()))
+        assertNotEquals(Indexer.metaStamp(guideStamp, curated, cardRules), Indexer.metaStamp(guideStamp, curated, cardRules.copy(hackRegex = "(?i)\\(hack\\)")))
         // unchanged rules and unrelated rule edits do not rebuild the library
-        assertEquals(Indexer.metaStamp(guideStamp, cardRules), Indexer.metaStamp(guideStamp, cardRules.copy(skipFiles = listOf("neogeo.zip"))))
+        assertEquals(
+            Indexer.metaStamp(guideStamp, curated, cardRules),
+            Indexer.metaStamp(guideStamp, curated, cardRules.copy(skipFiles = listOf("neogeo.zip")))
+        )
     }
 }

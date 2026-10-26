@@ -9,6 +9,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +50,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -62,6 +64,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -74,6 +77,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
@@ -83,13 +87,17 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -142,11 +150,14 @@ import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -1082,7 +1093,7 @@ private fun ContentsEntry(s: ShelfIssue, a: MagazineArticle, index: Int, narrow:
         Column(Modifier.weight(1f)) {
             val kick = listOf(a.system, a.gameTitle).filter { it.isNotEmpty() }.joinToString(" · ")
             if (kick.isNotEmpty()) Text(kick, style = kicker(), maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(a.title, style = headline(MaterialTheme.typography.titleLarge))
+            Text(a.title, style = headline(MaterialTheme.typography.titleLarge), modifier = Modifier.semantics { heading() })
             if (a.deck.isNotEmpty()) {
                 Text(
                     inlineText(a.deck),
@@ -1121,12 +1132,21 @@ private const val CLIP_WHOLE_ARTICLE = -1
 /** An article's text with its pictures, each with its pixel size already read. */
 private class OpenedArticle(val content: ArticleContent, val figures: List<ArticleFigure>)
 
-/** The pictures the reader shows, in reading order: the lead image, then every Markdown image whose file is in the issue. Blocking. */
+/**
+ * The pictures the reader shows, in reading order: the lead image, then every Markdown image and sequence panel whose file is in
+ * the issue. Blocking.
+ */
 private fun articleFigures(s: ShelfIssue, article: MagazineArticle, content: ArticleContent): List<ArticleFigure> = buildList {
     s.images[article.id]?.file?.let { add(ArticleFigure(HERO_KEY, it, article.imageCaption, imageSize(it))) }
     if (content is ArticleContent.Ready) {
         content.blocks.forEachIndexed { i, b ->
-            if (b is MdBlock.Image) content.images[b.src]?.file?.let { add(ArticleFigure("b$i", it, b.caption, imageSize(it))) }
+            when (b) {
+                is MdBlock.Image -> content.images[b.src]?.file?.let { add(ArticleFigure("b$i", it, b.caption, imageSize(it))) }
+                is MdBlock.Sequence -> b.panels.forEachIndexed { p, panel ->
+                    content.images[panel.src]?.file?.let { add(ArticleFigure(sequencePanelKey(i, p), it, panel.caption, imageSize(it), inSequence = true)) }
+                }
+                else -> Unit
+            }
         }
     }
 }
@@ -1139,6 +1159,10 @@ private fun articleFigures(s: ShelfIssue, article: MagazineArticle, content: Art
  * its passage once, or says the passage is gone instead of landing anywhere else.
  * Pictures: a tap on one, or R2 for the one most on screen (the hint bar offers it), opens [FigureViewer] over the article,
  * which stays where it was.
+ * Picture sequences: on a wide screen a sequence is one row of captioned panels; touch swipes it. With the controller, L2
+ * starts browsing the sequence in view: ←/→ then choose a panel instead of turning the page, R2 opens the chosen panel, ↑/↓
+ * still scroll the article, and L2, B, marking or scrolling the sequence out of sight stop browsing. Browsing is never
+ * restored by itself; the chosen panel is ([MagazineReadingStore.sequencePanel]). A narrow screen stacks the panels.
  */
 @Composable
 private fun ArticleReader(
@@ -1183,6 +1207,10 @@ private fun ArticleReader(
     // the full-screen picture (its figure key), and the one R2 would open
     var viewing by rememberSaveable { mutableStateOf<String?>(null) }
     var figureInView by remember { mutableStateOf<String?>(null) }
+    // the picture sequence (body block index) the controller is browsing, and the one L2 would browse; -1 for none. Plain
+    // remember: browsing never comes back by itself after recreation or the screen swap
+    var browsing by remember { mutableStateOf(-1) }
+    var sequenceInView by remember { mutableStateOf(-1) }
     val blocks = (content as? ArticleContent.Ready)?.blocks.orEmpty()
     val highlights = remember(clippings, blocks) { clippings.highlightsIn(issue.issue.id, article.id, blocks) }
     val articleClip = remember(clippings) { clippings.articleClip(issue.issue.id, article.id) }
@@ -1193,9 +1221,12 @@ private fun ArticleReader(
         selected = -1
     }
     fun toggleMarking() {
+        browsing = -1
         if (marking) stopMarking() else if (canMark) marking = true
     }
     BackHandler(enabled = marking) { stopMarking() }
+    // B leaves browsing before it leaves the article
+    BackHandler(enabled = browsing >= 0) { browsing = -1 }
     // A: straight to the library page when the article's one game matched one local file; otherwise the choices
     fun openGames() {
         val only = article.games.singleOrNull()?.let { resolved?.get(it.id) }?.singleOrNull()
@@ -1225,12 +1256,17 @@ private fun ArticleReader(
                 val boxes = remember(figures, maxWidth, maxHeight, density) {
                     val column = Measure.coerceAtMost(reading).value
                     val wide = WideMeasure.coerceAtMost(reading).value
+                    val panel = wide * SEQUENCE_PANEL_SHARE
+                    val panelCap = (maxHeight * SEQUENCE_HEIGHT_SHARE).value.coerceAtLeast(120f)
                     figures.associate { f ->
-                        // the lead image leaves room for the headline under it; figures may take most of the screen
+                        // the lead image leaves room for the headline under it; figures may take most of the screen; a row of
+                        // sequence panels shares the width (a narrow screen stacks them as ordinary figures)
                         val hero = f.key == HERO_KEY
-                        val cap = (maxHeight * if (hero) 0.55f else 0.7f).value.coerceAtLeast(120f)
-                        val limit = if (hero) wide else column
-                        f.key to (f.size?.let { figureBox(it.width, it.height, limit, wide, cap, density) } ?: unknownFigureBox(limit, cap))
+                        val row = f.inSequence && !narrow
+                        val cap = if (row) panelCap else (maxHeight * if (hero) 0.55f else 0.7f).value.coerceAtLeast(120f)
+                        val limit = if (row) panel else if (hero) wide else column
+                        val widest = if (row) panel else wide
+                        f.key to (f.size?.let { figureBox(it.width, it.height, limit, widest, cap, density) } ?: unknownFigureBox(limit, cap))
                     }
                 }
                 ArticleList(
@@ -1242,6 +1278,13 @@ private fun ArticleReader(
                     narrow = narrow,
                     figures = figures,
                     boxes = boxes,
+                    sequences = ReaderSequences(
+                        panelWidth = WideMeasure.coerceAtMost(reading) * SEQUENCE_PANEL_SHARE,
+                        browsing = browsing,
+                        inView = sequenceInView,
+                        onBrowse = { browsing = it },
+                        onInView = { sequenceInView = it }
+                    ),
                     onView = { viewing = it },
                     onFigureInView = { figureInView = it },
                     onGames = ::openGames,
@@ -1277,11 +1320,17 @@ private fun ArticleReader(
                 add("↑/↓" to "choose passage")
                 add("A" to if (selected in highlights) "edit highlight" else "highlight")
                 add("Y/B" to "done")
+            } else if (browsing >= 0) {
+                add("←/→" to "choose image")
+                add("R2" to "view image")
+                add("↑/↓" to "scroll")
+                add("L2/B" to "done browsing")
             } else {
                 add("D-pad" to "scroll")
                 add("←/→" to "page")
                 add("L1/R1" to "articles")
                 if (article.games.isNotEmpty()) add("A" to if (article.games.size == 1) "library page" else "games")
+                if (sequenceInView >= 0) add("L2" to "browse images")
                 if (figureInView != null) add("R2" to "view picture")
                 if (canMark) add("Y" to "highlight")
                 add("Select" to "reader menu")
@@ -1428,6 +1477,34 @@ private class ReaderClips(
     val onJumped: () -> Unit
 )
 
+/**
+ * Picture sequences in the article list: a panel's width in a wide-screen row, the sequence the controller is [browsing] and
+ * the one most on screen ([inView]), both body block indices or -1. State lives in [ArticleReader].
+ */
+private class ReaderSequences(
+    val panelWidth: Dp,
+    val browsing: Int,
+    val inView: Int,
+    val onBrowse: (Int) -> Unit,
+    val onInView: (Int) -> Unit
+)
+
+/**
+ * Where the narrow layout's stacked sequence panels are, read only when the reader asks which picture is most on screen (the
+ * list's scrolling already makes it ask again, so this is no state of its own).
+ */
+private class StackedPanels {
+    var list: LayoutCoordinates? = null
+    val panels = HashMap<String, LayoutCoordinates>()
+
+    /** The panel [key]'s top and height in the list's item offsets, whose [viewportStart] is the list's top; null when unplaced. */
+    fun span(key: String, viewportStart: Int): Pair<Int, Int>? {
+        val l = list?.takeIf { it.isAttached } ?: return null
+        val c = panels[key]?.takeIf { it.isAttached } ?: return null
+        return l.localPositionOf(c, Offset.Zero).y.roundToInt() + viewportStart to c.size.height
+    }
+}
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun ArticleList(
@@ -1439,6 +1516,7 @@ private fun ArticleList(
     narrow: Boolean,
     figures: List<ArticleFigure>,
     boxes: Map<String, FigureBox>,
+    sequences: ReaderSequences,
     onView: (String) -> Unit,
     onFigureInView: (String?) -> Unit,
     onGames: () -> Unit,
@@ -1502,18 +1580,70 @@ private fun ArticleList(
         }
     }
     val figureKeys = remember(figures) { figures.mapTo(HashSet()) { it.key } }
+    // each sequence's chosen panel by body block index, kept for the next visit to the article
+    val panels = remember(blocks) {
+        mutableStateMapOf<Int, Int>().apply {
+            blocks.forEachIndexed { i, b ->
+                if (b is MdBlock.Sequence) put(i, store.sequencePanel(issueId, article.id, i).coerceAtMost(b.panels.lastIndex))
+            }
+        }
+    }
+    fun choosePanel(block: Int, panel: Int) {
+        val sequence = blocks.getOrNull(block) as? MdBlock.Sequence ?: return
+        val p = panel.coerceIn(0, sequence.panels.lastIndex)
+        if (panels[block] == p) return
+        panels[block] = p
+        store.saveSequencePanel(issueId, article.id, block, p)
+    }
+    val stackedPanels = remember { StackedPanels() }
+    val browsing = sequences.browsing
 
-    /** The picture most on screen, when at least half of it (or half the screen) shows: what R2 opens full screen. */
+    /**
+     * The picture most on screen, when at least half of it (or half the screen) shows: what R2 opens full screen. A sequence row
+     * offers its chosen panel; stacked panels count one by one.
+     */
     fun figureInView(): String? {
         val info = state.layoutInfo
         val viewport = info.viewportEndOffset - info.viewportStartOffset
-        return info.visibleItemsInfo.mapNotNull { item ->
-            val key = (item.key as? String)?.takeIf { it in figureKeys } ?: return@mapNotNull null
-            val shown = min(item.offset + item.size, info.viewportEndOffset) - max(item.offset, info.viewportStartOffset)
-            if (shown * 2 >= min(item.size, viewport)) key to shown else null
+        return info.visibleItemsInfo.flatMap { item ->
+            val i = item.index - bodyStart
+            val sequence = blocks.getOrNull(i) as? MdBlock.Sequence
+            when {
+                sequence != null && !narrow -> listOf(Triple(sequencePanelKey(i, panels[i] ?: 0), item.offset, item.size))
+                sequence != null -> sequence.panels.indices.mapNotNull { p ->
+                    val key = sequencePanelKey(i, p)
+                    stackedPanels.span(key, info.viewportStartOffset)?.let { (top, size) -> Triple(key, top, size) }
+                }
+                else -> listOfNotNull((item.key as? String)?.let { Triple(it, item.offset, item.size) })
+            }
+        }.mapNotNull { (key, top, size) ->
+            val shown = min(top + size, info.viewportEndOffset) - max(top, info.viewportStartOffset)
+            if (key in figureKeys && shown * 2 >= min(size, viewport)) key to shown else null
         }.maxByOrNull { it.second }?.first
     }
-    LaunchedEffect(state, figureKeys) { snapshotFlow { figureInView() }.collect { onFigureInView(it) } }
+
+    /** The wide-screen sequence most on screen, at least half of it (or half the screen): what L2 browses; -1 for none. */
+    fun sequenceInView(): Int {
+        if (narrow) return -1
+        val info = state.layoutInfo
+        val viewport = info.viewportEndOffset - info.viewportStartOffset
+        return info.visibleItemsInfo.mapNotNull { item ->
+            val i = item.index - bodyStart
+            if (blocks.getOrNull(i) !is MdBlock.Sequence) return@mapNotNull null
+            val shown = min(item.offset + item.size, info.viewportEndOffset) - max(item.offset, info.viewportStartOffset)
+            if (shown * 2 >= min(item.size, viewport)) i to shown else null
+        }.maxByOrNull { it.second }?.first ?: -1
+    }
+    LaunchedEffect(state, blocks, narrow) { snapshotFlow { sequenceInView() }.collect { sequences.onInView(it) } }
+    // browsing ends once its sequence is out of sight (or the screen became too narrow for a row): ↑/↓ never get stuck on it
+    LaunchedEffect(browsing, narrow, blocks) {
+        if (browsing < 0) return@LaunchedEffect
+        if (!narrow && blocks.getOrNull(browsing) is MdBlock.Sequence) {
+            snapshotFlow { state.layoutInfo.visibleItemsInfo.any { it.index == bodyStart + browsing } }.first { !it }
+        }
+        sequences.onBrowse(-1)
+    }
+    LaunchedEffect(state, figureKeys, panels, narrow) { snapshotFlow { figureInView() }.collect { onFigureInView(it) } }
     LaunchedEffect(clips.jump?.id, content) {
         val clip = clips.jump ?: return@LaunchedEffect
         if (content is ArticleContent.Ready) {
@@ -1596,6 +1726,7 @@ private fun ArticleList(
     LazyColumn(
         Modifier
             .fillMaxSize()
+            .onPlaced { stackedPanels.list = it }
             .focusRequester(requester)
             .onFocusChanged { hasFocus = it.isFocused }
             .focusable()
@@ -1618,12 +1749,14 @@ private fun ArticleList(
                         if (down) if (clips.marking) move(-1) else scope.launch { state.scrollBy(-step) }
                         true
                     }
-                    Key.DirectionRight, Key.PageDown -> {
-                        if (down) turnPage(page)
+                    // ←/→ turn the page, or choose a panel while browsing a sequence; the keyboard's page keys always turn
+                    Key.DirectionRight, Key.DirectionLeft -> {
+                        val dir = if (e.key == Key.DirectionRight) 1 else -1
+                        if (down) if (browsing >= 0) choosePanel(browsing, (panels[browsing] ?: 0) + dir) else turnPage(dir * page)
                         true
                     }
-                    Key.DirectionLeft, Key.PageUp -> {
-                        if (down) turnPage(-page)
+                    Key.PageDown, Key.PageUp -> {
+                        if (down) turnPage(if (e.key == Key.PageDown) page else -page)
                         true
                     }
                     Key.ButtonA, Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
@@ -1638,9 +1771,17 @@ private fun ArticleList(
                         if (first) clips.onMenu()
                         true
                     }
-                    // R2 zooms in the picture viewer too; here it opens the picture in view (never while marking)
+                    // L2 starts browsing the sequence in view, or stops browsing (never while marking)
+                    Key.ButtonL2 -> {
+                        if (first && !clips.marking) sequences.onBrowse(if (browsing >= 0) -1 else sequenceInView())
+                        true
+                    }
+                    // R2 zooms in the picture viewer too; here it opens the browsed panel, else the picture in view (never while marking)
                     Key.ButtonR2 -> {
-                        if (first && !clips.marking) figureInView()?.let(onView)
+                        if (first && !clips.marking) {
+                            val key = if (browsing >= 0) sequencePanelKey(browsing, panels[browsing] ?: 0).takeIf { it in figureKeys } else figureInView()
+                            key?.let(onView)
+                        }
                         true
                     }
                     else -> false
@@ -1669,23 +1810,47 @@ private fun ArticleList(
         }
         when (content) {
             is ArticleContent.Ready -> itemsIndexed(content.blocks, key = { i, _ -> "b$i" }) { i, b ->
-                val mark = if (b.clipText() == null) {
-                    null
-                } else {
-                    BlockMark(
-                        highlight = clips.highlights[i],
-                        selected = (clips.marking && clips.selected == i) || flash == i,
-                        onTap = {
-                            when {
-                                clips.marking && clips.selected == i -> clips.onClip(i)
-                                clips.marking -> clips.onSelect(i)
-                                i in clips.highlights -> clips.onClip(i)
+                if (b is MdBlock.Sequence) {
+                    if (narrow) {
+                        StackedSequence(b, i, content.images, boxes, onView = { p -> onView(sequencePanelKey(i, p)) }) { key, coordinates ->
+                            stackedPanels.panels[key] = coordinates
+                        }
+                    } else {
+                        PictureSequence(
+                            b,
+                            i,
+                            content.images,
+                            boxes,
+                            panelWidth = sequences.panelWidth,
+                            selected = panels[i] ?: 0,
+                            browsing = browsing == i,
+                            inView = sequences.inView == i,
+                            onSelect = { choosePanel(i, it) },
+                            onView = { p ->
+                                choosePanel(i, p)
+                                onView(sequencePanelKey(i, p))
                             }
-                        },
-                        onHold = { clips.onClip(i) }
-                    )
+                        )
+                    }
+                } else {
+                    val mark = if (b.clipText() == null) {
+                        null
+                    } else {
+                        BlockMark(
+                            highlight = clips.highlights[i],
+                            selected = (clips.marking && clips.selected == i) || flash == i,
+                            onTap = {
+                                when {
+                                    clips.marking && clips.selected == i -> clips.onClip(i)
+                                    clips.marking -> clips.onSelect(i)
+                                    i in clips.highlights -> clips.onClip(i)
+                                }
+                            },
+                            onHold = { clips.onClip(i) }
+                        )
+                    }
+                    ArticleBlock(b, content.images, boxes["b$i"], onView = { onView("b$i") }, mark)
                 }
-                ArticleBlock(b, content.images, boxes["b$i"], onView = { onView("b$i") }, mark)
             }
             is ArticleContent.Failed -> item(key = "error") {
                 Column(Modifier.measure().padding(vertical = 16.dp)) {
@@ -1742,6 +1907,200 @@ private fun Figure(file: File, caption: String, box: FigureBox, shape: Shape, on
     }
 }
 
+/**
+ * A picture sequence on a wide screen: one row of captioned panels, the [selected] one centred with its neighbours peeking in
+ * at the sides, over a track saying which panel of how many. A swipe rests on the nearest panel and chooses it; a tap chooses a
+ * panel and opens it full screen. The controller browses through [ArticleList] (L2, then ←/→): while [browsing], the chosen
+ * panel is outlined, the others dim and the track names the keys; [inView] offers L2. Every panel is measured up front, so
+ * the row never changes height as it scrolls and the article around it never moves.
+ */
+@Composable
+private fun PictureSequence(
+    b: MdBlock.Sequence,
+    block: Int,
+    images: Map<String, IssueImage>,
+    boxes: Map<String, FigureBox>,
+    panelWidth: Dp,
+    selected: Int,
+    browsing: Boolean,
+    inView: Boolean,
+    onSelect: (Int) -> Unit,
+    onView: (Int) -> Unit
+) {
+    val count = b.panels.size
+    val gap = SEQUENCE_GAP.dp
+    val step = with(LocalDensity.current) { (panelWidth + gap).toPx() }
+    val scroll = rememberScrollState((selected * step).roundToInt())
+    val chosen by rememberUpdatedState(selected)
+    val choose by rememberUpdatedState(onSelect)
+    // a swipe or fling rests on the nearest panel, which becomes the chosen one. The settling animation runs as a child: a
+    // newer swipe or the centring below cancels only that child (scrolls share one mutex), never this collector, so every
+    // later swipe still settles
+    LaunchedEffect(scroll, step) {
+        var settling: Job? = null
+        snapshotFlow { scroll.isScrollInProgress }.filter { !it }.collect {
+            val p = nearestPanel(scroll.value, step, count)
+            if (p != chosen) choose(p)
+            val target = (p * step).roundToInt().coerceAtMost(scroll.maxValue)
+            if (scroll.value != target) {
+                settling?.cancel()
+                settling = launch { scroll.animateScrollTo(target) }
+            }
+        }
+    }
+    // a panel chosen with the controller (or restored) is centred
+    LaunchedEffect(selected, step) {
+        val target = (selected * step).roundToInt().coerceAtMost(scroll.maxValue)
+        if (scroll.value != target) scroll.animateScrollTo(target)
+    }
+    val imageHeight = b.panels.indices.maxOf { boxes[sequencePanelKey(block, it)]?.height ?: 0f }.dp
+    BoxWithConstraints(Modifier.widthIn(max = WideMeasure).fillMaxWidth().padding(top = 6.dp, bottom = 18.dp)) {
+        // each panel can be centred, the first and last included
+        val side = ((maxWidth - panelWidth) / 2).coerceAtLeast(0.dp)
+        Column {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(scroll).padding(horizontal = side),
+                horizontalArrangement = Arrangement.spacedBy(gap)
+            ) {
+                b.panels.forEachIndexed { p, panel ->
+                    SequencePanel(
+                        panel,
+                        images[panel.src],
+                        boxes[sequencePanelKey(block, p)],
+                        panelWidth,
+                        imageHeight,
+                        chosen = p == selected,
+                        browsing = browsing,
+                        label = "Picture ${p + 1} of $count",
+                        onView = { onView(p) }
+                    )
+                }
+            }
+            SequenceTrack(count, selected, browsing, inView, Modifier.padding(start = side, end = side, top = 10.dp))
+        }
+    }
+}
+
+/** One panel of a [PictureSequence]: its picture centred in the row's common picture height, then its whole caption. */
+@Composable
+private fun SequencePanel(
+    panel: MdBlock.Image,
+    image: IssueImage?,
+    box: FigureBox?,
+    width: Dp,
+    imageHeight: Dp,
+    chosen: Boolean,
+    browsing: Boolean,
+    label: String,
+    onView: () -> Unit
+) {
+    val file = image?.file
+    val outlined = browsing && chosen
+    Column(Modifier.width(width).graphicsLayer { alpha = if (browsing && !chosen) 0.5f else 1f }) {
+        if (file != null && box != null) {
+            Box(Modifier.fillMaxWidth().height(imageHeight), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier
+                        .size(box.width.dp, box.height.dp)
+                        .drawWithContent {
+                            drawContent()
+                            if (outlined) drawRoundRect(Amber, cornerRadius = CornerRadius(6.dp.toPx()), style = Stroke(3.dp.toPx()))
+                        }
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Slate)
+                        // touch only, like every figure: the controller browses through the article list
+                        .focusProperties { canFocus = false }
+                        .semantics { contentDescription = label }
+                        .clickable(role = Role.Image, onClickLabel = "View full screen", onClick = onView)
+                ) {
+                    CoverImage(
+                        file.path,
+                        Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit,
+                        filterQuality = if (box.upscaled) FilterQuality.None else DrawScope.DefaultFilterQuality
+                    )
+                }
+            }
+        } else {
+            PackNote(image?.problem ?: "Image missing: ${panel.src}")
+        }
+        if (panel.caption.isNotEmpty()) Text(inlineText(panel.caption), style = captionStyle(), modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+    }
+}
+
+/** Under a sequence row: one mark per panel (the chosen one long and amber), "n of N", and the controller keys that apply. */
+@Composable
+private fun SequenceTrack(count: Int, selected: Int, browsing: Boolean, inView: Boolean, modifier: Modifier) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            repeat(count) { p ->
+                Box(Modifier.size(width = if (p == selected) 22.dp else 10.dp, height = 3.dp).background(if (p == selected) Amber else Hairline))
+            }
+        }
+        Text("${selected + 1} of $count", style = MaterialTheme.typography.labelMedium, color = Muted, modifier = Modifier.padding(start = 10.dp))
+        Spacer(Modifier.weight(1f))
+        if (browsing) {
+            KeyCap("←/→", "choose")
+            KeyCap("L2", "done")
+        } else if (inView) {
+            KeyCap("L2", "browse images")
+        }
+    }
+}
+
+/** A controller key cap (as the hint bar and the head chips draw it) and what it does here; not a control itself. */
+@Composable
+private fun KeyCap(key: String, label: String) {
+    Row(Modifier.padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            key,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = Ink,
+            maxLines = 1,
+            modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Amber).padding(horizontal = 5.dp, vertical = 1.dp)
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f),
+            modifier = Modifier.padding(start = 6.dp)
+        )
+    }
+}
+
+/**
+ * A picture sequence on a narrow screen: its panels stacked as ordinary figures, every caption in full and nothing to swipe.
+ * [onPlaced] reports where each panel is, so R2 opens the one most on screen.
+ */
+@Composable
+private fun StackedSequence(
+    b: MdBlock.Sequence,
+    block: Int,
+    images: Map<String, IssueImage>,
+    boxes: Map<String, FigureBox>,
+    onView: (Int) -> Unit,
+    onPlaced: (String, LayoutCoordinates) -> Unit
+) {
+    Column(
+        Modifier.widthIn(max = WideMeasure).fillMaxWidth().padding(top = 6.dp, bottom = 18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        b.panels.forEachIndexed { p, panel ->
+            val key = sequencePanelKey(block, p)
+            val image = images[panel.src]
+            val file = image?.file
+            val box = boxes[key]
+            if (file != null && box != null) {
+                Figure(file, panel.caption, box, RoundedCornerShape(6.dp), onView = { onView(p) }, modifier = Modifier.onPlaced { onPlaced(key, it) })
+            } else {
+                Column(Modifier.measure()) { PackNote(image?.problem ?: "Image missing: ${panel.src}") }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ArticleHead(
@@ -1760,7 +2119,7 @@ private fun ArticleHead(
     Column(Modifier.measure().padding(top = 18.dp, bottom = 8.dp)) {
         val kick = listOf(article.system, article.gameTitle).filter { it.isNotEmpty() }.joinToString(" · ")
         if (kick.isNotEmpty()) Text(kick, style = kicker())
-        Text(article.title, style = headline(MaterialTheme.typography.headlineMedium), modifier = Modifier.padding(top = 4.dp))
+        Text(article.title, style = headline(MaterialTheme.typography.headlineMedium), modifier = Modifier.padding(top = 4.dp).semantics { heading() })
         if (article.deck.isNotEmpty()) Text(inlineText(article.deck), style = deckStyle(), modifier = Modifier.padding(top = 10.dp))
         val meta = listOfNotNull(issue.title, issueDate(issue), article.readingMinutes?.let { "$it min read" }).joinToString(" · ")
         Text(meta, style = MaterialTheme.typography.labelMedium, color = Muted, modifier = Modifier.padding(top = 10.dp))
@@ -1864,6 +2223,8 @@ private fun ArticleBlock(b: MdBlock, images: Map<String, IssueImage>, figure: Fi
                 Column(m.padding(top = 6.dp, bottom = 18.dp)) { PackNote(image?.problem ?: "Image missing: ${b.src}") }
             }
         }
+        // drawn by PictureSequence or StackedSequence: a sequence needs the article list's browsing state
+        is MdBlock.Sequence -> Unit
         MdBlock.Rule -> Box(m.padding(vertical = 14.dp).height(1.dp).background(Hairline))
     }
 }

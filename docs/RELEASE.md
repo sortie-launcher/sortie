@@ -269,7 +269,7 @@ No accounts, server, app store, automatic updater, ROM/BIOS downloads or telemet
 1. Fresh installation: grant storage through Android UI, add at least two systems from different directories, select usable
    emulator profiles and launch/return. No JSON editing or ADB configuration. Explain emulator/core/BIOS prerequisites.
 2. Daily maintenance: add a root, edit a system without losing custom fields, change emulator, rescan, remove a library entry
-   without deleting ROMs or personal notes, and continue using favourites/Want to play/Finished/Shelved/search.
+   without deleting ROMs or personal bookmarks, and continue using favourites/Want to play/Finished/Shelved/search.
 3. Existing library: opening setup never resets a desktop-generated configuration. Invalid/concurrently edited files cannot
    be overwritten as if empty. Interrupted setup leaves a recoverable complete configuration, not a mixed set.
 4. Recovery: missing/unreadable volumes preserve useful library state; restored or moved roots resolve the correct paths;
@@ -277,13 +277,13 @@ No accounts, server, app store, automatic updater, ROM/BIOS downloads or telemet
 5. Usability: touch and controller paths are usable on small and large surfaces, dialogs/drafts behave predictably on Back,
    optional features do not demand Shizuku/overlay/IME/Home permissions, and a newcomer can find library management.
 6. Upgrade: two APK versions signed with the same beta key update in place on an isolated install, preserving representative
-   preferences, notes and session data. Release build is not debuggable. Signature mismatch must never be solved by uninstalling
+   preferences, bookmarks and session data. Release build is not debuggable. Signature mismatch must never be solved by uninstalling
    the user's existing daily installation.
-7. Integrated regression: magazine reading/navigation and the journal/reference/shelf features remain functional.
+7. Integrated regression: magazine reading/navigation and the bookmark/reference/shelf features remain functional.
 
 ### Implemented
 
-- On-device library setup and maintenance (Home → Library setup, Settings → Library and emulators): multiple systems and
+- On-device library setup and maintenance (Home's Set up library while empty, Settings → Library and emulators): multiple systems and
   folders, built-in emulator presets with plain prerequisites, BIOS/save folders, re-index, safe removal, existing desktop
   configurations preserved (unknown fields kept, unreadable or concurrently changed files refused, atomic commit with
   interrupted-write recovery, remembered configuration location).
@@ -300,6 +300,9 @@ Signed candidates were built locally with `tools/release.sh`; none has been publ
 cover version codes 2–7, with the focused retests identified below. The latest local candidate,
 `sortie-0.1.0-beta.6-code7.apk` (SHA-256 `727c6e4dbd6f616458a146ebc72d6bad98497cd02259ac8af00d5f1b0ea067e0`),
 verifies with `apksigner` as a single v2 signer with the certificate above.
+
+These are historical results for those candidates. Where they mention the weekly journal or game notes, those features
+existed then; later builds replaced them with one bookmark per game and archive the older writing (see the changelog).
 
 - `tools/release.sh ktlintCheck test --continue`: style, 204 JVM tests per variant with no failures or skips, one expected
   v2 signer and a non-debuggable APK. Partial signing configuration is rejected.

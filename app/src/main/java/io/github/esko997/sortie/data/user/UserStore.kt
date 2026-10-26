@@ -2,9 +2,11 @@ package io.github.esko997.sortie.data.user
 
 import android.util.Log
 import io.github.esko997.sortie.data.apps.LibraryItem
+import io.github.esko997.sortie.data.manifest.BOOKMARK_MAX_CHARS
 import io.github.esko997.sortie.data.manifest.BrowseChromeMode
 import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import io.github.esko997.sortie.data.manifest.GameBookmark
 import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.stats.perfInterval
 import io.github.esko997.sortie.stats.statsInterval
@@ -25,6 +27,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 
 /**
  * Favourites, the Want to play queue, hidden entries, layout and per-game profile overrides, persisted as `<root>/sortie/user.json`.
@@ -39,11 +42,18 @@ import kotlinx.serialization.json.Json
  * existing user.json (restored onto a card that was missing at startup, or one that could not be read or parsed then) is left
  * alone and writes fail with [writeError]; a restart loads it ([reloadable]). The directory is only created when
  * [mayCreateDirectory] allows it, so a missing remembered library folder is never recreated empty.
+ *
+ * A user.json from before bookmarks is migrated as it loads ([LegacyUserMigration]): its journal entries, mapping notes and
+ * "where was I?" notes are first copied to a readable archive in [archiveDir] ([LegacyNotesArchive]), and only then is the
+ * migrated state written. Until that archive exists every write of user.json is refused (retrying the archive first), so
+ * the old writing is never overwritten without a copy.
  */
 class UserStore(
     private val file: File,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-    private val mayCreateDirectory: () -> Boolean = { true }
+    private val mayCreateDirectory: () -> Boolean = { true },
+    archiveDir: File = File(file.absoluteFile.parentFile, LegacyNotesArchive.DIR),
+    private val clock: () -> Long = System::currentTimeMillis
 ) {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -55,6 +65,16 @@ class UserStore(
      * [_data], whose initializer sets it. Changed under [writeLock] afterwards.
      */
     @Volatile private var owned = false
+
+    /** Where legacy writing is archived; also used by backup restore for an older backup's journal and notes. */
+    val archive = LegacyNotesArchive(archiveDir)
+
+    /** Legacy writing found in the loaded user.json that is not archived yet: user.json must not be written until it is. */
+    @Volatile private var pendingLegacy: LegacyNotes? = null
+
+    /** The loaded user.json still had legacy fields: once archived, the migrated state is written back. */
+    private var migratedOnLoad = false
+
     private val _data = MutableStateFlow(load())
     val data: StateFlow<UserData> = _data
 
@@ -74,16 +94,72 @@ class UserStore(
 
     init {
         scope.launch { for (unit in dirty) writeLock.withLock { write(_data.value, sync = false) } }
+        // rewrite a migrated user.json without its legacy fields (the write archives them first if that has not happened yet)
+        if (migratedOnLoad) dirty.trySend(Unit)
     }
 
-    private fun load(): UserData = decode()?.also { owned = true } ?: UserData()
+    private fun load(): UserData {
+        val root = readRoot() ?: return UserData()
+        val migrated = LegacyUserMigration.migrate(root)
+        val data = decode(migrated.user) ?: return UserData()
+        owned = true
+        migratedOnLoad = migrated.user != root
+        migrated.legacy?.let { legacy ->
+            pendingLegacy = legacy
+            runCatching { archivePending() }.onFailure { Log.w("UserStore", "archive legacy notes", it) }
+        }
+        return data
+    }
 
-    /** user.json's contents, or null when it is missing, unreadable or not valid. */
-    private fun decode(): UserData? = try {
-        json.decodeFromString(UserData.serializer(), file.readText())
+    /** user.json as a JSON object, or null when it is missing, unreadable or not an object. */
+    private fun readRoot(): JsonObject? = try {
+        json.parseToJsonElement(file.readText()) as? JsonObject
     } catch (e: Exception) {
         if (file.exists()) Log.w("UserStore", "read user.json", e)
         null
+    }
+
+    private fun decode(root: JsonObject): UserData? = try {
+        json.decodeFromJsonElement(UserData.serializer(), root)
+    } catch (e: Exception) {
+        Log.w("UserStore", "decode user.json", e)
+        null
+    }
+
+    /** user.json's contents (migrated in memory, nothing archived or written), or null when it is missing, unreadable or not valid. */
+    private fun decode(): UserData? = readRoot()?.let { decode(LegacyUserMigration.migrate(it).user) }
+
+    /** Archives [pendingLegacy], if any, and clears it. Throws when the archive cannot be written. */
+    private fun archivePending() {
+        val legacy = pendingLegacy ?: return
+        val saved = archive.save(legacy, file.name, clock())
+        Log.i("UserStore", "archived ${legacy.describe()} to ${saved.path}")
+        pendingLegacy = null
+    }
+
+    /**
+     * Archives legacy writing found elsewhere (an older backup about to be restored) in [archive]; returns the readable file.
+     * Throws when it cannot be written: the caller must then not drop that writing.
+     */
+    suspend fun archiveLegacy(legacy: LegacyNotes, source: String): File = withContext(Dispatchers.IO) { archive.save(legacy, source, clock()) }
+
+    /**
+     * Makes sure older journal entries and notes from the loaded user.json are archived (retrying now if that failed so far).
+     * [data] no longer holds them, so anything that copies it elsewhere (a backup export, a safety copy) calls this first and
+     * must stop when it throws: the copy would otherwise leave that writing out.
+     */
+    suspend fun ensureLegacyArchived() = withContext(Dispatchers.IO) {
+        writeLock.withLock {
+            try {
+                archivePending()
+            } catch (e: Exception) {
+                throw IOException(
+                    "older journal entries and notes in ${file.name} could not be archived to ${archive.dir.path} " +
+                        "(${e.message ?: e.javaClass.simpleName})",
+                    e
+                )
+            }
+        }
     }
 
     /** True when a user.json this store did not load now reads: only a restart picks it up. Reads the file. */
@@ -103,7 +179,10 @@ class UserStore(
         dirty.trySend(Unit)
     }
 
-    /** Writes [snapshot] via `.tmp` + rename; [sync] also fsyncs the temp file first. Returns the failure, or null. Caller holds [writeLock]. */
+    /**
+     * Writes [snapshot] via `.tmp` + rename; [sync] also fsyncs the temp file first. Returns the failure, or null. Caller holds
+     * [writeLock]. Legacy writing from the loaded file is archived first; if that fails nothing is written.
+     */
     private fun write(snapshot: UserData, sync: Boolean): Throwable? {
         val failure = runCatching {
             val dir = file.parentFile
@@ -113,6 +192,15 @@ class UserStore(
             }
             if (!owned && file.exists()) {
                 throw IOException("Sortie has not loaded ${file.path} and won't save over it; reopen Sortie, or fix or move that file")
+            }
+            try {
+                archivePending()
+            } catch (e: Exception) {
+                throw IOException(
+                    "older journal entries and notes in ${file.name} could not be archived to ${archive.dir.path} " +
+                        "(${e.message ?: e.javaClass.simpleName}), so ${file.name} is left as it is",
+                    e
+                )
             }
             val tmp = File(file.path + ".tmp")
             FileOutputStream(tmp).use { out ->
@@ -173,10 +261,23 @@ class UserStore(
      */
     suspend fun commit(f: (UserData) -> UserData): UserData = checkNotNull(writeThenPublish({ true }, f))
 
-    /** Saves [id]'s personal annotation durably (see [commit]); an empty one ([GameAnnotation.isEmpty]) removes the entry. */
+    /** Saves [id]'s controller requirement durably (see [commit]); an empty one ([GameAnnotation.isEmpty]) removes the entry. */
     suspend fun saveGameAnnotation(id: String, annotation: GameAnnotation): UserData = commit {
         it.copy(gameAnnotations = if (annotation.isEmpty()) it.gameAnnotations - id else it.gameAnnotations + (id to annotation))
     }
+
+    /**
+     * Saves [text] (trimmed) as [id]'s one bookmark durably, replacing the previous one; a blank [text] removes it (the explicit
+     * Clear). Text over [BOOKMARK_MAX_CHARS] is refused with [IllegalArgumentException], never truncated.
+     */
+    suspend fun saveBookmark(id: String, text: String): UserData {
+        val trimmed = text.trim()
+        require(trimmed.length <= BOOKMARK_MAX_CHARS) { "a bookmark holds at most $BOOKMARK_MAX_CHARS characters (this one has ${trimmed.length})" }
+        val at = clock()
+        return commit { u -> u.copy(bookmarks = if (trimmed.isEmpty()) u.bookmarks - id else u.bookmarks + (id to GameBookmark(trimmed, at))) }
+    }
+
+    fun setBookmarkInvitation(on: Boolean) = update { it.copy(bookmarkInvitation = on) }
 
     fun toggleFavourite(id: String) = update { it.copy(favourites = if (id in it.favourites) it.favourites - id else it.favourites + id) }
 

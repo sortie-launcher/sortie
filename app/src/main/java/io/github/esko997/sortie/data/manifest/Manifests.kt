@@ -1,6 +1,5 @@
 package io.github.esko997.sortie.data.manifest
 
-import io.github.esko997.sortie.data.journal.JournalEntry
 import io.github.esko997.sortie.data.magazine.MagazineClipping
 import io.github.esko997.sortie.data.reference.ReferenceCard
 import io.github.esko997.sortie.data.user.GameProgress
@@ -126,21 +125,31 @@ object ControllerSupportSerializer : KSerializer<ControllerSupport> {
 }
 
 /**
- * The user's own per-game notes: what the game needs ([controller]), personal [mappingNotes] (supplementing the guide's
- * `controls`, which stay separate), and [returnNote] — "where was I?", shown on the companion while browsing and playing.
+ * What a game needs beyond the built-in controller, recorded by the user on the device ([controller]). The guide's `controls`
+ * stay separate. Personal text about a game is its [GameBookmark]; the older `mappingNotes` and `returnNote` fields are read
+ * only by [io.github.esko997.sortie.data.user.LegacyUserMigration], which archives them and moves `returnNote` to a bookmark.
  */
 @Serializable
 data class GameAnnotation(
-    val controller: ControllerSupport = ControllerSupport.UNKNOWN,
-    val mappingNotes: String = "",
-    val returnNote: String = ""
+    val controller: ControllerSupport = ControllerSupport.UNKNOWN
 ) {
     /** Nothing recorded: the entry is dropped from [UserData.gameAnnotations] rather than stored. */
-    fun isEmpty(): Boolean = controller == ControllerSupport.UNKNOWN && mappingNotes.isBlank() && returnNote.isBlank()
-
-    /** Surrounding whitespace trimmed; an all-blank note becomes empty. */
-    fun normalised(): GameAnnotation = copy(mappingNotes = mappingNotes.trim(), returnNote = returnNote.trim())
+    fun isEmpty(): Boolean = controller == ControllerSupport.UNKNOWN
 }
+
+/**
+ * The one text bookmark a game has: where the player is, for when they return. Saving replaces the previous text; a blank
+ * text is never stored (the entry is removed). [savedAt] is epoch milliseconds of the save, 0 when unknown (a bookmark migrated
+ * from an older `returnNote`, whose date was never recorded).
+ */
+@Serializable
+data class GameBookmark(
+    val text: String = "",
+    val savedAt: Long = 0
+)
+
+/** Longest bookmark text accepted, in characters; longer drafts are refused, not truncated. */
+const val BOOKMARK_MAX_CHARS = 2_000
 
 /** Slots in the companion dock. */
 const val DOCK_SLOTS = 5
@@ -204,16 +213,18 @@ data class UserData(
     val perfInterval: Int = 2,
     /** What the companion screen of a dual-screen device shows: "companion" (its panel) or "perf" (see CompanionView). */
     val companionView: String = "companion",
-    /** Per-game controller requirement, mapping notes and "where was I?" notes (game id → annotation); empty entries are absent. */
+    /** Per-game controller requirement (game id → annotation); empty entries are absent. */
     val gameAnnotations: Map<String, GameAnnotation> = emptyMap(),
+    /** One text bookmark per game (game id → bookmark), shown on the game page and the companion; blank ones are absent. */
+    val bookmarks: Map<String, GameBookmark> = emptyMap(),
+    /** After a game Sortie saw end, offer (without a dialog or keyboard) to leave its bookmark; Settings turns this off. */
+    val bookmarkInvitation: Boolean = true,
     /** Independent of favourites and Want to play; a game has at most one personal shelf status. */
     val gameProgress: Map<String, GameProgress> = emptyMap(),
     /** Personal excerpts, recommendation clippings and notes; magazine packs stay read-only. */
     val magazineClippings: List<MagazineClipping> = emptyList(),
     /** Locally authored/imported reference cards keyed by exact library game id. */
     val referenceCards: Map<String, List<ReferenceCard>> = emptyMap(),
-    /** Dated personal journal entries; recorded sessions remain in the play-history database. */
-    val journalEntries: List<JournalEntry> = emptyList(),
     /** Cocoon directory last imported from, for re-runs: offered first next time "Import from Cocoon…" opens; null = never. */
     val cocoonDir: String? = null
 )

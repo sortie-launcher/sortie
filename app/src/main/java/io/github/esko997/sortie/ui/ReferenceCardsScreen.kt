@@ -33,7 +33,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -74,8 +73,6 @@ import io.github.esko997.sortie.data.reference.ReferenceStore
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -96,8 +93,6 @@ fun ReferenceCardsScreen(graph: SortieApp.Graph, gameId: String) {
     val store = remember(graph) { ReferenceStore(graph.user, graph.sortieDir) }
     val cards = rememberReferenceCards(graph, gameId)
     val game by produceState<GameEntity?>(null, gameId) { value = graph.db.games().byId(gameId) }
-    val annotation by remember(gameId) { graph.user.data.map { it.gameAnnotations[gameId] }.distinctUntilChanged() }
-        .collectAsState(graph.user.data.value.gameAnnotations[gameId])
     var viewing by rememberSaveable(gameId) { mutableStateOf<String?>(null) }
     var editing by rememberSaveable(gameId) { mutableStateOf<String?>(null) }
     // the card the list returns its focus to
@@ -196,7 +191,6 @@ fun ReferenceCardsScreen(graph: SortieApp.Graph, gameId: String) {
             cards = cards,
             sortieDir = graph.sortieDir,
             guideControls = game?.controls?.takeIf { it.isNotBlank() },
-            mappingNotes = annotation?.mappingNotes?.takeIf { it.isNotBlank() },
             focusId = lastCard,
             busy = busy,
             notice = notice,
@@ -247,7 +241,6 @@ private fun ReferenceList(
     cards: List<ReferenceCard>,
     sortieDir: File,
     guideControls: String?,
-    mappingNotes: String?,
     focusId: String?,
     busy: Boolean,
     notice: String?,
@@ -323,8 +316,8 @@ private fun ReferenceList(
                     }
                 }
             }
-            if (guideControls != null || mappingNotes != null) {
-                item { ReadOnlyReference(guideControls, mappingNotes) }
+            if (guideControls != null) {
+                item { ReadOnlyReference(guideControls) }
             }
         }
         HintBar("A" to "open", "B" to "back")
@@ -344,12 +337,9 @@ private fun cardLine(card: ReferenceCard): String {
     return listOfNotNull(what, edited).joinToString(" · ")
 }
 
-/**
- * The guide's hand-written controls and the user's own mapping notes, shown beside the cards but never edited or copied into
- * them; focusable so the D-pad can scroll down to it.
- */
+/** The guide's hand-written controls, shown beside the cards but never edited or copied into them; focusable so the D-pad can scroll down to it. */
 @Composable
-private fun ReadOnlyReference(guideControls: String?, mappingNotes: String?) {
+private fun ReadOnlyReference(guideControls: String) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(10.dp)
@@ -365,14 +355,8 @@ private fun ReadOnlyReference(guideControls: String?, mappingNotes: String?) {
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text("Not cards: shown here for reference only", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        guideControls?.let {
-            Text("Guide controls", style = MaterialTheme.typography.titleSmall, color = Amber)
-            Text(it, style = MaterialTheme.typography.bodyMedium)
-        }
-        mappingNotes?.let {
-            Text("My mapping notes (edited on the game page)", style = MaterialTheme.typography.titleSmall, color = Amber)
-            Text(it, style = MaterialTheme.typography.bodyMedium)
-        }
+        Text("Guide controls", style = MaterialTheme.typography.titleSmall, color = Amber)
+        Text(guideControls, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

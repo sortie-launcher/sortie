@@ -23,6 +23,8 @@ import io.github.esko997.sortie.data.manifest.BrowseChromeMode
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.LaunchProfile
 import io.github.esko997.sortie.data.manifest.SystemDef
+import io.github.esko997.sortie.data.tonight.TonightCard
+import io.github.esko997.sortie.data.tonight.TonightDay
 import io.github.esko997.sortie.launch.IntentBuilder
 import io.github.esko997.sortie.launch.SessionReturn
 import io.github.esko997.sortie.launch.sessionReturn
@@ -30,6 +32,7 @@ import io.github.esko997.sortie.mecha.ui.MechaPresence
 import io.github.esko997.sortie.stats.CompanionView
 import io.github.esko997.sortie.stats.DeviceStatsMode
 import java.io.File
+import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -115,15 +118,22 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
         viewModelScope.launch { user.map { it.heroRotation }.distinctUntilChanged().collect { Selection.heroRotation.value = it } }
     }
 
-    /** Publishes personal notes only after the card write succeeds; returns an error for the editor to display. */
-    suspend fun saveGameAnnotation(id: String, annotation: GameAnnotation): String? = try {
-        graph.user.saveGameAnnotation(id, annotation.normalised())
+    /** Publishes the controller requirement only after the card write succeeds; returns an error for the editor to display. */
+    suspend fun saveGameAnnotation(id: String, annotation: GameAnnotation): String? = userWrite { graph.user.saveGameAnnotation(id, annotation) }
+
+    /** Saves [text] as [id]'s one bookmark, replacing the previous one (blank removes it); returns an error for the editor. */
+    suspend fun saveBookmark(id: String, text: String): String? = userWrite { graph.user.saveBookmark(id, text) }
+
+    private suspend fun userWrite(write: suspend () -> Unit): String? = try {
+        write()
         null
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (failure: Exception) {
         failure.message ?: "Unable to write user.json"
     }
+
+    fun setBookmarkInvitation(on: Boolean) = graph.user.setBookmarkInvitation(on)
 
     fun setSystemProfile(systemId: String, profileId: String?) = graph.user.setSystemProfile(systemId, profileId)
 
@@ -317,6 +327,12 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     fun game(id: String): Flow<GameEntity?> = dao.observe(id)
 
+    /** Tonight's saved set for [date]: chosen and saved by the first request of that date, the same set for every later one. */
+    suspend fun tonight(date: LocalDate): TonightDay = graph.tonight.day(date)
+
+    /** [day]'s picks as they stand now: their games and whether each can still be played (see [TonightCard]). */
+    suspend fun tonightCards(day: TonightDay): List<TonightCard> = graph.tonight.cards(day)
+
     /** Favourited games, apps and shortcuts in one list, sorted by label. */
     @OptIn(ExperimentalCoroutinesApi::class)
     val favourites: Flow<List<LibraryItem>> =
@@ -431,27 +447,33 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     }
 
     /**
-     * Back in the foreground. The open play session ends only if its app is gone: Home summons the switcher by resuming this
-     * HOME activity while the game keeps running underneath (and is raised again), which must not stop the timer or replace
-     * Now playing. The app's package comes from the session's profile (games) or its id (apps); without Shizuku, as before,
-     * resuming ends the session. Save and BIOS state stay as scanned until the next re-index.
+     * Back in the foreground ([ownTask]: the navigation's own task id). The open play session ends only if its app is gone:
+     * Home summons the switcher by resuming this HOME activity while the game keeps running underneath (and is raised again),
+     * which must not stop the timer or replace Now playing. The app's package comes from the session's profile (games) or its id
+     * (apps); without Shizuku, or when the task list cannot be read, as before, resuming ends the session. Save and BIOS state
+     * stay as scanned until the next re-index.
      * A game whose emulator closed within [io.github.esko997.sortie.launch.QUICK_EXIT_MS] without a Home press (see
      * [sessionReturn]) did not start: its session is dropped and its page (or a toast elsewhere) says so.
+     * Separately, the same task list tells [io.github.esko997.sortie.launch.SessionEndWatch] whether a watched game really
+     * ended; only then is its bookmark offered (when the setting is on and the game is indexed here).
      */
-    fun onForeground() = viewModelScope.launch {
+    fun onForeground(ownTask: Int) = viewModelScope.launch {
         val session = graph.playLog.current.value
+        val tasks = if (graph.screenMover.ready && (session != null || graph.sessionEnds.watching() != null)) graph.screenMover.taskSnapshot() else null
         if (session != null) {
             val pkg = when {
                 session.gameId.startsWith(LibraryItem.APP_PREFIX) -> session.gameId.removePrefix(LibraryItem.APP_PREFIX)
                 session.gameId.startsWith(LibraryItem.SHORTCUT_PREFIX) -> session.gameId.removePrefix(LibraryItem.SHORTCUT_PREFIX).substringBefore('/')
                 else -> session.profileId?.let { manifests.value.profiles[it]?.`package` }
             }
-            val running = if (pkg != null && graph.screenMover.ready) graph.screenMover.appTasks().any { it.pkg == pkg } else null
+            // an unreadable task list is "unknown", never "gone"
+            val running = if (pkg != null && tasks != null) graph.screenMover.switchableOf(tasks).any { it.pkg == pkg } else null
             val outcome = sessionReturn(session.startedAt, System.currentTimeMillis(), running, graph.launcher.homeKeyAt)
             when {
                 outcome == SessionReturn.RUNNING -> Unit
                 // apps and shortcuts may legitimately finish at once (a toggle, a hand-off to another app): games only
                 outcome == SessionReturn.QUICK_EXIT && HomeIds.isGame(session.gameId) -> {
+                    graph.sessionEnds.forget(session.gameId, session.startedAt)
                     graph.playLog.endQuickExit()
                     val message = graph.launcher.quickExit(session.gameId, session.profileId)
                     if (gamePage == session.gameId) _exitNotice.value = ExitNotice(session.gameId, message) else graph.launcher.notify(message)
@@ -463,6 +485,9 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
                     graph.playLog.end()
                 }
             }
+        }
+        graph.sessionEnds.observe(tasks, ownTask)?.let { ended ->
+            if (user.value.bookmarkInvitation && dao.byId(ended.gameId) != null) graph.sessionEnds.offer(ended)
         }
         graph.screenMover.sweepStaleLaunchers()
         graph.screenMover.guardVendorPanel()

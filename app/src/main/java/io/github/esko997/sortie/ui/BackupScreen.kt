@@ -150,6 +150,12 @@ private fun LazyListScope.preview(p: BackupState.Preview, playing: String?, prim
                     error = true
                 )
             }
+            p.legacy?.let { legacy ->
+                Note(
+                    "It holds ${legacy.describe()} from an older Sortie. They are saved, readable, to sortie/archive on the card before " +
+                        "anything is replaced; \"where was I?\" notes become the games' bookmarks. Journal screenshots are files and stay untouched."
+                )
+            }
             Note("Your current preferences and companion are saved as a safety copy first (it recovers them; merged history stays).")
         }
     }
@@ -174,10 +180,10 @@ private fun summary(u: UserData): String = listOf(
     plural(u.wantToPlay.size, "Want to play game"),
     plural(u.layout.size, "custom home tile"),
     plural(u.dock.count { it.isNotBlank() }, "dock slot"),
-    plural(u.gameAnnotations.size, "game note"),
+    plural(u.bookmarks.size, "bookmark"),
+    plural(u.gameAnnotations.size, "controller requirement"),
     plural(u.gameProgress.size, "Finished/Shelved game"),
     plural(u.magazineClippings.size, "magazine clipping"),
     plural(u.referenceCards.values.sumOf { it.size }, "reference card"),
-    "${u.journalEntries.size} journal ${if (u.journalEntries.size == 1) "entry" else "entries"}",
     plural(u.shortcuts.size, "opted-in shortcut")
 ).joinToString(" · ")

@@ -12,6 +12,7 @@ import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.db.SortieDb
 import io.github.esko997.sortie.data.db.deleteSessions
 import io.github.esko997.sortie.data.manifest.UserData
+import io.github.esko997.sortie.data.user.LegacyNotes
 import io.github.esko997.sortie.data.user.PlayLog
 import io.github.esko997.sortie.data.user.UserStore
 import io.github.esko997.sortie.mecha.MechaRestore
@@ -50,7 +51,9 @@ sealed interface BackupState {
         /** App and shortcut ids the backup's favourites/layout/dock refer to that this device does not have (Android owns those). */
         val missingLaunchables: Int,
         /** This device's companion, which the backup's ([BackupFile.mecha]) would replace; null while no hangar is open. */
-        val currentMecha: MechaState? = null
+        val currentMecha: MechaState? = null,
+        /** An older Sortie's journal entries and game notes in the file; archived readable before user.json is replaced. */
+        val legacy: LegacyNotes? = null
     ) : BackupState
 
     data class Result(val ok: Boolean, val title: String, val lines: List<String>) : BackupState
@@ -92,8 +95,12 @@ class BackupManager(
      */
     suspend fun writeSafetyCopy(prefix: String): File = writeSafetyCopy(prefix, user.data.value, dao.allSessions(), mecha.backupSave())
 
-    /** Writes exactly [prefs], [sessions] and [save], for callers that must know what the copy holds (restore compares it with user.json). */
+    /**
+     * Writes exactly [prefs], [sessions] and [save], for callers that must know what the copy holds (restore compares it with
+     * user.json). Refused (throws) while older journal entries and notes are not archived: the copy would leave them out.
+     */
     private suspend fun writeSafetyCopy(prefix: String, prefs: UserData, sessions: List<SessionEntity>, save: MechaState?): File = withContext(Dispatchers.IO) {
+        user.ensureLegacyArchived()
         File(safetyDir, "$prefix-${stamp()}.json").also { writeSafety(it, prefs, sessions, save) }
     }
 
@@ -145,6 +152,21 @@ class BackupManager(
 
     private suspend fun exportTo(uri: Uri): BackupState {
         val name = displayName(uri)
+        // the backup holds user.data, which no longer has older journal entries and notes: only export once they are archived
+        try {
+            user.ensureLegacyArchived()
+        } catch (e: Exception) {
+            Log.w(TAG, "export legacy archive", e)
+            return BackupState.Result(
+                false,
+                "Export not written",
+                listOf(
+                    "Not exported: ${describe(e)}.",
+                    "A backup now would leave that writing out, so $name was left empty; delete it. user.json still holds the writing " +
+                        "unchanged. Make room on the card (or fix the sortie/archive folder), then export again."
+                )
+            )
+        }
         // One consistent snapshot: no session can open or close while the preferences and the table are read.
         val backup = playLog.paused {
             buildBackup(user.data.value, dao.allSessions(), mecha.backupSave(), System.currentTimeMillis(), deviceName(), BuildConfig.VERSION_NAME)
@@ -173,8 +195,8 @@ class BackupManager(
         }
         val lines = buildList {
             add(
-                "Saved $name: all preferences and personal records, including favourites, Want to play, Finished/Shelved status, game notes, " +
-                    "reference-card text, magazine clippings and journal entries. Completed play sessions saved: ${backup.sessions.size}."
+                "Saved $name: all preferences and personal records, including favourites, Want to play, Finished/Shelved status, bookmarks, " +
+                    "controller entries, reference-card text and magazine clippings. Completed play sessions saved: ${backup.sessions.size}."
             )
             backup.mecha?.let { add("Hangar companion saved: ${mechaLine(it)}.") }
             backup.openSessionExcluded?.let {
@@ -201,7 +223,7 @@ class BackupManager(
                 val available = availableLaunchables()
                 val missing = parsed.backup.user.launchableIds().count { it !in available }
                 val merge = planSessionMerge(parsed.backup.sessions, dao.allSessions())
-                BackupState.Preview(name, parsed.backup, parsed.openIgnored, merge, user.data.value, missing, mecha.backupSave())
+                BackupState.Preview(name, parsed.backup, parsed.openIgnored, merge, user.data.value, missing, mecha.backupSave(), parsed.legacy)
             }
         }
     }
@@ -232,6 +254,19 @@ class BackupManager(
                 "Restore not started",
                 listOf("Couldn't save a safety copy of the current state to ${safetyDir.path}: ${describe(e)}", "Nothing was changed.")
             )
+        }
+        // an older backup's journal and notes have no place in user.json any more: keep a readable copy before replacing it
+        val archived = preview.legacy?.let { legacy ->
+            try {
+                user.archiveLegacy(legacy, "backup ${preview.source}")
+            } catch (e: Exception) {
+                Log.w(TAG, "archive legacy notes", e)
+                return BackupState.Result(
+                    false,
+                    "Restore not started",
+                    listOf("Couldn't save the backup's ${legacy.describe()} to ${user.archive.dir.path}: ${describe(e)}", "Nothing was changed.")
+                )
+            }
         }
         // the companion first, before the history it would otherwise credit lands in the database
         val companion = try {
@@ -281,8 +316,14 @@ class BackupManager(
         val lines = buildList {
             add(
                 "Replaced all preferences and personal records from ${preview.source}, including layout, dock, favourites, Want to play, " +
-                    "Finished/Shelved status, game notes, reference-card text, magazine clippings and journal entries."
+                    "Finished/Shelved status, bookmarks, controller entries, reference-card text and magazine clippings."
             )
+            if (archived != null && preview.legacy != null) {
+                add(
+                    "The backup's ${preview.legacy.describe()} from an older Sortie were saved, readable, to ${archived.path}. " +
+                        "\"Where was I?\" notes are the games' bookmarks now; journal screenshots are files and were not touched."
+                )
+            }
             add(
                 "Play history merged: ${inserted.size} sessions added (${merge.addedMinutes} min); ${merge.alreadyPresent} already on this device were kept. " +
                     "Sessions recorded here since the backup are untouched. playlog.jsonl was not modified."
@@ -361,10 +402,10 @@ class BackupManager(
         private const val MAX_BYTES = 64 * 1024 * 1024
 
         const val SCOPE = "A backup holds Sortie's own state: every preference in user.json (layout, favourites, hidden entries, launcher choices, dock, " +
-            "Want to play, game notes, controller entries, Finished/Shelved verdicts, magazine clippings, reference-card text and journal entries), " +
-            "the play history from the database and the Hangar companion (name, parts, salvage, bond). It does not hold reference images or " +
-            "journal screenshots: copy their folders alongside the backup. ROMs, covers, emulator saves, the game index (rebuilt from the card), " +
-            "desktop manifests and playlog.jsonl are also excluded."
+            "Want to play, bookmarks, controller entries, Finished/Shelved verdicts, magazine clippings and reference-card text), " +
+            "the play history from the database and the Hangar companion (name, parts, salvage, bond). It does not hold reference images, " +
+            "the personal-notes archive (sortie/archive) or old journal screenshots: copy those folders alongside the backup. ROMs, covers, " +
+            "emulator saves, the game index (rebuilt from the card), desktop manifests and playlog.jsonl are also excluded."
 
         const val NOT_RESTORED = "Not restored, because Android owns them: launcher shortcut pins, Shizuku and all-files/draw-over-apps permissions, " +
             "and the default home app. Re-grant those in Android settings if they were lost."
