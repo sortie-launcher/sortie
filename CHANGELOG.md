@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Limit the companion screen's curated blurb to two lines with an ellipsis, keeping long recommendations from crowding
+  the art and controls. The game detail page still shows the full, unchanged blurb.
 - Refresh the README, website, onboarding, manual and format references for Quiet Home, Tonight, bookmarks and their
   archive/backup limits, bundled guide precedence, Rivet gestures and current switcher/reader controls. Add native Nova
   beta 2136 captures of Home, Tonight, game details and the bookmark editor; keep older setup images clearly identified.
