@@ -80,6 +80,7 @@ import io.github.esko997.sortie.mecha.MechaRoam
 import io.github.esko997.sortie.mecha.MechaSpotKind
 import io.github.esko997.sortie.mecha.MechaStore
 import io.github.esko997.sortie.mecha.MechaTouch
+import io.github.esko997.sortie.mecha.MechaVelocity
 import io.github.esko997.sortie.ui.Amber
 import io.github.esko997.sortie.ui.Slate
 import io.github.esko997.sortie.ui.displayLitFlow
@@ -106,6 +107,9 @@ private val SNORE = Color(0xFFB8C4D6)
 /** A declared element pushed by the mech: [id]'s content drawn shifted by ([dx], [dy]) window pixels (a poke, a lift). */
 @Immutable
 internal data class MechaNudge(val id: String, val dx: Int, val dy: Int)
+
+/** One release, in window pixels. Cancelled carries may land locally but cannot cross displays. */
+internal data class MechaRelease(val x: Float, val y: Float, val velocity: MechaVelocity = MechaVelocity.ZERO, val allowAcross: Boolean = true)
 
 /**
  * One window's stage for the companion: the declared spots and obstacles (window pixels, from layout callbacks, never state),
@@ -205,9 +209,9 @@ class MechaStage internal constructor(
     /** In the player's hand (held still or carried): the pointer watcher moves him, the director only swings his legs. */
     internal var carried = false
 
-    /** Finished gestures for the director, oldest first: PET, HANGAR or DROP (with [dropAt], the finger in window pixels). */
+    /** Finished gestures for the director, oldest first; a carry has no new hit target until its release is handled. */
     internal val gestures = ArrayDeque<MechaTouch>()
-    internal var dropAt: Pair<Float, Float>? = null
+    internal var dropAt: MechaRelease? = null
 
     var hangarOpen by mutableStateOf(false)
         private set
@@ -322,6 +326,7 @@ class MechaStage internal constructor(
     /** Held still long enough: picked up where he stands, drawn over the interface, dangling. */
     internal fun grab(fx: Float, fy: Float) {
         carried = true
+        MechaPresence.holdPointer(this)
         busy = false
         nudge = null
         bubble = null
@@ -341,11 +346,11 @@ class MechaStage internal constructor(
     }
 
     /** Let go: [how] is HANGAR (released still) or DROP (released after a carry, finger at [fx], [fy]). */
-    internal fun letGo(how: MechaTouch, fx: Float, fy: Float) {
+    internal fun letGo(how: MechaTouch, fx: Float, fy: Float, velocity: MechaVelocity = MechaVelocity.ZERO, allowAcross: Boolean = true) {
         carried = false
         front = false
         bob = 0
-        dropAt = fx to fy
+        dropAt = MechaRelease(fx, fy, velocity, allowAcross)
         gestures.addLast(how)
         signal.trySend(Unit)
     }
@@ -569,6 +574,7 @@ private fun BubbleView(bubble: MechaBubble, stage: MechaStage) {
  * carries him until released. Only what is his is consumed (the pet's release, everything after the hold), so the control
  * or panel under him never also reacts; a move before the hold is a swipe and is left alone for the scroller under him.
  */
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 private suspend fun PointerInputScope.watchTouches(stage: MechaStage, haptics: HapticFeedback) {
     val slop = viewConfiguration.touchSlop
     awaitPointerEventScope {
@@ -605,9 +611,11 @@ private suspend fun PointerInputScope.watchTouches(stage: MechaStage, haptics: H
                 val held = gesture.state == MechaTouch.HELD || gesture.state == MechaTouch.CARRY
                 if (c == null || next.changes.size > 1) {
                     // a second finger or a lost pointer: the gesture is over; a mech in hand is let go where he is
-                    if (held) stage.letGo(MechaTouch.DROP, lastX + b.left, lastY + b.top)
+                    if (held) stage.letGo(MechaTouch.DROP, lastX + b.left, lastY + b.top, allowAcross = false)
                     break
                 }
+                // Android batches fast moves between frames. Keep their original times for the release estimate.
+                for (sample in c.historical) gesture.move(sample.position.x, sample.position.y, sample.uptimeMillis)
                 lastX = c.position.x
                 lastY = c.position.y
                 lastT = c.uptimeMillis
@@ -625,7 +633,8 @@ private suspend fun PointerInputScope.watchTouches(stage: MechaStage, haptics: H
                         MechaTouch.DROP -> {
                             c.consume()
                             if (!held) stage.grab(lastX + b.left, lastY + b.top)
-                            stage.letGo(MechaTouch.DROP, lastX + b.left, lastY + b.top)
+                            stage.carryTo(lastX + b.left, lastY + b.top)
+                            stage.letGo(MechaTouch.DROP, lastX + b.left, lastY + b.top, gesture.releaseVelocity)
                         }
                         else -> Unit
                     }

@@ -9,6 +9,7 @@ import io.github.esko997.sortie.mecha.MechaBody
 import io.github.esko997.sortie.mecha.MechaDo
 import io.github.esko997.sortie.mecha.MechaDrop
 import io.github.esko997.sortie.mecha.MechaEdge
+import io.github.esko997.sortie.mecha.MechaFlight
 import io.github.esko997.sortie.mecha.MechaMove
 import io.github.esko997.sortie.mecha.MechaPlacement
 import io.github.esko997.sortie.mecha.MechaPlay
@@ -16,6 +17,8 @@ import io.github.esko997.sortie.mecha.MechaRect
 import io.github.esko997.sortie.mecha.MechaRoam
 import io.github.esko997.sortie.mecha.MechaSpotKind
 import io.github.esko997.sortie.mecha.MechaState
+import io.github.esko997.sortie.mecha.MechaThrowTransfer
+import io.github.esko997.sortie.mecha.MechaThrows
 import io.github.esko997.sortie.mecha.MechaTouch
 import io.github.esko997.sortie.mecha.MechaVignette
 import kotlin.math.abs
@@ -213,6 +216,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
             return
         }
         while (stage.gestures.isNotEmpty()) gesture(stage.gestures.removeFirst(), b)
+        if (MechaPresence.owner !== stage) return
         if (stage.layoutChanged) {
             stage.layoutChanged = false
             layoutAt = now
@@ -316,13 +320,17 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
     private suspend fun arrive() {
         val b = stage.bounds ?: return
         rescale(b)
-        val dropped = MechaPresence.droppedIn
-        MechaPresence.droppedIn = null
+        val dropped = MechaPresence.carriedIn
+        MechaPresence.carriedIn = null
         val side = MechaPresence.arriving
         MechaPresence.arriving = null
         if (dropped != null) {
             strollsHere = 0
-            dropIn(dropped, b)
+            try {
+                if (dropped.thrown != null) thrownIn(dropped.thrown, b) else dropIn(dropped.fraction, b)
+            } finally {
+                MechaPresence.releasePointer(stage)
+            }
             return
         }
         if (side != null && motion && !resting) {
@@ -426,6 +434,8 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         stage.busy = false
         stage.interrupted = false
         stage.gestures.clear()
+        stage.dropAt = null
+        MechaPresence.releasePointer(stage)
     }
 
     // ---- gestures ----
@@ -438,11 +448,16 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
                 val p = at
                 if (p != null) place(p) else comeBack()
                 stage.openHangar()
+                MechaPresence.releasePointer(stage)
             }
             MechaTouch.DROP -> {
-                val (fx, fy) = stage.dropAt ?: (stage.x.toFloat() to stage.floor.toFloat())
+                val release = stage.dropAt ?: MechaRelease(stage.x.toFloat(), stage.floor.toFloat(), allowAcross = false)
                 stage.dropAt = null
-                drop(fx, fy, b)
+                try {
+                    drop(release, b)
+                } finally {
+                    MechaPresence.releasePointer(stage)
+                }
             }
             else -> Unit
         }
@@ -475,13 +490,18 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         if (!stage.carried) still()
     }
 
-    /** Let go with the finger at ([fx], [fy]): across to the other display, down to the nearest place, or out of sight. */
-    private suspend fun drop(fx: Float, fy: Float, b: MechaRect) {
+    /** Released after a carry: thrown across, gently handed over, or put down on a local perch. */
+    private suspend fun drop(release: MechaRelease, b: MechaRect) {
         at = null
         stage.stand(null)
         stage.front = false
         rescale(b)
-        val other = MechaPresence.otherWithRoom(stage)
+        val (fx, fy) = release
+        val other = if (release.allowAcross) MechaPresence.otherWithRoom(stage) else null
+        // Geometry collected while he was in hand is the starting point, not an interruption of this new flight.
+        stage.layoutChanged = false
+        layoutAt = now()
+        if (other != null && throwAcross(release, b, other)) return
         val places = options(stage.scale, b, spread = false)
         val d = MechaPlay.drop(fx, fy, stage.x, stage.floor, places, b, stage.toward, stage.edgeZone, other != null)
         Log.i(TAG, "display ${stage.displayId}: dropped at ${fx.roundToInt()},${fy.roundToInt()} -> $d")
@@ -496,12 +516,12 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
                 lastSpot = null
                 hide()
                 strollsHere = 0
-                MechaPresence.handOffDrop(other!!, d.fraction)
+                if (!MechaPresence.handOffDrop(other!!, d.fraction)) outOfSight()
             }
             is MechaDrop.Land -> {
                 if (motion) glide(d.at.x, d.at.floor, LAND_HOP, land = true)
                 previous = lastSpot
-                place(d.at)
+                if (validLanding(d.at)) place(d.at) else outOfSight()
             }
             MechaDrop.Nowhere -> outOfSight()
         }
@@ -528,6 +548,110 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
             glide(target.at.x, target.at.floor, LAND_HOP, land = true)
         }
         place(target.at)
+    }
+
+    /** A deliberate flick continues beyond the facing edge; only a still-active destination can take him over. */
+    private suspend fun throwAcross(release: MechaRelease, b: MechaRect, other: MechaStage): Boolean {
+        val toward = stage.toward
+        val exit = MechaThrows.exit(stage.x, stage.floor, stage.scale, release.velocity, b, toward, stage.minTap) ?: return false
+        Log.i(TAG, "display ${stage.displayId}: throw toward ${other.displayId}")
+        if (motion && !fly(exit.path, other)) {
+            outOfSight()
+            return true
+        }
+        lastSpot = null
+        hide()
+        strollsHere = 0
+        if (!MechaPresence.handOffDrop(other, exit.transfer.fraction, exit.transfer)) outOfSight()
+        return true
+    }
+
+    /** A fresh safe perch is selected on arrival; the source never sends a stale destination coordinate. */
+    private suspend fun thrownIn(transfer: MechaThrowTransfer, b: MechaRect) {
+        val toward = stage.toward
+        val s = stage.scale
+        val aim = MechaThrows.aim(transfer, s, b, toward, stage.minTap)
+        val target = MechaPlay.drop(0f, 0f, aim.x, aim.floor, options(s, b, spread = false), b, null, 0, false)
+        if (target !is MechaDrop.Land) {
+            outOfSight()
+            return
+        }
+        val p = target.at
+        val path = MechaThrows.enter(transfer, p, s, b, toward, stage.minTap)
+        if (motion && !fly(path)) {
+            if (!motion && validLanding(p)) place(p) else outOfSight()
+            return
+        }
+        if (!validLanding(p)) {
+            outOfSight()
+            return
+        }
+        if (motion) {
+            stage.front = true
+            stage.busy = true
+            stage.interrupted = false
+            lastBeat = null
+            val landed = try {
+                play(MechaMotion.land(p.x, p.floor, 0, fell = abs(p.floor - path.floorAt(0f)) / s, random = random), roaming = false)
+            } finally {
+                stage.front = false
+                stage.busy = false
+            }
+            if (!landed && motion) {
+                outOfSight()
+                return
+            }
+        }
+        if (validLanding(p)) {
+            place(p)
+            Log.i(TAG, "display ${stage.displayId}: throw landed")
+        } else {
+            outOfSight()
+        }
+    }
+
+    private fun validLanding(p: MechaPlacement): Boolean {
+        val b = stage.bounds ?: return false
+        val element = stage.elements[p.spotId] ?: return false
+        return !stage.hangarOpen && MechaRoam.place(element, stage.scale, b, elements(), p.x, stage.minTap) == p
+    }
+
+    /** Display-paced, whole-pixel flight. No hit target, physics allocations or timer loop survive the flight. */
+    private suspend fun fly(path: MechaFlight, destination: MechaStage? = null): Boolean {
+        stage.stand(null)
+        stage.x = path.xAt(0f)
+        stage.floor = path.floorAt(0f)
+        stage.clip = Int.MAX_VALUE
+        stage.bob = 0
+        stage.rig = MechaRigs.DANGLE
+        stage.shown = true
+        stage.front = true
+        stage.busy = true
+        stage.interrupted = false
+        var started = -1L
+        var complete = false
+        try {
+            while (!complete) {
+                val valid = withFrameMillis { frame ->
+                    if (!motion || !stage.active || MechaPresence.owner !== stage || stage.layoutChanged ||
+                        stage.interrupted || stage.hangarOpen || stage.carried || destination?.active == false
+                    ) {
+                        return@withFrameMillis false
+                    }
+                    if (started < 0) started = frame
+                    val t = ((frame - started).toFloat() / path.durationMs).coerceIn(0f, 1f)
+                    stage.x = path.xAt(t)
+                    stage.floor = path.floorAt(t)
+                    complete = t >= 1f
+                    true
+                }
+                if (!valid) return false
+            }
+            return true
+        } finally {
+            stage.front = false
+            stage.busy = false
+        }
     }
 
     // ---- behaviour ----

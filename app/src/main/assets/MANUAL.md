@@ -179,8 +179,11 @@ only one of him.
 - Touch him: a **tap** pets him (a happy bounce and a little heart; it wakes him if he dozed off, and adds a little bond
   at most once every few minutes). **Hold still** for half a second and let go to open the Hangar. **Hold, then move** to
   pick him up and carry him: he dangles from your finger, and when you let go he drops to the nearest place he can stand,
-  with a little hop. On a dual-screen handheld, let go near the edge that faces the other screen and he goes across to it.
-  A quick swipe that starts on him still scrolls whatever is under him.
+  with a little hop. On a stacked dual-screen handheld, a **flick while carrying** can throw him through the edge facing
+  the other screen. He keeps his momentum, arcs onto a safe perch and settles after landing. A gentle release near that
+  edge still hands him across. The receiving screen must already show Sortie and have room for him; he never opens
+  anything over a game. Otherwise he stays on this screen. Animate off skips the flight.
+  A quick swipe before picking him up still scrolls whatever is under him.
 - **Hangar** in Home's header opens the Hangar with the controller. In an article, **Select → Visit the hangar** also works.
   **B** returns from Gallery to Workshop, then closes the Hangar without losing your place.
 - **Workshop** lets you name your companion, tune it, charge it, or put it to sleep. Charge and condition never run down
