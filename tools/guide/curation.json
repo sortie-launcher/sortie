@@ -1,620 +1,724 @@
 {
- "format": 2,
- "source": {
-  "sha256": "9c6749a68402ab27ef9f5b251bce4ee47eda70473eec7a50f7cc5187f4ce669a",
-  "lines": 1103
- },
- "about": "Editorial decisions applied by tools/guide/import-blurbs.py to the source snapshot named by 'source'. A decision names its record by source line; 'platform' and 'title' are that record's public identity and must match it, so an edited or reordered source cannot apply a decision to another game. Excluded records have no public identity and are guarded by the snapshot hash. 'hook' and 'controls' replace the published text; 'dropFlags'/'addFlags' adjust published flags; 'exclude' leaves the record out; 'work' assigns a justified shared work id. The authored source is never changed.",
- "decisions": [
-  {
-   "line": 19,
-   "platform": "ps2",
-   "title": "Devil Kings",
-   "hook": "Westernized Sengoku Basara with the roster and story stripped. Flashier Musou; the Japanese Sengoku Basara 2 Heroes is the better version.",
-   "reason": "Refers to the curator's own library contents; removed."
-  },
-  {
-   "line": 21,
-   "platform": "ps2",
-   "title": "Dragon Ball Z - Budokai Tenkaichi 3 - Crossover Legends",
-   "hook": "Andrés21's Crossover Legends v8 turns BT3 into an anime crossover brawler, with fighters from Jujutsu Kaisen, Bleach, Elfen Lied, Fairy Tail and more on the same arena engine.",
-   "reason": "Described the curator's memory-card setup; removed."
-  },
-  {
-   "line": 44,
-   "platform": "ps2",
-   "title": "Kingdom Hearts",
-   "hook": "Disney/Square action-RPG; charming, but linear and cutscene-heavy.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 71,
-   "platform": "ps2",
-   "title": "SSX 3",
-   "hook": "Arcade snowboarding on one giant mountain; superb feel.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 85,
-   "platform": "ps2",
-   "title": "Tales of the Abyss",
-   "hook": "Long anime JRPG with the Tales action battle system.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 87,
-   "platform": "ps2",
-   "title": "Tony Hawk's Underground 2",
-   "hook": "Skate sandbox with a level editor; the series at its most absurd. Systemic in its own way.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 106,
-   "platform": "psp",
-   "title": "Elminage Original",
-   "hook": "Hardcore Wizardry-like with 16 classes and alignment shifts; brutal, honest, instant dungeon.",
-   "reason": "Described where the curator keeps a DLC file; removed."
-  },
-  {
-   "line": 130,
-   "platform": "psp",
-   "title": "Ridge Racer",
-   "hook": "Launch-era arcade drift racer with a huge course list.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 157,
-   "platform": "psx",
-   "title": "Bushido Blade",
-   "hook": "One clean strike kills. Stances, limb crippling, running from duels across a continuous castle grounds. The ancestor of a whole lineage of sword-duel games.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 163,
-   "platform": "psx",
-   "title": "Castlevania - Rondo of Night",
-   "hook": "SotN's full castle played as Richter, with the RPG systems the official Richter mode lacks: stats, levels, loot and gear. mazenk's hack adds new sprites, story, music, whips and weapons. Builds since 2.0 add rare enemy drops, food healing and a diagonal-whip relic. Written about the Aug 2026 build.",
-   "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
-  },
-  {
-   "line": 178,
-   "platform": "psx",
-   "title": "Gran Turismo",
-   "hook": "The driving sim.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 208,
-   "platform": "psx",
-   "title": "R4 - Ridge Racer Type 4",
-   "hook": "The most stylish arcade racer of the era; this one is art.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 209,
-   "platform": "psx",
-   "title": "Rage Racer",
-   "hook": "Ridge Racer with a career ladder.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 240,
-   "platform": "psx",
-   "title": "Wipeout 3",
-   "hook": "The cleanest Wipeout.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 266,
-   "platform": "nds",
-   "title": "Elite Beat Agents",
-   "hook": "Stylus rhythm game with great charts.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 276,
-   "platform": "nds",
-   "title": "Mario Kart DS",
-   "hook": "Kart racing; the mission mode is good.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 290,
-   "platform": "nds",
-   "title": "Pokemon Blaze Black 2 (Complete)",
-   "hook": "Drayano's Black 2 overhaul: all 649 Pokemon catchable in-game, every trainer roster rebuilt for a much harder curve, plus Pokemon/move/learnset buffs. 'Complete' is the patch with those edits; superseded by the Redux remake.",
-   "reason": "Refers to the curator's own library contents; removed."
-  },
-  {
-   "line": 306,
-   "platform": "nds",
-   "title": "Pokemon Volt White 2 (Complete)",
-   "hook": "Drayano's White 2 overhaul: all 649 Pokemon catchable in-game, rebuilt trainer rosters for a much harder curve, 8+ species per area, plus Pokemon/move/learnset edits in this Complete patch. Superseded by Redux.",
-   "reason": "Refers to the curator's own library contents; removed."
-  },
-  {
-   "line": 340,
-   "platform": "dreamcast",
-   "title": "Marvel vs. Capcom 2 - House Remix (Hack)",
-   "hook": "MvC2 with fatman01923's 2009 custom soundtrack hack, which swaps the music for house tracks. Roster, gameplay and modes are untouched; only the music changes.",
-   "dropFlags": [
-    "duplicate"
-   ],
-   "reason": "Library-management advice and a library-relative 'duplicate' flag; the description of the hack is kept."
-  },
-  {
-   "line": 352,
-   "platform": "n64",
-   "title": "F-Zero X (Climax)",
-   "hook": "F-Zero X with the Japan-only Expansion Kit track editor restored. The editor is a toy worth seeing.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 353,
-   "platform": "n64",
-   "title": "F-Zero X",
-   "hook": "60fps 30-car racing.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 370,
-   "platform": "gc",
-   "title": "Baten Kaitos Origins",
-   "hook": "Faster, better-written prequel with a shared deck and relay combos.",
-   "dropFlags": [
-    "missing disc 2"
-   ],
-   "reason": "Said which discs the curator owns; the description of the game is kept."
-  },
-  {
-   "line": 373,
-   "platform": "gc",
-   "title": "F-Zero GX",
-   "hook": "Brutal 60fps racer with a machine-part garage; the best of its kind.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 404,
-   "platform": "snes",
-   "title": "F-Zero",
-   "hook": "Mode 7 racer.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 424,
-   "platform": "neogeocd",
-   "title": "Neo Drift Out - New Technology",
-   "hook": "Isometric rally.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 670,
-   "platform": "arcade",
-   "title": "feversos",
-   "dropFlags": [
-    "duplicate"
-   ],
-   "reason": "The 'duplicate' flag was relative to the curator's library; Fever SOS is a distinct world-release romset."
-  },
-  {
-   "line": 777,
-   "platform": "gba",
-   "title": "Fire Emblem - The Sun God's Wrath",
-   "hook": "Corrupt Theocracy sequel on FE8: 27 chapters, no gaidens, skill system, leadership stars, con growths, capture, third-tier promotions and FE5-style fatigue. Written about v1.63 (Mar 2021); later patches up to the 2022 final added optional no-fatigue and 100%-growth versions.",
-   "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
-  },
-  {
-   "line": 788,
-   "platform": "gba",
-   "title": "Poke47 (More with Followers)",
-   "hook": "Emerald repopulated with only Gen 4–7 Pokémon, all rebalanced, plus hand-coded moves, abilities and items, followers that roam and autobattle, and Gauntlet Island, a roguelite mode open from the start. Vanilla+ with an optional level cap.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 810,
-   "platform": "gba",
-   "title": "Pokemon Emerald Rogue (v2.2.1-EX)",
-   "hook": "Pokemon as a roguelike: from a hub you head out on randomized route-and-encounter runs against randomly generated gyms, E4 and champion, then spend progress upgrading Pokémon, items and the hub. EX build has Gens 1-9 and modern mechanics.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 834,
-   "platform": "gba",
-   "title": "Pokemon Monster Hunter",
-   "hook": "Probably TheNadei's Monster Hunter Emerald: Emerald's Hoenn story with every encounter swapped for 100+ Monster Hunter monsters with custom sprites, plus level caps, physical/special split and evolution stones. Battle Frontier and breeding are unsupported.",
-   "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
-  },
-  {
-   "line": 838,
-   "platform": "gba",
-   "title": "Pokemon Noon",
-   "hook": "iFunny-meme FireRed hack: stop censoring Team Grin across the new Efonni region with fakemon, pop-culture riffs and a trainer-CV fame system. The humor is deliberately crude and offensive, slurs included. Written about the Dec 2023 build. Skip.",
-   "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
-  },
-  {
-   "line": 857,
-   "platform": "gba",
-   "title": "Pokemon TRE Johto",
-   "hook": "Dragonsden's Team Rocket Edition: rise from grunt to Admin across the FRLG-to-GSC timeline, with the English 2025-04-30 release covering Kanto, Sevii and Johto (~70 hrs). Adds Rocket rank progression, Rocket-experiment Pokémon, Physical/Special split, no trade evolutions. Not Colonelsalt's FR Rocket Edition.",
-   "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
-  },
-  {
-   "line": 989,
-   "platform": "ps2",
-   "title": "Dynasty Warriors 5 - Xtreme Legends",
-   "hook": "Expansion for DW5: Xtreme Mode is a survival run where you hoard gold for temporary stat boosts, plus new Legend and Destiny modes. Swap in the Dynasty Warriors 5 disc to unlock Musou and Free modes with the full cast.",
-   "reason": "Refers to the curator's own library contents; removed."
-  },
-  {
-   "line": 992,
-   "platform": "ps2",
-   "title": "Samurai Warriors 2 - Xtreme Legends",
-   "hook": "SW2 expansion: new story content, Mercenary Mode, and higher level caps. Most of the original cast's content needs the base Samurai Warriors 2 disc imported.",
-   "dropFlags": [
-    "base SW2 not in library"
-   ],
-   "addFlags": [
-    "needs SW2 disc for full content"
-   ],
-   "reason": "Refers to the curator's own library contents; removed."
-  },
-  {
-   "line": 997,
-   "platform": "wii",
-   "title": "Sin & Punishment - Star Successor",
-   "controls": "Designed for Wii Remote pointer aim + Nunchuk. Classic Controller and GameCube pad are supported natively, aiming with a stick-driven reticle instead of the pointer. Pointer emulation via touch or mouse is possible in Dolphin but untested.",
-   "reason": "Control note referred to the curator's own testing setup."
-  },
-  {
-   "line": 1003,
-   "platform": "genesis",
-   "title": "Cave Story Doukutsu",
-   "hook": "andwn's from-scratch Mega Drive port of Pixel's Cave Story: the full freeware campaign rebuilt for 16-bit hardware with YM2612 music covers. v0.7.0 (2020) added a CS+ speed setting, fixed music glitches and split languages into separate ROMs; 0.8.x builds are newer.",
-   "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
-  },
-  {
-   "line": 1020,
-   "platform": "genesis",
-   "title": "Sonic Classic Heroes",
-   "hook": "flamewing and ColinC10 merged Sonic 2 Heroes with Sonic 1 and 2: both full Sonic 1 and Sonic 2 campaigns, alone or chained, on an upgraded Sonic 2 engine with S3&K shields and character abilities and SRAM saves. Written about the 2013 build; later 0.15.x releases are newer.",
-   "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
-  },
-  {
-   "line": 1030,
-   "platform": "genesis",
-   "title": "The Bare Knuckle III Project",
-   "hook": "Earlier (v0.3, 2018) build of gsaurus' Bare Knuckle III Project on the Japanese BK3: bug fixes, restored content and extra characters including Adam and Max. The 2019 'Bare Knuckle 3 Project' file is the newer build.",
-   "reason": "Library storage advice; removed."
-  },
-  {
-   "line": 1040,
-   "platform": "genesis",
-   "title": "issdx_real_hack",
-   "hook": "ISS Deluxe (Mega Drive) 'Real Names + Extras' hack by Sprill (2016), per the FBNeo dat: Konami's arcade football with real player names; the 'extras' are undocumented. Not the same as the archive.org real-names hack by Alenyaka Bodalshchik.",
-   "reason": "First-person research note; restated neutrally."
-  },
-  {
-   "line": 1044,
-   "platform": "genesis",
-   "title": "sonic_6",
-   "hook": "Not a fan hack: Sonic Jam 6 is Gamtec's 1998 Taiwanese bootleg, a Super Mario Bros. (All-Stars graphics) clone with Sonic pasted over Mario. An 8-bit-style curio.",
-   "reason": "Taste framing addressed to the curator, and a note about which dump the curator holds; the description of the game is kept."
-  },
-  {
-   "line": 1054,
-   "platform": "ps2",
-   "title": "Soulcalibur III - Arcade Edition Deluxe (v1.21 Hack)",
-   "hook": "A fan build of Soulcalibur III from TopazTK's project to port the Arcade Edition to PS2. CDRomance's v1.21 notes list playable Hilde, Inferno, Colossus, Charade and others, plus new costumes, reshuffled Tales of Souls opponents and a Soul Edge (Complete) weapon set. The project's own v1.20 notes left out true Arcade Edition movesets and costumes because they broke the game, so how much arcade balance this build has is unverified.",
-   "reason": "Refers to the curator's own library contents; removed."
-  },
-  {
-   "line": 1064,
-   "platform": "ps2",
-   "title": "Marvel - Ultimate Alliance 2",
-   "hook": "This is n-Space's PS2 version of the Civil War sequel, not the PS3/360 game. Pick Pro or Anti-Registration, build four-hero teams, and pair heroes for fusion attacks. Levels, balance and powers differ from PS3/360, and the roster adds Psylocke, Cyclops and Blade. User reviews cite long loads and slowdown.",
-   "dropFlags": [
-    "unverified dump"
-   ],
-   "reason": "Described byte checks of the curator's private copy and its dump status; removed, with the dump-status flag."
-  },
-  {
-   "line": 1075,
-   "platform": "psvita",
-   "title": "Muramasa Rebirth",
-   "hook": "Vanillaware's hand-painted 2D action RPG: equip three blades and switch among them, because blocking and Secret Arts drain each blade's Soul Power until it breaks, then it regenerates in its sheath. Forging all 108 blades, cooking and two protagonists add long-term pull. Rebirth is the Vita version with Aksys's redone localisation. Critics found the combat fun but shallow.",
-   "reason": "Described the contents of the curator's private copy; removed."
-  },
-  {
-   "line": 1081,
-   "platform": "psvita",
-   "title": "Call of Duty Black Ops - Declassified",
-   "hook": "Nihilistic's Vita-exclusive Call of Duty: about a dozen short Operations missions, plus Time Trials and Hostiles wave survival. Pocket Gamer said a seasoned player could finish the story in around 45 minutes, with difficulty spikes from hostages and timers, and the narrative is disjointed. Campaign XP does not carry into online multiplayer. Thin, poorly reviewed and not systemic; worth trying only as a curiosity.",
-   "reason": "Refers to the curator's own library contents; removed."
-  },
-  {
-   "line": 1092,
-   "platform": "psp",
-   "title": "Castlevania - The Dracula X Chronicles",
-   "hook": "Three strong reasons to play this: a 2.5D Rondo of Blood remake, the original Rondo, and Symphony of the Night. The latter two must be unlocked inside the remake. Rondo offers branching stages, rescued characters and demanding boss patterns; Symphony supplies the exploratory equipment-and-ability game. Richter's committed movement is deliberately old-school, while Maria's double jump makes a friendlier alternative. Immediate action and route discovery, not a long JRPG introduction.",
-   "reason": "Refers to the curator's own library contents; removed."
-  },
-  {
-   "line": 1094,
-   "platform": "psx",
-   "title": "Dynasty Warriors",
-   "hook": "The 1997 original is a one-on-one 3D weapon fighter, not the army-clearing Musou formula that began with Dynasty Warriors 2. Three Kingdoms officers meet in individual duels, so this fits a quick fighting-game session rather than a strategy or territory-management mood. An interesting prehistory of the series; do not pick it expecting a miniature version of the PS2 battlefield games.",
-   "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
-  },
-  {
-   "line": 805,
-   "platform": "gba",
-   "title": "Pokemon Dark Rising",
-   "hook": "DarkRisingGirl's 2012 original: an Arceus dream opens a Core-region quest against Darugis, with Gen 4–5 Pokémon but no physical/special split, overleveled boss fights and forced grinding. Edgy, unbalanced.",
-   "reason": "Speculated about which release the curator's file is; removed."
-  },
-  {
-   "line": 1095,
-   "platform": "gba",
-   "title": "Anguna - Warriors of Virtue",
-   "hook": "Nathan Tolbert's compact, top-down Zelda-like homebrew, with Chris Hildenbrand's art. Explore an overworld and dungeons, find hidden rooms and power-ups, and add a bow, bear traps, dynamite, a lantern and magic boots to the sword. A low-commitment exploration snack rather than a deep character-building sandbox. Written about the No-Intro v0.95 build; the creator's current release page mixes five- and six-dungeon descriptions, so do not infer later-edition extras from it.",
-   "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
-  },
-  {
-   "line": 1096,
-   "platform": "xbox",
-   "title": "JSRF - Jet Set Radio Future",
-   "hook": "Smilebit turns futuristic Tokyo into a skating playground: chain grinds and wall rides, hunt hidden graffiti souls, and tag rival territory without the original game's constant stage timer. Boosts consume spray cans, while police encounters punctuate the exploration. Built for movement mastery and finding your own routes rather than gear-building or stealth simulation. A working Android launch setup has not been verified.",
-   "dropFlags": [
-    "not tested on Thor"
-   ],
-   "reason": "Taste-fit framing, the curator's scraping state and a device-specific flag; the gameplay description is kept."
-  },
-  {
-   "line": 1097,
-   "platform": "sega32x",
-   "title": "Chaotix Complete (Hack)",
-   "hook": "An experimental 32X hack labelled Chaotix Complete v0.1. The ROM header confirms that title and version, and the release archive credits AdamKempenich, but it contains no changelog; public searches did not establish its exact alterations. Treat this as a curiosity to sample, not a verified definitive edition or a promised fix for the original's mechanics. Patch completeness, save behaviour and compatibility have not been playtested.",
-   "reason": "Referred to the archive the curator received; restated as the release archive."
-  },
-  {
-   "line": 1103,
-   "platform": "psx",
-   "title": "Harmful Park (v1.1 Translation)",
-   "hook": "Sky Think System's colourful horizontal shooter hides a real scoring game beneath its theme-park gags. Switch freely among potato shots, ice-cream lasers, pies and homing jelly; each has its own bomb. Six stages reward lining up multi-kills and collecting gems without dropping the chain, with a separate Score Attack stage for repeat runs. A good change of pace from Cave's bullet curtains without abandoning route mastery. Hilltop's English patch translates the cutscenes and nearly all background text; the patch archive labels it v1.1.",
-   "reason": "Referred to the archive the curator received; restated as the patch archive."
-  },
-  {
-   "line": 790,
-   "platform": "gba",
-   "title": "Pokemon - FireRed Version",
-   "hook": "Kanto remake.",
-   "reason": "Shares one variant with the original-revision copy (revision tags do not change identity), so the revision-specific wording is removed."
-  },
-  {
-   "line": 934,
-   "exclude": "Library-maintenance note about an extra copy pending cleanup; not a game description, and its short name is not a verified alias."
-  },
-  {
-   "line": 940,
-   "exclude": "Library-maintenance note about an extra copy pending cleanup; not a game description, and its short name is not a verified alias."
-  },
-  {
-   "line": 945,
-   "exclude": "Library-maintenance note about an extra copy pending cleanup; not a game description, and its short name is not a verified alias."
-  },
-  {
-   "line": 964,
-   "exclude": "Library-maintenance note about an extra copy pending cleanup; not a game description, and its short name is not a verified alias."
-  },
-  {
-   "line": 973,
-   "exclude": "Library-maintenance note about an extra copy pending cleanup; not a game description, and its short name is not a verified alias."
-  },
-  {
-   "line": 974,
-   "exclude": "Library-maintenance note about an extra copy pending cleanup; not a game description, and its short name is not a verified alias."
-  },
-  {
-   "line": 348,
-   "platform": "dreamcast",
-   "title": "Twinkle Star Sprites",
-   "work": "twinkle-star-sprites",
-   "reason": "Same Twinkle Star Sprites game on another platform; the Neo Geo CD hook calls itself that edition."
-  },
-  {
-   "line": 430,
-   "platform": "neogeocd",
-   "title": "Twinkle Star Sprites",
-   "work": "twinkle-star-sprites",
-   "reason": "Same Twinkle Star Sprites game on another platform; the Neo Geo CD hook calls itself that edition."
-  },
-  {
-   "line": 568,
-   "platform": "arcade",
-   "title": "twinspri",
-   "work": "twinkle-star-sprites",
-   "reason": "twinspri is the Twinkle Star Sprites romset; the hook describes the same versus shmup."
-  },
-  {
-   "line": 48,
-   "platform": "ps2",
-   "title": "Marvel vs. Capcom 2 - New Age of Heroes",
-   "work": "marvel-vs-capcom-2",
-   "reason": "Both hooks describe the same 56-character Marvel vs. Capcom 2 tag fighter."
-  },
-  {
-   "line": 339,
-   "platform": "dreamcast",
-   "title": "Marvel vs. Capcom 2",
-   "work": "marvel-vs-capcom-2",
-   "reason": "Both hooks describe the same 56-character Marvel vs. Capcom 2 tag fighter."
-  },
-  {
-   "line": 340,
-   "platform": "dreamcast",
-   "title": "Marvel vs. Capcom 2 - House Remix (Hack)",
-   "work": "marvel-vs-capcom-2",
-   "reason": "Soundtrack hack of Marvel vs. Capcom 2 with roster and gameplay unchanged: an edition of the same work."
-  },
-  {
-   "line": 917,
-   "platform": "ngp",
-   "title": "Renketsu Puzzle Tsunagete Pon!",
-   "work": "puzzle-link",
-   "reason": "The hook identifies it as the Japanese release of this work."
-  },
-  {
-   "line": 918,
-   "platform": "ngp",
-   "title": "Renketsu Puzzle Tsunagete Pon! Color",
-   "work": "puzzle-link",
-   "reason": "The hook identifies it as the Japanese release of this work."
-  },
-  {
-   "line": 933,
-   "platform": "ngp",
-   "title": "Tsunagete Pon! 2",
-   "work": "puzzle-link-2",
-   "reason": "The hook identifies it as the Japanese release of this work."
-  },
-  {
-   "line": 923,
-   "platform": "ngp",
-   "title": "SNK vs. Capcom - Gekitotsu Card Fighters - Capcom Supporter Version",
-   "work": "snk-vs-capcom-card-fighters-clash-capcom-version",
-   "reason": "The hook identifies it as the Japanese release of this work."
-  },
-  {
-   "line": 924,
-   "platform": "ngp",
-   "title": "SNK vs. Capcom - Gekitotsu Card Fighters - SNK Supporter Version",
-   "work": "snk-vs-capcom-card-fighters-clash-snk-version",
-   "reason": "The hook identifies it as the Japanese release of this work."
-  },
-  {
-   "line": 927,
-   "platform": "ngp",
-   "title": "Shinki Sekai Evolution - Hateshinai Dungeon",
-   "work": "evolution-eternal-dungeons",
-   "reason": "The hook identifies it as the Japanese release of this work."
-  },
-  {
-   "line": 935,
-   "platform": "ngp",
-   "title": "bakumatsu rouman tokubetsu hen - gekka no kenshi - tsuki ni saku hana, chiri yuku hana",
-   "work": "the-last-blade-beyond-the-destiny",
-   "reason": "The hook identifies it as the Japanese release of this work."
-  },
-  {
-   "line": 970,
-   "platform": "ngp",
-   "title": "puzzle bobble mini",
-   "work": "bust-a-move-pocket",
-   "reason": "The hook identifies it as the Japanese/European release of Bust-a-Move Pocket."
-  },
-  {
-   "line": 1029,
-   "platform": "genesis",
-   "title": "The Bare Knuckle 3 Project",
-   "work": "the-bare-knuckle-3-project",
-   "reason": "Two builds of the same gsaurus project; the 2018 entry calls itself the earlier build."
-  },
-  {
-   "line": 1030,
-   "platform": "genesis",
-   "title": "The Bare Knuckle III Project",
-   "work": "the-bare-knuckle-3-project",
-   "reason": "Two builds of the same gsaurus project; the 2018 entry calls itself the earlier build."
-  },
-  {
-   "line": 883,
-   "platform": "ngp",
-   "title": "Dive Alert - Burn Hen",
-   "dropFlags": [
-    "duplicate"
-   ],
-   "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
-  },
-  {
-   "line": 885,
-   "platform": "ngp",
-   "title": "Dive Alert - Rebecca Hen",
-   "dropFlags": [
-    "duplicate"
-   ],
-   "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
-  },
-  {
-   "line": 917,
-   "platform": "ngp",
-   "title": "Renketsu Puzzle Tsunagete Pon!",
-   "dropFlags": [
-    "duplicate"
-   ],
-   "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
-  },
-  {
-   "line": 918,
-   "platform": "ngp",
-   "title": "Renketsu Puzzle Tsunagete Pon! Color",
-   "dropFlags": [
-    "duplicate"
-   ],
-   "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
-  },
-  {
-   "line": 923,
-   "platform": "ngp",
-   "title": "SNK vs. Capcom - Gekitotsu Card Fighters - Capcom Supporter Version",
-   "dropFlags": [
-    "duplicate"
-   ],
-   "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
-  },
-  {
-   "line": 924,
-   "platform": "ngp",
-   "title": "SNK vs. Capcom - Gekitotsu Card Fighters - SNK Supporter Version",
-   "dropFlags": [
-    "duplicate"
-   ],
-   "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
-  },
-  {
-   "line": 927,
-   "platform": "ngp",
-   "title": "Shinki Sekai Evolution - Hateshinai Dungeon",
-   "dropFlags": [
-    "duplicate"
-   ],
-   "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
-  },
-  {
-   "line": 933,
-   "platform": "ngp",
-   "title": "Tsunagete Pon! 2",
-   "dropFlags": [
-    "duplicate"
-   ],
-   "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
-  },
-  {
-   "line": 935,
-   "platform": "ngp",
-   "title": "bakumatsu rouman tokubetsu hen - gekka no kenshi - tsuki ni saku hana, chiri yuku hana",
-   "dropFlags": [
-    "duplicate"
-   ],
-   "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
-  },
-  {
-   "line": 970,
-   "platform": "ngp",
-   "title": "puzzle bobble mini",
-   "dropFlags": [
-    "duplicate"
-   ],
-   "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
-  }
- ]
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "system": "cps1",
+      "alias": "kod.7z",
+      "hook": "D&D-flavoured brawler with levelling and five classes.",
+      "controls": "",
+      "flags": [],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "cps2",
+      "alias": "ddtod.7z",
+      "hook": "Tower of Doom: the first D&D brawler, branching paths and spells.",
+      "controls": "",
+      "flags": [],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "cps2",
+      "alias": "gigawing.7z",
+      "hook": "Reflect-barrier shmup with absurd scores.",
+      "controls": "",
+      "flags": [],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "cps2",
+      "alias": "mmatrix.7z",
+      "hook": "One-button bullet-absorb shmup from Takumi; intense, systemic scoring.",
+      "controls": "",
+      "flags": [
+        "brutal difficulty"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "dreamcast",
+      "alias": "Marvel vs. Capcom 2 (USA).chd",
+      "reason": "Both hooks describe the same 56-character Marvel vs. Capcom 2 tag fighter."
+    },
+    {
+      "system": "dreamcast",
+      "alias": "Marvel vs. Capcom 2 - House Remix (Hack).cdi",
+      "hook": "MvC2 with fatman01923's 2009 custom soundtrack hack, which swaps the music for house tracks. Roster, gameplay and modes are untouched; only the music changes.",
+      "dropFlags": [
+        "duplicate"
+      ],
+      "reason": "Soundtrack hack of Marvel vs. Capcom 2 with roster and gameplay unchanged: an edition of the same work."
+    },
+    {
+      "system": "dreamcast",
+      "alias": "Twinkle Star Sprites (Japan).chd",
+      "reason": "Same Twinkle Star Sprites game on another platform; the Neo Geo CD hook calls itself that edition."
+    },
+    {
+      "system": "gba",
+      "alias": "Anguna - Warriors of Virtue (World) (v0.95).gba",
+      "hook": "Nathan Tolbert's compact, top-down Zelda-like homebrew, with Chris Hildenbrand's art. Explore an overworld and dungeons, find hidden rooms and power-ups, and add a bow, bear traps, dynamite, a lantern and magic boots to the sword. A low-commitment exploration snack rather than a deep character-building sandbox. Written about the No-Intro v0.95 build; the creator's current release page mixes five- and six-dungeon descriptions, so do not infer later-edition extras from it.",
+      "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+    },
+    {
+      "system": "gba",
+      "alias": "Fire Emblem - The Sun God's Wrath (v1.63).gba",
+      "hook": "Corrupt Theocracy sequel on FE8: 27 chapters, no gaidens, skill system, leadership stars, con growths, capture, third-tier promotions and FE5-style fatigue. Written about v1.63 (Mar 2021); later patches up to the 2022 final added optional no-fatigue and 100%-growth versions.",
+      "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+    },
+    {
+      "system": "gba",
+      "alias": "Poke47 (More with Followers) (v1.1.0).gba",
+      "hook": "Emerald repopulated with only Gen 4–7 Pokémon, all rebalanced, plus hand-coded moves, abilities and items, followers that roam and autobattle, and Gauntlet Island, a roguelite mode open from the start. Vanilla+ with an optional level cap.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "gba",
+      "alias": "Pokemon - FireRed Version (USA, Europe) (Rev 1).gba",
+      "hook": "Kanto remake.",
+      "reason": "Shares one variant with the original-revision copy (revision tags do not change identity), so the revision-specific wording is removed."
+    },
+    {
+      "system": "gba",
+      "alias": "Pokemon - FireRed Version (USA, Europe).gba",
+      "hook": "Kanto remake.",
+      "controls": "",
+      "flags": [
+        "Pokemon"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "gba",
+      "alias": "Pokemon Dark Rising.gba",
+      "hook": "DarkRisingGirl's 2012 original: an Arceus dream opens a Core-region quest against Darugis, with Gen 4–5 Pokémon but no physical/special split, overleveled boss fights and forced grinding. Edgy, unbalanced.",
+      "reason": "Speculated about which release the curator's file is; removed."
+    },
+    {
+      "system": "gba",
+      "alias": "Pokemon Emerald Rogue (v2.2.1-EX).gba",
+      "hook": "Pokemon as a roguelike: from a hub you head out on randomized route-and-encounter runs against randomly generated gyms, E4 and champion, then spend progress upgrading Pokémon, items and the hub. EX build has Gens 1-9 and modern mechanics.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "gba",
+      "alias": "Pokemon FireRed Rocket Edition.gba",
+      "hook": "Play a Team Rocket recruit in a story running parallel to FireRed: steal a Pokémon from every trainer you beat (more classes as you rank up), take morality-driven side jobs, with Fairy type, PSS and Gen 4–6 moves. v1.0.2 is the finished release. The cleverest FireRed reskin.",
+      "controls": "",
+      "flags": [
+        "Pokemon",
+        "hack"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "gba",
+      "alias": "Pokemon Monster Hunter.gba",
+      "hook": "Probably TheNadei's Monster Hunter Emerald: Emerald's Hoenn story with every encounter swapped for 100+ Monster Hunter monsters with custom sprites, plus level caps, physical/special split and evolution stones. Battle Frontier and breeding are unsupported.",
+      "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+    },
+    {
+      "system": "gba",
+      "alias": "Pokemon Noon (2023-12-11).gba",
+      "hook": "iFunny-meme FireRed hack: stop censoring Team Grin across the new Efonni region with fakemon, pop-culture riffs and a trainer-CV fame system. The humor is deliberately crude and offensive, slurs included. Written about the Dec 2023 build. Skip.",
+      "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+    },
+    {
+      "system": "gba",
+      "alias": "Pokemon Sors (v1.3) (alt 2026-10-14).gba",
+      "hook": "Vytron's FireRed story hack in the Hupest region: an Eclipse Tournament plot and an Eclipsing mechanic with 48 Solar/Lunar-form Pokémon, a near-full dex to Gen 7, Gen 7 mechanics, a quest log, day/night and Soaring. On mGBA, apply the creator's Emulator Fix patch.",
+      "controls": "",
+      "flags": [
+        "Pokemon",
+        "hack"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "gba",
+      "alias": "Pokemon TRE Johto (2025-04-30).gba",
+      "hook": "Dragonsden's Team Rocket Edition: rise from grunt to Admin across the FRLG-to-GSC timeline, with the English 2025-04-30 release covering Kanto, Sevii and Johto (~70 hrs). Adds Rocket rank progression, Rocket-experiment Pokémon, Physical/Special split, no trade evolutions. Not Colonelsalt's FR Rocket Edition.",
+      "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+    },
+    {
+      "system": "gc",
+      "alias": "Baten Kaitos - Eternal Wings and the Lost Ocean (USA) (Disc 2).iso",
+      "hook": "Card-based RPG where items age in real time (fruit rots, wine matures) and combos spell numbers. Odd, slow, systemic.",
+      "controls": "",
+      "flags": [
+        "JRPG pacing",
+        "two discs"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "gc",
+      "alias": "Baten Kaitos Origins (USA, Canada) (Disc 1).ciso",
+      "hook": "Faster, better-written prequel with a shared deck and relay combos.",
+      "dropFlags": [
+        "missing disc 2"
+      ],
+      "reason": "Said which discs the curator owns; the description of the game is kept."
+    },
+    {
+      "system": "gc",
+      "alias": "F-Zero GX (USA).iso",
+      "hook": "Brutal 60fps racer with a machine-part garage; the best of its kind.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "genesis",
+      "alias": "Cave Story Doukutsu (v0.7.0).zip",
+      "hook": "andwn's from-scratch Mega Drive port of Pixel's Cave Story: the full freeware campaign rebuilt for 16-bit hardware with YM2612 music covers. v0.7.0 (2020) added a CS+ speed setting, fixed music glitches and split languages into separate ROMs; 0.8.x builds are newer.",
+      "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+    },
+    {
+      "system": "genesis",
+      "alias": "Sonic Classic Heroes.zip",
+      "hook": "flamewing and ColinC10 merged Sonic 2 Heroes with Sonic 1 and 2: both full Sonic 1 and Sonic 2 campaigns, alone or chained, on an upgraded Sonic 2 engine with S3&K shields and character abilities and SRAM saves. Written about the 2013 build; later 0.15.x releases are newer.",
+      "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+    },
+    {
+      "system": "genesis",
+      "alias": "The Bare Knuckle 3 Project.zip",
+      "reason": "Two builds of the same gsaurus project; the 2018 entry calls itself the earlier build."
+    },
+    {
+      "system": "genesis",
+      "alias": "The Bare Knuckle III Project.zip",
+      "hook": "Earlier (v0.3, 2018) build of gsaurus' Bare Knuckle III Project on the Japanese BK3: bug fixes, restored content and extra characters including Adam and Max. The 2019 'Bare Knuckle 3 Project' file is the newer build.",
+      "reason": "Two builds of the same gsaurus project; the 2018 entry calls itself the earlier build."
+    },
+    {
+      "system": "genesis",
+      "alias": "issdx_real_hack.zip",
+      "hook": "ISS Deluxe (Mega Drive) 'Real Names + Extras' hack by Sprill (2016), per the FBNeo dat: Konami's arcade football with real player names; the 'extras' are undocumented. Not the same as the archive.org real-names hack by Alenyaka Bodalshchik.",
+      "reason": "First-person research note; restated neutrally."
+    },
+    {
+      "system": "genesis",
+      "alias": "sonic_6.zip",
+      "hook": "Not a fan hack: Sonic Jam 6 is Gamtec's 1998 Taiwanese bootleg, a Super Mario Bros. (All-Stars graphics) clone with Sonic pasted over Mario. An 8-bit-style curio.",
+      "reason": "Taste framing addressed to the curator, and a note about which dump the curator holds; the description of the game is kept."
+    },
+    {
+      "system": "n64",
+      "alias": "F-Zero X (USA) (Climax).z64",
+      "hook": "F-Zero X with the Japan-only Expansion Kit track editor restored. The editor is a toy worth seeing.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "n64",
+      "alias": "F-Zero X (USA).z64",
+      "hook": "60fps 30-car racing.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "nds",
+      "alias": "Elite Beat Agents (USA).nds",
+      "hook": "Stylus rhythm game with great charts.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "nds",
+      "alias": "Mario Kart DS (USA, Australia) (En,Fr,De,Es,It).nds",
+      "hook": "Kart racing; the mission mode is good.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "nds",
+      "alias": "Pokemon Blaze Black 2 (Complete).nds",
+      "hook": "Drayano's Black 2 overhaul: all 649 Pokemon catchable in-game, every trainer roster rebuilt for a much harder curve, plus Pokemon/move/learnset buffs. 'Complete' is the patch with those edits; superseded by the Redux remake.",
+      "reason": "Refers to the curator's own library contents; removed."
+    },
+    {
+      "system": "nds",
+      "alias": "Pokemon Volt White 2 (Complete).nds",
+      "hook": "Drayano's White 2 overhaul: all 649 Pokemon catchable in-game, rebuilt trainer rosters for a much harder curve, 8+ species per area, plus Pokemon/move/learnset edits in this Complete patch. Superseded by Redux.",
+      "reason": "Refers to the curator's own library contents; removed."
+    },
+    {
+      "system": "neogeo",
+      "alias": "twinspri.zip",
+      "reason": "twinspri is the Twinkle Star Sprites romset; the hook describes the same versus shmup."
+    },
+    {
+      "system": "neogeo",
+      "alias": "viewpoin.7z",
+      "hook": "Isometric Zaxxon-view shmup; brutal and gorgeous.",
+      "controls": "",
+      "flags": [
+        "brutal difficulty"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "neogeocd",
+      "alias": "Neo Drift Out - New Technology (Japan).chd",
+      "hook": "Isometric rally.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "neogeocd",
+      "alias": "Twinkle Star Sprites (Japan) (En,Ja).chd",
+      "reason": "Same Twinkle Star Sprites game on another platform; the Neo Geo CD hook calls itself that edition."
+    },
+    {
+      "system": "ngp",
+      "alias": "Dive Alert - Burn Hen (Japan).zip",
+      "dropFlags": [
+        "duplicate"
+      ],
+      "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
+    },
+    {
+      "system": "ngp",
+      "alias": "Dive Alert - Rebecca Hen (Japan).zip",
+      "dropFlags": [
+        "duplicate"
+      ],
+      "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release."
+    },
+    {
+      "system": "ngp",
+      "alias": "Renketsu Puzzle Tsunagete Pon! (Japan).zip",
+      "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release.",
+      "dropFlags": [
+        "duplicate"
+      ]
+    },
+    {
+      "system": "ngp",
+      "alias": "Renketsu Puzzle Tsunagete Pon! Color (Japan).zip",
+      "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release.",
+      "dropFlags": [
+        "duplicate"
+      ]
+    },
+    {
+      "system": "ngp",
+      "alias": "SNK vs. Capcom - Gekitotsu Card Fighters - Capcom Supporter Version (Japan).zip",
+      "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release.",
+      "dropFlags": [
+        "duplicate"
+      ]
+    },
+    {
+      "system": "ngp",
+      "alias": "SNK vs. Capcom - Gekitotsu Card Fighters - SNK Supporter Version (Japan).zip",
+      "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release.",
+      "dropFlags": [
+        "duplicate"
+      ]
+    },
+    {
+      "system": "ngp",
+      "alias": "Shinki Sekai Evolution - Hateshinai Dungeon (Japan).zip",
+      "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release.",
+      "dropFlags": [
+        "duplicate"
+      ]
+    },
+    {
+      "system": "ngp",
+      "alias": "Tsunagete Pon! 2 (Japan).zip",
+      "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release.",
+      "dropFlags": [
+        "duplicate"
+      ]
+    },
+    {
+      "system": "ngp",
+      "alias": "baccarat.zip",
+      "title": "Pocket Casino Series - Neo Baccarat (prototype)",
+      "reason": "Archive payload CRC32 and size match the MAME prototype; replaces an incorrect duplicate-maintenance classification."
+    },
+    {
+      "system": "ngp",
+      "alias": "bakumatsu rouman tokubetsu hen - gekka no kenshi - tsuki ni saku hana, chiri yuku hana (japan).zip",
+      "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release.",
+      "dropFlags": [
+        "duplicate"
+      ]
+    },
+    {
+      "system": "ngp",
+      "alias": "bustmove.zip",
+      "title": "Bust-A-Move Pocket (prototype)",
+      "reason": "Archive payload CRC32 and size match the MAME prototype; replaces an incorrect duplicate-maintenance classification."
+    },
+    {
+      "system": "ngp",
+      "alias": "divealert.zip",
+      "title": "Dive Alert - Barn Hen (Japan, prototype)",
+      "reason": "Archive payload CRC32 and size match the MAME prototype; replaces an incorrect duplicate-maintenance classification."
+    },
+    {
+      "system": "ngp",
+      "alias": "partymail.zip",
+      "title": "Party Mail (prototype)",
+      "reason": "Archive payload CRC32 and size match the MAME prototype; replaces an incorrect duplicate-maintenance classification."
+    },
+    {
+      "system": "ngp",
+      "alias": "puzzle bobble mini (japan, europe) (v1.10).zip",
+      "reason": "The 'duplicate' flag was relative to the curator's library; this is a distinct regional release.",
+      "dropFlags": [
+        "duplicate"
+      ]
+    },
+    {
+      "system": "ngp",
+      "alias": "shminijpp.zip",
+      "title": "Shanghai Mini (Japan, prototype)",
+      "reason": "Archive payload CRC32 and size match the MAME prototype; replaces an incorrect duplicate-maintenance classification."
+    },
+    {
+      "system": "ngp",
+      "alias": "shminiusp.zip",
+      "title": "Shanghai Mini (USA, prototype)",
+      "reason": "Archive payload CRC32 and size match the MAME prototype; replaces an incorrect duplicate-maintenance classification."
+    },
+    {
+      "system": "ps2",
+      "alias": "Blood Will Tell - Tezuka Osamu's Dororo (USA) (Undub).iso",
+      "hook": "Recover Hyakkimaru's stolen body parts through sword fights against fiends; each return strengthens him or restores an ability. This undub replaces English voices with Japanese audio. Chapter narration remains unsubtitled, and the awkward camera still needs managing.",
+      "reason": "Remove private archive/build verification and emulator-setup details; retain public game/edition description.",
+      "dropFlags": [
+        "patch attribution unverified"
+      ]
+    },
+    {
+      "system": "ps2",
+      "alias": "Devil Kings (USA).iso",
+      "hook": "Westernized Sengoku Basara with the roster and story stripped. Flashier Musou; the Japanese Sengoku Basara 2 Heroes is the better version.",
+      "reason": "Refers to the curator's own library contents; removed."
+    },
+    {
+      "system": "ps2",
+      "alias": "Dragon Ball Z - Budokai Tenkaichi 3 - Crossover Legends (v8.0).iso",
+      "hook": "Andrés21's Crossover Legends v8 turns BT3 into an anime crossover brawler, with fighters from Jujutsu Kaisen, Bleach, Elfen Lied, Fairy Tail and more on the same arena engine.",
+      "reason": "Described the curator's memory-card setup; removed."
+    },
+    {
+      "system": "ps2",
+      "alias": "Dynasty Warriors 5 - Xtreme Legends (USA).iso",
+      "hook": "Expansion for DW5: Xtreme Mode is a survival run where you hoard gold for temporary stat boosts, plus new Legend and Destiny modes. Swap in the Dynasty Warriors 5 disc to unlock Musou and Free modes with the full cast.",
+      "reason": "Refers to the curator's own library contents; removed."
+    },
+    {
+      "system": "ps2",
+      "alias": "Kingdom Hearts (USA).iso",
+      "hook": "Disney/Square action-RPG; charming, but linear and cutscene-heavy.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "ps2",
+      "alias": "Knights of the Temple II (Europe) (En,Fr,De,Es,It).iso",
+      "hook": "Templar Paul de Raque hunts three artifacts across cities with side quests, blacksmith trading and tavern challenges. Experience unlocks combos and abilities; heavy weapons have weight, while bosses provide the strongest fights. Released on PS2 in Europe.",
+      "reason": "Remove private archive/build verification and emulator-setup details; retain public game/edition description."
+    },
+    {
+      "system": "ps2",
+      "alias": "Marvel - Ultimate Alliance 2 (USA) (Unverified).iso",
+      "hook": "This is n-Space's PS2 version of the Civil War sequel, not the PS3/360 game. Pick Pro or Anti-Registration, build four-hero teams, and pair heroes for fusion attacks. Levels, balance and powers differ from PS3/360, and the roster adds Psylocke, Cyclops and Blade. User reviews cite long loads and slowdown.",
+      "dropFlags": [
+        "unverified dump"
+      ],
+      "reason": "Described byte checks of the curator's private copy and its dump status; removed, with the dump-status flag."
+    },
+    {
+      "system": "ps2",
+      "alias": "Marvel vs. Capcom 2 - New Age of Heroes (USA).iso",
+      "reason": "Both hooks describe the same 56-character Marvel vs. Capcom 2 tag fighter."
+    },
+    {
+      "system": "ps2",
+      "alias": "Onimusha - Dawn of Dreams (USA) (Disc 2).iso",
+      "hook": "Biggest Onimusha: two-character switching, weapon upgrading, long campaign. More action-RPG than survival horror.",
+      "controls": "",
+      "flags": [
+        "long",
+        "two discs"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "ps2",
+      "alias": "SSX 3 (USA).iso",
+      "hook": "Arcade snowboarding on one giant mountain; superb feel.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "ps2",
+      "alias": "Samurai Warriors 2 - Xtreme Legends (USA).iso",
+      "hook": "SW2 expansion: new story content, Mercenary Mode, and higher level caps. Most of the original cast's content needs the base Samurai Warriors 2 disc imported.",
+      "dropFlags": [
+        "base SW2 not in library"
+      ],
+      "addFlags": [
+        "needs SW2 disc for full content"
+      ],
+      "reason": "Refers to the curator's own library contents; removed."
+    },
+    {
+      "system": "ps2",
+      "alias": "Soulcalibur III - Arcade Edition Deluxe (USA) (v1.21 Hack).iso",
+      "hook": "A fan build of Soulcalibur III from TopazTK's project to port the Arcade Edition to PS2. CDRomance's v1.21 notes list playable Hilde, Inferno, Colossus, Charade and others, plus new costumes, reshuffled Tales of Souls opponents and a Soul Edge (Complete) weapon set. The project's own v1.20 notes left out true Arcade Edition movesets and costumes because they broke the game, so how much arcade balance this build has is unverified.",
+      "reason": "Refers to the curator's own library contents; removed."
+    },
+    {
+      "system": "ps2",
+      "alias": "Tales of Rebirth (Japan) (En) (v1.0 Translation).iso",
+      "hook": "Tales of Rebirth's Three-Line battle system lets fighters change lanes to flank enemies, while Rush and Force gauges shape attack, defence and skills. Life Bottle Productions' v1.0 English translation opens up its long, story-heavy adventure.",
+      "reason": "Remove private archive/build verification and emulator-setup details; retain public game/edition description."
+    },
+    {
+      "system": "ps2",
+      "alias": "Tales of the Abyss (USA).iso",
+      "hook": "Long anime JRPG with the Tales action battle system.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "ps2",
+      "alias": "Tony Hawk's Underground 2 (USA).iso",
+      "hook": "Skate sandbox with a level editor; the series at its most absurd. Systemic in its own way.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "psp",
+      "alias": "Castlevania - The Dracula X Chronicles (USA).iso",
+      "hook": "Three strong reasons to play this: a 2.5D Rondo of Blood remake, the original Rondo, and Symphony of the Night. The latter two must be unlocked inside the remake. Rondo offers branching stages, rescued characters and demanding boss patterns; Symphony supplies the exploratory equipment-and-ability game. Richter's committed movement is deliberately old-school, while Maria's double jump makes a friendlier alternative. Immediate action and route discovery, not a long JRPG introduction.",
+      "reason": "Refers to the curator's own library contents; removed."
+    },
+    {
+      "system": "psp",
+      "alias": "Elminage Original (USA) (v1.01) (PSN).iso",
+      "hook": "Hardcore Wizardry-like with 16 classes and alignment shifts; brutal, honest, instant dungeon.",
+      "reason": "Described where the curator keeps a DLC file; removed."
+    },
+    {
+      "system": "psp",
+      "alias": "Ridge Racer (USA) (En,Fr,De,Es,It).iso",
+      "hook": "Launch-era arcade drift racer with a huge course list.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "psvita",
+      "alias": "Call of Duty Black Ops - Declassified (USA)(v1.02)(PCSE00097)[NoNpDrm].zip",
+      "hook": "Nihilistic's Vita-exclusive Call of Duty: about a dozen short Operations missions, plus Time Trials and Hostiles wave survival. Pocket Gamer said a seasoned player could finish the story in around 45 minutes, with difficulty spikes from hostages and timers, and the narrative is disjointed. Campaign XP does not carry into online multiplayer. Thin, poorly reviewed and not systemic; worth trying only as a curiosity.",
+      "reason": "Refers to the curator's own library contents; removed."
+    },
+    {
+      "system": "psvita",
+      "alias": "Muramasa Rebirth (v1.06)(USA)(PCSE00240)[vita3k].zip",
+      "hook": "Vanillaware's hand-painted 2D action RPG: equip three blades and switch among them, because blocking and Secret Arts drain each blade's Soul Power until it breaks, then it regenerates in its sheath. Forging all 108 blades, cooking and two protagonists add long-term pull. Rebirth is the Vita version with Aksys's redone localisation. Critics found the combat fun but shallow.",
+      "reason": "Described the contents of the curator's private copy; removed."
+    },
+    {
+      "system": "psx",
+      "alias": "Bushido Blade (USA).chd",
+      "hook": "One clean strike kills. Stances, limb crippling, running from duels across a continuous castle grounds. The ancestor of a whole lineage of sword-duel games.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "psx",
+      "alias": "Bushido Blade (USA).pbp",
+      "hook": "One clean strike kills. Stances, limb crippling, running from duels across a continuous castle grounds. The ancestor of a whole lineage of sword-duel games.",
+      "controls": "",
+      "flags": [],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "psx",
+      "alias": "Bushido Blade 2 (USA).pbp",
+      "hook": "More characters and weapons, faster duels, a story mode per clan. Slightly less austere than the first, still lethal.",
+      "controls": "",
+      "flags": [],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "psx",
+      "alias": "Castlevania - Rondo of Night (v20260802).chd",
+      "hook": "SotN's full castle played as Richter, with the RPG systems the official Richter mode lacks: stats, levels, loot and gear. mazenk's hack adds new sprites, story, music, whips and weapons. Builds since 2.0 add rare enemy drops, food healing and a diagonal-whip relic. Written about the Aug 2026 build.",
+      "reason": "Spoke about the curator's particular file; matching ignores version tags, so the claim is anchored to the version it describes."
+    },
+    {
+      "system": "psx",
+      "alias": "Colony Wars (USA) (Disc 2).chd",
+      "hook": "Space combat sim where winning or losing a mission actually changes the campaign branch and ending. Tight and atmospheric.",
+      "controls": "",
+      "flags": [
+        "two discs"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "psx",
+      "alias": "Dragon Valor (USA) (Disc 2).chd",
+      "hook": "Generational action-RPG: your choices pick who your hero marries and which descendant you play next. Light combat, neat structure.",
+      "controls": "",
+      "flags": [
+        "two discs"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "psx",
+      "alias": "Dynasty Warriors (USA).chd",
+      "hook": "The 1997 original is a one-on-one 3D weapon fighter, not the army-clearing Musou formula that began with Dynasty Warriors 2. Three Kingdoms officers meet in individual duels, so this fits a quick fighting-game session rather than a strategy or territory-management mood. An interesting prehistory of the series; do not pick it expecting a miniature version of the PS2 battlefield games.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "psx",
+      "alias": "Gran Turismo (USA) (Rev 1).chd",
+      "hook": "The driving sim.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "psx",
+      "alias": "Harmful Park (Japan) (En) (v1.1 Translation).chd",
+      "hook": "Sky Think System's colourful horizontal shooter hides a real scoring game beneath its theme-park gags. Switch freely among potato shots, ice-cream lasers, pies and homing jelly; each has its own bomb. Six stages reward lining up multi-kills and collecting gems without dropping the chain, with a separate Score Attack stage for repeat runs. A good change of pace from Cave's bullet curtains without abandoning route mastery. Hilltop's English patch translates the cutscenes and nearly all background text; the patch archive labels it v1.1.",
+      "reason": "Referred to the archive the curator received; restated as the patch archive."
+    },
+    {
+      "system": "psx",
+      "alias": "Metal Gear Solid (USA) (Disc 2) (Rev 1).chd",
+      "hook": "Stealth with AI alert states, item tricks and fourth-wall play. Tight 8 hours; cutscenes are long but earned.",
+      "controls": "",
+      "flags": [
+        "two discs",
+        "cutscene heavy"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "psx",
+      "alias": "Parasite Eve (USA) (Disc 2).chd",
+      "hook": "Survival-horror RPG with real-time positioning in battles and weapon stat transfer. Short, moody, adult.",
+      "controls": "",
+      "flags": [
+        "two discs"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "psx",
+      "alias": "R4 - Ridge Racer Type 4 (USA).chd",
+      "hook": "The most stylish arcade racer of the era; this one is art.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "psx",
+      "alias": "Rage Racer (USA).chd",
+      "hook": "Ridge Racer with a career ladder.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "psx",
+      "alias": "Tales of Destiny II (USA) (Disc 2).chd",
+      "hook": "Tales of Eternia under a confusing name; long anime JRPG.",
+      "controls": "",
+      "flags": [
+        "JRPG pacing",
+        "anime tone",
+        "three discs"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "psx",
+      "alias": "Tales of Destiny II (USA) (Disc 3).chd",
+      "hook": "Tales of Eternia under a confusing name; long anime JRPG.",
+      "controls": "",
+      "flags": [
+        "JRPG pacing",
+        "anime tone",
+        "three discs"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "psx",
+      "alias": "Valkyrie Profile (USA) (Disc 2).chd",
+      "hook": "Recruit dying warriors and send them to Valhalla on a schedule; four-button combo battles. Structure is unique, the tone is anime-tragic.",
+      "controls": "",
+      "flags": [
+        "two discs",
+        "anime tone"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "psx",
+      "alias": "Wipeout 3 (USA).chd",
+      "hook": "The cleanest Wipeout.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "saturn",
+      "alias": "Panzer Dragoon Saga (USA) (Disc 2).chd",
+      "hook": "Positional real-time battles where you circle enemies to find their weak quadrant; dragon morphing. Short for an RPG, adult, singular.",
+      "controls": "",
+      "flags": [
+        "four discs"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "saturn",
+      "alias": "Panzer Dragoon Saga (USA) (Disc 3).chd",
+      "hook": "Positional real-time battles where you circle enemies to find their weak quadrant; dragon morphing. Short for an RPG, adult, singular.",
+      "controls": "",
+      "flags": [
+        "four discs"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "saturn",
+      "alias": "Panzer Dragoon Saga (USA) (Disc 4).chd",
+      "hook": "Positional real-time battles where you circle enemies to find their weak quadrant; dragon morphing. Short for an RPG, adult, singular.",
+      "controls": "",
+      "flags": [
+        "four discs"
+      ],
+      "reason": "Companion disc/copy: retain the previously published main release editorial note; no identity merge."
+    },
+    {
+      "system": "sega32x",
+      "alias": "Chaotix Complete (v0.1) (Hack).32x",
+      "hook": "An experimental 32X hack labelled Chaotix Complete v0.1. The ROM header confirms that title and version, and the release archive credits AdamKempenich, but it contains no changelog; public searches did not establish its exact alterations. Treat this as a curiosity to sample, not a verified definitive edition or a promised fix for the original's mechanics. Patch completeness, save behaviour and compatibility have not been playtested.",
+      "reason": "Referred to the archive the curator received; restated as the release archive."
+    },
+    {
+      "system": "snes",
+      "alias": "F-Zero (USA).sfc",
+      "hook": "Mode 7 racer.",
+      "reason": "Personal taste framing addressed to the curator; removed so the sentence stands for any reader."
+    },
+    {
+      "system": "toaplan-cave-stg",
+      "alias": "feversos.zip",
+      "dropFlags": [
+        "duplicate"
+      ],
+      "reason": "The 'duplicate' flag was relative to the curator's library; Fever SOS is a distinct world-release romset."
+    },
+    {
+      "system": "wii",
+      "alias": "Sin & Punishment - Star Successor (USA).wbfs",
+      "controls": "Designed for Wii Remote pointer aim + Nunchuk. Classic Controller and GameCube pad are supported natively, aiming with a stick-driven reticle instead of the pointer. Pointer emulation via touch or mouse is possible in Dolphin but untested.",
+      "reason": "Control note referred to the curator's own testing setup."
+    },
+    {
+      "system": "xbox",
+      "alias": "JSRF - Jet Set Radio Future (USA).xiso.iso",
+      "hook": "Smilebit turns futuristic Tokyo into a skating playground: chain grinds and wall rides, hunt hidden graffiti souls, and tag rival territory without the original game's constant stage timer. Boosts consume spray cans, while police encounters punctuate the exploration. Built for movement mastery and finding your own routes rather than gear-building or stealth simulation. A working Android launch setup has not been verified.",
+      "dropFlags": [
+        "not tested on Thor"
+      ],
+      "reason": "Taste-fit framing, the curator's scraping state and a device-specific flag; the gameplay description is kept."
+    }
+  ]
 }

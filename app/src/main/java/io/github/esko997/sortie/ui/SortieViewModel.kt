@@ -80,6 +80,8 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     private var deviceScanned = false
     private var watchingManifests = false
+    private var indexChecked = false
+    private var indexCheckRunning = false
 
     /**
      * Set by a built-in app's activity (Magazines, Performance) on its own view model: the display of that window. Launches
@@ -91,9 +93,9 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     private fun origin(): Int? = runCatching { launchOrigin?.invoke() }.getOrNull()
 
     /**
-     * Navigation activity start: re-check the all-files permission and recover manifests after a grant. The library is NOT
-     * re-walked here: the index is fixed until the first run (empty table), a manifest deploy (hot reload) or an explicit
-     * re-index in Diagnostics. Built-in apps' activities never call this: one window owns the library's upkeep.
+     * Navigation activity start: re-check permission and recover manifests after a grant. Check metadata until a nonempty
+     * library is current; failed/incomplete refreshes and empty libraries remain eligible on the next foreground entry.
+     * Unchanged metadata never walks ROMs. Built-in apps' activities never call this: one window owns the library's upkeep.
      */
     fun onStart(granted: Boolean) {
         // A manifest deploy from the desktop is the explicit signal that the card changed; watched from the navigation's view
@@ -105,7 +107,27 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
         _storageGranted.value = granted
         if (!granted) return
         if (manifests.value.errors.isNotEmpty()) graph.manifests.reload()
-        viewModelScope.launch { if (dao.total().first() == 0) reindex() }
+        if (!indexChecked && !indexCheckRunning) {
+            indexCheckRunning = true
+            viewModelScope.launch {
+                try {
+                    if (
+                        manifests.value.errors.isNotEmpty() || dao.total().first() == 0 ||
+                        _index.value.report?.problems?.isNotEmpty() == true || graph.indexer.needsMetadataRefresh()
+                    ) {
+                        reindex()
+                    } else {
+                        indexChecked = true
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    _index.update { it.copy(report = Indexer.Report(0, 0, 0, 0, 0, listOf("metadata check failed: ${e.message}"))) }
+                } finally {
+                    indexCheckRunning = false
+                }
+            }
+        }
         if (!deviceScanned) {
             deviceScanned = true
             viewModelScope.launch { graph.deviceState.refresh() }
@@ -423,11 +445,23 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     fun reindex(force: Boolean = false) {
         if (_index.value.running) return
+        indexChecked = false
         _index.update { it.copy(running = true) }
         viewModelScope.launch {
-            val r = graph.indexer.run(force)
-            graph.deviceState.refresh()
-            _index.update { IndexState(running = false, report = r) }
+            try {
+                val r = graph.indexer.run(force)
+                indexChecked = r.problems.isEmpty() && manifests.value.errors.isEmpty() &&
+                    dao.total().first() > 0 && !graph.indexer.needsMetadataRefresh()
+                _index.update { it.copy(report = r) }
+                graph.deviceState.refresh()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                indexChecked = false
+                _index.update { it.copy(report = Indexer.Report(0, 0, 0, 0, 0, listOf("index refresh failed: ${e.message}"))) }
+            } finally {
+                _index.update { it.copy(running = false) }
+            }
         }
     }
 

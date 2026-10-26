@@ -1,430 +1,387 @@
 #!/usr/bin/env python3
-"""Build Sortie's bundled curated guide from an authored blurbs.jsonl, with every source record accounted for.
+"""Export original editorial notes into the public, offline game identity catalog.
 
-    tools/guide/import-blurbs.py SOURCE.jsonl [--private-report FILE] [--check]
-
-SOURCE is the curator's private hand-written guide (one JSON object per line: sys, file, fit, hook, flags, controls; lines
-starting with // are comments). It is read, never written. The output is reproducible from SOURCE plus tools/guide/curation.json:
-
-  app/src/main/assets/guide/catalog.json   the bundled catalogue (format 1), shipped in every APK
-  tools/guide/import-report.json           public accounting: one entry per source line (line numbers of the snapshot whose
-                                           SHA-256 it records); no per-record digests and never file names
-
-What is published, per record: the authored hook, control notes and flags, attached to a portable identity. What is not: file
-names, extensions, dump-tool tags, local folder names (arcade folders become the portable "arcade" platform and match by
-romset), the curator's fit scores, and automatically generated taste tags (the source has none; build_guide.py adds them).
-curation.json holds the editorial decisions, keyed by source line and checked against the public platform/title of
-that line and the source snapshot hash: neutral rewording of personal or library-specific sentences, flags that only
-made sense in the curator's library, excluded maintenance notes and justified shared work ids. The private report (written
-outside the repository) shows original next to published text so the curator can review those edits.
-
-Identity. A variant is one platform/edition of a work and answers to its matchNames, compared by the app with the magazine
-rules (GameNames.key: case, punctuation, accents, ", The", region, language, disc, revision and reprint tags are ignored;
-edition, hack and translation qualifiers are kept word for word). Source records that share platform and key are one
-variant: disc companions and library duplicates merge into the record that describes the game. A work id is the slug of the
-title without any tags (arcade: the romset), so editions, patches and translations of one game share it. A title that occurs
-on several platforms is never merged by name: each gets a platform-qualified work id unless curation.json names a shared work
-with a reason. Ids already present in the existing catalogue are kept, so a later title or alias change never renames them.
-Nothing here uses the network.
+Private inputs are read-only. Existing catalog UUIDs and community entries survive
+regeneration. DAT hashes describe expected releases, never verified local files.
 """
 
 import argparse
+import copy
 import hashlib
 import json
 import re
 import sys
-import unicodedata
+import uuid
 from pathlib import Path
+from urllib.parse import urlsplit
 
-REPO = Path(__file__).resolve().parent.parent.parent
-CATALOG = REPO / "app" / "src" / "main" / "assets" / "guide" / "catalog.json"
-CURATION = Path(__file__).resolve().parent / "curation.json"
-REPORT = Path(__file__).resolve().parent / "import-report.json"
-FORMAT = 1
-
-# Local folders whose files are arcade romsets: published under the portable "arcade" platform (the app's SystemFamilies).
-ARCADE_FOLDERS = {"arcade", "mame", "fbneo", "neogeo", "cps1", "cps2", "cps3", "toaplan-cave-stg", "stv", "model2", "naomi", "atomiswave"}
-# Dump-tool, container and serial tags that say how a file was made, not which edition it is; never published.
-DUMP_TAGS = re.compile(r"\s*(?:\[(?:vita3k|NoNpDrm)\]|\(PC[A-Z]{2}\d{5}\)|\(Unverified\))", re.IGNORECASE)
-XISO = re.compile(r"\.xiso$", re.IGNORECASE)
-# Distribution tags that are public No-Intro naming: published, plus a match name without them.
-DISTRIBUTION_TAGS = re.compile(r"\s*\((?:eShop)\)", re.IGNORECASE)
-# Flags that describe the curator's library rather than the game; each must be resolved in curation.json.
-PRIVATE_FLAGS = re.compile(r"^(?:duplicate|check|disc \d|missing disc.*|.*not in library.*|not tested on thor)$", re.IGNORECASE)
-DISC_COMPANION = re.compile(r"^disc \d+$", re.IGNORECASE)
-# Wording that must never ship (published hooks, controls and flags). Same spirit as publish-magazines.py PRIVATE.
-PRIVATE_TEXT = [
-    (re.compile(r"(?<![\w.])/(?:var/)?home/[^/\s\"]+/"), "a home-directory path"),
-    (re.compile(r"(?<![\w.])/(?:storage|sdcard)/"), "a device storage path"),
-    (re.compile(r"\byour (?:library|lane|list|genres|tastes?|thor|roms?|fighter shelf)\b", re.IGNORECASE), "personal-library or taste framing"),
-    (re.compile(r"\b(?:in|not in) the library\b", re.IGNORECASE), "personal-library framing"),
-    (re.compile(r"\byou (?:also have|said)\b", re.IGNORECASE), "personal framing"),
-    (re.compile(r"\b(?:on|for|tested on|not tested on) (?:the )?thor\b", re.IGNORECASE), "the curator's device"),
-    (re.compile(r"\bI (?:could|can|have|had|think|found|was|am|tested|checked|keep)\b"), "first-person curator voice"),
-    (re.compile(r"\b(?:supplied archive|this copy|pending cleanup|duplicate of the|keep (?:it|that one|the v))\b", re.IGNORECASE), "a note about the curator's files"),
-    (re.compile(r"\b(?:tested here|on this card)\b", re.IGNORECASE), "the curator's own setup"),
-    (re.compile(r"\b(?:cracked|raw|unverified) dump\b|\bfile may be\b", re.IGNORECASE), "a note about the curator's dump"),
-]
-
-
-# ---- GameNames port (app/src/main/java/io/github/esko997/sortie/data/magazine/MagazineGames.kt); keep in step with it ----
-GROUP = re.compile(r"[(\[]([^()\[\]]*)[)\]]")
-ARTICLE = re.compile(r"(.*?),\s+(the|a|an)(?=$|\s+-\s|\s*:)(.*)", re.IGNORECASE)
-EXTENSION = re.compile(r"\.[A-Za-z0-9]{1,5}$")
-CONTAINER_SUFFIX = re.compile(r"\.(nkit|dec|enc)$", re.IGNORECASE)
-APOSTROPHES = re.compile(r"['’`´]")
-SPACES = re.compile(r"\s+")
-VERSION = re.compile(r"(?:v\d[\w.]*|r\d+|\d+(?:\.\d+)*[a-z]?|\d+(?:st|nd|rd|th)|[a-gijksuw]|m\d+|[bofa]\d+)")
-NEUTRAL = set("""usa us america europe eu japan jp jpn world asia korea china taiwan hong kong brazil australia canada france
-germany spain italy uk netherlands sweden scandinavia russia en ja fr de es it nl pt sv no da fi zh ko ru pl ntsc pal secam ue
-ju jue rev revision ver version alt alternate set disc disk cd side of track greatest hits platinum players player choice best
-the playstation classics essentials reprint budget psn jan january feb february mar march apr april may jun june jul july aug
-august sep sept september oct october nov november dec december mon tue wed thu fri sat sun""".split())
+REPO = Path(__file__).resolve().parents[2]
+CATALOG = REPO / "app/src/main/assets/game-blurbs.json"
+CURATION = Path(__file__).with_name("curation.json")
+NAMESPACE = uuid.UUID("5ced76a4-4230-5cdb-a657-f975b92eb7ba")
+ARCADE = {"arcade", "mame", "fbneo", "neogeo", "cps1", "cps2", "cps3", "toaplan-cave-stg", "stv", "model2", "naomi", "atomiswave"}
+PLATFORM_ALIASES = {"tg16": "pcengine", "megadrive": "genesis"}
+EXTENSIONS = {"zip", "7z", "iso", "chd", "cso", "ciso", "cdi", "gdi", "pbp", "m3u", "cue", "bin", "gba", "gb", "gbc", "sfc", "smc", "md", "gen", "nes", "fds", "ngp", "ngc", "pce", "sgx", "z64", "n64", "v64", "nds", "3ds", "cci", "rvz", "gcm", "wbfs", "xiso", "vpk", "apk", "gg", "sms", "32x", "a26", "a78", "col", "rom", "lnx", "ws", "wsc"}
+DAT_FILES = {
+    "gba": ["Nintendo - Game Boy Advance.dat"],
+    "gb": ["Nintendo - Game Boy.dat"],
+    "gbc": ["Nintendo - Game Boy Color.dat"],
+    "snes": ["Nintendo - Super Nintendo Entertainment System.dat"],
+    "genesis": ["Sega - Mega Drive - Genesis.dat"],
+    "ngp": ["SNK - Neo Geo Pocket.dat", "SNK - Neo Geo Pocket Color.dat"],
+    "ngpc": ["SNK - Neo Geo Pocket Color.dat"],
+    "pcengine": ["NEC - PC Engine - TurboGrafx 16.dat"],
+    "supergrafx": ["NEC - PC Engine SuperGrafx.dat"],
+    "gamegear": ["Sega - Game Gear.dat"],
+    "mastersystem": ["Sega - Master System - Mark III.dat"],
+}
+PRIVATE = re.compile(
+    r"/(?:var/)?home/|/(?:storage|sdcard)/|\b(?:swatson|Pocket DMG|AYN Thor)\b|"
+    r"\byour (?:library|lane|list|genres|tastes?|thor|roms?|fighter shelf)\b|"
+    r"\b(?:in|not in) the library\b|\byou (?:also have|said)\b|"
+    r"\b(?:on|for|tested on|not tested on) (?:the )?thor\b|"
+    r"\b(?:supplied archive|this copy|this archive|pending cleanup|duplicate of the|on this card|tested here)\b|"
+    r"\bI (?:could|can|have|had|think|found|was|am|tested|checked|keep)\b|"
+    r"\b(?:cracked|raw|unverified) dump\b|\bfile may be\b", re.I
+)
+PRIVATE_FLAG = re.compile(r"^(?:duplicate|check|disc \d|missing disc.*|.*not in library.*|not tested on thor)$", re.I)
+ENTRY_FIELDS = {"id", "system", "title", "aliases", "hook", "controls", "flags", "parentId", "fingerprints", "externalIds", "sources"}
+SOURCE_FIELDS = {"kind", "name", "url", "version", "sha256", "release"}
+FINGERPRINT_FIELDS = {"algorithm", "value", "representation", "size", "verification", "source"}
+SHARED_ENTRYPOINTS = {"game.exe", "game.ini", "game.rgssad", "game.rgss2a", "game.rgss3a", "rpg_rt.exe", "rpg_rt.ldb", "rpg_rt.lmt"}
 
 
-def _marks(s):
-    return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.category(c).startswith("M"))
+def canonical(system):
+    system = system.lower()
+    return "arcade" if system in ARCADE else PLATFORM_ALIASES.get(system, system)
 
 
-def _words(s):
-    s = APOSTROPHES.sub("", s.lower().replace("&", " and "))
-    return " ".join("".join(c if (c.isalpha() or c.isnumeric()) else " " for c in s).split())
+def stem(name):
+    base, dot, extension = name.rpartition(".")
+    return base if dot and extension.lower() in EXTENSIONS else name
 
 
-def _reorder(s):
-    m = ARTICLE.fullmatch(s)
-    return f"{m.group(2)} {m.group(1)}{m.group(3)}" if m else s
+def release_aliases(name):
+    """Keep the full name and recognized suffix chain, never package-path stems."""
+    aliases = {name}
+    if "/" not in name:
+        while True:
+            shorter = stem(name)
+            if shorter == name:
+                break
+            aliases.add(shorter)
+            name = shorter
+    return sorted(aliases)
 
 
-def _qualifier(content):
-    kept = []
-    for part in re.split(r"[,/;]", content):
-        token = _words(part)
-        if token and any(w not in NEUTRAL and not VERSION.fullmatch(w) for w in token.split(" ")):
-            kept.append(token)
-    return " ".join(kept) or None
+def encoded(value):
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
-def stem(file_name):
-    return CONTAINER_SUFFIX.sub("", EXTENSION.sub("", file_name.strip()))
+def revision(entries):
+    return hashlib.sha256(encoded(entries)).hexdigest()
 
 
-def key(name):
-    qualifiers = set()
-
-    def tag(m):
-        q = _qualifier(m.group(1))
-        if q:
-            qualifiers.add(q)
-        return " "
-
-    main = GROUP.sub(tag, _marks(name))
-    title = _words(_reorder(SPACES.sub(" ", main).strip()))
-    return " ".join(x for x in [title] + sorted(qualifiers) if x)
+def read_jsonl(path):
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip() and not line.lstrip().startswith("//")]
 
 
-def display_title(st):
-    kept = GROUP.sub(lambda m: " " if _qualifier(m.group(1)) is None else f" {m.group(0)} ", st)
-    parts = SPACES.sub(" ", kept).strip()
-    first = next((i for i, c in enumerate(parts) if c in "(["), -1)
-    head, tail = (parts[:first].strip(), " " + parts[first:]) if first > 0 else (parts, "")
-    return (_reorder(head) + tail) or st
+def public_text(text):
+    if not isinstance(text, str) or PRIVATE.search(text):
+        raise ValueError("non-text or private/library-specific wording requires editorial curation")
+    return text.strip()
 
 
-def slug(s):
-    s = APOSTROPHES.sub("", _marks(s).lower().replace("&", " and "))
-    return re.sub(r"[^a-z0-9]+", "-", s).strip("-")
-# ---- end of GameNames port ----
+def exact_alias(value):
+    public_text(value)
+    if (not value or value != value.strip() or "\\" in value or re.match(r"^[A-Za-z]:", value)
+            or "://" in value or any(ord(char) < 32 for char in value)
+            or any(part in {"", ".", ".."} for part in value.split("/"))):
+        raise ValueError("aliases must be exact safe system-relative paths, never absolute paths or traversal")
+    if value.lower() in SHARED_ENTRYPOINTS:
+        raise ValueError("shared engine entrypoints require an exact game-package relative path")
+    return value
 
 
-def sha256(data):
-    return hashlib.sha256(data).hexdigest()
+def public_url(url):
+    parsed = urlsplit(url)
+    host = parsed.hostname or ""
+    if parsed.scheme not in {"http", "https"} or not host or parsed.username or parsed.password:
+        raise ValueError("evidence URL must be a public HTTP(S) URL")
+    import ipaddress
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        if host == "localhost" or "." not in host or host.endswith((".local", ".lan", ".internal")):
+            raise ValueError("private evidence URL")
+    else:
+        if not address.is_global:
+            raise ValueError("private evidence URL")
+    return url
 
 
-def fail(msg):
-    sys.exit(f"import-blurbs: {msg}")
+def sources_from(values):
+    result = []
+    for value in values:
+        source = {"kind": "research", "name": "Editorial research", "url": value} if isinstance(value, str) else dict(value)
+        if not source.get("kind") or not source.get("name"):
+            raise ValueError("source kind and name are required")
+        if set(source) - SOURCE_FIELDS:
+            raise ValueError("unsupported source fields (do not publish private evidence paths)")
+        for key, text in source.items():
+            public_url(text) if key == "url" else public_text(text)
+        result.append(source)
+    return result
 
 
-def read_source(path):
-    raw = path.read_bytes()
-    lines = raw.decode("utf-8").split("\n")
-    if lines and lines[-1] == "":
-        lines.pop()
-    records, comments, blanks = [], 0, 0
-    for n, line in enumerate(lines, 1):
-        s = line.strip()
-        if not s:
-            blanks += 1
+def unique(values):
+    return [json.loads(value) for value in sorted({encoded(v).decode("utf-8") for v in values})]
+
+
+def load_dat(directory):
+    """Return exact release records and systems whose DAT evidence was refreshed."""
+    result, refreshed_systems = {}, set()
+    if directory is None:
+        return result, refreshed_systems
+    for system, names in DAT_FILES.items():
+        for filename in names:
+            path = directory / filename
+            if not path.is_file():
+                continue
+            refreshed_systems.add(system)
+            raw = path.read_bytes()
+            text = raw.decode("utf-8-sig")
+            header = text.split("game (", 1)[0]
+            version_match = re.search(r'\bversion\s+"([^"]+)"', header)
+            version = version_match.group(1) if version_match else "unspecified"
+            source = {"kind": "dat", "name": path.stem, "version": version,
+                      "sha256": hashlib.sha256(raw).hexdigest(),
+                      "url": "https://github.com/robloach/libretro-dats"}
+            for block in re.findall(r"^game \(\s*\n(.*?)^\)", text, re.M | re.S):
+                name = re.search(r'^\s*name\s+"([^"]+)"', block, re.M)
+                roms = re.findall(r"^\s*rom \( (.*) \)\s*$", block, re.M)
+                if not name or len(roms) != 1:
+                    continue
+                fields = dict((key, quoted or bare) for key, quoted, bare in re.findall(r'(\w+)\s+(?:"([^"]*)"|([^\s()]+))', roms[0]))
+                if not re.fullmatch(r"[0-9a-fA-F]{8}", fields.get("crc", "")) or not fields.get("size", "").isdigit():
+                    continue
+                if int(fields["size"]) <= 0 or fields.get("status") in {"baddump", "nodump"}:
+                    continue
+                fingerprint = {"algorithm": "crc32", "value": fields["crc"].lower(), "representation": "raw",
+                               "size": int(fields["size"]), "verification": "dat-release",
+                               "source": f"{path.stem} ({version})"}
+                evidence = dict(source, release=name.group(1))
+                for alias in {name.group(1), fields.get("name", "")} - {""}:
+                    result.setdefault((system, alias), []).append((fingerprint, evidence))
+    return result, refreshed_systems
+
+
+def validate(document):
+    if set(document) != {"schemaVersion", "revision", "entries"} or document["schemaVersion"] != 1:
+        raise ValueError("unsupported catalog schema")
+    entries = document["entries"]
+    if document["revision"] != revision(entries):
+        raise ValueError("catalog revision does not describe its content")
+    ids, aliases, fingerprints = set(), {}, {}
+    for entry in entries:
+        if set(entry) - ENTRY_FIELDS:
+            raise ValueError("unsupported/private catalog field")
+        identity = entry["id"]
+        if str(uuid.UUID(identity)) != identity or identity in ids:
+            raise ValueError("invalid or duplicate UUID")
+        ids.add(identity)
+        system = entry["system"]
+        if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", system) or canonical(system) != system:
+            raise ValueError("noncanonical platform")
+        for key in ("title", "hook"):
+            if not public_text(entry[key]):
+                raise ValueError(f"empty {key}")
+        public_text(entry.get("controls", ""))
+        for flag in entry.get("flags", []):
+            if not public_text(flag) or PRIVATE_FLAG.fullmatch(flag):
+                raise ValueError("private or empty flag")
+        if not entry["aliases"] or len(set(entry["aliases"])) != len(entry["aliases"]):
+            raise ValueError("missing or repeated aliases")
+        for alias in entry["aliases"]:
+            exact_alias(alias)
+            key = system, alias.lower()
+            if key in aliases and aliases[key] != identity:
+                raise ValueError(f"ambiguous alias: {system}/{alias}")
+            aliases[key] = identity
+        if not entry.get("sources"):
+            raise ValueError("provenance is required")
+        sources_from(entry["sources"])
+        for fp in entry.get("fingerprints", []):
+            if set(fp) != FINGERPRINT_FIELDS or fp["algorithm"] != "crc32" or not re.fullmatch(r"[0-9a-f]{8}", fp["value"]):
+                raise ValueError("unsupported fingerprint")
+            if fp["representation"] not in {"raw", "nes-prg-chr"} or fp["verification"] not in {"dat-release", "payload-verified"}:
+                raise ValueError("fingerprint representation/evidence is required")
+            if type(fp["size"]) is not int or fp["size"] <= 0 or not public_text(fp["source"]):
+                raise ValueError("fingerprint size/source is required")
+            key = system, fp["representation"], fp["value"], fp["size"]
+            if key in fingerprints and fingerprints[key] != identity:
+                raise ValueError(f"ambiguous fingerprint: {system}/{fp['value']}")
+            fingerprints[key] = identity
+        for provider, value in entry.get("externalIds", {}).items():
+            if not public_text(provider) or not public_text(value):
+                raise ValueError("invalid external identifier")
+    parents = {e["id"]: e.get("parentId") for e in entries}
+    for identity, parent in parents.items():
+        seen = {identity}
+        while parent:
+            if parent not in ids or parent in seen:
+                raise ValueError("missing/cyclic variant parent")
+            seen.add(parent)
+            parent = parents[parent]
+
+
+def export(notes, inventory, decisions, previous, dat, evidence=(), refreshed_systems=None):
+    metadata = {(r.get("s", r.get("sys")), r.get("f", r.get("file"))): r for r in inventory}
+    edits = {(r["system"], r["alias"]): r for r in decisions}
+    if len(edits) != len(decisions):
+        raise ValueError("duplicate curation identity")
+    research = {}
+    for row in evidence:
+        research.setdefault((row["sys"], row["file"]), []).extend(row.get("sources", []))
+    entries = {e["id"]: copy.deepcopy(e) for e in previous.get("entries", [])}
+    # Backfill newly supported container stems before consulting any new input.
+    # This is an alias repair on the published UUID, never a second allocation.
+    by_alias = {}
+    for entry in entries.values():
+        entry["aliases"] = sorted({candidate for alias in entry["aliases"]
+                                   for candidate in release_aliases(alias)})
+        for alias in entry["aliases"]:
+            key = entry["system"], alias.lower()
+            if key in by_alias and by_alias[key] != entry["id"]:
+                raise ValueError(f"stem repair joins published identities: {key}")
+            by_alias[key] = entry["id"]
+    seen, updated, excluded = set(), set(), 0
+    for note in sorted(notes, key=lambda r: (r["sys"], r["file"])):
+        local = note["sys"], note["file"]
+        if local in seen:
+            raise ValueError(f"duplicate input identity: {local}")
+        seen.add(local)
+        edit = edits.get(local, {})
+        system, filename = canonical(note["sys"]), note["file"]
+        if edit.get("exclude"):
+            excluded += 1
             continue
-        if s.startswith("//"):
-            comments += 1
+        exact_alias(filename)
+        nested = "/" in filename
+        aliases = release_aliases(filename)
+        pinned = {by_alias[(system, a.lower())] for a in aliases if (system, a.lower()) in by_alias}
+        if len(pinned) > 1:
+            raise ValueError(f"aliases join multiple identities: {local}")
+        identity = next(iter(pinned), str(uuid.uuid5(NAMESPACE, system + "\n" + filename)))
+        old = entries.get(identity, {})
+        flags = edit.get("flags", [f for f in note.get("flags", []) if f not in edit.get("dropFlags", [])] + edit.get("addFlags", []))
+        meta = metadata.get(local, {})
+        # Display titles, including reviewed corrections, never create aliases.
+        title = edit.get("title", meta.get("t") if system == "arcade" or nested else stem(filename))
+        if "title" in edit and not public_text(title):
+            raise ValueError(f"curated title must not be empty: {local}")
+        if nested and not title:
+            raise ValueError(f"nested game package needs an explicit display title: {local}")
+        entry = dict(old, id=identity, system=system, title=title or stem(filename),
+                     aliases=sorted(set(old.get("aliases", []) + aliases)),
+                     hook=edit.get("hook", note.get("hook", "")).strip())
+        for key, value in (("controls", edit.get("controls", note.get("controls", "")).strip()), ("flags", sorted(set(flags)))):
+            if value:
+                entry[key] = value
+            else:
+                entry.pop(key, None)
+        sources = old.get("sources", []) + [
+            {"kind": "editorial", "name": "Sortie contributors: original AI-assisted editorial note"},
+            {"kind": "alias", "name": ("Exact game-package relative path; not an engine fingerprint" if nested
+                                      else "Exact authored release basename; not a local checksum verification")},
+        ]
+        sources += sources_from(note.get("sources", []) + research.get(local, []))
+        identity_source = meta.get("identity_source", "")
+        if identity_source.startswith(("https://", "http://")):
+            sources += [{"kind": "identity", "name": "Release identity reference", "url": public_url(identity_source)}]
+        entry["sources"] = unique(sources)
+        if identity in updated:
+            if any(entries[identity].get(k) != entry.get(k) for k in ("hook", "controls", "flags")):
+                raise ValueError(f"conflicting notes for one exact release: {local}; curate explicitly")
+        entries[identity] = entry
+        updated.add(identity)
+        for alias in entry["aliases"]:
+            by_alias[system, alias.lower()] = identity
+    # Refresh every retained entry on the platforms actually supplied, including
+    # community entries absent from the private import. Historical citations stay
+    # as provenance, but superseded expected checksums must not remain matchable.
+    if refreshed_systems is None:
+        refreshed_systems = {system for system, _ in dat}
+    for entry in entries.values():
+        if entry["system"] not in refreshed_systems:
             continue
-        try:
-            obj = json.loads(s)
-        except ValueError as e:
-            fail(f"source line {n} is not JSON: {e}")
-        if not isinstance(obj, dict) or not isinstance(obj.get("sys"), str) or not isinstance(obj.get("file"), str):
-            fail(f"source line {n} has no sys/file")
-        records.append({"line": n, "rec": obj})
-    return raw, len(lines), comments, blanks, records
-
-
-def read_curation(source_sha, records):
-    """Decisions by source line. They apply only to the source snapshot they were written for, and every decision with a public
-    identity must name the platform and title its line actually has, so a reordered source cannot redirect one."""
-    doc = json.loads(CURATION.read_text(encoding="utf-8"))
-    pinned = doc.get("source", {}).get("sha256")
-    if pinned != source_sha:
-        fail(f"curation.json was written for source {pinned}, not {source_sha}. Review every decision's line against the new "
-             "source (excluded lines have no public identity to check), then update source.sha256 in curation.json")
-    by_line = {r["line"]: r["rec"] for r in records}
-    by = {}
-    for d in doc["decisions"]:
-        line = d.get("line")
-        if line not in by_line:
-            fail(f"curation.json names line {line}, which is not a record in this source")
-        if "exclude" not in d:
-            platform, shown = identity(by_line[line])[:2]
-            if (d.get("platform"), d.get("title")) != (platform, shown):
-                fail(f"curation.json line {line} expects {d.get('platform')}/{d.get('title')!r}, but that line is {platform}/{shown!r}")
-        by.setdefault(line, []).append(d)
-    return by
-
-
-def existing_ids():
-    """(platform, key) -> (work id, variant id) from the catalogue being replaced, so published ids never change."""
-    if not CATALOG.is_file():
-        return {}
-    doc = json.loads(CATALOG.read_text(encoding="utf-8"))
-    ids = {}
-    for w in doc.get("works", []):
-        for v in w.get("variants", []):
-            for name in v.get("matchNames", []):
-                ids[(v["platform"], key(name))] = (w["id"], v["id"])
-    return ids
-
-
-def identity(rec):
-    """(platform, display title, work title, edition, match names) for one source record. No file name survives."""
-    folder = rec["sys"]
-    st = stem(rec["file"])
-    if folder in ARCADE_FOLDERS:
-        return "arcade", st, st, "", [st]
-    clean = SPACES.sub(" ", DUMP_TAGS.sub("", XISO.sub("", st))).strip()
-    shown = display_title(clean)
-    work_title = _reorder(SPACES.sub(" ", GROUP.sub(" ", clean)).strip())
-    edition = ", ".join(m.group(1).strip() for m in GROUP.finditer(shown))
-    names = [shown]
-    plain = SPACES.sub(" ", DISTRIBUTION_TAGS.sub("", clean)).strip()
-    if plain != clean:
-        names.append(display_title(plain))
-    return folder, shown, work_title, edition, names
+        matches = unique([{"fingerprint": fp, "source": src} for alias in entry["aliases"]
+                          for fp, src in dat.get((entry["system"], alias), [])])
+        payloads = {(m["fingerprint"]["algorithm"], m["fingerprint"]["representation"],
+                     m["fingerprint"]["value"], m["fingerprint"]["size"]) for m in matches}
+        retained = [fp for fp in entry.get("fingerprints", []) if fp["verification"] != "dat-release"]
+        if len(payloads) == 1:
+            retained += [m["fingerprint"] for m in matches]
+        if retained:
+            entry["fingerprints"] = unique(retained)
+        else:
+            entry.pop("fingerprints", None)
+        entry["sources"] = unique(entry["sources"] + [m["source"] for m in matches])
+    # Equal hashes on separately identified releases are deliberately not usable.
+    owners = {}
+    for entry in entries.values():
+        for fp in entry.get("fingerprints", []):
+            owners.setdefault((entry["system"], fp["representation"], fp["value"], fp["size"]), set()).add(entry["id"])
+    for entry in entries.values():
+        usable = [fp for fp in entry.get("fingerprints", []) if len(owners[entry["system"], fp["representation"], fp["value"], fp["size"]]) == 1]
+        if usable:
+            entry["fingerprints"] = usable
+        else:
+            entry.pop("fingerprints", None)
+    ordered = sorted(entries.values(), key=lambda e: (e["system"], e["id"]))
+    document = {"schemaVersion": 1, "revision": revision(ordered), "entries": ordered}
+    validate(document)
+    return document, excluded
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("source", type=Path)
-    ap.add_argument("--private-report", type=Path, help="original-vs-published review file; keep it outside the repository")
-    ap.add_argument("--check", action="store_true", help="verify that the committed outputs are current; write nothing")
-    a = ap.parse_args()
-    if a.private_report and REPO in a.private_report.resolve().parents:
-        fail("the private report must not be written inside the repository")
-
-    raw, n_lines, comments, blanks, records = read_source(a.source)
-    curation = read_curation(sha256(raw), records)
-    pinned = existing_ids()
-
-    # 1. Each record: decisions, published fields, identity.
-    rows = []
-    for r in records:
-        rec, decisions = r["rec"], curation.get(r["line"], [])
-        row = {"line": r["line"], "rec": rec, "decisions": decisions, "reasons": [], "edited": []}
-        excluded = [d["exclude"] for d in decisions if "exclude" in d]
-        if excluded:
-            row["disposition"], row["reasons"] = "excluded", excluded
-            rows.append(row)
-            continue
-        hook, controls = rec.get("hook", "").strip(), rec.get("controls", "").strip()
-        flags = [f.strip() for f in rec.get("flags", []) if isinstance(f, str) and f.strip()]
-        work_override = None
-        for d in decisions:
-            if "hook" in d:
-                hook = d["hook"]
-                row["edited"].append("hook")
-            if "controls" in d:
-                controls = d["controls"]
-                row["edited"].append("controls")
-            for f in d.get("dropFlags", []):
-                if f not in flags:
-                    fail(f"line {r['line']}: dropFlags names {f!r}, which the record does not have")
-                flags.remove(f)
-                row["edited"].append(f"flag -{f}")
-            for f in d.get("addFlags", []):
-                flags.append(f)
-                row["edited"].append(f"flag +{f}")
-            if "work" in d:
-                work_override = d["work"]
-            if "reason" in d:
-                row["reasons"].append(d["reason"])
-        platform, shown, work_title, edition, names = identity(rec)
-        row.update(hook=hook, controls=controls, flags=flags, platform=platform, shown=shown, work_title=work_title,
-                   edition=edition, names=names, key=key(names[0]), work_override=work_override)
-        rows.append(row)
-
-    # 2. Records with the same platform and key are one variant; the describing record is primary.
-    groups = {}
-    for row in rows:
-        if row.get("disposition") != "excluded":
-            groups.setdefault((row["platform"], row["key"]), []).append(row)
-    conflicts = []
-    for (platform, k), members in groups.items():
-        def companion(row):
-            return any(f.lower() == "duplicate" or DISC_COMPANION.match(f) for f in row["rec"].get("flags", []))
-        primary = next((m for m in members if not companion(m)), members[0])
-        primary["disposition"] = "edited" if primary["edited"] else "published"
-        for m in members:
-            if m is primary:
-                continue
-            why = "disc companion" if any(DISC_COMPANION.match(f) for f in m["rec"].get("flags", [])) else "library copy of the same edition"
-            m["disposition"], m["mergedInto"] = "merged", primary["line"]
-            m["reasons"].append(f"Same platform and match key as line {primary['line']} ({why}); that record's prose describes the game.")
-        if len(members) > 1:
-            hooks = {m["rec"].get("hook", "").strip() for m in members}
-            conflicts.append({
-                "platform": platform, "matchKey": k, "records": [m["line"] for m in members], "primary": primary["line"],
-                "distinctSourceHooks": len(hooks), "resolution": "primary record's hook published; others merged",
-            })
-
-    # 3. Ids: pinned ids first, then work slugs (platform-qualified when a title spans platforms without a curated work).
-    variants = []
-    for (platform, k), members in groups.items():
-        p = next(m for m in members if m["disposition"] in ("published", "edited"))
-        variants.append(p)
-    by_slug = {}
-    for v in variants:
-        v["work_slug"] = v["work_override"] or slug(v["work_title"])
-        by_slug.setdefault(v["work_slug"], set()).add(v["platform"])
-    for v in variants:
-        pin = next((pinned[(v["platform"], key(n))] for n in v["names"] if (v["platform"], key(n)) in pinned), None)
-        if pin:
-            v["work_id"], v["variant_id"] = pin
-            continue
-        spans = len(by_slug[v["work_slug"]]) > 1 and not v["work_override"]
-        v["work_id"] = f"{v['work_slug']}-{slug(v['platform'])}" if spans else v["work_slug"]
-        v["variant_id"] = f"{slug(v['platform'])}-{slug(v['shown'])}"
-    seen = {}
-    for v in variants:
-        if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,119}", v["variant_id"]) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,119}", v["work_id"]):
-            fail(f"line {v['line']}: unusable id {v['work_id']} / {v['variant_id']}")
-        if v["variant_id"] in seen:
-            fail(f"lines {seen[v['variant_id']]} and {v['line']} both produce variant id {v['variant_id']}")
-        seen[v["variant_id"]] = v["line"]
-        if not v["hook"]:
-            fail(f"line {v['line']}: no hook to publish")
-        for f in v["flags"]:
-            if PRIVATE_FLAGS.match(f):
-                fail(f"line {v['line']}: library-relative flag {f!r} needs a decision in curation.json")
-        for text in [v["hook"], v["controls"], *v["flags"]]:
-            for rx, what in PRIVATE_TEXT:
-                if rx.search(text):
-                    fail(f"line {v['line']}: published text contains {what}: {text!r}")
-    # The app's "arcade" covers every arcade-generation system, so it overlaps those platforms as well as itself.
-    arcade_family = ARCADE_FOLDERS | {"neogeocd"}
-
-    def overlap(a, b):
-        return a == b or (a == "arcade" and b in arcade_family) or (b == "arcade" and a in arcade_family)
-
-    claims = {}
-    for v in variants:
-        for n in v["names"]:
-            for other in claims.setdefault(key(n), []):
-                if other["variant_id"] != v["variant_id"] and overlap(other["platform"], v["platform"]):
-                    fail(f"match name {n!r} answers to both {other['variant_id']} and {v['variant_id']}")
-            claims[key(n)].append(v)
-
-    # 4. Catalogue: works sorted by id, variants by id; no file names, fit scores or generated tags.
-    works = {}
-    for v in sorted(variants, key=lambda v: v["variant_id"]):
-        w = works.setdefault(v["work_id"], {"id": v["work_id"], "title": v["work_title"], "variants": []})
-        entry = {"id": v["variant_id"], "platform": v["platform"], "title": v["shown"]}
-        if v["edition"]:
-            entry["edition"] = v["edition"]
-        entry["matchNames"] = v["names"]
-        entry["hook"] = v["hook"]
-        if v["controls"]:
-            entry["controls"] = v["controls"]
-        if v["flags"]:
-            entry["flags"] = v["flags"]
-        w["variants"].append(entry)
-    for w in works.values():
-        titles = {x["title"] for x in w["variants"]}
-        if len({x["platform"] for x in w["variants"]}) > 1 or len(titles) > 1:
-            # the shortest title, preferring a real title over an arcade romset name
-            w["title"] = min(((v["platform"] == "arcade", len(v["work_title"]), v["work_title"]) for v in variants if v["work_id"] == w["id"]))[2]
-    for v in variants:
-        if v["work_override"] and sum(1 for x in variants if x["work_id"] == v["work_id"]) < 2:
-            fail(f"line {v['line']}: curated work {v['work_id']} joins nothing; drop the decision or fix the id")
-    counts = {d: sum(1 for r in rows if r["disposition"] == d) for d in ("published", "edited", "merged", "excluded")}
-    if sum(counts.values()) != len(records):
-        fail("accounting does not add up")
-    source = {
-        "sha256": sha256(raw), "bytes": len(raw), "lines": n_lines, "commentLines": comments, "blankLines": blanks,
-        "records": len(records), **counts,
-    }
-    catalog = {"format": FORMAT, "source": source, "works": [works[k] for k in sorted(works)]}
-    catalog_text = json.dumps(catalog, ensure_ascii=False, indent=1) + "\n"
-    repeated = {}
-    for v in variants:
-        repeated.setdefault(v["hook"], []).append(v["variant_id"])
-
-    report = {
-        "format": 1,
-        "about": "Accounting for every authored source record by its line in the source snapshot named by 'source' (whole-file SHA-256); "
-                 "no per-record digests and never file names. "
-                 "published: hook, controls and flags as authored. edited: published after the curation.json decision "
-                 "named by 'reasons'. merged: same platform and match key as 'mergedInto', whose prose describes the game. "
-                 "excluded: not published, for the stated reason. Fit scores are never published.",
-        "source": source,
-        "catalog": {"works": len(works), "variants": len(variants), "sha256": sha256(catalog_text.encode("utf-8"))},
-        # several source records that became one variant: which line's prose was published, and whether the merged hooks differed
-        "sharedVariants": sorted(conflicts, key=lambda c: c["primary"]),
-        # identical published hooks on different variants (short genre notes such as "Football."): kept, each variant is its own game
-        "repeatedHooks": sorted(
-            ({"hook": h, "variants": sorted(ids)} for h, ids in repeated.items() if len(ids) > 1),
-            key=lambda g: (-len(g["variants"]), g["hook"]),
-        ),
-        "records": [{
-            "line": r["line"], "disposition": r["disposition"],
-            **({"variant": next(v["variant_id"] for v in variants
-                                if (v["platform"], v["key"]) == (r["platform"], r["key"]))} if r["disposition"] != "excluded" else {}),
-            **({"mergedInto": r["mergedInto"]} if "mergedInto" in r else {}),
-            **({"edited": r["edited"]} if r["edited"] else {}),
-            **({"reasons": r["reasons"]} if r["reasons"] else {}),
-        } for r in rows],
-    }
-    report_text = json.dumps(report, ensure_ascii=False, indent=1) + "\n"
-
-    if a.check:
-        stale = [p for p, t in ((CATALOG, catalog_text), (REPORT, report_text)) if not p.is_file() or p.read_text(encoding="utf-8") != t]
-        if stale:
-            fail("out of date: " + ", ".join(str(p.relative_to(REPO)) for p in stale))
-        print(f"current: {len(variants)} variants in {len(works)} works from {len(records)} records")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("source", nargs="?", type=Path)
+    parser.add_argument("--inventory", type=Path, help="full inventory JSONL, or window.GUIDE data.js")
+    parser.add_argument("--dats", type=Path, help="optional directory of supported clrmamepro DATs")
+    parser.add_argument("--evidence", type=Path, action="append", default=[], help="JSONL with sys/file/sources")
+    parser.add_argument("--output", type=Path, default=CATALOG)
+    parser.add_argument("--curation", type=Path, default=CURATION)
+    parser.add_argument("--check", action="store_true", help="compare regenerated content without writing")
+    parser.add_argument("--validate", action="store_true", help="validate committed catalog without private inputs")
+    args = parser.parse_args()
+    previous = json.loads(args.output.read_text(encoding="utf-8")) if args.output.exists() else {"entries": []}
+    if args.validate:
+        validate(previous)
+        print(f"Valid catalog: {len(previous['entries'])} entries")
         return
-    CATALOG.parent.mkdir(parents=True, exist_ok=True)
-    CATALOG.write_text(catalog_text, encoding="utf-8")
-    REPORT.write_text(report_text, encoding="utf-8")
-    if a.private_report:
-        private = [{
-            "line": r["line"], "disposition": r["disposition"], "sys": r["rec"]["sys"], "file": r["rec"]["file"],
-            "originalHook": r["rec"].get("hook", ""), "originalControls": r["rec"].get("controls", ""), "originalFlags": r["rec"].get("flags", []),
-            **({"publishedHook": r["hook"], "publishedControls": r["controls"], "publishedFlags": r["flags"]} if r["disposition"] == "edited" else {}),
-            "reasons": r["reasons"],
-        } for r in rows if r["disposition"] != "published"]
-        a.private_report.parent.mkdir(parents=True, exist_ok=True)
-        a.private_report.write_text(json.dumps(private, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    print(f"{len(records)} records: {counts['published']} published, {counts['edited']} edited, {counts['merged']} merged, "
-          f"{counts['excluded']} excluded -> {len(variants)} variants in {len(works)} works")
+    if args.source is None or args.inventory is None:
+        parser.error("source and --inventory are required unless --validate is used")
+    if previous["entries"]:
+        validate(previous)
+    text = args.inventory.read_text(encoding="utf-8")
+    inventory = json.loads(text.removeprefix("window.GUIDE=").rstrip(";\n"))["games"] if text.startswith("window.GUIDE=") else read_jsonl(args.inventory)
+    decisions = json.loads(args.curation.read_text(encoding="utf-8"))["decisions"]
+    evidence = [row for path in args.evidence for row in read_jsonl(path)]
+    dat, refreshed_systems = load_dat(args.dats)
+    document, excluded = export(read_jsonl(args.source), inventory, decisions, previous, dat, evidence, refreshed_systems)
+    content = json.dumps(document, ensure_ascii=False, indent=2) + "\n"
+    if args.check:
+        if not args.output.exists() or args.output.read_text(encoding="utf-8") != content:
+            raise ValueError("catalog differs; regenerate and review")
+    else:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(content, encoding="utf-8")
+    print(f"Catalog: {len(document['entries'])} identities; {sum(bool(e.get('fingerprints')) for e in document['entries'])} fingerprinted; {excluded} excluded; revision {document['revision']}")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (ValueError, KeyError, TypeError) as error:
+        sys.exit(f"import-blurbs: {error}")

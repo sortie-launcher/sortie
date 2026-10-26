@@ -25,6 +25,15 @@ for published builds.
   from shipped behavior. Replace the remaining old screenshots with current Nova/Thor captures and a fresh beta 2138
   setup/import walkthrough, including a real uCity launch. Publish the hardening reference and use native Thor screen
   originals in the website hero instead of cropping a composite.
+- Replace the bundled guide's normalized-title matching with a public, in-git release catalog: immutable UUIDs, exact
+  platform-scoped aliases, explicitly sourced expected DAT fingerprints and original editorial notes. Preserve every
+  previously published note and legacy identity cross-reference, keep hacks/revisions separate, and never publish private
+  fit scores or library details. Renamed supported small cartridges can match by payload; no disc hashing or network lookup.
+  Catalog revisions refresh cached shared prose at normal startup without replacing local authored overrides or game IDs.
+  Add deterministic export/validation, behavioral coverage and public contribution guidance in docs/formats/guide.md.
+  Expand coverage to 10,135 release identities across 41 canonical platforms, including older consoles, computers and
+  arcade games. Notes favor concise, concrete play advice over marketing copy; uncertain prototype/patch details remain
+  explicit. Six Neo Geo Pocket prototypes have independently verified payload fingerprints and MAME cross-references.
 - Limit the companion screen's curated blurb to two lines with an ellipsis, keeping long recommendations from crowding
   the art and controls. The game detail page still shows the full, unchanged blurb.
 - Refresh the README, website, onboarding, manual and format references for Quiet Home, Tonight, bookmarks and their
