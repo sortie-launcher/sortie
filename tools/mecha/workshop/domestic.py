@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Original domestic repair / tea-service parts for the isolated Rivet workshop.
+"""Authoritative domestic repair / tea-service drawings for the Rivet workshop.
 
 Run: python3 tools/mecha/workshop/domestic.py
 Writes only assets/domestic beside this script. Uses the existing courier mask
 primitives and shared rig: neck32,25; shoulders19/45,29; hips26/38,44; floor61.
 The two silhouettes are Bellhop (enamel pressure-service) and Mend (bench repair).
+Production copies only the catalog and eight part sheets, checked by test_production.py.
 """
 from __future__ import annotations
 

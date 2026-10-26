@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Offline, resolved-recipe Rivet assembly workshop. Requires Python 3.10+ and Pillow.
 
-Generate a portable review bundle from the three shipped catalogs:
+Generate a portable review bundle from the seven shipped catalogs:
   python3 tools/mecha/workshop/procedural/assemble.py generate --seed 2136 --count 12 --out tools/mecha/workshop/procedural/review
 Replay without catalogs or seed selection (uses the bundle's digest-locked assets):
   python3 tools/mecha/workshop/procedural/assemble.py replay tools/mecha/workshop/procedural/review/recipes.json --out /tmp/rivet-replayed
@@ -274,7 +274,7 @@ def prepare_out(out: Path) -> None:
 
 def generate(args) -> None:
     catalogs = args.catalog or [ROOT / f"mecha/src/main/assets/mecha/{family}/catalog.json"
-                               for family in ("yard", "survey", "courier")]
+                               for family in ("yard", "survey", "courier", "foundry", "orbital", "tidal", "domestic")]
     parts, provenance = load_catalogs(catalogs)
     rows, eligible = select(parts, args.seed, args.count)
     recipe = {"format": "rivet-resolved-assemblies", "version": 1, "generator": VERSION,

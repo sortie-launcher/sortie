@@ -37,4 +37,5 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test) // the companion's lifecycle gate on virtual time
+    testDebugImplementation(libs.robolectric) // native BitmapFactory checks for authored art and finish pixels
 }

@@ -191,15 +191,28 @@ only one of him.
   anything over a game. Otherwise he stays on this screen. Animate off skips the flight.
   A quick swipe before picking him up still scrolls whatever is under him.
 - **Extras → Hangar** on Home opens the Hangar with the controller. In an article, **Select → Visit the hangar** also works.
-  **B** returns from Gallery to Workshop, then closes the Hangar without losing your place; on Home the focus returns to
-  **Extras**.
-- **Workshop** lets you name your companion, tune it, charge it, or put it to sleep. Charge and condition never run down
-  while you are away, and neither can stop you playing or using the companion.
+  **B** returns from Shop, Build bench, Cabinet or Gallery to Workshop, then closes the Hangar without losing your place;
+  on Home the focus returns to **Extras**.
+- **Workshop** lets you name your companion, tune it, charge it, or put it to sleep. Press **Rename** to edit the name;
+  **Save** commits it and **Cancel** discards the edit. Tapping the displayed name never opens the keyboard.
+  Charge and condition never run down while you are away, and neither can stop you playing or using the companion.
 - Choose a part slot and **Equip** an owned part, or wear a complete family set. Mixing families is encouraged.
-- You start with twelve parts and three salvage credits. Each credit finds one new part, optionally in a chosen slot.
-  New completed game sessions earn a credit per five accumulated whole minutes (up to 120 minutes from one session).
+- You start with twelve parts and three salvage credits. **Shop** previews all 56 parts across seven families; a chosen
+  part costs **2 credits**. Buying adds it to your inventory but does not equip it.
+- **Finishes** in the Shop unlock **Alloy for 6 credits** or **Holo for 10**. Each is a one-time unlock, reusable on every
+  part. Preview the metal glint or translucent prism effect before buying, then **Apply finish** to a chosen slot.
+  **Plain** removes that slot's finish for free. Animate off also keeps finishes still.
+- **Build bench** freely combines owned parts: body and arms from one family, head and legs from another. Browse chassis,
+  trim and variants, then **Fit build** when you like the result. Previewing never changes your fitted parts.
+- **Cabinet** is an optional gamble, not the only way to collect. Stake **1 / 3 / 5 credits** for a part / Alloy / Holo:
+  each spin has a **20%** chance of a new reward plus the stake back, **30%** of the stake back alone, and **50%** of losing
+  the stake. There are no duplicates; a completed tier cannot be played. Buying directly costs less on average.
+  A confirmation precedes every spin. The saved receipt shows the one committed result; reopening it never spins again.
+- New completed game sessions earn a credit per five accumulated whole minutes (up to 120 minutes from one session).
+  **Earning stops at 50 credits.** Extra play still counts toward your companion's stats, but no credits or partial credit
+  are banked while full. Spending below 50 lets new play earn again. Existing balances above 50 are kept, not cut down.
   Earlier play, abandoned sessions, apps and launcher shortcuts do not count. Recorded time is not a measure of active input.
-- **Gallery** compares all three families and idle, walking, sleeping and cheering animations. Parts labelled **preview**
+- **Gallery** compares all seven families and idle, walking, sleeping and cheering animations. Parts labelled **preview**
   are not unlocked; a preview build can only be worn when you own every part.
 - At the bottom of Workshop, turn **Animate companion** off and he stays put at one spot, or **Hide companion** and he
   goes away entirely. **Show companion** in the Hangar brings him back without losing parts.

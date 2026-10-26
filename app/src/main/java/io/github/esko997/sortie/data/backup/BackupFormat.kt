@@ -6,6 +6,7 @@ import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.data.user.LegacyNotes
 import io.github.esko997.sortie.data.user.LegacyUserMigration
 import io.github.esko997.sortie.mecha.MechaState
+import io.github.esko997.sortie.mecha.mechaStateProblem
 import io.github.esko997.sortie.stats.CompanionView
 import io.github.esko997.sortie.stats.perfInterval
 import io.github.esko997.sortie.stats.statsInterval
@@ -130,6 +131,11 @@ fun parseBackup(text: String): ParsedBackup {
         return ParsedBackup.Invalid("The backup is damaged: ${e.message?.lineSequence()?.firstOrNull() ?: "unreadable field"}.")
     } catch (e: IllegalArgumentException) {
         return ParsedBackup.Invalid("The backup is damaged: ${e.message ?: "invalid value"}.")
+    }
+    backup.mecha?.let { save ->
+        mechaStateProblem(save)?.let { problem ->
+            return ParsedBackup.Invalid("The companion save in the backup can't be used: $problem. Nothing was changed.")
+        }
     }
     backup.sessions.forEachIndexed { i, s ->
         val problem = when {

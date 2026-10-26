@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Original orbital-maintenance parts; run with Python/Pillow, no shipped writes.
+"""Authoritative orbital-maintenance drawings; run with Python/Pillow, no shipped writes.
 
 Eight 512x64 RGBA sheets share the courier rig and integer-mask primitives.
 Output: workshop/assets/orbital/{orbital_*.png,catalog.json,board.png,preview.gif}.
 Frames: idle, detail, left contact, passing, right contact, passing, sleep, cheer.
+Production copies only the catalog and eight part sheets, checked by test_production.py.
 """
 from __future__ import annotations
 

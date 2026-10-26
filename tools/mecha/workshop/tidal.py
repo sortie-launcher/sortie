@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Original Tidal salvage-diver parts; rerun with Python + Pillow from anywhere.
+"""Authoritative Tidal salvage-diver drawings; rerun with Python + Pillow from anywhere.
 
 Only writes workshop/assets/tidal. Shares the shipped courier raster primitives,
 neutral outlines and attachment rig, never its authored part silhouettes.
+Production copies only the catalog and eight part sheets, checked by test_production.py.
 """
 from __future__ import annotations
 

@@ -34,7 +34,6 @@ import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -440,7 +439,7 @@ fun MechaStageHost(stage: MechaStage, modifier: Modifier = Modifier, active: Boo
             MechaPresence.setActive(stage, shown && stage.allowed)
         }
     }
-    val load = rememberSpriteLoad(view.parts, state?.equipped.orEmpty())
+    val load = rememberSpriteLoad(view.parts, state?.equipped.orEmpty(), state?.equippedFinishes.orEmpty())
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelLarge
     val density = LocalDensity.current
@@ -475,7 +474,12 @@ fun MechaStageHost(stage: MechaStage, modifier: Modifier = Modifier, active: Boo
             Spacer(
                 Modifier.fillMaxSize().drawBehind {
                     if (!stage.shown) return@drawBehind
-                    (load as? SpriteLoad.Ready)?.layers?.let { drawMech(stage, it) }
+                    (load as? SpriteLoad.Ready)?.layers?.let {
+                        // Sample only when the existing director/gesture draw clock invalidates this stage.
+                        // Materials never schedule a frame or keep an idle/hidden stage awake.
+                        val phase = mechaMaterialPhase(SystemClock.uptimeMillis(), state?.motion == true)
+                        drawMech(stage, it, phase)
+                    }
                     drawMarks(stage)
                 }
             )
@@ -486,7 +490,7 @@ fun MechaStageHost(stage: MechaStage, modifier: Modifier = Modifier, active: Boo
 }
 
 /** A foreground resident, clipped at peek edges and clear of controls even during a layout change. */
-private fun DrawScope.drawMech(stage: MechaStage, sheets: List<ImageBitmap>) {
+private fun DrawScope.drawMech(stage: MechaStage, sheets: List<MechaSheet>, materialPhase: Int) {
     val b = stage.bounds ?: return
     val s = stage.scale
     val left = stage.x - b.left
@@ -522,9 +526,9 @@ private fun DrawScope.drawMech(stage: MechaStage, sheets: List<ImageBitmap>) {
             }
         }
         if (c == Int.MAX_VALUE || stage.front) {
-            drawMechaFrame(sheets, stage.rig, left, top, s)
+            drawMechaFrame(sheets, stage.rig, left, top, s, materialPhase)
         } else {
-            clipRect(bottom = (c - b.top).toFloat()) { drawMechaFrame(sheets, stage.rig, left, top, s) }
+            clipRect(bottom = (c - b.top).toFloat()) { drawMechaFrame(sheets, stage.rig, left, top, s, materialPhase) }
         }
     } finally {
         canvas.restore()

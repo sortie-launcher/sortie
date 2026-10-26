@@ -126,11 +126,17 @@ Settings exports a JSON document through Android's file picker. The required fie
 and `sessions` (an array, possibly empty). `device` and `appVersion` identify the source. `openSessionExcluded` optionally
 describes a running session omitted from export.
 
-Version 2 adds `mecha`: the Hangar companion's whole save (`files/mecha/state.json`, with its own `version`, 1: name,
-enabled/motion, fitted and owned parts, salvage, bond, charge, condition, credited-session keys `<gameId>@<startedAt>`), or
-absent when no hangar was open. A `mecha` section is checked against this build's parts catalog (owned and fitted parts
-exist, counters in range) before the restore is offered; a bad one rejects the whole file. The pet rate-limit time
-(`files/mecha/pet.txt`) is not backed up.
+Version 2 adds `mecha`: the Hangar companion's whole save (`files/mecha/state.json`), or absent when no hangar was open.
+The nested save has its **own version, now 2**: name, enabled/motion, fitted and owned parts, salvage, bond, charge,
+condition, credited-session keys `<gameId>@<startedAt>`, owned/applied finishes, cabinet sequence and the last spin receipt.
+The outer backup version remains 2. Nested version 1 saves are accepted and upgraded before publication; an omitted nested
+version retains its legacy meaning. Migration preserves inventory and balances, including balances above the new 50-credit
+earning ceiling, but clears pending minutes at or above that ceiling. Older builds cannot read the new companion save.
+
+A `mecha` section is checked against this build's parts catalog (owned and fitted parts exist, counters in range, applied
+finishes owned, receipt internally consistent) before restore is offered; a bad one rejects the whole file. Restoring a
+receipt never grants its reward again. A failed save migration blocks export and restore until nondestructive retry succeeds,
+rather than treating the valid old save as absent. The pet rate-limit time (`files/mecha/pet.txt`) is not backed up.
 
 Each closed session contains `gameId`, `profileId`, `startedAt`, `endedAt` and `abandoned`. Identity is `(gameId, startedAt)`,
 not a database row ID. Unfinished sessions are never imported. Files over 64 MB, unsupported formats/versions, missing required

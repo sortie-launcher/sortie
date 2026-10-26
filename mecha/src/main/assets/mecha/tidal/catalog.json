@@ -1,0 +1,58 @@
+[
+  {
+    "id": "tidal_head_1",
+    "slot": "HEAD",
+    "family": "tidal",
+    "name": "Brass bell",
+    "asset": "mecha/tidal/tidal_head_1.png"
+  },
+  {
+    "id": "tidal_head_2",
+    "slot": "HEAD",
+    "family": "tidal",
+    "name": "Depth recorder",
+    "asset": "mecha/tidal/tidal_head_2.png"
+  },
+  {
+    "id": "tidal_body_1",
+    "slot": "BODY",
+    "family": "tidal",
+    "name": "Bathysphere",
+    "asset": "mecha/tidal/tidal_body_1.png"
+  },
+  {
+    "id": "tidal_body_2",
+    "slot": "BODY",
+    "family": "tidal",
+    "name": "Twin tanks",
+    "asset": "mecha/tidal/tidal_body_2.png"
+  },
+  {
+    "id": "tidal_arms_1",
+    "slot": "ARMS",
+    "family": "tidal",
+    "name": "Specimen hooks",
+    "asset": "mecha/tidal/tidal_arms_1.png"
+  },
+  {
+    "id": "tidal_arms_2",
+    "slot": "ARMS",
+    "family": "tidal",
+    "name": "Salvage jaws",
+    "asset": "mecha/tidal/tidal_arms_2.png"
+  },
+  {
+    "id": "tidal_legs_1",
+    "slot": "LEGS",
+    "family": "tidal",
+    "name": "Lead-toe gaiters",
+    "asset": "mecha/tidal/tidal_legs_1.png"
+  },
+  {
+    "id": "tidal_legs_2",
+    "slot": "LEGS",
+    "family": "tidal",
+    "name": "Ballast shoes",
+    "asset": "mecha/tidal/tidal_legs_2.png"
+  }
+]

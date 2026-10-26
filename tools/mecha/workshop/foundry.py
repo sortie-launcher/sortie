@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Original foundry service-bot parts; run with Python 3 + Pillow.
+"""Authoritative foundry service-bot drawings; run with Python 3 + Pillow.
 
 Writes only workshop/assets/foundry: eight RGBA sheets, catalog, review board
 and animated preview. Reuses the existing courier pixel primitives and rig,
-not its artwork. Catalog asset names follow the shipped five-field contract;
-these are review assets, not installed game content.
+not its artwork. Production copies only the catalog and eight part sheets;
+test_production.py checks these exports against the drawings and shipped files.
 """
 from __future__ import annotations
 
