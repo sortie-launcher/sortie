@@ -605,7 +605,11 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
 
     private fun validLanding(p: MechaPlacement): Boolean {
         val b = stage.bounds ?: return false
-        val element = stage.elements[p.spotId] ?: return false
+        val element = stage.elements[p.spotId]
+        if (element == null) {
+            Log.i("MechaThrowProbe", "landing anchor missing ${p.spotId}; keys=${stage.elements.keys}")
+            return false
+        }
         val current = MechaRoam.place(element, stage.scale, b, elements(), p.x, stage.minTap)
         if (stage.hangarOpen || current != p) Log.i("MechaThrowProbe", "landing invalid old=$p current=$current hangar=${stage.hangarOpen}")
         return !stage.hangarOpen && current == p
@@ -645,6 +649,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
             }
             return true
         } finally {
+            Log.i("MechaThrowProbe", "flight ended display=${stage.displayId} complete=$complete active=${stage.active} owner=${MechaPresence.owner === stage}")
             stage.front = false
             stage.busy = false
         }

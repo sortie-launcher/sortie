@@ -196,8 +196,8 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 
 - Lives above Home and the other display's idle panel without changing their layout. `MechaStageHost` (in `:mecha`)
   draws one foreground layer after its content. Normal poses are clipped away from declared solid content and controls,
-  including a prop's temporary drawing offset; peek edges and the window bounds also clip the art. Carrying and sitting
-  intentionally allow overlap. Screens declare geometry with `Modifier.mechaSpot(id, kind)` / `mechaObstacle(id)`.
+  including a prop's temporary drawing offset; peek edges and the window bounds also clip the art. Carrying, thrown
+  flight and sitting intentionally allow overlap. Screens declare geometry with `Modifier.mechaSpot(id, kind)` / `mechaObstacle(id)`.
   ROOM, FOOTER and BASE are empty-space anchors, not solid obstacles.
   Spot kinds: LEDGE (on an element's top edge), PEEK (head and shoulders above an element), BESIDE_END/START (outside its
   bottom edge), ROOM (inside empty space), EDGE_START/END (partly off screen), FOOTER (inside a bottom-aligned bar, with
@@ -273,6 +273,16 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   every place he stands guarantees). **Hangar** in Home's header stays the controller route (focus returns to it on close).
   The Hangar holds Animate and Hide/Show companion. Reader Select → Visit the hangar keeps its controller access. The
   Hangar dialog stays mounted while its rename field uses the keyboard.
+- A carried release also estimates velocity from a bounded, preallocated recent-sample buffer, including Android's
+  coalesced pointer history. Pauses, insufficient samples and non-carry gestures yield no throw; cancelled carries stay
+  local. `MechaThrows` accepts a deliberate flick toward the other display only when it can clear the facing edge within
+  450 ms without leaving through a side. Outgoing travel is gravity-affected; entry is a guided arc to a freshly selected
+  qualifying perch, followed by landing compression. Coordinates and velocity are normalized across display sizes and
+  densities. Flight samples are whole pixels on display frames, not a persistent physics simulation.
+  There is one owner throughout. The destination must still be active, current and have room at handoff; its one-shot
+  arrival is discarded if that window disappears or is replaced. Layout changes, new input, hidden windows and motion-off
+  interrupt flight; a landing is revalidated before it gains a hit target. Animate off permits an immediate handoff.
+  No activity launch, overlay permission or input interception outside Sortie's own windows is involved.
 - Roaming acceptance (`0.1.0-mecha-roam` debug on the DMG, `0.1.0-beta.1044-roam.1` on the Thor): DMG Home at the clock,
   on the wrapped header buttons, on the hint bar (list view) and peeking over first-row tiles (grid view); peek-to-peek
   strolls; 0 frames in 10 s windows between strolls, while dozing (only the clock's minute tick) and with motion off; a

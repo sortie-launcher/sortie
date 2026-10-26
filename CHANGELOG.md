@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Hold and carry Rivet, then flick toward the other screen to throw him across with momentum and a weighted landing.
+  Gentle edge handoffs still work. He only crosses into an active Sortie view with a safe perch: no opening apps over
+  games, no new permissions, and no background animation loop. Single-screen releases stay local; Animate off skips flight.
 - Rivet now lives above the UI without reserving extra footer space. Home's controls bar keeps its natural height,
   spans the full width and uses a lighter gradient. Declared boundaries keep him clear of labels and controls; if a
   cramped layout has no tappable perch, he hides instead of stretching it.
