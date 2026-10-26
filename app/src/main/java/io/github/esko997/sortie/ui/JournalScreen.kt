@@ -1,13 +1,16 @@
 package io.github.esko997.sortie.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -61,6 +64,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 
 internal val LONG_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy")
 internal val DAY_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM HH:mm")
@@ -108,11 +112,17 @@ fun JournalScreen(graph: SortieApp.Graph, onGame: (String) -> Unit) {
     val apps by graph.apps.apps.collectAsState()
     val shortcuts by graph.shortcuts.shortcuts.collectAsState()
     val hasOpen = sessions?.any { it.endedAt == null } == true
-    val now by produceState(System.currentTimeMillis(), hasOpen) {
+    // a running session's bar grows by the minute, and only while the journal is in front on a lit screen: a journal stopped
+    // behind the game it is recording wakes for nothing ([rememberShown] follows lifecycle and display events, not frames)
+    val shown = rememberShown()
+    val now by produceState(System.currentTimeMillis(), hasOpen, shown) {
         value = System.currentTimeMillis()
-        while (hasOpen) {
-            delay(60_000L - (System.currentTimeMillis() % 60_000L) + 50)
-            value = System.currentTimeMillis()
+        if (!hasOpen) return@produceState
+        shown.collectLatest { visible ->
+            while (visible) {
+                value = System.currentTimeMillis()
+                delay(60_000L - (System.currentTimeMillis() % 60_000L) + 50)
+            }
         }
     }
     val play = remember(sessions, week, now) { sessions?.let { weekPlay(week, zone, it, now) } }
@@ -192,7 +202,7 @@ fun JournalScreen(graph: SortieApp.Graph, onGame: (String) -> Unit) {
         LazyColumn(Modifier.weight(1f), state = listState, contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             item(key = "head") {
                 Column(Modifier.padding(horizontal = 8.dp)) {
-                    Text("Journal", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Journal", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Text(
                         weekTitle(week, thisWeek),
                         style = MaterialTheme.typography.titleMedium,
@@ -229,23 +239,32 @@ fun JournalScreen(graph: SortieApp.Graph, onGame: (String) -> Unit) {
                 val dayPlay = play?.days?.getOrNull(d.toInt())
                 val dayEntries = entries[day].orEmpty()
                 item(key = "day-$day") {
-                    FocusRow(onClick = { newEntry(day, null, null) }) {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column {
+                        // a hairline between days, so a week of sessions and notes reads as seven sections
+                        Box(
+                            Modifier.padding(start = 8.dp, end = 8.dp, top = 10.dp, bottom = 4.dp).fillMaxWidth().height(1.dp)
+                                .background(if (d == 0L) Color.Transparent else Hairline)
+                        )
+                        FocusRow(onClick = { newEntry(day, null, null) }) {
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        day.format(DAY_HEADING) + if (day == today) " (today)" else "",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (day == today) Amber else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if ((dayPlay?.countedMs ?: 0L) > 0L) {
+                                        Text(formatPlayed(dayPlay!!.countedMs), style = MaterialTheme.typography.titleSmall, color = Amber)
+                                    }
+                                }
                                 Text(
-                                    day.format(DAY_HEADING) + if (day == today) " (today)" else "",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (day == today) Amber else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
+                                    if (day.isAfter(today)) "A: write a note for this day" else "A: add a note for this day",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                if ((dayPlay?.countedMs ?: 0L) > 0L) Text(formatPlayed(dayPlay!!.countedMs), style = MaterialTheme.typography.bodyMedium)
                             }
-                            Text(
-                                if (day.isAfter(today)) "A: write a note for this day" else "A: add a note for this day",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
                     }
                 }

@@ -5,6 +5,7 @@ import android.graphics.drawable.Drawable
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -19,8 +20,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -30,6 +33,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -69,6 +74,16 @@ import kotlinx.coroutines.delay
 
 /** Glow colour of a home tile that is being moved (edit mode); distinct from every focus colour. */
 val LiftColour = Color(0xFF38BDF8)
+
+private val TileShape = RoundedCornerShape(14.dp)
+
+/** Under a tile's title: the art stays clear in its upper half, then deepens to near-Ink behind the text. */
+private val TileScrim = Brush.verticalGradient(0.3f to Color.Transparent, 0.62f to Ink.copy(alpha = 0.55f), 1f to Ink.copy(alpha = 0.94f))
+
+/** A tile without art: Slate lit faintly from the top left, so a run of them still reads as objects rather than holes. */
+private val NoArtLight = Brush.linearGradient(listOf(Color(0x14FFFFFF), Color.Transparent))
+private val Monogram = Color(0xFF3B4550)
+private val MonogramAlignment = BiasAlignment(0f, -0.35f)
 
 /**
  * 1:1 tile shared by the home and browse grids. With a [cover] the art is cropped square under a bottom gradient so [title] stays
@@ -100,7 +115,7 @@ fun SquareTile(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(14.dp)
+    var held by remember { mutableStateOf(false) }
     val accent = if (paletteGlow && focused) rememberPalette(cover)?.accent else null
     val glow = when {
         lifted -> LiftColour
@@ -108,12 +123,14 @@ fun SquareTile(
         colour != null -> colour
         else -> Amber
     }
+    val wash = remember(colour) { colour?.let { Brush.verticalGradient(listOf(it.copy(alpha = 0.3f), it.copy(alpha = 0.14f))) } }
     Box(
         modifier
-            .focusGlow(focused || lifted, shape, glow, if (lifted) 1.12f else 1.06f, colour?.copy(alpha = 0.5f) ?: Color.Transparent)
+            .focusGlow(focused || lifted, TileShape, glow, if (lifted) 1.12f else 1.06f, colour?.copy(alpha = 0.5f) ?: Color.Transparent, pressed = held)
             .aspectRatio(1f)
-            .clip(shape)
-            .background(colour?.copy(alpha = 0.22f) ?: Slate)
+            .clip(TileShape)
+            .then(if (wash != null) Modifier.background(wash) else Modifier.background(Slate))
+            .confirmHeld { held = it }
             .keyLongPress(onLongClick, onFavourite)
             .combinedClickable(interactionSource = interaction, indication = PressVeil, onClick = onClick, onLongClick = onLongClick)
     ) {
@@ -146,9 +163,16 @@ fun SquareTile(
             if (cover != null) {
                 // behind a logo the cover is only a hint of the library; the logo is the name
                 CoverImage(cover, Modifier.fillMaxSize(), ContentScale.Crop, alpha = if (logo != null) 0.2f else if (colour != null) 0.45f else 1f)
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.35f to Color.Transparent, 1f to Ink.copy(alpha = 0.92f))))
+                Box(Modifier.fillMaxSize().background(TileScrim))
             } else if (colour == null) {
-                Text(title.take(1), style = MaterialTheme.typography.displaySmall, color = Color(0xFF4A525C), modifier = Modifier.align(Alignment.Center))
+                // no art yet: a quiet lit panel and the initial, set above centre to keep clear of the title
+                Box(Modifier.fillMaxSize().background(NoArtLight))
+                Text(
+                    title.take(1),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = Monogram,
+                    modifier = Modifier.align(MonogramAlignment)
+                )
             }
             if (logo != null) {
                 CoverImage(logo, Modifier.align(Alignment.Center).fillMaxWidth(0.82f).fillMaxHeight(0.5f), ContentScale.Fit)
@@ -176,7 +200,15 @@ fun SquareTile(
                 annotation?.let { ControllerBadge(it, Modifier.padding(top = 2.dp)) }
             }
         }
-        if (favourite) Text("★", color = Amber, style = MaterialTheme.typography.titleMedium, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp))
+        if (favourite) {
+            // on a disc of Ink, so the star reads over bright cover art as well as on the plain panel
+            Box(
+                Modifier.align(
+                    Alignment.TopEnd
+                ).padding(6.dp).sizeIn(minWidth = 22.dp, minHeight = 22.dp).clip(CircleShape).background(Ink.copy(alpha = 0.72f)),
+                contentAlignment = Alignment.Center
+            ) { Text("★", color = Amber, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 4.dp)) }
+        }
     }
 }
 
@@ -270,6 +302,9 @@ private fun TileTitle(title: String, style: TextStyle, modifier: Modifier = Modi
 
 private const val MIN_TITLE_SCALE = 0.75f
 
+/** Context sheets: a Slate card a corner step above the tiles, edged in Hairline so it stands off the dimmed screen. */
+private val SheetShape = RoundedCornerShape(16.dp)
+
 /**
  * Small controller-first context menu (hold A / long press): a dialog with one row per action plus Cancel; the first action takes
  * focus, A picks, B or a tap outside cancels. The dialog closes before the action runs.
@@ -279,15 +314,16 @@ fun ContextSheet(title: String, actions: List<SheetAction>, onDismiss: () -> Uni
     val first = remember { FocusRequester() }
     var focusedOnce by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onDismiss) {
-        Column(Modifier.width(380.dp).clip(RoundedCornerShape(16.dp)).background(Slate).padding(12.dp)) {
+        Column(Modifier.width(380.dp).clip(SheetShape).background(Slate).border(1.dp, Hairline, SheetShape).padding(12.dp)) {
             Text(
                 title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 2.dp, bottom = 10.dp)
             )
+            Box(Modifier.padding(horizontal = 8.dp).padding(bottom = 6.dp).fillMaxWidth().height(1.dp).background(Hairline))
             actions.forEachIndexed { i, a ->
                 FocusRow(
                     onClick = {
@@ -300,7 +336,7 @@ fun ContextSheet(title: String, actions: List<SheetAction>, onDismiss: () -> Uni
             FocusRow(onClick = onDismiss, modifier = if (actions.isEmpty()) Modifier.focusRequester(first) else Modifier) {
                 Text("Cancel", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            HintBar("A" to "choose", "B" to "cancel")
+            HintBar("A" to "choose", "B" to "cancel", modifier = Modifier.padding(top = 8.dp).clip(RoundedCornerShape(10.dp)))
         }
         // Opened by a touch long-press the window is in touch input mode, where Compose refuses to move focus, so A would do
         // nothing until the D-pad is pressed; opened by the controller the dialog window gains focus a few frames after

@@ -2,9 +2,11 @@ package io.github.esko997.sortie.ui
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -250,8 +252,24 @@ private fun ItemListScreen(
                 }
                 return@Column
             }
-            Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp)) {
-                Text("$title · ${shown.size}", style = MaterialTheme.typography.titleLarge)
+            Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // the name leads; the count is a quieter fact beside it
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false).alignByBaseline()
+                    )
+                    Text(
+                        "${shown.size}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        modifier = Modifier.alignByBaseline()
+                    )
+                }
                 subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -267,23 +285,34 @@ private fun ItemListScreen(
                 }
             }
         }
-        ItemGrid(grid, user, Modifier.weight(1f).foldsBrowseChrome(chrome, gridState, pickFocus), state = gridState) {
-            items(shown, key = { it.id }) { item ->
-                RememberedItem(memory, item.id) {
-                    ItemCell(
-                        item,
-                        grid,
-                        vm,
-                        favourite = item.id in user.favourites,
-                        minutes = stats[item.id]?.minutes,
-                        annotation = user.gameAnnotations[item.id],
-                        onClick = { open(item) },
-                        onLongClick = { sheet = item },
-                        appLabel = { appLabels[it] ?: it },
-                        hasSave = item is LibraryItem.Game && item.game.saveStem() in saves,
-                        platform = (item as? LibraryItem.Game)?.game?.systemId?.let { systemLabels[it]?.takeIf(String::isNotBlank) ?: it }
-                    )
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            ItemGrid(grid, user, Modifier.fillMaxSize().foldsBrowseChrome(chrome, gridState, pickFocus), state = gridState) {
+                items(shown, key = { it.id }) { item ->
+                    RememberedItem(memory, item.id) {
+                        ItemCell(
+                            item,
+                            grid,
+                            vm,
+                            favourite = item.id in user.favourites,
+                            minutes = stats[item.id]?.minutes,
+                            annotation = user.gameAnnotations[item.id],
+                            onClick = { open(item) },
+                            onLongClick = { sheet = item },
+                            appLabel = { appLabels[it] ?: it },
+                            hasSave = item is LibraryItem.Game && item.game.saveStem() in saves,
+                            platform = (item as? LibraryItem.Game)?.game?.systemId?.let { systemLabels[it]?.takeIf(String::isNotBlank) ?: it }
+                        )
+                    }
                 }
+            }
+            // an empty grid says why: the filters above (kept open) hide everything, or there is nothing here yet
+            if (shown.isEmpty()) {
+                Text(
+                    if (items.isEmpty()) "Nothing here yet." else "Nothing matches these filters. Turn one off above to see more.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp)
+                )
             }
         }
         BrowseHintBar(

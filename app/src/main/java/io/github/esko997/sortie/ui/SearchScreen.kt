@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -590,6 +591,8 @@ private fun SearchPicker(
                     }
                 }
             }
+            // the values above scroll; the rule keeps Done and Clear reading as the dialog's own controls
+            if (!rows.isNullOrEmpty()) Box(Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth().height(1.dp).background(Hairline))
             FocusRow(onClick = onDismiss, modifier = if (rows.isNullOrEmpty()) firstModifier else Modifier) {
                 Text("Done", style = MaterialTheme.typography.bodyLarge)
             }

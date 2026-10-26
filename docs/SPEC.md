@@ -146,6 +146,14 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   row reveals it (▴ folds it), it stays open with nothing to browse, and the folded state is saved per destination.
   Compact hints are one light row: up to three of A/B/Y/Select by width, then a Controls dialog listing every command.
   The hint bar stays in the measured layout, never over the last row of tiles.
+- Smaller Home windows keep header actions in a horizontally scrolling rail; the scroll content includes space for the
+  focus glow. Wide windows retain wrapping actions. Settings choices accept direct taps while A still cycles the row.
+- Focus feedback is a finite flare and spring settling to a steady glow, with a held-confirm press state cleared on
+  key release, focus loss or window-focus loss. Navigation, image zoom and ambient palette changes are finite transitions;
+  hidden ambient changes snap without animating. Home's clock and journal/companion elapsed timers pause while hidden.
+- Game detail groups primary and personal actions separately, scales the cover to the available width, and expands
+  launch choices beside the actions. Select toggles that panel; closing from its list restores the opener's focus.
+  Artwork-derived accents meet 4.5:1 contrast against both the backdrop and Ink.
 - Launcher shortcuts are opt-in: Apps lists only `user.shortcuts` (pinned to Sortie or added with "Add shortcut from…" are
   opted in automatically; "Browse all shortcuts…" toggles the rest). Smart folders see a shortcut only if it is opted in,
   favourited or placed on home.

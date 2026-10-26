@@ -36,10 +36,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -429,6 +426,7 @@ private fun FocusOnEntry(focus: ListFocus, keys: List<String>, focusable: List<S
 private fun Entry(focus: ListFocus, key: String, index: Int, onClick: (() -> Unit)?, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    var held by remember { mutableStateOf(false) }
     val inputMode = LocalInputModeManager.current
     val shape = RoundedCornerShape(12.dp)
     Box(
@@ -444,7 +442,8 @@ private fun Entry(focus: ListFocus, key: String, index: Int, onClick: (() -> Uni
             .onPreviewKeyEvent { focus.onKey(it, index) }
             .then(
                 when {
-                    onClick != null -> Modifier.focusGlow(focused, shape)
+                    // wide reading blocks lift less than a tile would; A held sinks the entry before it opens
+                    onClick != null -> Modifier.confirmHeld { held = it }.focusGlow(focused, shape, focusedScale = 1.01f, pressed = held)
                     focused -> Modifier.border(1.dp, Amber.copy(alpha = 0.5f), shape)
                     else -> Modifier
                 }
@@ -520,7 +519,7 @@ private fun ShelfView(shelf: MagazineShelf, store: MagazineReadingStore, clipCou
                         val ra = ri.issue.article(resume.article)!!
                         Entry(focus, "resume", keys.indexOf("resume"), onClick = { open(resume) }, modifier = Modifier.measure()) {
                             Column {
-                                Text("CONTINUE READING", style = kicker())
+                                Text("Continue reading", style = kicker())
                                 Text(ra.title, style = headline(MaterialTheme.typography.titleLarge), maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 Text(ri.issue.title, style = MaterialTheme.typography.bodySmall, color = Muted)
                             }
@@ -530,7 +529,7 @@ private fun ShelfView(shelf: MagazineShelf, store: MagazineReadingStore, clipCou
                 item(key = "scrapbook") {
                     Entry(focus, "scrapbook", keys.indexOf("scrapbook"), onClick = onScrapbook, modifier = Modifier.measure()) {
                         Column {
-                            Text("YOUR SCRAPBOOK", style = kicker())
+                            Text("Your scrapbook", style = kicker())
                             Text(
                                 when (clipCount) {
                                     0 -> "Highlights and clipped recommendations you save while reading"
@@ -555,7 +554,7 @@ private fun ShelfView(shelf: MagazineShelf, store: MagazineReadingStore, clipCou
                     val k = "broken:${b.folder}"
                     Entry(focus, k, keys.indexOf(k), onClick = null, modifier = Modifier.measure()) {
                         Column {
-                            Text("COULD NOT OPEN", style = kicker().copy(color = Warning))
+                            Text("Could not open", style = kicker().copy(color = Warning))
                             Text("magazines/${b.folder}", style = MaterialTheme.typography.titleMedium)
                             Text(b.reason, style = MaterialTheme.typography.bodyMedium, color = Muted)
                         }
@@ -581,9 +580,9 @@ private fun ShelfView(shelf: MagazineShelf, store: MagazineReadingStore, clipCou
 @Composable
 private fun ShelfMasthead(modifier: Modifier) {
     Column(modifier.padding(bottom = 6.dp)) {
-        Text("SORTIE", style = kicker())
+        Text("Sortie", style = kicker())
         Text("Magazines", style = headline(MaterialTheme.typography.displaySmall))
-        Text("Offline reading", style = MaterialTheme.typography.bodySmall, color = Muted)
+        Text("Offline reading", style = MaterialTheme.typography.bodyMedium, color = Muted)
         Box(Modifier.padding(top = 10.dp).width(56.dp).height(3.dp).background(Amber))
     }
 }
@@ -612,7 +611,7 @@ private fun FeatureIssue(s: ShelfIssue, narrow: Boolean) {
     val text: @Composable () -> Unit = {
         Column {
             issue.issueNumber?.let { IssueNumber(it, if (narrow) 34.sp else 46.sp, Modifier.padding(bottom = 4.dp)) }
-            Text("LATEST ISSUE · ${issueDate(issue).uppercase()}", style = kicker())
+            Text("Latest issue · ${issueDate(issue)}", style = kicker())
             Text(issue.title, style = headline(if (narrow) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium))
             if (issue.subtitle.isNotEmpty()) Text(issue.subtitle, style = deckStyle(), color = Muted)
         }
@@ -675,7 +674,7 @@ private fun CompactIssue(s: ShelfIssue, numberColumn: Boolean) {
         IssueCover(s, 58.dp, 78.dp)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(issueDate(s.issue).uppercase(), style = kicker())
+            Text(issueDate(s.issue), style = kicker())
             Text(s.issue.title, style = headline(MaterialTheme.typography.titleLarge), maxLines = 2, overflow = TextOverflow.Ellipsis)
             val n = s.issue.articles.size
             Text(
@@ -689,11 +688,12 @@ private fun CompactIssue(s: ShelfIssue, numberColumn: Boolean) {
     }
 }
 
-/** The pack's cover, or the issue title set as type when the pack has none (or the file is missing). */
+/** The pack's cover, or the issue title set as type when the pack has none (or the file is missing), framed by a hairline. */
 @Composable
 private fun IssueCover(s: ShelfIssue, width: Dp, height: Dp) {
     val file = s.cover?.file
-    Box(Modifier.size(width, height).clip(RoundedCornerShape(4.dp)).background(Slate), contentAlignment = Alignment.Center) {
+    val shape = RoundedCornerShape(4.dp)
+    Box(Modifier.size(width, height).clip(shape).background(Slate).border(1.dp, Hairline, shape), contentAlignment = Alignment.Center) {
         if (file != null) {
             CoverImage(file.path, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         } else {
@@ -813,13 +813,13 @@ private fun ContentsView(
                     item(key = "editorial") {
                         Entry(focus, "editorial", keys.indexOf("editorial"), onClick = null, modifier = Modifier.measure()) {
                             Column {
-                                Text("FROM THE EDITOR", style = kicker())
+                                Text("From the editor", style = kicker())
                                 editorial.forEach { p -> Text(inlineText(p), style = bodyStyle(), modifier = Modifier.padding(top = 8.dp)) }
                             }
                         }
                     }
                 }
-                item(key = "toc") { SectionRule("IN THIS ISSUE") }
+                item(key = "toc") { SectionRule("In this issue") }
                 itemsIndexed(issue.articles, key = { _, a -> "article:${a.id}" }) { i, a ->
                     val k = "article:${a.id}"
                     Entry(focus, k, keys.indexOf(k), onClick = { onArticle(a.id, k) }, modifier = Modifier.measure()) {
@@ -827,7 +827,7 @@ private fun ContentsView(
                     }
                 }
                 if (mentioned.isNotEmpty()) {
-                    item(key = "games") { SectionRule("GAMES MENTIONED", top = 26.dp) }
+                    item(key = "games") { SectionRule("Games mentioned", top = 26.dp) }
                     item(key = "games:filter") {
                         Entry(
                             focus,
@@ -1028,7 +1028,7 @@ private fun IssueMasthead(s: ShelfIssue, narrow: Boolean) {
     val text: @Composable () -> Unit = {
         Column {
             issue.issueNumber?.let { IssueNumber(it, if (narrow) 38.sp else 52.sp, Modifier.padding(bottom = 4.dp)) }
-            Text(issueDate(issue).uppercase(), style = kicker())
+            Text(issueDate(issue), style = kicker())
             Text(issue.title, style = headline(if (narrow) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.displaySmall))
             if (issue.subtitle.isNotEmpty()) Text(issue.subtitle, style = deckStyle(), color = Muted, modifier = Modifier.padding(top = 4.dp))
             val n = issue.articles.size
@@ -1065,21 +1065,23 @@ private fun IssueMasthead(s: ShelfIssue, narrow: Boolean) {
 @Composable
 private fun ContentsEntry(s: ShelfIssue, a: MagazineArticle, index: Int, narrow: Boolean, store: MagazineReadingStore) {
     val issueId = s.issue.id
+    val finished = store.finished(issueId, a.id)
     val status = when {
-        store.finished(issueId, a.id) -> "Read"
+        finished -> "Read"
         store.started(issueId, a.id) -> "Continue reading"
         else -> null
     }
     Row {
+        // a finished article's number steps back, so what is left to read stands out down the contents
         Text(
             (index + 1).toString().padStart(2, '0'),
             style = headline(MaterialTheme.typography.headlineMedium),
-            color = Amber,
+            color = if (finished) Muted else Amber,
             modifier = Modifier.width(if (narrow) 44.dp else 58.dp)
         )
         Column(Modifier.weight(1f)) {
             val kick = listOf(a.system, a.gameTitle).filter { it.isNotEmpty() }.joinToString(" · ")
-            if (kick.isNotEmpty()) Text(kick.uppercase(), style = kicker(), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (kick.isNotEmpty()) Text(kick, style = kicker(), maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(a.title, style = headline(MaterialTheme.typography.titleLarge))
             if (a.deck.isNotEmpty()) {
                 Text(
@@ -1094,7 +1096,7 @@ private fun ContentsEntry(s: ShelfIssue, a: MagazineArticle, index: Int, narrow:
                 Text(
                     meta,
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (status != null) Amber else Muted,
+                    color = if (status != null && !finished) Amber else Muted,
                     modifier = Modifier.padding(top = 6.dp)
                 )
             }
@@ -1102,7 +1104,8 @@ private fun ContentsEntry(s: ShelfIssue, a: MagazineArticle, index: Int, narrow:
         val thumb = s.images[a.id]?.file
         if (!narrow && thumb != null) {
             Spacer(Modifier.width(14.dp))
-            Box(Modifier.size(132.dp, 88.dp).clip(RoundedCornerShape(6.dp)).background(Slate)) {
+            val shape = RoundedCornerShape(6.dp)
+            Box(Modifier.size(132.dp, 88.dp).clip(shape).background(Slate).border(1.dp, Hairline, shape)) {
                 CoverImage(thumb.path, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             }
         }
@@ -1405,10 +1408,8 @@ private fun MarkingBar(selectedHighlighted: Boolean, canClip: Boolean, onClip: (
             color = Amber,
             modifier = Modifier.weight(1f)
         )
-        Button(onClick = onClip, enabled = canClip, colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = Ink)) {
-            Text(if (selectedHighlighted) "Edit highlight" else "Highlight")
-        }
-        OutlinedButton(onClick = onDone) { Text("Done") }
+        GlowButton(if (selectedHighlighted) "Edit highlight" else "Highlight", enabled = canClip, primary = true, onClick = onClip)
+        GlowButton("Done", onClick = onDone)
     }
 }
 
@@ -1758,38 +1759,27 @@ private fun ArticleHead(
 ) {
     Column(Modifier.measure().padding(top = 18.dp, bottom = 8.dp)) {
         val kick = listOf(article.system, article.gameTitle).filter { it.isNotEmpty() }.joinToString(" · ")
-        if (kick.isNotEmpty()) Text(kick.uppercase(), style = kicker())
+        if (kick.isNotEmpty()) Text(kick, style = kicker())
         Text(article.title, style = headline(MaterialTheme.typography.headlineMedium), modifier = Modifier.padding(top = 4.dp))
         if (article.deck.isNotEmpty()) Text(inlineText(article.deck), style = deckStyle(), modifier = Modifier.padding(top = 10.dp))
         val meta = listOfNotNull(issue.title, issueDate(issue), article.readingMinutes?.let { "$it min read" }).joinToString(" · ")
         Text(meta, style = MaterialTheme.typography.labelMedium, color = Muted, modifier = Modifier.padding(top = 10.dp))
-        if (gamesLabel != null) {
-            Text(
-                gamesLabel,
-                style = MaterialTheme.typography.labelLarge,
-                color = Amber,
-                modifier = Modifier
-                    .padding(top = 12.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(1.dp, Amber.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
-                    .clickable(role = Role.Button, onClick = onGames)
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            )
-        }
-        // touch twins of Y and Select; the controller never focuses these (the D-pad scrolls the article)
-        FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // touch twins of A, Y and Select, each with its button's key cap; the controller never focuses these (the D-pad scrolls the article)
+        FlowRow(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (gamesLabel != null) HeadChip(gamesLabel, key = "A", accent = true, onClick = onGames)
             if (canMark) {
                 HeadChip(
                     when {
-                        marking -> "Y  Done marking"
-                        highlightCount > 0 -> "Y  Highlight · $highlightCount saved"
-                        else -> "Y  Highlight a passage"
+                        marking -> "Done marking"
+                        highlightCount > 0 -> "Highlight · $highlightCount saved"
+                        else -> "Highlight a passage"
                     },
-                    onMark
+                    key = "Y",
+                    onClick = onMark
                 )
             }
-            HeadChip(if (articleClipped) "Clipped ✓  edit" else "Select  Clip article", onClipArticle)
-            HeadChip("Scrapbook", onScrapbook)
+            HeadChip(if (articleClipped) "Clipped ✓ · edit" else "Clip article", key = "Select", onClick = onClipArticle)
+            HeadChip("Scrapbook", onClick = onScrapbook)
         }
         Box(Modifier.padding(top = 16.dp).width(56.dp).height(3.dp).background(Amber))
     }
@@ -1807,28 +1797,46 @@ private fun articleGamesLabel(refs: List<MagazineGameReference>, resolved: Map<S
             val matches = resolved?.get(only.id)
             val available = matches?.count { it.available } ?: 0
             when {
-                available > 1 -> "A  Library page: ${only.title} · $available versions"
-                available == 1 -> "A  Library page: ${only.title}"
-                else -> "A  ${only.title} · ${availabilityLabel(only, matches)}"
+                available > 1 -> "Library page: ${only.title} · $available versions"
+                available == 1 -> "Library page: ${only.title}"
+                else -> "${only.title} · ${availabilityLabel(only, matches)}"
             }
         }
-        resolved == null -> "A  ${refs.size} games in this article"
-        else -> "A  ${refs.size} games in this article · ${refs.count { r -> resolved[r.id].orEmpty().any { it.available } }} on this device"
+        resolved == null -> "${refs.size} games in this article"
+        else -> "${refs.size} games in this article · ${refs.count { r -> resolved[r.id].orEmpty().any { it.available } }} on this device"
     }
 }
 
+/** A touch chip under the headline: its controller button's [key] cap (as the hint bar draws it), then the label; [accent] for A. */
 @Composable
-private fun HeadChip(label: String, onClick: () -> Unit) {
-    Text(
-        label,
-        style = MaterialTheme.typography.labelMedium,
-        color = Muted,
-        modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
-            .border(1.dp, Hairline, RoundedCornerShape(14.dp))
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 5.dp)
-    )
+private fun HeadChip(label: String, key: String? = null, accent: Boolean = false, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(50)
+    Row(
+        Modifier
+            .focusProperties { canFocus = false }
+            .clip(shape)
+            .border(1.dp, if (accent) Amber.copy(alpha = 0.6f) else Hairline, shape)
+            .clickable(interactionSource = null, indication = PressVeil, role = Role.Button, onClick = onClick)
+            .padding(start = if (key != null) 6.dp else 12.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        key?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = Ink,
+                maxLines = 1,
+                modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(if (accent) Amber else Muted).padding(horizontal = 5.dp, vertical = 1.dp)
+            )
+        }
+        Text(
+            label,
+            style = if (accent) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelMedium,
+            color = if (accent) Amber else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f)
+        )
+    }
 }
 
 /**
@@ -1934,28 +1942,56 @@ private fun TextBlock(b: MdBlock, mark: BlockMark?) {
     }
 }
 
+/** An end mark under the text, then the next article as a touch card (the controller has R1), or the end of the issue. */
 @Composable
 private fun ArticleEnd(issue: MagazineIssue, next: MagazineArticle?, onArticle: (String) -> Unit) {
-    Column(Modifier.measure().padding(top = 18.dp, bottom = 28.dp)) {
-        Box(Modifier.fillMaxWidth().height(1.dp).background(Hairline))
+    Column(Modifier.measure().padding(top = 6.dp, bottom = 28.dp)) {
+        Box(Modifier.size(9.dp).background(Amber))
+        Box(Modifier.padding(top = 22.dp).fillMaxWidth().height(1.dp).background(Hairline))
         if (next != null) {
-            Text("NEXT IN ${issue.title.uppercase()} · R1", style = kicker(), modifier = Modifier.padding(top = 16.dp))
-            Text(
-                next.title,
-                style = headline(MaterialTheme.typography.titleLarge),
-                modifier = Modifier.padding(top = 4.dp).clickable { onArticle(next.id) }
-            )
-            if (next.deck.isNotEmpty()) {
-                Text(
-                    inlineText(next.deck),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Muted,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+            val shape = RoundedCornerShape(12.dp)
+            Column(
+                Modifier
+                    .padding(top = 16.dp)
+                    .fillMaxWidth()
+                    .focusProperties { canFocus = false }
+                    .clip(shape)
+                    .background(Slate)
+                    .clickable(interactionSource = null, indication = PressVeil, role = Role.Button, onClickLabel = "Read next") { onArticle(next.id) }
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Next in ${issue.title}",
+                        style = kicker(),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    Text(
+                        "R1",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Ink,
+                        maxLines = 1,
+                        modifier = Modifier.padding(start = 8.dp).clip(RoundedCornerShape(4.dp)).background(Muted).padding(horizontal = 5.dp, vertical = 1.dp)
+                    )
+                }
+                Text(next.title, style = headline(MaterialTheme.typography.titleLarge), modifier = Modifier.padding(top = 6.dp))
+                if (next.deck.isNotEmpty()) {
+                    Text(
+                        inlineText(next.deck),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Muted,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
             }
         } else {
             Text("End of ${issue.title}", style = deckStyle(), modifier = Modifier.padding(top = 16.dp))
-            Text("B returns to the contents.", style = MaterialTheme.typography.bodySmall, color = Muted, modifier = Modifier.padding(top = 4.dp))
+            Text("B returns to the contents.", style = MaterialTheme.typography.bodyMedium, color = Muted, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }
@@ -2162,7 +2198,7 @@ private fun ClipEditor(
                 Modifier.padding(20.dp).verticalScroll(rememberScrollState()).onFocusChanged { if (it.hasFocus) focusedAny = true },
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(heading.uppercase(), style = kicker())
+                Text(heading, style = kicker())
                 if (source.isNotEmpty()) Text(source, style = MaterialTheme.typography.labelMedium, color = Muted)
                 if (excerpt.isNotEmpty()) {
                     Row(Modifier.height(IntrinsicSize.Min)) {
@@ -2205,31 +2241,17 @@ private fun ClipEditor(
                     Text("Not saved to the card: $it — try again, or Cancel to discard.", style = MaterialTheme.typography.bodySmall, color = Warning)
                 }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val saveInteraction = remember { MutableInteractionSource() }
-                    val cancelInteraction = remember { MutableInteractionSource() }
-                    val removeInteraction = remember { MutableInteractionSource() }
-                    Button(
-                        onClick = { change(false) { save(note.trim()) } },
+                    GlowButton(
+                        if (saving) "Saving…" else "Save",
+                        if (tooLong) Modifier else Modifier.focusRequester(saveFocus),
                         enabled = !saving && !tooLong,
-                        modifier = (if (tooLong) Modifier else Modifier.focusRequester(saveFocus))
-                            .focusGlow(saveInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape),
-                        colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = Ink),
-                        interactionSource = saveInteraction
-                    ) { Text(if (saving) "Saving…" else "Save") }
-                    OutlinedButton(
-                        onClick = onClose,
-                        enabled = !saving,
-                        modifier = (if (tooLong) Modifier.focusRequester(saveFocus) else Modifier)
-                            .focusGlow(cancelInteraction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape),
-                        interactionSource = cancelInteraction
-                    ) { Text("Cancel") }
+                        primary = true
+                    ) { change(false) { save(note.trim()) } }
+                    GlowButton("Cancel", if (tooLong) Modifier.focusRequester(saveFocus) else Modifier, enabled = !saving, onClick = onClose)
                     if (existing) {
-                        OutlinedButton(
-                            onClick = { if (confirmRemove) change(true, remove) else confirmRemove = true },
-                            enabled = !saving,
-                            modifier = Modifier.focusGlow(removeInteraction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape, Warning),
-                            interactionSource = removeInteraction
-                        ) { Text(if (confirmRemove) "Press again to remove" else "Remove", color = Warning) }
+                        GlowButton(if (confirmRemove) "Press again to remove" else "Remove", enabled = !saving, colour = Warning) {
+                            if (confirmRemove) change(true, remove) else confirmRemove = true
+                        }
                     }
                 }
             }
@@ -2440,7 +2462,7 @@ private fun ScrapbookView(
 @Composable
 private fun ScrapbookMasthead(count: Int, modifier: Modifier) {
     Column(modifier.padding(bottom = 6.dp)) {
-        Text("SORTIE · MAGAZINES", style = kicker())
+        Text("Magazines", style = kicker())
         Text("Scrapbook", style = headline(MaterialTheme.typography.displaySmall))
         Text(
             when (count) {
@@ -2448,7 +2470,7 @@ private fun ScrapbookMasthead(count: Int, modifier: Modifier) {
                 1 -> "1 clipping, kept on this device"
                 else -> "$count clippings, kept on this device"
             },
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = Muted
         )
         Box(Modifier.padding(top = 10.dp).width(56.dp).height(3.dp).background(Amber))
@@ -2458,9 +2480,9 @@ private fun ScrapbookMasthead(count: Int, modifier: Modifier) {
 @Composable
 private fun ClippingCard(c: MagazineClipping, source: ClipSource) {
     Column {
-        val kind = if (c.isArticle) "CLIPPED RECOMMENDATION" else "HIGHLIGHT"
+        val kind = if (c.isArticle) "Clipped recommendation" else "Highlight"
         Text(
-            listOf(kind, c.issueTitle.uppercase()).filter { it.isNotEmpty() }.joinToString(" · "),
+            listOf(kind, c.issueTitle).filter { it.isNotEmpty() }.joinToString(" · "),
             style = kicker(),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -2534,7 +2556,7 @@ private fun PackNote(text: String) {
 private fun Modifier.measure(): Modifier = widthIn(max = Measure).fillMaxWidth()
 
 @Composable
-private fun kicker(): TextStyle = MaterialTheme.typography.labelMedium.copy(color = Amber, letterSpacing = 1.4.sp, fontWeight = FontWeight.Bold)
+private fun kicker(): TextStyle = MaterialTheme.typography.labelLarge.copy(color = Amber, letterSpacing = 0.4.sp, fontWeight = FontWeight.SemiBold)
 
 private fun headline(base: TextStyle): TextStyle = base.copy(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold)
 
@@ -2545,7 +2567,7 @@ private fun deckStyle(): TextStyle = MaterialTheme.typography.titleMedium.copy(f
 private fun bodyStyle(): TextStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 29.sp)
 
 @Composable
-private fun captionStyle(): TextStyle = MaterialTheme.typography.bodySmall.copy(fontStyle = FontStyle.Italic, color = Muted)
+private fun captionStyle(): TextStyle = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic, color = Muted, lineHeight = 20.sp)
 
 private val DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.getDefault())
 

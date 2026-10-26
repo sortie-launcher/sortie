@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -287,12 +289,15 @@ private fun ReferenceList(
         ) {
             if (cards.isEmpty()) {
                 item {
-                    Text(
-                        "No cards yet. Write one, or import a Markdown file or an image — a map, move list or chart — from this device. " +
-                            "While the game runs, the cards open on the other screen from Now playing.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(8.dp)
-                    )
+                    Column(Modifier.padding(8.dp).widthIn(max = EDITOR_MEASURE), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("No cards yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Write one, or import a Markdown file or an image — a map, move list or chart — from this device. " +
+                                "On dual-screen devices, open them from Now playing while the game stays on the other screen.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
             items(cards, key = { it.id }) { card ->
@@ -497,11 +502,13 @@ private fun ReferenceCardEditor(
     val hasContent = title.isNotBlank() || body.isNotBlank() || isImage
     val canSave = !saving && !tooLong && hasContent && (changed || original == null || error != null)
     Column(Modifier.fillMaxSize()) {
+        // a form, not a page: on the wide screen it keeps a readable width instead of stretching the text across it
         Column(
-            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp)
+                .wrapContentWidth(Alignment.Start).widthIn(max = EDITOR_MEASURE),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(if (original == null) "New card" else "Edit card", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(if (original == null) "New card" else "Edit card", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Label("Title")
             ReferenceTextField(
                 title,
@@ -566,6 +573,9 @@ private fun ReferenceCardEditor(
 private fun Label(text: String) {
     Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
+
+/** The card editor's widest column: the title, the text and the buttons stay a comfortable reach on the wide screen. */
+private val EDITOR_MEASURE = 760.dp
 
 /**
  * A text field a controller can leave: D-pad up/down from a physical pad moves the focus to [up]/[down] (as for [NoteField]),

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,12 +15,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,9 +32,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalInputModeManager
@@ -73,22 +73,28 @@ private fun Shelf.meaning(): String = when (this) {
 
 /**
  * Game [gameId]'s personal shelf on its detail page: Finished or Shelved with the date and the optional verdict, and a button
- * that opens the shelf editor. Self-contained: reads and writes `user.gameProgress` through [graph]'s user store. The editor
- * is a dialog, so the detail screen's hotkeys (Y, R2) do not reach it while the verdict is typed.
+ * that opens the shelf editor, on one wrapping line after the page's other personal [actions] (notes, reference cards).
+ * Self-contained: reads and writes `user.gameProgress` through [graph]'s user store. The editor is a dialog, so the detail
+ * screen's hotkeys (Y, R2) do not reach it while the verdict is typed.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun GameProgressSection(graph: SortieApp.Graph, gameId: String, modifier: Modifier = Modifier, accent: Color = Amber) {
+fun GameProgressSection(
+    graph: SortieApp.Graph,
+    gameId: String,
+    modifier: Modifier = Modifier,
+    accent: Color = Amber,
+    actions: @Composable FlowRowScope.() -> Unit = {}
+) {
     val progress by remember(gameId) { graph.user.data.map { it.gameProgress[gameId] }.distinctUntilChanged() }
         .collectAsState(graph.user.data.value.gameProgress[gameId])
     var editing by rememberSaveable(gameId) { mutableStateOf(false) }
-    Column(modifier.padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         progress?.let { ShelfSummary(it) }
-        val interaction = remember { MutableInteractionSource() }
-        OutlinedButton(
-            onClick = { editing = true },
-            modifier = Modifier.focusGlow(interaction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape, accent),
-            interactionSource = interaction
-        ) { Text(if (progress == null) "Mark finished or shelved" else "Change shelf or verdict", maxLines = 1) }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            actions()
+            GamePageButton(if (progress == null) "Mark finished or shelved" else "Change shelf or verdict", { editing = true }, accent, quiet = true)
+        }
     }
     if (editing) {
         ShelfEditor(
@@ -123,8 +129,8 @@ private fun ShelfSummary(progress: GameProgress) {
         )
         return
     }
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 shelf.label,
                 style = MaterialTheme.typography.labelMedium,
@@ -134,17 +140,28 @@ private fun ShelfSummary(progress: GameProgress) {
             )
             progress.sinceDate?.let {
                 Text(
-                    "  since ${it.format(ShelfDate)}",
+                    "since ${it.format(ShelfDate)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
         if (progress.verdict.isNotBlank()) {
-            Text("“${progress.verdict}”", style = MaterialTheme.typography.bodyMedium, fontStyle = FontStyle.Italic)
+            // set off like a pull quote: a rule in the shelf's colour, drawn once, no extra layout
+            val rule = shelf.colour()
+            Text(
+                "“${progress.verdict}”",
+                style = MaterialTheme.typography.bodyMedium,
+                fontStyle = FontStyle.Italic,
+                modifier = Modifier
+                    .drawBehind { drawRect(rule, size = Size(VERDICT_RULE.toPx(), size.height)) }
+                    .padding(start = 12.dp)
+            )
         }
     }
 }
+
+private val VERDICT_RULE = 3.dp
 
 /**
  * Draft editor for the shelf and verdict: nothing is written until Save; Cancel or B drops the draft (a tap outside does not,
@@ -230,20 +247,19 @@ private fun ShelfEditor(gameId: String, current: GameProgress?, accent: Color, s
                     "${verdict.trim().length} / $VERDICT_MAX_CHARS"
                 },
                 style = MaterialTheme.typography.labelSmall,
-                color = if (tooLong) Color(0xFFF87171) else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (tooLong) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
             )
             error?.let {
                 Text(
                     "Not saved to the card: $it — Save retries; Cancel discards this draft.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFF87171)
+                    color = MaterialTheme.colorScheme.error
                 )
             }
             FlowRow(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                val saveInteraction = remember { MutableInteractionSource() }
-                val cancelInteraction = remember { MutableInteractionSource() }
-                Button(
-                    onClick = {
+                GamePageButton(
+                    if (saving) "Saving…" else if (removing) "Take off shelf" else "Save",
+                    {
                         saving = true
                         scope.launch {
                             val failure = save(draft, verdict)
@@ -252,18 +268,12 @@ private fun ShelfEditor(gameId: String, current: GameProgress?, accent: Color, s
                             if (failure == null) onClose()
                         }
                     },
-                    enabled = canSave,
-                    modifier = Modifier.focusRequester(saveFocus).focusGlow(saveInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape, accent),
-                    colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Ink),
-                    interactionSource = saveInteraction
-                ) { Text(if (saving) "Saving…" else if (removing) "Take off shelf" else "Save") }
-                OutlinedButton(
-                    onClick = onClose,
-                    enabled = !saving,
-                    modifier = Modifier.focusRequester(cancelFocus)
-                        .focusGlow(cancelInteraction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape, accent),
-                    interactionSource = cancelInteraction
-                ) { Text("Cancel") }
+                    accent,
+                    Modifier.focusRequester(saveFocus),
+                    primary = true,
+                    enabled = canSave
+                )
+                GamePageButton("Cancel", onClose, accent, Modifier.focusRequester(cancelFocus), quiet = true, enabled = !saving)
             }
             HintBar("↕" to "move", "A" to "select / type", "B" to "cancel")
         }

@@ -5,18 +5,18 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -29,8 +29,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.data.markdown.MdBlock
 import io.github.esko997.sortie.data.markdown.parseMarkdown
@@ -39,9 +37,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * The bundled user manual (`assets/MANUAL.md`), rendered by the shared Markdown subset ([parseMarkdown]); the manual itself
- * uses `#`/`##` headings, `-` bullets, paragraphs joined across soft line breaks, `**bold**` and `*italic*`. The grid takes the
- * D-pad; the text scrolls.
+ * The bundled user manual (`assets/MANUAL.md`), rendered by the shared Markdown subset ([parseMarkdown], [MarkdownBlock]); the
+ * manual itself uses `#`/`##`/`###` headings, `-` bullets, paragraphs joined across soft line breaks, `**bold**` and `*italic*`.
+ * The D-pad scrolls the text.
  */
 @Composable
 fun ManualScreen() {
@@ -90,42 +88,12 @@ fun ManualScreen() {
                     }
                 },
             state = scrollState,
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+            // the same measure and block styles as a reference card's text, so long lines stay readable on the wide screen
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            items(blocks) { b ->
-                when (b) {
-                    is MdBlock.Heading -> when (b.level) {
-                        1 -> Text(
-                            b.text,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        2 -> Text(b.text, style = MaterialTheme.typography.titleLarge, color = Amber, modifier = Modifier.padding(top = 18.dp, bottom = 6.dp))
-                        else -> Text(
-                            b.text,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
-                        )
-                    }
-                    is MdBlock.Bullet -> Text(
-                        inlineText("•  " + b.text),
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(start = 12.dp, bottom = 4.dp)
-                    )
-                    is MdBlock.Paragraph -> Text(inlineText(b.text), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(bottom = 10.dp))
-                    is MdBlock.Quote -> Text(
-                        inlineText(b.text),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontStyle = FontStyle.Italic,
-                        modifier = Modifier.padding(start = 12.dp, bottom = 10.dp)
-                    )
-                    // the manual ships no pictures; a caption is all it could show
-                    is MdBlock.Image -> Text(b.caption, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 10.dp))
-                    MdBlock.Rule -> Unit
-                }
-            }
+            val measure = Modifier.widthIn(max = MarkdownMeasure).fillMaxWidth()
+            items(blocks) { MarkdownBlock(it, measure) }
         }
         HintBar("D-pad" to "scroll", "B" to "back")
     }

@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -21,7 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -36,13 +37,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -74,8 +75,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-
-private val ErrorText = Color(0xFFF87171)
 
 @Serializable
 private enum class SetupPage { OVERVIEW, ADD, SYSTEM, EMULATORS, SUPPORT }
@@ -600,37 +599,30 @@ private fun Overview(
     }
 
     SetupPageFrame(hints = arrayOf("A" to "choose", "B" to "back")) {
-        Text("Library setup", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        PageTitle("Library setup")
         Text(
             "The kinds of games on this device, the folders that hold them and the emulators that start them.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
         )
         if (working != null) {
             FocusRow(onClick = {}, modifier = at("work")) {
-                Column {
-                    Text(working.step, style = MaterialTheme.typography.titleSmall, color = Amber)
-                    LinearProgressIndicator(Modifier.fillMaxWidth().padding(vertical = 6.dp), color = Amber, trackColor = Slate)
-                    Note("Sortie reads every file name in each folder; a large library takes a while. You can leave this screen: the work carries on.")
-                }
+                WorkProgress(
+                    working.step,
+                    detail = "Sortie reads every file name in each folder; a large library takes a while. You can leave this screen: the work carries on."
+                )
             }
         }
         orphanFailure?.let { f ->
-            FocusRow(onClick = { model.acknowledge(f.token) }, modifier = at("failure-ok")) {
-                Column {
-                    Text("Not saved", style = MaterialTheme.typography.titleSmall, color = ErrorText)
-                    Note(f.message, error = true)
-                    Note("A: OK")
-                }
-            }
+            OutcomeRow("Not saved", ok = false, lines = listOf(f.message), onDismiss = { model.acknowledge(f.token) }, modifier = at("failure-ok"))
         }
         done?.let { ResultBlock(it, friendly, at, onGame) { model.dismissResult() } }
         when (configState) {
-            SetupConfig.Loading -> Note("Reading the library settings…")
+            SetupConfig.Loading -> WorkProgress("Reading the library settings…")
             is SetupConfig.Failed -> {
                 Note("Couldn't read the library settings: ${configState.message}", error = true)
-                FocusRow(onClick = retry, modifier = at("retry")) { Line("Try again", "read the settings from the card again") }
+                SettingsPanel { row { FocusRow(onClick = retry, modifier = at("retry")) { Line("Try again", "Read the settings from the card again") } } }
             }
             is SetupConfig.Loaded -> Unit
         }
@@ -650,44 +642,65 @@ private fun Overview(
                 )
             }
             SectionTitle("Systems")
-            systems.forEach { def ->
-                val n = counts.firstOrNull { it.systemId == def.id }?.n ?: 0
-                val emulator = emulatorSummary(def, config, installed)
-                FocusRow(onClick = { onSystem(def) }, modifier = at("system:${def.id}")) {
-                    Column {
-                        Text(def.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "${plural(n, "game")} · ${plural(def.roots.size, "folder")}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            emulator.first,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (emulator.second) ErrorText else MaterialTheme.colorScheme.onSurfaceVariant
+            SettingsPanel {
+                systems.forEach { def ->
+                    row(key = def.id) {
+                        val n = counts.firstOrNull { it.systemId == def.id }?.n ?: 0
+                        val emulator = emulatorSummary(def, config, installed)
+                        FocusRow(onClick = { onSystem(def) }, modifier = at("system:${def.id}")) {
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        def.label,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Text(
+                                        plural(n, "game"),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = if (n == 0) MaterialTheme.colorScheme.onSurfaceVariant else Amber,
+                                        modifier = Modifier.padding(start = 12.dp)
+                                    )
+                                }
+                                Text(
+                                    plural(def.roots.size, "folder") + " · " + emulator.first,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (emulator.second) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+                row {
+                    FocusRow(onClick = onAdd, modifier = at("add")) {
+                        Line("Add a system…", "PlayStation 2, Game Boy Advance, arcade… or one you name yourself")
+                    }
+                }
+            }
+            SectionTitle("BIOS and save folders")
+            SettingsPanel {
+                row {
+                    FocusRow(onClick = onSupport, modifier = at("support")) {
+                        Line(
+                            "BIOS and save folders",
+                            "BIOS: ${config.biosDir?.let(friendly) ?: "not set"} · saves: " +
+                                if (config.saves.isEmpty()) "none" else plural(config.saves.size, "folder")
                         )
                     }
                 }
             }
-            FocusRow(onClick = onAdd, modifier = at("add")) {
-                Line("Add a system…", "PlayStation 2, Game Boy Advance, arcade… or one you name yourself")
-            }
-            SectionTitle("BIOS and save folders")
-            FocusRow(onClick = onSupport, modifier = at("support")) {
-                Line(
-                    "BIOS and save folders",
-                    "BIOS: ${config.biosDir?.let(friendly) ?: "not set"} · saves: " +
-                        if (config.saves.isEmpty()) "none" else plural(config.saves.size, "folder")
-                )
-            }
             SectionTitle("Index")
-            FocusRow(onClick = onReindex) { Line("Re-index every system", "read all game folders again, e.g. after copying games") }
+            SettingsPanel { row { FocusRow(onClick = onReindex) { Line("Re-index every system", "Read all game folders again, e.g. after copying games") } } }
             InfoBlock("Where these settings live") {
                 Note("${friendly(graph.sortieDir.path)} (${graph.sortieDir.path}).")
                 Note("Systems you don't edit here, desktop-made ones included, stay exactly as they are.")
             }
         }
-        FocusRow(onClick = onDone) { Line("Done", "back to Sortie") }
+        Spacer(Modifier.height(8.dp))
+        SettingsPanel { row { FocusRow(onClick = onDone) { Line("Done", "Back to Sortie") } } }
     }
 }
 
@@ -707,7 +720,7 @@ private fun emulatorSummary(def: SystemDef, config: LibraryConfiguration, instal
 @Composable
 private fun ResultBlock(r: SetupResult, friendly: (String) -> String, at: (String) -> Modifier, onGame: (String) -> Unit, onDismiss: () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Slate).padding(8.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Slate).padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Text(r.title, style = MaterialTheme.typography.titleMedium, color = Amber, modifier = Modifier.padding(horizontal = 8.dp))
@@ -769,31 +782,38 @@ private fun AddSystemPage(config: LibraryConfiguration, installed: Installed, on
     FocusOnShow(Unit, first)
     val configured = config.systems.map { it.id }.toSet()
     SetupPageFrame(hints = arrayOf("A" to "choose", "B" to "back")) {
-        Text("Add a system", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        PageTitle("Add a system")
         Note(
             "Pick what kind of games they are. Sortie suggests file types and emulators; you choose the folders and can change " +
                 "everything before saving. Sortie only starts emulators already installed; it never downloads emulators, BIOS files or games."
         )
-        LibraryPresets.systems.forEachIndexed { i, preset ->
-            val packaged = preset.profiles.filter { it.`package` != null }
-            val ready = packaged.filter { installed.has(it.`package`!!) }
-            val status = when {
-                preset.system.id in configured -> "Already in your library: opens its settings"
-                ready.isNotEmpty() -> {
-                    val apps = ready.mapNotNull { it.`package` }.distinct().map(installed::label)
-                    val coreApps = ready.filter(::usesCore).mapNotNull { it.`package` }.distinct().map(installed::label)
-                    "Emulator app installed: ${apps.joinToString(", ")}" +
-                        if (coreApps.isEmpty()) "" else " · cores are set up separately in ${coreApps.joinToString(", ")}"
+        Spacer(Modifier.height(6.dp))
+        SettingsPanel {
+            LibraryPresets.systems.forEachIndexed { i, preset ->
+                row(key = preset.system.id) {
+                    val packaged = preset.profiles.filter { it.`package` != null }
+                    val ready = packaged.filter { installed.has(it.`package`!!) }
+                    val status = when {
+                        preset.system.id in configured -> "Already in your library: opens its settings"
+                        ready.isNotEmpty() -> {
+                            val apps = ready.mapNotNull { it.`package` }.distinct().map(installed::label)
+                            val coreApps = ready.filter(::usesCore).mapNotNull { it.`package` }.distinct().map(installed::label)
+                            "Emulator app installed: ${apps.joinToString(", ")}" +
+                                if (coreApps.isEmpty()) "" else " · cores are set up separately in ${coreApps.joinToString(", ")}"
+                        }
+                        packaged.isNotEmpty() -> "Not installed yet: ${packaged.joinToString(", ") { it.label }}"
+                        else -> "Opens games with an app you choose"
+                    }
+                    FocusRow(onClick = { onPreset(preset) }, modifier = if (i == 0) Modifier.focusRequester(first) else Modifier) {
+                        Line(preset.system.label, status)
+                    }
                 }
-                packaged.isNotEmpty() -> "Not installed yet: ${packaged.joinToString(", ") { it.label }}"
-                else -> "Opens games with an app you choose"
             }
-            FocusRow(onClick = { onPreset(preset) }, modifier = if (i == 0) Modifier.focusRequester(first) else Modifier) {
-                Line(preset.system.label, status)
+            row {
+                FocusRow(onClick = onCustom, modifier = if (LibraryPresets.systems.isEmpty()) Modifier.focusRequester(first) else Modifier) {
+                    Line("Something else…", "Name it yourself and choose its file types and emulator")
+                }
             }
-        }
-        FocusRow(onClick = onCustom, modifier = if (LibraryPresets.systems.isEmpty()) Modifier.focusRequester(first) else Modifier) {
-            Line("Something else…", "name it yourself and choose its file types and emulator")
         }
     }
 }
@@ -839,7 +859,14 @@ private fun SystemEditor(
     val name = sys.label.ifBlank { if (isNew) "New system" else draft.initial.label }
 
     SetupPageFrame(hints = arrayOf("A" to "choose / type", "B" to "cancel")) {
-        Text(name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            name,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)
+        )
         Note(
             if (isNew) {
                 "Nothing is saved until you choose Save."
@@ -859,21 +886,40 @@ private fun SystemEditor(
             "Sortie lists the game files that sit directly in each folder; it doesn't look inside subfolders, so add every folder " +
                 "that holds games. If two folders of this system hold files with the same name, they show as one game."
         )
-        sys.roots.forEach { root ->
-            val check by produceState<FolderCheck?>(null, root, extSet) {
-                value = withContext(Dispatchers.IO) { checkFolder(resolveFolder(graph, root), extSet) }
-            }
-            FocusRow(onClick = { if (!busy) folderSheet = root }) {
-                Column {
-                    Text(friendly(root), style = MaterialTheme.typography.bodyLarge)
-                    Text(resolveFolder(graph, root).path, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    val status = check?.let { folderStatus(it, anyType = extSet.isEmpty()) } ?: ("Checking…" to false)
-                    Text(status.first, style = MaterialTheme.typography.bodySmall, color = if (status.second) ErrorText else Amber)
+        Spacer(Modifier.height(4.dp))
+        SettingsPanel {
+            sys.roots.forEach { root ->
+                row(key = root) {
+                    val check by produceState<FolderCheck?>(null, root, extSet) {
+                        value = withContext(Dispatchers.IO) { checkFolder(resolveFolder(graph, root), extSet) }
+                    }
+                    FocusRow(onClick = { if (!busy) folderSheet = root }) {
+                        Column {
+                            Text(friendly(root), style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                resolveFolder(graph, root).path,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            val status = check?.let { folderStatus(it, anyType = extSet.isEmpty()) }
+                            Text(
+                                status?.first ?: "Checking…",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = when {
+                                    status == null -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    status.second -> MaterialTheme.colorScheme.error
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                }
+                            )
+                        }
+                    }
                 }
             }
-        }
-        FocusRow(onClick = { if (!busy) onAddFolder() }, modifier = at("add-folder")) {
-            Line("Add a folder…", if (sys.roots.isEmpty()) "choose where this system's games are" else "another folder with games for this system")
+            row {
+                FocusRow(onClick = { if (!busy) onAddFolder() }, modifier = at("add-folder")) {
+                    Line("Add a folder…", if (sys.roots.isEmpty()) "Choose where this system's games are" else "Another folder with games for this system")
+                }
+            }
         }
 
         SectionTitle("File types")
@@ -891,8 +937,12 @@ private fun SystemEditor(
         preset?.let { p ->
             val suggested = p.system.extensions
             if (suggested.isNotEmpty() && parseExtensions(suggested.joinToString(",")).first != exts) {
-                FocusRow(onClick = { if (!busy) onChange(draft.copy(extensions = extensionsText(suggested))) }) {
-                    Line("Use the suggested file types", suggested.joinToString(", "))
+                SettingsPanel {
+                    row {
+                        FocusRow(onClick = { if (!busy) onChange(draft.copy(extensions = extensionsText(suggested))) }) {
+                            Line("Use the suggested file types", suggested.joinToString(", "))
+                        }
+                    }
                 }
             }
         }
@@ -902,16 +952,37 @@ private fun SystemEditor(
             "Sortie starts a game with the first installed emulator in this list, unless you chose a default for this system in " +
                 "Settings or a game has its own Launch with… choice."
         )
-        sys.profiles.forEachIndexed { i, id ->
-            val def = profileDef(config, id)
-            val (status, problem) = def?.let { profileStatus(it, installed) } ?: ("unknown emulator: not in the library settings or Sortie's list" to true)
-            FocusRow(onClick = { if (!busy) emulatorSheet = id }) {
-                Row {
-                    Text("${i + 1}", style = MaterialTheme.typography.titleMedium, color = Amber, modifier = Modifier.padding(end = 12.dp))
-                    Column {
-                        Text(def?.label ?: id, style = MaterialTheme.typography.bodyLarge)
-                        Text(status, style = MaterialTheme.typography.bodySmall, color = if (problem) ErrorText else MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(4.dp))
+        SettingsPanel {
+            sys.profiles.forEachIndexed { i, id ->
+                row(key = id) {
+                    val def = profileDef(config, id)
+                    val (status, problem) = def?.let { profileStatus(it, installed) }
+                        ?: ("unknown emulator: not in the library settings or Sortie's list" to true)
+                    FocusRow(onClick = { if (!busy) emulatorSheet = id }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "${i + 1}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Amber,
+                                modifier = Modifier.padding(end = 14.dp)
+                            )
+                            Column {
+                                Text(def?.label ?: id, style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    status.replaceFirstChar { it.uppercase() },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (problem) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
+                }
+            }
+            row {
+                FocusRow(onClick = { if (!busy) onAddEmulator() }, modifier = at("add-emulator")) {
+                    Line("Add an emulator…", "Choose from the emulators Sortie knows how to start")
                 }
             }
         }
@@ -919,9 +990,6 @@ private fun SystemEditor(
             Note("Choose an emulator or Open with… before saving.", error = true)
         } else if (sys.profiles.mapNotNull { profileDef(config, it) }.none { installed.available(it) }) {
             Note("None of these is installed. Install one, then come back: Sortie checks again when you return.", error = true)
-        }
-        FocusRow(onClick = { if (!busy) onAddEmulator() }, modifier = at("add-emulator")) {
-            Line("Add an emulator…", "choose from the emulators Sortie knows how to start")
         }
         preset?.instructions?.takeIf { it.isNotBlank() }?.let { InfoBlock("Before the first game") { Note(it) } }
 
@@ -935,7 +1003,7 @@ private fun SystemEditor(
                 onClick = onSave
             )
             GlowButton("Cancel", enabled = !busy, onClick = onCancel)
-            if (!isNew) GlowButton("Remove from library…", enabled = !busy, colour = ErrorText, onClick = onRemove)
+            if (!isNew) GlowButton("Remove from library…", enabled = !busy, colour = MaterialTheme.colorScheme.error, onClick = onRemove)
         }
     }
 
@@ -985,22 +1053,31 @@ private fun EmulatorPicker(draft: SystemDraft, config: LibraryConfiguration?, in
     val back = remember { FocusRequester() }
     FocusOnShow(Unit, if (groups.isEmpty()) back else first)
     SetupPageFrame(hints = arrayOf("A" to "add", "B" to "back")) {
-        Text("Add an emulator", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        PageTitle("Add an emulator")
         Note("Sortie only starts emulators already installed on this device; it never downloads emulators, BIOS files or games.")
         if (groups.isEmpty()) Note("Every emulator Sortie knows is already in this system's list.")
         groups.forEachIndexed { g, (title, profiles) ->
             SectionTitle(title)
-            profiles.forEachIndexed { i, p ->
-                val (status, problem) = profileStatus(p, installed)
-                FocusRow(onClick = { onPick(p.id) }, modifier = if (g == 0 && i == 0) Modifier.focusRequester(first) else Modifier) {
-                    Column {
-                        Text(p.label, style = MaterialTheme.typography.bodyLarge)
-                        Text(status, style = MaterialTheme.typography.bodySmall, color = if (problem) ErrorText else MaterialTheme.colorScheme.onSurfaceVariant)
+            SettingsPanel {
+                profiles.forEachIndexed { i, p ->
+                    row(key = p.id) {
+                        val (status, problem) = profileStatus(p, installed)
+                        FocusRow(onClick = { onPick(p.id) }, modifier = if (g == 0 && i == 0) Modifier.focusRequester(first) else Modifier) {
+                            Column {
+                                Text(p.label, style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    status.replaceFirstChar { it.uppercase() },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (problem) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
-        FocusRow(onClick = onBack, modifier = Modifier.focusRequester(back)) { Line("Back", "add nothing") }
+        Spacer(Modifier.height(8.dp))
+        SettingsPanel { row { FocusRow(onClick = onBack, modifier = Modifier.focusRequester(back)) { Line("Back", "Add nothing") } } }
     }
 }
 
@@ -1033,22 +1110,30 @@ private fun SupportEditor(
     FocusOnShow(target, first)
     val at = { key: String -> if (key == target) Modifier.focusRequester(first) else Modifier }
     SetupPageFrame(hints = arrayOf("A" to "choose", "B" to "cancel")) {
-        Text("BIOS and save folders", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        PageTitle("BIOS and save folders")
         Note("Both are optional. Nothing is saved until you choose Save.")
         SectionTitle("BIOS folder")
         Note(
             "Where your BIOS files are. Sortie checks for the files a system lists there and marks games whose BIOS is missing; " +
                 "emulators keep their own BIOS settings. Sortie never downloads BIOS files."
         )
-        FocusRow(onClick = { if (!busy) biosSheet = true }, modifier = at("bios")) {
-            Line("BIOS folder", draft.biosDir?.let(friendly) ?: "Not set")
+        Spacer(Modifier.height(4.dp))
+        SettingsPanel {
+            row {
+                FocusRow(onClick = { if (!busy) biosSheet = true }, modifier = at("bios")) {
+                    Line("BIOS folder", draft.biosDir?.let(friendly) ?: "Not set")
+                }
+            }
         }
         SectionTitle("Save folders")
         Note("Where emulators keep saves and save states. Sortie looks two folder levels deep for files named like a game and marks that game as started.")
-        draft.saves.forEach { path ->
-            FocusRow(onClick = { if (!busy) saveSheet = path }) { Line(friendly(path), path) }
+        Spacer(Modifier.height(4.dp))
+        SettingsPanel {
+            draft.saves.forEach { path ->
+                row(key = path) { FocusRow(onClick = { if (!busy) saveSheet = path }) { Line(friendly(path), path) } }
+            }
+            row { FocusRow(onClick = { if (!busy) onAddSave() }, modifier = at("add-save")) { Line("Add a save folder…", "e.g. RetroArch's saves folder") } }
         }
-        FocusRow(onClick = { if (!busy) onAddSave() }, modifier = at("add-save")) { Line("Add a save folder…", "e.g. RetroArch's saves folder") }
         DraftFooter(error = error, conflict = conflict, working = working, onReload = onReload)
         FlowRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             GlowButton(if (busy) "Saving…" else "Save", enabled = !busy && (draft.changed || error != null), primary = true, onClick = onSave)
@@ -1082,16 +1167,13 @@ private fun SupportEditor(
 @Composable
 private fun DraftFooter(error: String?, conflict: Boolean, working: SetupWork.Working?, onReload: () -> Unit) {
     if (working != null) {
-        Column(Modifier.padding(top = 12.dp)) {
-            Text(working.step, style = MaterialTheme.typography.titleSmall, color = Amber, modifier = Modifier.padding(horizontal = 8.dp))
-            LinearProgressIndicator(Modifier.fillMaxWidth().padding(8.dp), color = Amber, trackColor = Slate)
-        }
+        Column(Modifier.padding(top = 12.dp)) { WorkProgress(working.step) }
     }
     if (error != null && working == null) {
         Column(Modifier.padding(top = 12.dp)) {
             Note(error, error = true)
             if (conflict) {
-                FocusRow(onClick = onReload) { Line("Reload library settings", "keeps your draft") }
+                SettingsPanel { row { FocusRow(onClick = onReload) { Line("Reload library settings", "Keeps your draft") } } }
             } else {
                 Note("Your draft is kept: fix it and Save again, or Cancel to drop it.")
             }
@@ -1110,27 +1192,6 @@ private fun SetupPageFrame(hints: Array<Pair<String, String>>, content: @Composa
         }
         HintBar(*hints)
     }
-}
-
-/** A focusable passage (A does nothing), so the D-pad can reach it and scroll it into view. */
-@Composable
-private fun InfoBlock(title: String, content: @Composable () -> Unit) {
-    FocusRow(onClick = {}) {
-        Column {
-            Text(title, style = MaterialTheme.typography.titleSmall)
-            content()
-        }
-    }
-}
-
-@Composable
-private fun Note(text: String, error: Boolean = false) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodySmall,
-        color = if (error) ErrorText else MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-    )
 }
 
 /**
@@ -1179,15 +1240,16 @@ private fun ConfirmDialog(title: String, body: String, keep: String, confirm: St
             Modifier.widthIn(max = 460.dp).clip(RoundedCornerShape(16.dp)).background(Slate).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 8.dp))
             Text(
                 body,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 6.dp)
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 6.dp)
             )
             FocusRow(onClick = onDismiss, modifier = Modifier.focusRequester(safe)) { Text(keep, style = MaterialTheme.typography.bodyLarge) }
-            FocusRow(onClick = onConfirm, colour = ErrorText) { Text(confirm, style = MaterialTheme.typography.bodyLarge, color = ErrorText) }
+            val danger = MaterialTheme.colorScheme.error
+            FocusRow(onClick = onConfirm, colour = danger) { Text(confirm, style = MaterialTheme.typography.bodyLarge, color = danger) }
             HintBar("A" to "choose", "B" to "keep")
         }
         FocusOnShow(Unit, safe)

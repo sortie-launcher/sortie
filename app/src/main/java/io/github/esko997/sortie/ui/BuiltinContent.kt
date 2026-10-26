@@ -143,7 +143,7 @@ private fun WindowChip(label: String, button: String?, onClick: () -> Unit) {
             .focusProperties { canFocus = false }
             .clip(shape)
             .background(Slate)
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(interactionSource = null, indication = PressVeil, role = Role.Button, onClick = onClick)
             .padding(start = if (button != null) 4.dp else 10.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically

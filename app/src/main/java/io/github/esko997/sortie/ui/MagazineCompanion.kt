@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,7 +31,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.semantics.Role
@@ -169,11 +174,14 @@ internal fun MagazineCompanion(panel: MagazineCompanionState, leading: @Composab
                 val next = issue.articles.getOrNull(articleIndex + 1)
                 Box(
                     Modifier.weight(0.32f).heightIn(min = 68.dp)
-                        .clickable(enabled = previous != null, role = Role.Button) { previous?.let { open(it.id) } }
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(interactionSource = null, indication = PressVeil, enabled = previous != null, role = Role.Button) {
+                            previous?.let { open(it.id) }
+                        }
                         .semantics { contentDescription = "Previous article" }
-                        .padding(vertical = 18.dp)
+                        .padding(horizontal = 6.dp, vertical = 18.dp)
                 ) {
-                    Text("Previous", color = if (previous == null) Color.Gray else Amber, style = MaterialTheme.typography.labelLarge)
+                    Text("Previous", color = if (previous == null) Spent else Amber, style = MaterialTheme.typography.labelLarge)
                 }
                 Box(
                     Modifier.weight(0.68f).heightIn(min = 68.dp)
@@ -195,17 +203,17 @@ internal fun MagazineCompanion(panel: MagazineCompanionState, leading: @Composab
                             }
                             onDrawBehind {
                                 drawPath(page, Slate)
-                                drawPath(corner, if (next == null) Color.Gray else Amber)
+                                drawPath(corner, if (next == null) Hairline else Amber)
                             }
                         }
-                        .clickable(enabled = next != null, role = Role.Button) { next?.let { open(it.id) } }
+                        .clickable(interactionSource = null, indication = PressVeil, enabled = next != null, role = Role.Button) { next?.let { open(it.id) } }
                         .semantics { contentDescription = if (next == null) "End of issue" else "Next article: ${next.title}" }
                         .padding(start = 14.dp, top = 12.dp, end = 30.dp, bottom = 14.dp)
                 ) {
                     Column {
                         Text(
                             if (next == null) "End of issue" else "Next article",
-                            color = if (next == null) Color.Gray else Amber,
+                            color = if (next == null) Spent else Amber,
                             style = MaterialTheme.typography.labelLarge
                         )
                         if (next != null) {
@@ -223,19 +231,28 @@ internal fun MagazineCompanion(panel: MagazineCompanionState, leading: @Composab
     }
 }
 
+/** A finished control: no previous article, the end of the issue. */
+private val Spent = Color(0xFF5C6570)
+
+/** One half of the Sections/Articles switch: the active half is lifted onto Slate with an amber edge. */
 @Composable
 private fun ContentsTab(label: String, active: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
     Text(
         label,
         color = if (active) Amber else Color(0xFF9AA3AD),
         style = MaterialTheme.typography.labelLarge,
-        modifier = modifier.background(if (active) Slate else Color.Transparent)
-            .clickable(role = Role.Tab, onClick = onClick)
+        modifier = modifier
+            .clip(shape)
+            .background(if (active) Slate else Color.Transparent)
+            .border(1.dp, if (active) Amber.copy(alpha = 0.45f) else Hairline, shape)
+            .clickable(interactionSource = null, indication = PressVeil, role = Role.Tab, onClick = onClick)
             .semantics { selected = active }
             .padding(horizontal = 14.dp, vertical = 12.dp)
     )
 }
 
+/** A section or article; the one being read sits on Slate behind an amber margin rule, like a highlighted passage. */
 @Composable
 private fun ContentsLink(title: String, active: Boolean, indent: Int = 0, onClick: () -> Unit) {
     Text(
@@ -244,8 +261,15 @@ private fun ContentsLink(title: String, active: Boolean, indent: Int = 0, onClic
         style = MaterialTheme.typography.bodyMedium,
         fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-            .background(if (active) Slate else Color.Transparent)
-            .clickable(role = Role.Button, onClick = onClick)
+            .clip(RoundedCornerShape(8.dp))
+            .then(
+                if (active) {
+                    Modifier.background(Slate).drawBehind { drawRect(Amber, size = Size(3.dp.toPx(), size.height)) }
+                } else {
+                    Modifier
+                }
+            )
+            .clickable(interactionSource = null, indication = PressVeil, role = Role.Button, onClick = onClick)
             .semantics { selected = active }
             .padding(start = (12 + indent).dp, top = 12.dp, end = 12.dp, bottom = 12.dp)
     )

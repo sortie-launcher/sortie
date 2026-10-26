@@ -2,6 +2,7 @@ package io.github.esko997.sortie.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -24,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -71,14 +73,17 @@ internal fun rememberAttachmentFile(media: JournalMedia, path: String): State<At
 internal fun AttachmentThumb(attachment: JournalAttachment, media: JournalMedia, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    var held by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(6.dp)
     val state by rememberAttachmentFile(media, attachment.path)
     Box(
         modifier
             .size(160.dp, 90.dp)
-            .focusGlow(focused, shape)
+            .confirmHeld { held = it }
+            .focusGlow(focused, shape, pressed = held)
             .clip(shape)
             .background(Slate)
+            .border(1.dp, Hairline, shape)
             .clickable(interactionSource = interaction, indication = PressVeil, role = Role.Image, onClick = onOpen)
             .semantics { contentDescription = "Screenshot ${attachment.name}".trim() },
         contentAlignment = Alignment.Center

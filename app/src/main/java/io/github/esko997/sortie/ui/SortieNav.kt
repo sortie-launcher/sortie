@@ -4,6 +4,11 @@ import android.net.Uri
 import android.view.Display
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -15,7 +20,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -96,8 +103,17 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
     }
     // The companion roams Home's margins behind the screens (MechaStageHost draws him under them); Home declares the spots.
     val stage = rememberMechaStage(graph.mecha)
+    val routeOffset = with(LocalDensity.current) { 18.dp.roundToPx() }
     MechaStageHost(stage) {
-        NavHost(nav, startDestination = "home", modifier = Modifier.fillMaxSize()) {
+        NavHost(
+            nav,
+            startDestination = "home",
+            modifier = Modifier.fillMaxSize(),
+            enterTransition = { fadeIn(tween(180)) + slideInHorizontally(tween(220)) { routeOffset } },
+            exitTransition = { fadeOut(tween(120)) },
+            popEnterTransition = { fadeIn(tween(180)) },
+            popExitTransition = { fadeOut(tween(140)) + slideOutHorizontally(tween(180)) { routeOffset } }
+        ) {
             composable("home") {
                 // Home is the launcher's root: Back has nothing to return to. Without this, Android moves a root task to the
                 // back, which on a device where Sortie runs in an ordinary task (started from an icon or another launcher)

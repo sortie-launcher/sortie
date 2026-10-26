@@ -8,15 +8,22 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.Display
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,15 +34,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.esko997.sortie.launch.LaunchManager
 import io.github.esko997.sortie.shell.ScreenMover
 import kotlinx.coroutines.delay
 
@@ -109,100 +121,148 @@ private fun rememberDisplays(): List<Display> {
 private fun displayLabel(d: Display): String = (if (d.displayId == Display.DEFAULT_DISPLAY) "main" else d.name.ifBlank { "screen" }) + " (${d.displayId})"
 
 private fun shizukuText(status: ScreenMover.Status): String = when (status) {
-    ScreenMover.Status.READY -> "Shizuku: ready. Sortie can move apps between screens."
-    ScreenMover.Status.PERMISSION_NEEDED -> "Shizuku: running, but Sortie hasn't been allowed to use it yet."
-    ScreenMover.Status.NOT_RUNNING -> "Shizuku: not running (optional). Start it in the Shizuku app to move apps between screens."
-    ScreenMover.Status.UNAVAILABLE -> "Shizuku: not installed or too old (optional). Everything else works without it."
+    ScreenMover.Status.READY -> "Ready. Sortie can move apps between screens."
+    ScreenMover.Status.PERMISSION_NEEDED -> "Running, but Sortie hasn't been allowed to use it yet."
+    ScreenMover.Status.NOT_RUNNING -> "Not running (optional). Start it in the Shizuku app to move apps between screens."
+    ScreenMover.Status.UNAVAILABLE -> "Not installed or too old (optional). Everything else works without it."
 }
 
+/**
+ * Index, manifests, screens and Shizuku, and the launch log. Every passage is a focusable row (A does nothing), so the D-pad
+ * can scroll through all of it, the log included.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DiagnosticsScreen(vm: SortieViewModel) {
     val index by vm.index.collectAsState()
     val log by vm.launchLog.collectAsState()
     val snap by vm.manifests.collectAsState()
+    val shizuku by vm.shizuku.collectAsState()
+    val moveResult by vm.moveResult.collectAsState()
     val context = LocalContext.current
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp)) {
-        item {
-            Text("Diagnostics", style = MaterialTheme.typography.titleLarge)
-            var debuggingFailed by remember { mutableStateOf(false) }
-            FlowRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                GlowButton(if (index.running) "Indexing…" else "Re-index everything", enabled = !index.running, primary = true) { vm.reindex(force = true) }
-                GlowButton("Reload manifests") { vm.reloadManifests() }
-                GlowButton("Wireless debugging") {
-                    // Developer options, scrolled to Wireless debugging (the fragment arg Settings itself uses)
-                    val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
-                    debuggingFailed = !openSettingsScreen(context, intent)
+    var debuggingFailed by remember { mutableStateOf(false) }
+    // Real displays, not the manifest's idea of them: a move needs Shizuku and two screens that are switched on.
+    val displays = rememberDisplays()
+    val usable = displays.filter { it.state != Display.STATE_OFF }
+    Column(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(12.dp)) {
+            item { PageTitle("Diagnostics") }
+            item {
+                FlowRow(
+                    Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    GlowButton(if (index.running) "Indexing…" else "Re-index everything", enabled = !index.running, primary = true) { vm.reindex(force = true) }
+                    GlowButton("Reload manifests") { vm.reloadManifests() }
+                    GlowButton("Wireless debugging") {
+                        // Developer options, scrolled to Wireless debugging (the fragment arg Settings itself uses)
+                        val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
+                        debuggingFailed = !openSettingsScreen(context, intent)
+                    }
                 }
             }
             if (debuggingFailed) {
-                Text(
-                    "Developer options couldn't be opened. Turn them on first: Settings → About phone → tap Build number seven times.",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
+                item { Note("Developer options couldn't be opened. Turn them on first: Settings → About phone → tap Build number seven times.", error = true) }
             }
-            Text(
-                "Manifests: ${snap.systems.size} systems · ${snap.profiles.size} profiles · ${snap.folders.size} folders · guide ${snap.guide.size}",
-                style = MaterialTheme.typography.bodySmall
-            )
-            snap.errors.forEach { Text("! $it", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-            index.report?.let { r ->
-                Text("Last index: ${r.files} files, ${r.updated} updated, ${r.removed} removed, ${r.millis} ms", style = MaterialTheme.typography.bodySmall)
-                r.problems.forEach { Text("! $it", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-            }
-            val shizuku by vm.shizuku.collectAsState()
-            val moveResult by vm.moveResult.collectAsState()
-            // Real displays, not the manifest's idea of them: a move needs Shizuku and two screens that are switched on.
-            val displays = rememberDisplays()
-            val usable = displays.filter { it.state != Display.STATE_OFF }
-            SectionTitle("Screens")
-            Text(
-                if (displays.isEmpty()) {
-                    "No displays reported."
-                } else {
-                    displays.joinToString(
-                        " · "
-                    ) { displayLabel(it) + if (it.state == Display.STATE_OFF) " — off" else "" }
-                },
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(shizukuText(shizuku), style = MaterialTheme.typography.bodySmall)
-            FlowRow(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                GlowButton("Refresh") { vm.shizukuRefresh() }
-                if (shizuku == ScreenMover.Status.PERMISSION_NEEDED) GlowButton("Allow Sortie in Shizuku") { vm.shizukuRequest() }
-                if (shizuku == ScreenMover.Status.READY && usable.size > 1) {
-                    for (from in usable) {
-                        for (to in usable) {
-                            if (from.displayId == to.displayId) continue
-                            GlowButton("App on ${displayLabel(from)} → ${displayLabel(to)}") { vm.moveTopApp(from.displayId, to.displayId) }
+            item { SectionTitle("Library") }
+            settingsGroup(null) {
+                row {
+                    FocusRow(onClick = {}) {
+                        Column {
+                            Line(
+                                "Manifests",
+                                "${plural(snap.systems.size, "system")} · ${plural(snap.profiles.size, "profile")} · " +
+                                    "${plural(snap.folders.size, "folder")} · guide ${snap.guide.size}"
+                            )
+                            snap.errors.forEach { Note(it, error = true) }
+                        }
+                    }
+                }
+                index.report?.let { r ->
+                    row {
+                        FocusRow(onClick = {}) {
+                            Column {
+                                Line("Last index", "${r.files} files · ${r.updated} updated · ${r.removed} removed · ${r.millis} ms")
+                                r.problems.forEach { Note(it, error = true) }
+                            }
                         }
                     }
                 }
             }
-            if (shizuku == ScreenMover.Status.READY && usable.size < 2) {
-                Text(
-                    "Moving apps needs a second screen that is switched on.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (moveResult.isNotBlank()) Text(moveResult, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            SectionTitle("Launch log (newest first)")
-        }
-        items(log) { e ->
-            Column(Modifier.padding(vertical = 6.dp)) {
-                Text("${e.at}  ${e.gameId}  ${if (e.launched) "✓" else "✗"}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                e.attempts.forEach { a ->
-                    Text("  ${a.profileId}: ${a.outcome}", style = MaterialTheme.typography.bodySmall)
-                    if (a.command.isNotBlank()) {
-                        Text(
-                            "    adb shell ${a.command}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+            item { SectionTitle("Screens") }
+            settingsGroup(null) {
+                row {
+                    FocusRow(onClick = {}) {
+                        Line(
+                            "Displays",
+                            if (displays.isEmpty()) {
+                                "No displays reported."
+                            } else {
+                                displays.joinToString(" · ") { displayLabel(it) + if (it.state == Display.STATE_OFF) " — off" else "" }
+                            }
                         )
                     }
                 }
+                row { FocusRow(onClick = {}) { Line("Shizuku", shizukuText(shizuku)) } }
+            }
+            item {
+                FlowRow(
+                    Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    GlowButton("Refresh") { vm.shizukuRefresh() }
+                    if (shizuku == ScreenMover.Status.PERMISSION_NEEDED) GlowButton("Allow Sortie in Shizuku", primary = true) { vm.shizukuRequest() }
+                    if (shizuku == ScreenMover.Status.READY && usable.size > 1) {
+                        for (from in usable) {
+                            for (to in usable) {
+                                if (from.displayId == to.displayId) continue
+                                GlowButton("App on ${displayLabel(from)} → ${displayLabel(to)}") { vm.moveTopApp(from.displayId, to.displayId) }
+                            }
+                        }
+                    }
+                }
+            }
+            if (shizuku == ScreenMover.Status.READY && usable.size < 2) item { Note("Moving apps needs a second screen that is switched on.") }
+            if (moveResult.isNotBlank()) item { Note(moveResult) }
+            item { SectionTitle("Launch log (newest first)") }
+            if (log.isEmpty()) item { Note("Nothing launched since Sortie started.") }
+            settingsGroup(null) {
+                log.forEach { e -> row { FocusRow(onClick = {}) { LaunchLogEntry(e) } } }
+            }
+        }
+        HintBar("A" to "choose", "B" to "back")
+    }
+}
+
+/** One launch: ✓ or ✗, the game and when, then every profile tried with its outcome and the equivalent adb command. */
+@Composable
+private fun LaunchLogEntry(e: LaunchManager.LogEntry) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (e.launched) "✓" else "✗",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = if (e.launched) Amber else MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(end = 10.dp)
+            )
+            Column(Modifier.weight(1f)) {
+                Text(e.gameId, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(e.at, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        e.attempts.forEach { a ->
+            Text("${a.profileId}: ${a.outcome}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 24.dp, top = 4.dp))
+            if (a.command.isNotBlank()) {
+                Text(
+                    "adb shell ${a.command}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 24.dp)
+                )
             }
         }
     }
@@ -223,30 +283,47 @@ fun PermissionScreen() {
             delay(40)
         }
     }
-    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Let Sortie see your games", style = MaterialTheme.typography.titleLarge)
-        Text(
-            "Sortie lists the games stored on this device and its memory card, and keeps your favourites, notes and play time next to " +
-                "them. Android asks you to allow this once, as \"All files access\". Sortie has no internet access.",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Text(
-            "1. Press Open settings.\n2. Turn on \"Allow access to manage all files\" for Sortie.\n3. Go back; Sortie opens your library.",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        GlowButton("Open settings", Modifier.focusRequester(primary), primary = true) { failed = !openAllFilesAccessSettings(ctx) }
-        if (failed) {
+    // scrolls so large text on a short screen still reaches the button; the focused button scrolls itself into view
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
+        Column(Modifier.widthIn(max = 640.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Let Sortie see your games", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
             Text(
-                "Android settings couldn't be opened from here. Open the Settings app yourself and go to $ALL_FILES_ACCESS_PATH.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error
+                "Sortie lists the games stored on this device and its memory card, and keeps your favourites, notes and play time next to " +
+                    "them. Android asks you to allow this once, as \"All files access\". Sortie has no internet access.",
+                style = MaterialTheme.typography.bodyMedium
             )
-        } else {
-            Text(
-                "If Settings opens on a different page, look for $ALL_FILES_ACCESS_PATH.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Slate).padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("Press Open settings.", "Turn on \"Allow access to manage all files\" for Sortie.", "Go back; Sortie opens your library.")
+                    .forEachIndexed { i, step ->
+                        Row {
+                            Text(
+                                "${i + 1}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Amber,
+                                modifier = Modifier.width(28.dp)
+                            )
+                            Text(step, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 2.dp))
+                        }
+                    }
+            }
+            GlowButton("Open settings", Modifier.focusRequester(primary), primary = true) { failed = !openAllFilesAccessSettings(ctx) }
+            if (failed) {
+                Text(
+                    "Android settings couldn't be opened from here. Open the Settings app yourself and go to $ALL_FILES_ACCESS_PATH.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            } else {
+                Text(
+                    "If Settings opens on a different page, look for $ALL_FILES_ACCESS_PATH.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

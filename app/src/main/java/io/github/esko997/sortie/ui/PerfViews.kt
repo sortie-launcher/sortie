@@ -2,8 +2,8 @@ package io.github.esko997.sortie.ui
 
 import android.view.KeyEvent
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,6 +59,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -249,13 +251,22 @@ private fun MetricTile(frame: PerfFrame, metric: PerfMetric, modifier: Modifier)
         Sparkline.of(frame.history.times, values, Sparkline.range(metric, values, frame.stats))
     }
     val now = metric.read(frame.stats)
+    val shape = RoundedCornerShape(10.dp)
     Column(
-        modifier.clip(RoundedCornerShape(10.dp)).background(Slate).padding(horizontal = 10.dp, vertical = 8.dp)
+        modifier.clip(shape).background(Slate).border(1.dp, Hairline, shape).padding(horizontal = 10.dp, vertical = 8.dp)
             .semantics(mergeDescendants = true) {}
     ) {
         Text(metric.label, style = MaterialTheme.typography.labelMedium, color = Amber.copy(alpha = 0.85f), maxLines = 1)
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(now?.let(metric::big) ?: "—", fontSize = 28.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+            // fixed-width digits: a reading that changes every poll keeps its place instead of shuffling sideways
+            Text(
+                now?.let(metric::big) ?: "—",
+                style = LocalTextStyle.current.merge(Tabular),
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
             Text(
                 metric.unit(frame.stats),
                 style = MaterialTheme.typography.labelMedium,
@@ -268,6 +279,9 @@ private fun MetricTile(frame: PerfFrame, metric: PerfMetric, modifier: Modifier)
         SparklineView(line, Modifier.fillMaxWidth().height(30.dp))
     }
 }
+
+/** Figures of equal width, for numbers that change in place. */
+private val Tabular = TextStyle(fontFeatureSettings = "tnum")
 
 /** The line, broken where a poll had no value, over a faint baseline; the newest point is a dot at the right edge. */
 @Composable
@@ -314,7 +328,14 @@ private fun Chip(label: String, value: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, fontSize = 11.sp, color = Amber.copy(alpha = 0.8f), maxLines = 1)
-        Text(value, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium, maxLines = 1)
+        Text(
+            value,
+            style = LocalTextStyle.current.merge(Tabular),
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1
+        )
     }
 }
 
@@ -334,17 +355,19 @@ private fun ZoneRow(group: ZoneGroup, modifier: Modifier) {
     }
 }
 
-/** A small pill that opens or leaves the Perf page; it glows while it has the controller focus. */
+/** A small pill that opens or leaves the Perf page; it glows while it has the controller focus and sinks while A is held. */
 @Composable
 fun PerfChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val interaction = remember { MutableInteractionSource() }
+    var held by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(50)
     Box(
         modifier
-            .focusGlow(interaction.collectIsFocusedAsState().value, shape)
+            .confirmHeld { held = it }
+            .focusGlow(interaction.collectIsFocusedAsState().value, shape, pressed = held)
             .clip(shape)
             .background(Slate)
-            .clickable(interactionSource = interaction, indication = LocalIndication.current, role = Role.Button, onClick = onClick)
+            .clickable(interactionSource = interaction, indication = PressVeil, role = Role.Button, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {

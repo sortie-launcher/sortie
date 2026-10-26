@@ -10,7 +10,6 @@ import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -62,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.layout.ContentScale
@@ -101,6 +101,7 @@ import io.github.esko997.sortie.shell.TaskSwitcher
 import io.github.esko997.sortie.stats.CompanionView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -367,16 +368,20 @@ private fun NowPlaying(graph: SortieApp.Graph, session: SessionEntity) {
 }
 
 /**
- * Whole minutes since [startedAt], recomposed once a minute (aligned to the session's minute boundary) and never faster: the
- * only periodic work the companion does while something is being played.
+ * Whole minutes since [startedAt], recomposed once a minute (aligned to the session's minute boundary) and never faster, and
+ * only while this panel is in front on a lit screen ([rememberShown]): the only periodic work the companion does while
+ * something is being played. Shown again, it catches up at once.
  */
 @Composable
 private fun playingMinutes(startedAt: Long): Long {
+    val shown = rememberShown()
     var now by remember(startedAt) { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(startedAt) {
-        while (true) {
-            now = System.currentTimeMillis()
-            delay(MINUTE - (now - startedAt).mod(MINUTE) + 100)
+    LaunchedEffect(startedAt, shown) {
+        shown.collectLatest { visible ->
+            while (visible) {
+                now = System.currentTimeMillis()
+                delay(MINUTE - (now - startedAt).mod(MINUTE) + 100)
+            }
         }
     }
     return ((now - startedAt) / MINUTE).coerceAtLeast(0)
@@ -398,7 +403,7 @@ private fun Panel(
     onTap: (() -> Unit)? = null,
     art: @Composable () -> Unit
 ) {
-    val tap = if (onTap != null) Modifier.clickable(onClick = onTap) else Modifier
+    val tap = if (onTap != null) Modifier.clickable(interactionSource = null, indication = PressVeil, onClick = onTap) else Modifier
     val hasNotes = notes != null && !notes.isEmpty()
     val lower = detail != null || hasNotes
     Column(Modifier.fillMaxSize().then(tap).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -507,12 +512,14 @@ private fun Dock(
                 val item = user.dock.getOrNull(slot)?.takeIf { it.isNotEmpty() }?.let { resolve(it, apps, shortcuts) }
                 val interaction = remember { MutableInteractionSource() }
                 val focused by interaction.collectIsFocusedAsState()
+                var held by remember { mutableStateOf(false) }
                 if (slot == 0) LaunchedEffect(focused) { firstFocused = focused }
                 val unpin: (() -> Unit)? = if (item != null) ({ graph.user.setDockSlot(slot, null) }) else null
                 Box(
                     Modifier
                         .then(if (slot == 0) Modifier.focusRequester(first) else Modifier)
-                        .focusGlow(focused, CircleShape)
+                        .confirmHeld { held = it }
+                        .focusGlow(focused, CircleShape, pressed = held)
                         .size(56.dp)
                         .clip(CircleShape)
                         .background(Slate.copy(alpha = if (item == null) 0.35f else 0.8f))
@@ -547,7 +554,10 @@ private fun Dock(
             }
         }
         // the dot sits centred in a corner-sized hit box so it lines up with the '+' opposite (and is easier to hit)
-        Box(Modifier.size(CORNER).clip(CircleShape).clickable(onClickLabel = "Dock", onClick = onToggle), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.size(CORNER).clip(CircleShape).clickable(interactionSource = null, indication = PressVeil, onClickLabel = "Dock", onClick = onToggle),
+            contentAlignment = Alignment.Center
+        ) {
             Box(Modifier.size(if (open) 20.dp else 14.dp).clip(CircleShape).background(if (open) Amber else Slate.copy(alpha = 0.8f)))
         }
     }
@@ -591,7 +601,8 @@ private fun Bell(graph: SortieApp.Graph, modifier: Modifier) {
     val shizuku by graph.screenMover.status.collectAsState()
     if (shizuku != ScreenMover.Status.READY) return
     Box(
-        modifier.size(CORNER).clip(CircleShape).clickable(onClickLabel = "Notifications") { graph.screenMover.expandNotifications() },
+        modifier.size(CORNER).clip(CircleShape)
+            .clickable(interactionSource = null, indication = PressVeil, onClickLabel = "Notifications") { graph.screenMover.expandNotifications() },
         contentAlignment = Alignment.Center
     ) { Text("🔔", fontSize = 18.sp) }
 }
@@ -609,15 +620,17 @@ private val BASE_TOP = 68.dp
 @Composable
 private fun CornerPlus(modifier: Modifier, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
+    var held by remember { mutableStateOf(false) }
     Box(
         modifier
-            .focusGlow(interaction.collectIsFocusedAsState().value, CircleShape)
+            .confirmHeld { held = it }
+            .focusGlow(interaction.collectIsFocusedAsState().value, CircleShape, pressed = held)
             .size(CORNER)
             .clip(CircleShape)
             .background(Slate.copy(alpha = 0.6f))
             .clickable(
                 interactionSource = interaction,
-                indication = LocalIndication.current,
+                indication = PressVeil,
                 onClickLabel = "Open an app here",
                 role = Role.Button,
                 onClick = onClick
@@ -703,29 +716,46 @@ fun TouchSwitcher(switcher: TaskSwitcher, state: TaskSwitcher.State, displayId: 
                 else -> "On this screen"
             },
             style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 12.dp)
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
             items(shown, key = { it.task.id }) { e ->
                 val elsewhere = e.task.displayId != displayId
+                // the same tile as the controller switcher's cards on the other screen: Slate under a faint top-left light
+                val card = RoundedCornerShape(14.dp)
                 Column(
-                    Modifier.width(150.dp).clip(RoundedCornerShape(12.dp)).background(Slate).clickable(enabled = !state.busy) {
+                    Modifier.width(150.dp).clip(card).background(Slate).background(CardLight).clickable(
+                        interactionSource = null,
+                        indication = PressVeil,
+                        enabled = !state.busy
+                    ) {
                         if (elsewhere) switcher.moveTo(e, displayId) else switcher.bringToFront(e)
                     }.padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(Modifier.fillMaxWidth()) {
                         AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(64.dp).align(Alignment.Center)) { it.setImageDrawable(e.icon) }
-                        Text(
-                            "✕",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.align(Alignment.TopEnd).clip(CircleShape).clickable(enabled = !state.busy, onClickLabel = "Close app") {
-                                switcher.closeApp(e)
-                            }.padding(6.dp)
-                        )
+                        Box(
+                            Modifier.align(Alignment.TopEnd).padding(4.dp).size(28.dp).clip(CircleShape).background(Ink.copy(alpha = 0.55f))
+                                .clickable(interactionSource = null, indication = PressVeil, enabled = !state.busy, onClickLabel = "Close app") {
+                                    switcher.closeApp(e)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("✕", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
-                    Text(e.label, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+                    Text(
+                        e.label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        minLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
                     val other = switcher.other(displayId)
                     if (elsewhere) {
                         Text("other screen", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -745,3 +775,6 @@ fun TouchSwitcher(switcher: TaskSwitcher, state: TaskSwitcher.State, displayId: 
         }
     }
 }
+
+/** The faint light across a switcher card, matching the controller switcher's tiles. */
+private val CardLight = Brush.linearGradient(listOf(Color(0x14FFFFFF), Color.Transparent))
