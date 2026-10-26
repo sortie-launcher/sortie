@@ -1,0 +1,58 @@
+[
+  {
+    "id": "foundry_head_1",
+    "slot": "HEAD",
+    "family": "foundry",
+    "name": "Welder's hood",
+    "asset": "mecha/foundry/foundry_head_1.png"
+  },
+  {
+    "id": "foundry_head_2",
+    "slot": "HEAD",
+    "family": "foundry",
+    "name": "Kiln keeper",
+    "asset": "mecha/foundry/foundry_head_2.png"
+  },
+  {
+    "id": "foundry_body_1",
+    "slot": "BODY",
+    "family": "foundry",
+    "name": "Hearth chest",
+    "asset": "mecha/foundry/foundry_body_1.png"
+  },
+  {
+    "id": "foundry_body_2",
+    "slot": "BODY",
+    "family": "foundry",
+    "name": "Draft bellows",
+    "asset": "mecha/foundry/foundry_body_2.png"
+  },
+  {
+    "id": "foundry_arms_1",
+    "slot": "ARMS",
+    "family": "foundry",
+    "name": "Hammer and tongs",
+    "asset": "mecha/foundry/foundry_arms_1.png"
+  },
+  {
+    "id": "foundry_arms_2",
+    "slot": "ARMS",
+    "family": "foundry",
+    "name": "Torch and brush",
+    "asset": "mecha/foundry/foundry_arms_2.png"
+  },
+  {
+    "id": "foundry_legs_1",
+    "slot": "LEGS",
+    "family": "foundry",
+    "name": "Slag sabatons",
+    "asset": "mecha/foundry/foundry_legs_1.png"
+  },
+  {
+    "id": "foundry_legs_2",
+    "slot": "LEGS",
+    "family": "foundry",
+    "name": "Split-toe gaiters",
+    "asset": "mecha/foundry/foundry_legs_2.png"
+  }
+]

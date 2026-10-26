@@ -13,12 +13,13 @@ internal const val MECHA_STARTER_ORIGIN = "Starter kit"
 /** The family whose variant-1 parts a new hangar wears. */
 internal const val MECHA_STARTER_FAMILY = "yard"
 
+private val STARTER_FAMILIES = setOf("yard", "survey", "courier")
+
 private const val PART_NAME_MAX = 32
 private const val STARTER_CHARGE = 80
 private const val STARTER_CONDITION = 90
 private const val TUNE_STEP = 20
 private const val CHARGE_STEP = 25
-private const val SALVAGE_WEAR = 5
 
 /** Charge spent per this many credited minutes of play (never below [MECHA_STAT_FLOOR]). */
 private const val MINUTES_PER_CHARGE_POINT = 6
@@ -57,13 +58,14 @@ internal fun parseMechaCatalog(family: String, text: String, assetProblem: (Stri
     return rows.sortedWith(compareBy({ it.slot.ordinal }, { it.variant }))
 }
 
-/** A new hangar: every family's variant-1 parts (twelve), the starter family fitted, [MECHA_STARTER_CREDITS] credits. */
+/** A new hangar: the original three families' variant-1 parts, the yard family fitted, and starter credits. */
 internal fun starterMechaState(parts: List<MechaPart>, now: Long): MechaState {
-    val starters = parts.filter { it.variant == 1 }
+    val starters = parts.filter { it.variant == 1 && it.family in STARTER_FAMILIES }
     val equipped = MechaSlot.entries.associateWith { slot ->
         starters.first { it.family == MECHA_STARTER_FAMILY && it.slot == slot }.id
     }
     return MechaState(
+        version = 2,
         equipped = equipped,
         owned = starters.mapTo(LinkedHashSet()) { it.id },
         salvage = MECHA_STARTER_CREDITS,
@@ -91,23 +93,43 @@ internal fun mechaNameProblem(name: String): String? = when {
 
 /** Why a loaded [MechaState] can't be used with [parts], or null when it is consistent. */
 internal fun mechaStateProblem(state: MechaState, parts: List<MechaPart>): String? {
+    mechaStateProblem(state)?.let { return it }
     val byId = parts.associateBy { it.id }
     val unknown = state.owned.filter { it !in byId }
+    return when {
+        unknown.isNotEmpty() -> "it owns parts this build doesn't have (${unknown.joinToString()})"
+        state.equipped.any { (slot, id) -> byId[id]?.slot != slot } -> "its fitted parts aren't of the right slots"
+        else -> null
+    }
+}
+
+/** Catalog-independent validation shared by state files and portable backup parsing. */
+fun mechaStateProblem(state: MechaState): String? {
     val stats = MECHA_STAT_FLOOR..MECHA_STAT_MAX
     return when {
-        state.version != 1 -> "it is format version ${state.version}, this build reads version 1"
+        state.version !in 1..2 -> "it is format version ${state.version}, this build reads versions 1 and 2"
+        state.version == 1 && !state.hasLegacyCommerceDefaults() -> "a legacy hangar contains newer commerce fields"
         mechaNameProblem(state.name) != null -> "its name \"${state.name}\" is invalid"
-        unknown.isNotEmpty() -> "it owns parts this build doesn't have (${unknown.joinToString()})"
-        MechaSlot.entries.any { slot -> state.equipped[slot].let { id -> id == null || id !in state.owned || byId[id]?.slot != slot } } ->
-            "its fitted parts aren't owned parts of the right slots"
+        MechaSlot.entries.any { state.equipped[it] !in state.owned } -> "its fitted parts aren't complete owned parts"
         state.origins.keys.any { it !in state.owned } -> "it records where unowned parts came from"
         state.salvage < 0 || state.salvageRuns < 0 || state.creditedMinutes < 0 -> "a counter is negative"
         state.pendingMinutes !in 0 until MECHA_MINUTES_PER_CREDIT -> "its pending play minutes (${state.pendingMinutes}) are out of range"
+        state.version == 2 && state.salvage >= MECHA_CREDIT_CEILING && state.pendingMinutes != 0 ->
+            "it banks pending credit progress at the earning ceiling"
         state.bond !in 0..MECHA_STAT_MAX -> "its bond (${state.bond}) is out of range"
         state.charge !in stats || state.condition !in stats -> "its charge or condition is out of range"
         state.initializedAt <= 0 -> "it has no start time"
-        else -> null
+        else -> mechaCommerceProblem(state)
     }
+}
+
+private fun MechaState.hasLegacyCommerceDefaults(): Boolean =
+    ownedFinishes == setOf(MechaFinish.PLAIN) && equippedFinishes.isEmpty() && cabinetSpins == 0 && lastSpin == null
+
+/** Called after catalog/state validation; upgrading never awards parts or changes historical counters. */
+internal fun MechaState.upgraded(): MechaState {
+    require(mechaStateProblem(this) == null) { "Invalid hangar state: ${mechaStateProblem(this)}" }
+    return if (version == 1) copy(version = 2, pendingMinutes = if (salvage >= MECHA_CREDIT_CEILING) 0 else pendingMinutes) else this
 }
 
 /**
@@ -153,7 +175,7 @@ internal fun MechaState.renamed(input: String): MechaResult {
 
 internal fun MechaState.equipping(partId: String, parts: List<MechaPart>): MechaResult {
     val part = parts.firstOrNull { it.id == partId } ?: return MechaResult(this, error = "There is no part \"$partId\".")
-    if (partId !in owned) return MechaResult(this, error = "${part.name} isn't in the hangar yet; salvage can turn it up.")
+    if (partId !in owned) return MechaResult(this, error = "${part.name} isn't in the hangar yet; find it in the shop.")
     if (equipped[part.slot] == partId) return MechaResult(this, message = "${part.name} is already fitted.")
     return MechaResult(copy(equipped = equipped + (part.slot to partId)), message = "Fitted ${part.name}.")
 }
@@ -187,44 +209,19 @@ internal fun MechaState.withEnabled(on: Boolean): MechaResult =
 internal fun MechaState.withMotion(on: Boolean): MechaResult =
     if (motion == on) MechaResult(this) else MechaResult(copy(motion = on), message = if (on) "Animation on." else "Animation off.")
 
-/**
- * Spends one credit on a part not yet owned in [slot] (any slot when null). The pick is deterministic: the same state always
- * finds the same part. With nothing left to find, or no credit, nothing changes and nothing is spent.
- */
-internal fun MechaState.salvaged(parts: List<MechaPart>, slot: MechaSlot? = null): MechaResult {
-    val candidates = unownedIn(parts, slot)
-    if (candidates.isEmpty()) {
-        val what = if (slot == null) "Every part" else "Every ${slot.label()} part"
-        return MechaResult(this, message = "$what is already in the hangar; no credit spent.")
-    }
-    if (salvage <= 0) {
-        return MechaResult(this, message = "No salvage credits. Every $MECHA_MINUTES_PER_CREDIT minutes of play earns one ($minutesToNextCredit to go).")
-    }
-    val pick = candidates[Math.floorMod("salvage-$salvageRuns-${slot?.name ?: "ANY"}".hashCode(), candidates.size)]
-    val run = salvageRuns + 1
-    val next = copy(
-        owned = owned + pick.id,
-        origins = origins + (pick.id to "Salvage run #$run"),
-        salvage = salvage - 1,
-        salvageRuns = run,
-        condition = max(MECHA_STAT_FLOOR, condition - SALVAGE_WEAR),
-        bond = bondPlus(1)
-    )
-    return MechaResult(next, message = "Salvage run #$run turned up ${pick.name} (${pick.family} ${pick.slot.label()}). ${creditText(next.salvage)} left.")
-}
-
 /** The key that identifies a play session across backup restores and history imports, which keep game and start time. */
 internal fun mechaSessionKey(session: PlaySession): String = "${session.gameId}@${session.startedAt}"
 
 /**
  * Credits completed game sessions not seen before: only games ([PlaySession.isGame], not apps or shortcuts), not abandoned, started at or after
  * [MechaState.initializedAt]. Each counts its whole minutes up to [MECHA_SESSION_MINUTES_CAP]; every [MECHA_MINUTES_PER_CREDIT]
- * accumulated minutes is one credit, the rest carries over. Every new eligible session is remembered, so the same session read
- * again (reopened, restored, re-imported) never counts twice. Play wears charge a little, never below [MECHA_STAT_FLOOR].
+ * accumulated minutes is one credit until [MECHA_CREDIT_CEILING]. Progress at the ceiling is discarded, never banked.
+ * Every new eligible session is remembered, so reopened/restored/re-imported play never counts twice. All eligible play still
+ * counts toward history and wears charge a little, never below [MECHA_STAT_FLOOR], even when earnings are capped.
  */
 internal fun MechaState.credited(sessions: List<PlaySession>): MechaResult {
     val processed = LinkedHashSet(processedSessions)
-    var pending = pendingMinutes
+    var pending = if (salvage >= MECHA_CREDIT_CEILING) 0 else pendingMinutes
     var credits = 0
     var minutes = 0
     var played = 0
@@ -235,12 +232,15 @@ internal fun MechaState.credited(sessions: List<PlaySession>): MechaResult {
         val counted = ((end - s.startedAt) / 60_000L).coerceIn(0L, MECHA_SESSION_MINUTES_CAP.toLong()).toInt()
         if (counted > 0) played++
         minutes += counted
-        pending += counted
-        credits += pending / MECHA_MINUTES_PER_CREDIT
-        pending %= MECHA_MINUTES_PER_CREDIT
+        if (salvage + credits < MECHA_CREDIT_CEILING) {
+            pending += counted
+            credits += min(pending / MECHA_MINUTES_PER_CREDIT, MECHA_CREDIT_CEILING - salvage - credits)
+            pending = if (salvage + credits >= MECHA_CREDIT_CEILING) 0 else pending % MECHA_MINUTES_PER_CREDIT
+        }
     }
     if (processed.size == processedSessions.size) return MechaResult(this)
     val next = copy(
+        version = 2,
         processedSessions = processed,
         pendingMinutes = pending,
         creditedMinutes = creditedMinutes + minutes,
@@ -253,6 +253,7 @@ internal fun MechaState.credited(sessions: List<PlaySession>): MechaResult {
     )
     val message = when {
         credits > 0 -> "$name logged $minutes min of play: +${creditText(credits)}."
+        minutes > 0 && next.salvage >= MECHA_CREDIT_CEILING -> "$name logged $minutes min of play; credit earnings are paused at the ceiling."
         minutes > 0 -> "$name logged $minutes min of play; ${next.minutesToNextCredit} more for the next credit."
         else -> null
     }
@@ -260,7 +261,5 @@ internal fun MechaState.credited(sessions: List<PlaySession>): MechaResult {
 }
 
 private fun MechaState.bondPlus(n: Int): Int = min(MECHA_STAT_MAX, bond + n)
-
-private fun MechaSlot.label(): String = name.lowercase()
 
 private fun creditText(n: Int): String = if (n == 1) "1 salvage credit" else "$n salvage credits"

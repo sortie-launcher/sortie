@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#296968">
+  <title>Salvage cabinet · Rivet workshop</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <header class="page-header">
+    <a href="../index.html">Rivet workshop</a>
+    <p>Fictional demo credits. Separate from Sortie.</p>
+  </header>
+  <main>
+    <section class="cabinet" aria-labelledby="cabinet-title">
+      <div class="marquee"><span class="rivet" aria-hidden="true"></span><div><h1 id="cabinet-title">Salvage cabinet</h1><p>A little luck. A new look.</p></div><span class="rivet" aria-hidden="true"></span></div>
+      <div class="cabinet-inner">
+        <div class="meter-row"><div>Demo balance <strong id="balance">30</strong></div><div>Completed spins <strong id="spins">0</strong></div></div>
+        <div class="reel-box" id="reel-box" role="img" aria-label="Three reels, ready to spin">
+          <div class="reel"><canvas width="32" height="32" aria-hidden="true"></canvas><span></span></div>
+          <div class="reel"><canvas width="32" height="32" aria-hidden="true"></canvas><span></span></div>
+          <div class="reel"><canvas width="32" height="32" aria-hidden="true"></canvas><span></span></div>
+        </div>
+        <fieldset id="bets"><legend>Choose a stake</legend><div class="bet-row"></div></fieldset>
+        <p class="stake-note" id="stake-note"></p>
+        <button class="spin-button" id="spin" type="button"><span class="lever" aria-hidden="true"></span><span>Spin for <span id="stake">1</span> credit</span></button>
+        <div class="delivery" aria-live="polite" aria-atomic="true"><h2 id="result-title">Ready when you are</h2><p id="result-message">Three matching symbols deliver a part + finish. Or choose exactly what you want from the shelf.</p><div id="result-reward"></div></div>
+        <p class="save-status" id="save-status" role="status">Results are saved before the reels open.</p>
+      </div>
+      <div class="cabinet-foot" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+    </section>
+    <section class="shelf" aria-labelledby="shelf-title"><div class="shelf-heading"><h2 id="shelf-title">Skip the spin</h2><p>Buy the same part + finish outright. No luck required.</p></div><div id="rewards"></div><p class="inventory-note" id="inventory-note">Your demo collection is empty.</p></section>
+    <section class="rules" aria-labelledby="rules-title"><h2 id="rules-title">Nothing behind the curtain</h2><p>Each reel independently picks one of five symbols with equal probability. All stakes have exactly the same odds. Symbols do not change the reward; your stake selects its tier.</p>
+      <div class="table-scroll"><table><caption>Exact outcomes, out of 125 equally likely combinations</caption><thead><tr><th scope="col">Outcome</th><th scope="col">Chance</th><th scope="col">What comes back</th></tr></thead><tbody><tr><th scope="row">Three matching</th><td>5 / 125 = 4%</td><td>3 × stake + the stake’s part and finish</td></tr><tr><th scope="row">Exactly two matching</th><td>60 / 125 = 48%</td><td>Your stake, returned</td></tr><tr><th scope="row">No matching symbols</th><td>60 / 125 = 48%</td><td>0 credits</td></tr></tbody></table></div>
+      <p>The stake is deducted first. A triple returns 3, 9 or 30 credits for a stake of 1, 3 or 10. Already own that reward? Receive its direct price (4, 6 or 10 credits) instead of a second copy, in addition to the triple payout.</p><p>Before duplicate conversion, average cash returned is 60% of the stake; the average cash cost is 40%. Random rewards are never guaranteed. All three items cost 20 credits together, less than your starting 30.</p><p>These are cosmetic review concepts, not live app inventory. Credits cannot be bought, traded or cashed out. No autoplay, expiry or daily pressure.</p>
+    </section>
+  </main>
+  <footer><p>Tab to choose a control; arrow keys change the focused stake. Enter or Space activates a button. One spin per press.</p><button id="reset" type="button">Reset demo to 30 credits</button><div id="reset-confirm" hidden><p>Clear only this cabinet’s demo collection and spin history?</p><button id="reset-yes" type="button">Yes, reset demo</button><button id="reset-no" type="button">Keep my demo</button></div></footer>
+  <noscript>This interactive cabinet needs JavaScript. It never reads or changes your Sortie save.</noscript>
+</body>
+</html>

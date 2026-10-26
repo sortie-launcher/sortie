@@ -39,14 +39,16 @@ class MechaRulesTest {
     }
 
     @Test
-    fun starterOwnsEveryVariantOneAndWearsTheYardSet() {
+    fun starterOwnsOnlyOriginalVariantOnePartsAndWearsTheYardSet() {
         val s = starter()
         assertEquals(12, s.owned.size)
         assertTrue(s.owned.all { it.endsWith("_1") })
+        assertTrue(s.owned.all { it.substringBefore('_') in setOf("yard", "survey", "courier") })
+        assertEquals(2, s.version)
         assertEquals(MechaSlot.entries.associateWith { "yard_${it.name.lowercase()}_1" }, s.equipped)
         assertEquals(MECHA_STARTER_CREDITS, s.salvage)
         assertEquals(MECHA_STARTER_ORIGIN, s.origins["courier_legs_1"])
-        assertEquals(12, s.unownedIn(parts).size)
+        assertEquals(44, s.unownedIn(parts).size)
         assertNull(mechaStateProblem(s, parts))
     }
 
@@ -61,44 +63,6 @@ class MechaRulesTest {
         assertEquals("courier_arms_1", fitted.state.equipped[MechaSlot.ARMS])
         assertEquals("yard_head_1", fitted.state.equipped[MechaSlot.HEAD])
         assertSame(fitted.state, fitted.state.equipping("courier_arms_1", parts).state)
-    }
-
-    @Test
-    fun salvageIsDeterministicAndSpendsOneCreditPerPart() {
-        val s = starter()
-        val a = s.salvaged(parts)
-        assertEquals(a, s.salvaged(parts))
-        val found = (a.state.owned - s.owned).single()
-        assertTrue(found.endsWith("_2"))
-        assertEquals(MECHA_STARTER_CREDITS - 1, a.state.salvage)
-        assertEquals("Salvage run #1", a.state.origins[found])
-        assertEquals(s.equipped, a.state.equipped)
-
-        var state = s
-        repeat(MECHA_STARTER_CREDITS) { state = state.salvaged(parts).state }
-        assertEquals(15, state.owned.size)
-        assertEquals(0, state.salvage)
-        val broke = state.salvaged(parts)
-        assertSame(state, broke.state)
-        assertNull(broke.error)
-        assertNotNull(broke.message)
-
-        val head = s.salvaged(parts, MechaSlot.HEAD).state
-        assertEquals(MechaSlot.HEAD, parts.first { it.id == (head.owned - s.owned).single() }.slot)
-    }
-
-    @Test
-    fun aCompleteSlotOrCollectionCostsNothing() {
-        val heads = parts.filter { it.slot == MechaSlot.HEAD }.map { it.id }
-        val s = starter().copy(owned = starter().owned + heads, salvage = 5)
-        val slot = s.salvaged(parts, MechaSlot.HEAD)
-        assertSame(s, slot.state)
-        assertEquals(5, slot.state.salvage)
-        assertNotNull(slot.message)
-
-        val all = s.copy(owned = parts.map { it.id }.toSet())
-        assertSame(all, all.salvaged(parts).state)
-        assertSame(all, all.salvaged(parts, MechaSlot.LEGS).state)
     }
 
     @Test
@@ -174,7 +138,6 @@ class MechaRulesTest {
     @Test
     fun careNeverReachesDistressAndRestToggles() {
         var s = starter().copy(salvage = 50)
-        repeat(30) { s = s.salvaged(parts).state }
         repeat(40) { i -> s = s.credited(listOf(session("n64/g$i.z64", INIT + i * 200 * MINUTE, 120))).state }
         assertTrue(s.condition >= MECHA_STAT_FLOOR)
         assertTrue(s.charge >= MECHA_STAT_FLOOR)
@@ -220,8 +183,8 @@ class MechaRulesTest {
         assertNotNull(mechaStateProblem(s.copy(charge = 0), parts))
         assertNotNull(mechaStateProblem(s.copy(pendingMinutes = MECHA_MINUTES_PER_CREDIT), parts))
         assertNotNull(mechaStateProblem(s.copy(salvage = -1), parts))
-        assertNotEquals(s, s.copy(version = 2))
-        assertNotNull(mechaStateProblem(s.copy(version = 2), parts))
+        assertNotEquals(s, s.copy(version = 3))
+        assertNotNull(mechaStateProblem(s.copy(version = 3), parts))
     }
 
     @Test

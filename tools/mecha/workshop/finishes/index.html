@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Rivet / Material bench</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <main>
+    <header class="page-head">
+      <a href="../index.html" class="back">Rivet workshop</a>
+      <h1>Material bench</h1>
+      <p class="intro">The same little machine. Three different surfaces.</p>
+      <p class="boundary">Offline proposal only. Fictional demo credits and selections are separate from Sortie. Nothing here changes your launcher, balance or inventory.</p>
+    </header>
+
+    <section aria-labelledby="finishes-title" class="bench">
+      <div class="section-heading"><h2 id="finishes-title">Compare the finish, not the power</h2><span>Original 64 × 64 art</span></div>
+      <form class="controls" id="controls">
+        <label>Machine<select id="family"><option value="courier">Courier</option><option value="survey">Survey</option><option value="yard">Yard</option></select></label>
+        <label>Set<select id="variant"><option value="1">First silhouette</option><option value="2">Second silhouette</option></select></label>
+        <label>Pose<select id="pose"><option value="0">Idle</option><option value="1">Detail</option><option value="2">Left step</option><option value="3">Passing left</option><option value="4">Right step</option><option value="5">Passing right</option><option value="6">Sleeping</option><option value="7">Celebrating</option></select></label>
+        <button type="button" id="motion" aria-pressed="false" disabled>Animate finishes</button>
+      </form>
+      <p id="status" role="status">Loading the shipped Rivet sprites…</p>
+      <div class="comparison" id="comparison">
+        <article class="sample">
+          <div class="stage"><canvas id="plain" width="64" height="64" role="img" aria-label="Original assembled Rivet machine, plain finish"></canvas><canvas class="actual" data-finish="plain" width="64" height="64" role="img" aria-label="Plain finish at native size"></canvas><span class="scale">1×</span></div>
+          <div class="sample-caption"><h3>Paint & steel</h3><span class="price">Included</span><p>The original pixels, untouched. Every outline, joint and signal stays exactly as drawn.</p></div>
+        </article>
+        <article class="sample">
+          <div class="stage"><canvas id="chrome" width="64" height="64" role="img" aria-label="Rivet with restrained metallic glint on interior plates"></canvas><canvas class="actual" data-finish="chrome" width="64" height="64" role="img" aria-label="Metallic finish at native size"></canvas><span class="scale">1×</span></div>
+          <div class="sample-caption"><h3>Brushed alloy</h3><span class="price">Proposal: 10 credits</span><p>A cooler plate surface and one narrow traveling glint. Not a flash across the whole machine.</p></div>
+        </article>
+        <article class="sample">
+          <div class="stage"><canvas id="holo" width="64" height="64" role="img" aria-label="Rivet with a soft iridescent film on interior plates"></canvas><canvas class="actual" data-finish="holo" width="64" height="64" role="img" aria-label="Holographic finish at native size"></canvas><span class="scale">1×</span></div>
+          <div class="sample-caption"><h3>Prism film</h3><span class="price">Proposal: 10 credits</span><p>A thin cyan, lilac and rose coating. The paint still shows through; the silhouette stays solid.</p></div>
+        </article>
+      </div>
+      <div class="bench-footer"><p id="motion-note">Static by default. Optional motion runs at 8 updates/second and stops when this tab is hidden.</p><button id="export" type="button" disabled>Save comparison PNG</button></div>
+    </section>
+
+    <section aria-labelledby="palettes-title" class="palette-section">
+      <div class="section-heading"><h2 id="palettes-title">A home for the machine</h2><span>Three launcher palette proposals</span></div>
+      <p>Choose a bench backdrop below. Each miniature shows the same launcher content with its own readable surfaces, selection and focus colors.</p>
+      <fieldset class="finish-choice"><legend>Finish in the launcher previews</legend><label><input type="radio" name="preview-finish" value="plain" checked> Paint & steel</label><label><input type="radio" name="preview-finish" value="chrome"> Brushed alloy</label><label><input type="radio" name="preview-finish" value="holo"> Prism film</label></fieldset>
+      <div class="palettes" id="palettes"></div>
+      <p class="free-note"><strong>Readability is never a premium upgrade.</strong> All three palettes, clear focus, strong text contrast and reduced-motion support are free in this proposal. Cosmetic finishes buy a material treatment, not power, better odds or a “rarity” label.</p>
+    </section>
+    <footer class="notes"><h2>Small effects, honest boundaries</h2><p>The 64-pixel canvas uses the current Courier, Survey and Yard sheets, assembled legs → body → arms → head. Surface masks leave the dark linework, face, signal lights and transparency intact. No smoothing, glow blur or full-body strobe.</p><p>The 10-credit figures are ideas for optional direct purchases, not live prices. Credits would be fictional, earned through play, non-purchasable and non-tradable. This bench has no wallet, random reward or save access.</p><p>Keyboard: Tab between controls, arrow keys in selectors and finish choices, Enter or Space on buttons. No external fonts, libraries or network services. Serve the worktree root on localhost to load its original art.</p></footer>
+  </main>
+</body>
+</html>

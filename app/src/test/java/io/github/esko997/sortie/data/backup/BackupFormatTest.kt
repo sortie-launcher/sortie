@@ -8,8 +8,14 @@ import io.github.esko997.sortie.data.manifest.GameBookmark
 import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.data.reference.ReferenceCard
 import io.github.esko997.sortie.data.user.GameProgress
+import io.github.esko997.sortie.mecha.MechaCabinetTier
+import io.github.esko997.sortie.mecha.MechaFinish
 import io.github.esko997.sortie.mecha.MechaSlot
+import io.github.esko997.sortie.mecha.MechaSpinOutcome
+import io.github.esko997.sortie.mecha.MechaSpinReceipt
 import io.github.esko997.sortie.mecha.MechaState
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -192,5 +198,60 @@ class BackupFormatTest {
             """{"format": "sortie-backup", "version": 2, "createdAt": 1, "user": {}, "sessions": [], "mecha": {"name": "Rivet"}}"""
         )
         rejected.forEach { assertTrue("accepted: $it", parseBackup(it) is ParsedBackup.Invalid) }
+    }
+
+    private fun withReceipt() = companion.copy(
+        version = 2,
+        ownedFinishes = setOf(MechaFinish.PLAIN, MechaFinish.ALLOY),
+        equippedFinishes = mapOf(MechaSlot.HEAD to MechaFinish.ALLOY),
+        cabinetSpins = 1,
+        lastSpin = MechaSpinReceipt(
+            sequence = 1,
+            tier = MechaCabinetTier.ALLOY,
+            reels = listOf(2, 2, 2),
+            outcome = MechaSpinOutcome.REWARD,
+            returnedCredits = 3,
+            finish = MechaFinish.ALLOY
+        )
+    )
+
+    @Test
+    fun versionTwoCompanionKeepsFinishAndResolvedReceiptWithoutChangingBackupWrapper() {
+        val save = withReceipt()
+        val backup = buildBackup(user, emptyList(), save, 42, "dmg", "0.0.1")
+        assertEquals(2, backup.version)
+        assertEquals(save, valid(encodeBackup(backup)).backup.mecha)
+    }
+
+    @Test
+    fun legacyCompanionWithoutItsVersionStillParsesAsVersionOne() {
+        val backup = buildBackup(user, emptyList(), companion, 42, "dmg", "0.0.1")
+        val root = backupJson.parseToJsonElement(encodeBackup(backup)).jsonObject
+        val legacy = JsonObject(
+            root.getValue("mecha").jsonObject - setOf("version", "ownedFinishes", "equippedFinishes", "cabinetSpins", "lastSpin")
+        )
+        assertEquals(companion, valid(JsonObject(root + ("mecha" to legacy)).toString()).backup.mecha)
+    }
+
+    @Test
+    fun futureVersionsInvalidFinishesAndInconsistentReceiptsRejectTheWholeBackup() {
+        val save = withReceipt()
+        val invalid = listOf(
+            save.copy(version = 99),
+            save.copy(version = 1),
+            save.copy(ownedFinishes = setOf(MechaFinish.PLAIN)),
+            save.copy(cabinetSpins = 2),
+            save.copy(lastSpin = save.lastSpin!!.copy(returnedCredits = 10)),
+            save.copy(lastSpin = save.lastSpin!!.copy(reels = listOf(0, 1, 2))),
+            save.copy(lastSpin = save.lastSpin!!.copy(finish = MechaFinish.HOLO)),
+            save.copy(lastSpin = save.lastSpin!!.copy(partId = "yard_head_1"))
+        )
+        invalid.forEach { broken ->
+            val text = encodeBackup(buildBackup(user, emptyList(), broken, 42, "dmg", "0.0.1"))
+            assertTrue("accepted: $broken", parseBackup(text) is ParsedBackup.Invalid)
+        }
+        val text = encodeBackup(buildBackup(user, emptyList(), save, 42, "dmg", "0.0.1"))
+        assertTrue(parseBackup(text.replace("\"ALLOY\"", "\"UNKNOWN_FINISH\"")) is ParsedBackup.Invalid)
+        assertTrue(parseBackup(text.replace("\"REWARD\"", "\"UNKNOWN_OUTCOME\"")) is ParsedBackup.Invalid)
     }
 }

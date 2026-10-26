@@ -41,7 +41,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -52,9 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.esko997.sortie.mecha.MECHA_FAMILIES
-import io.github.esko997.sortie.mecha.MECHA_MINUTES_PER_CREDIT
 import io.github.esko997.sortie.mecha.MECHA_NAME_MAX
-import io.github.esko997.sortie.mecha.MECHA_SESSION_MINUTES_CAP
 import io.github.esko997.sortie.mecha.MECHA_STAT_MAX
 import io.github.esko997.sortie.mecha.MechaCare
 import io.github.esko997.sortie.mecha.MechaPart
@@ -71,7 +71,13 @@ import io.github.esko997.sortie.ui.Ink
 import io.github.esko997.sortie.ui.Slate
 import kotlinx.coroutines.delay
 
-private enum class HangarTab { WORKSHOP, GALLERY }
+private enum class HangarTab(val label: String) {
+    WORKSHOP("Workshop"),
+    SHOP("Shop"),
+    BENCH("Build bench"),
+    CABINET("Cabinet"),
+    GALLERY("Gallery")
+}
 
 /** How long a reaction (new part, care, rename) shows in the bay. */
 private const val CHEER_MS = 2_400L
@@ -98,8 +104,9 @@ private fun rememberCheer(state: MechaState): Boolean {
  * The companion's hangar, over whatever screen opened it (that screen stays composed underneath, so a reader keeps its page).
  * Workshop is the real, saved hangar: every change goes through [MechaStore]. Gallery previews all the art and never changes
  * what is owned or worn, except through the same equip call when every previewed part is already owned.
- * B closes the Gallery back to the Workshop, then the Hangar.
+ * B returns from any preview or shop to the Workshop, then closes the Hangar.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun Hangar(store: MechaStore, onClose: () -> Unit) {
     val view by store.view.collectAsState()
@@ -107,7 +114,7 @@ fun Hangar(store: MechaStore, onClose: () -> Unit) {
     // the explicit foreground refresh: sessions finished since the last look count now
     LaunchedEffect(Unit) { store.refreshSessions() }
     Dialog(
-        onDismissRequest = { if (tab == HangarTab.GALLERY) tab = HangarTab.WORKSHOP else onClose() },
+        onDismissRequest = { if (tab != HangarTab.WORKSHOP) tab = HangarTab.WORKSHOP else onClose() },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
@@ -128,28 +135,32 @@ fun Hangar(store: MechaStore, onClose: () -> Unit) {
             }
             Column(Modifier.padding(14.dp).onFocusChanged { if (it.hasFocus) focusedAny = true }) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Hangar", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 8.dp))
-                    if (view.state != null) {
-                        MechaChip(
-                            "Workshop",
-                            tab == HangarTab.WORKSHOP,
-                            { tab = HangarTab.WORKSHOP },
-                            if (tab == HangarTab.WORKSHOP) Modifier.focusRequester(first) else Modifier
-                        )
-                        MechaChip(
-                            "Gallery",
-                            tab == HangarTab.GALLERY,
-                            { tab = HangarTab.GALLERY },
-                            if (tab == HangarTab.GALLERY) Modifier.focusRequester(first) else Modifier
-                        )
-                    }
-                    Spacer(Modifier.weight(1f))
+                    Text("Hangar", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     MechaButton("Close", onClick = onClose, modifier = if (view.state == null) Modifier.focusRequester(first) else Modifier)
+                }
+                if (view.state != null) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        HangarTab.entries.forEach { item ->
+                            MechaChip(
+                                item.label,
+                                tab == item,
+                                { tab = item },
+                                if (tab == item) Modifier.focusRequester(first) else Modifier
+                            )
+                        }
+                    }
+                }
+                LaunchedEffect(tab) {
+                    if (inputMode.inputMode == InputMode.Keyboard) runCatching { first.requestFocus() }
                 }
                 Outcome(view)
                 val state = view.state
                 when {
-                    state == null && view.error != null -> Damaged(store, view.error.orEmpty())
+                    state == null && view.error != null -> Damaged(store, view)
                     state == null -> Text(
                         "Opening the hangar…",
                         style = MaterialTheme.typography.bodyMedium,
@@ -157,6 +168,9 @@ fun Hangar(store: MechaStore, onClose: () -> Unit) {
                         modifier = Modifier.padding(top = 12.dp)
                     )
                     tab == HangarTab.WORKSHOP -> Workshop(store, view, state, onHide = onClose)
+                    tab == HangarTab.SHOP -> MechaShop(store, view, state)
+                    tab == HangarTab.BENCH -> MechaBuildBench(store, view, state)
+                    tab == HangarTab.CABINET -> MechaCabinet(store, view, state)
                     else -> Gallery(store, view, state)
                 }
             }
@@ -170,6 +184,7 @@ private fun Outcome(view: MechaView) {
     val error = view.error
     val message = view.message
     when {
+        view.busy -> Text("Saving…", style = MaterialTheme.typography.bodySmall, color = Muted, modifier = Modifier.padding(top = 6.dp))
         error != null && view.state != null -> Text(error, style = MaterialTheme.typography.bodySmall, color = Warning, modifier = Modifier.padding(top = 6.dp))
         message != null -> Text(message, style = MaterialTheme.typography.bodySmall, color = Amber, modifier = Modifier.padding(top = 6.dp))
     }
@@ -177,10 +192,15 @@ private fun Outcome(view: MechaView) {
 
 /** The saved hangar can't be read. Nothing is replaced unless asked twice; the damaged file is kept beside the new one. */
 @Composable
-private fun Damaged(store: MechaStore, error: String) {
+private fun Damaged(store: MechaStore, view: MechaView) {
     var confirming by remember { mutableStateOf(false) }
     Column(Modifier.padding(top = 12.dp).widthIn(max = 560.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(error, style = MaterialTheme.typography.bodyMedium, color = Warning)
+        Text(view.error.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = Warning)
+        if (!view.canStartFresh) {
+            Text("Your saved hangar is not replaced. Try again after the storage or catalog problem is resolved.", style = MaterialTheme.typography.bodyMedium)
+            MechaButton("Try again", onClick = { store.retryOpen() })
+            return@Column
+        }
         Text(
             "Sortie leaves the hangar file as it is. Starting fresh keeps the damaged file in the same folder and begins a new " +
                 "hangar with the starter parts.",
@@ -238,12 +258,12 @@ private fun Bay(store: MechaStore, view: MechaView, state: MechaState, compact: 
     val floor = Modifier.clip(RoundedCornerShape(12.dp)).background(Ink).padding(10.dp)
     if (compact) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(floor) { MechaFigure(view.parts, state.equipped, pose, state.motion, target = 112.dp) }
+            Box(floor) { MechaFigure(view.parts, state.equipped, pose, state.motion && state.enabled, target = 112.dp, finishes = state.equippedFinishes) }
             Box(Modifier.weight(1f)) { Rename(store, state) }
         }
     } else {
         Box(Modifier.fillMaxWidth().then(floor), contentAlignment = Alignment.Center) {
-            MechaFigure(view.parts, state.equipped, pose, state.motion, target = 176.dp)
+            MechaFigure(view.parts, state.equipped, pose, state.motion && state.enabled, target = 176.dp, finishes = state.equippedFinishes)
         }
         Rename(store, state)
     }
@@ -251,22 +271,62 @@ private fun Bay(store: MechaStore, view: MechaView, state: MechaState, compact: 
 
 @Composable
 private fun Rename(store: MechaStore, state: MechaState) {
+    var editing by rememberSaveable { mutableStateOf(false) }
     var draft by rememberSaveable(state.name) { mutableStateOf(state.name) }
     val problem = if (draft.trim() == state.name) null else mechaNameProblem(draft.trim())
-    val canSave = draft.trim() != state.name && problem == null
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            value = draft,
-            onValueChange = { draft = it.take(MECHA_NAME_MAX + 4) },
-            label = { Text("Name") },
-            singleLine = true,
-            isError = problem != null,
-            supportingText = { Text(problem ?: "${draft.trim().length}/$MECHA_NAME_MAX") },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { if (canSave) store.rename(draft.trim()) }),
-            modifier = Modifier.weight(1f)
-        )
-        MechaButton("Rename", onClick = { store.rename(draft.trim()) }, enabled = canSave, modifier = Modifier.padding(start = 8.dp))
+    val field = remember { FocusRequester() }
+    val action = remember { FocusRequester() }
+    val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val inputMode = LocalInputModeManager.current
+    val finish = {
+        keyboard?.hide()
+        focus.clearFocus()
+        editing = false
+        if (inputMode.inputMode == InputMode.Keyboard) action.requestFocus()
+    }
+    val save = {
+        if (problem == null) {
+            if (draft.trim() != state.name) store.rename(draft.trim())
+            finish()
+        }
+    }
+    LaunchedEffect(editing) {
+        if (editing) field.requestFocus()
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (editing) {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it.take(MECHA_NAME_MAX + 4) },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    isError = problem != null,
+                    supportingText = { Text(problem ?: "${draft.trim().length}/$MECHA_NAME_MAX") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { save() }),
+                    modifier = Modifier.weight(1f).focusRequester(field)
+                )
+            } else {
+                Column(Modifier.weight(1f)) {
+                    Text("Name", style = MaterialTheme.typography.labelMedium, color = Muted)
+                    Text(state.name, style = MaterialTheme.typography.titleLarge)
+                }
+            }
+            MechaButton(
+                if (editing) "Save" else "Rename",
+                onClick = { if (editing) save() else editing = true },
+                enabled = !editing || problem == null,
+                modifier = Modifier.focusRequester(action)
+            )
+        }
+        if (editing) {
+            MechaButton("Cancel", onClick = {
+                draft = state.name
+                finish()
+            })
+        }
     }
 }
 
@@ -317,7 +377,7 @@ private fun Settings(store: MechaStore, state: MechaState, onHide: () -> Unit) {
                 if (state.enabled) {
                     Text("Hide companion", style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "${state.name} stops roaming the screens. Show it again here (Hangar on Home). Parts and credits stay.",
+                        "${state.name} stops roaming the screens. Show it again in Home → Extras → Hangar. Parts and credits stay.",
                         style = MaterialTheme.typography.bodySmall,
                         color = Muted
                     )
@@ -337,9 +397,6 @@ private fun Parts(store: MechaStore, view: MechaView, state: MechaState) {
     val inSlot = remember(view.parts, slot) { view.parts.filter { it.slot == slot }.sortedWith(partOrder) }
     val owned = inSlot.filter { state.owns(it.id) }
     val unownedHere = state.unownedIn(view.parts, slot)
-    val unownedAll = state.unownedIn(view.parts)
-
-    Salvage(store, state, slot, unownedHere.size, unownedAll.size)
 
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         MechaSlot.entries.forEach { s ->
@@ -354,7 +411,14 @@ private fun Parts(store: MechaStore, view: MechaView, state: MechaState) {
             FocusRow(onClick = { if (!worn) store.equip(part.id) }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // the whole mech wearing this part, so a swap is judged in context
-                    MechaFigure(view.parts, state.equipped + (slot to part.id), MechaPose.IDLE, motion = false, target = 64.dp)
+                    MechaFigure(
+                        view.parts,
+                        state.equipped + (slot to part.id),
+                        MechaPose.IDLE,
+                        motion = false,
+                        target = 64.dp,
+                        finishes = state.equippedFinishes
+                    )
                     Column(Modifier.weight(1f).padding(start = 10.dp)) {
                         Text(
                             part.name,
@@ -384,7 +448,7 @@ private fun Parts(store: MechaStore, view: MechaView, state: MechaState) {
         if (unownedHere.isNotEmpty()) {
             val n = unownedHere.size
             Text(
-                "$n more ${slot.label().lowercase()} ${if (n == 1) "part" else "parts"} to find by salvaging. The Gallery previews them.",
+                "$n more ${slot.label().lowercase()} ${if (n == 1) "part" else "parts"} available in the Shop or Cabinet. The Gallery previews them.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Muted,
                 modifier = Modifier.padding(horizontal = 8.dp)
@@ -392,43 +456,6 @@ private fun Parts(store: MechaStore, view: MechaView, state: MechaState) {
         }
     }
     FamilySets(store, view, state)
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun Salvage(store: MechaStore, state: MechaState, slot: MechaSlot, leftHere: Int, leftAll: Int) {
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Ink).padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Text(
-            if (state.salvage == 1) "1 salvage credit" else "${state.salvage} salvage credits",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = Amber
-        )
-        Text(
-            "Playing a game earns 1 credit every $MECHA_MINUTES_PER_CREDIT minutes, counting up to $MECHA_SESSION_MINUTES_CAP minutes of each " +
-                "session. ${state.minutesToNextCredit} more ${if (state.minutesToNextCredit == 1) "minute" else "minutes"} to the next one; " +
-                "${state.creditedMinutes} minutes counted so far. Play from before the companion arrived doesn't count.",
-            style = MaterialTheme.typography.bodySmall,
-            color = Muted
-        )
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            MechaButton(
-                "Salvage ${slot.label().lowercase()} (1 credit)",
-                onClick = { store.salvage(slot) },
-                enabled = state.salvage > 0 && leftHere > 0,
-                primary = true
-            )
-            MechaButton("Any slot (1 credit)", onClick = { store.salvage(null) }, enabled = state.salvage > 0 && leftAll > 0)
-        }
-        when {
-            leftAll == 0 -> Text("Every part is in the hangar. Credits keep until there's something new to find.", style = MaterialTheme.typography.bodySmall)
-            leftHere == 0 -> Text("Every ${slot.label().lowercase()} part is found; salvage another slot.", style = MaterialTheme.typography.bodySmall)
-            state.salvage == 0 -> Text("No credits yet. Play something and check back.", style = MaterialTheme.typography.bodySmall)
-        }
-    }
 }
 
 /** Each family's parts that are already in the hangar, as one outfit: wearing a set is four ordinary equips. */
@@ -445,7 +472,7 @@ private fun FamilySets(store: MechaStore, view: MechaView, state: MechaState) {
                 FocusRow(onClick = { set?.forEach { (s, id) -> if (state.equipped[s] != id) store.equip(id) } }) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         if (set != null) {
-                            MechaFigure(view.parts, set, MechaPose.IDLE, motion = false, target = 72.dp)
+                            MechaFigure(view.parts, set, MechaPose.IDLE, motion = false, target = 72.dp, finishes = state.equippedFinishes)
                         }
                         Text(familyName(family), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         Text(
@@ -488,7 +515,7 @@ private fun Gallery(store: MechaStore, view: MechaView, state: MechaState) {
     }
     Column(Modifier.padding(top = 10.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            "Gallery previews every part and pose. It doesn't add parts to your hangar: unfound parts come only from salvage.",
+            "Gallery previews every part and pose for free. Buy missing parts in the Shop or try the Cabinet.",
             style = MaterialTheme.typography.bodySmall,
             color = Muted
         )
@@ -498,7 +525,7 @@ private fun Gallery(store: MechaStore, view: MechaView, state: MechaState) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 MechaPose.entries.forEach { p ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        MechaFigure(view.parts, build, p, state.motion, target = target)
+                        MechaFigure(view.parts, build, p, state.motion && state.enabled, target = target, finishes = state.equippedFinishes)
                         Text(p.label(), style = MaterialTheme.typography.labelMedium, color = Muted)
                     }
                 }
@@ -543,7 +570,7 @@ private fun Gallery(store: MechaStore, view: MechaView, state: MechaState) {
     }
 }
 
-/** All six complete family builds (variant 1 and 2) in one pose, to compare silhouettes and motion; choosing one loads it above. */
+/** Complete family builds in one pose; choosing one loads its free preview above. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ColumnScope.FamilyGrid(view: MechaView, state: MechaState, pose: MechaPose, onPose: (MechaPose) -> Unit, onPick: (Map<MechaSlot, String>) -> Unit) {
@@ -561,7 +588,7 @@ private fun ColumnScope.FamilyGrid(view: MechaView, state: MechaState, pose: Mec
                     Box(Modifier.widthIn(min = 150.dp)) {
                         FocusRow(onClick = { onPick(set) }) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                MechaFigure(view.parts, set, pose, state.motion, target = 88.dp)
+                                MechaFigure(view.parts, set, pose, state.motion && state.enabled, target = 88.dp, finishes = state.equippedFinishes)
                                 Column(Modifier.padding(start = 8.dp)) {
                                     Text("${familyName(family)} $variant", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                                     Text(

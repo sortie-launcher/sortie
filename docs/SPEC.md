@@ -365,27 +365,42 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   no crash. The bottom panel's rotating hero still redraws on its own timer (not the mech).
 - One named companion, cosmetic Bond/Charge/Condition, tune/charge/rest interactions, motion toggle and hide/show.
   No time-away decay, death, streaks, notifications, network calls or requirement to care before playing.
-- Three original pixel-art families (yard, survey, courier), two variants for each head/body/arms/legs slot: 24 authored
-  parts and 1,296 possible loadouts. Eight 64×64 frames per transparent 512×64 atlas, shared attachment points, four poses.
-  Grounded sole fill y61, outline y62, y63 clear. Nearest-neighbour integer display scaling; sheets decoded once off-main.
-  Family-local Pillow generators in `tools/mecha/` reproduce the assets (`mecha/src/main/assets/mecha/`) and review boards.
-  The companion is the `:mecha` module (see the code map below).
-- Twelve starter parts and three clearly labelled starter salvage credits. A deterministic salvage choice finds an unowned
-  part for one credit; completed collections cost nothing. Gallery previews all parts but cannot equip unowned ones.
+- Seven original pixel-art families (yard, survey, courier, foundry, orbital, tidal, domestic), two variants for each
+  head/body/arms/legs slot: 56 authored parts and 38,416 freely equipped loadouts. Eight 64×64 frames per transparent
+  512×64 atlas, shared attachment points, four poses. Grounded sole fill y61, outline y62, y63 clear.
+  Nearest-neighbour integer display scaling; family-local Pillow generators in `tools/mecha/` reproduce the assets
+  (`mecha/src/main/assets/mecha/`) and review boards. The companion is the `:mecha` module (see the code map below).
+- Twelve original starter parts and three starter credits. Direct purchases cost two credits per part and never auto-equip.
+  Alloy (6) and Holo (10) are global reusable finish unlocks, applied per slot; Plain is free. Pixel transforms preserve
+  transparency, outlines, joints and the head's face area. Eight material phases share the existing visible sprite clock;
+  motion off selects phase zero. Decode/transform work runs off-main behind a mutex with a 12 MiB LRU atlas cache.
+- Build bench enumerates only owned two-family sets: matching body/arms chassis family, a different head/legs trim family,
+  independently chosen authored variants. All parts owned permits 672 distinct sets. Free preview; explicit Fit saves
+  the four real part IDs, preserving finishes. No generated artwork, opaque recipe IDs or new part-affix system.
+- Cabinet stakes 1/3/5 target an unowned part/Alloy/Holo. Outcomes: 20% reward plus stake returned, 30% stake returned,
+  50% miss. Expected net cost per reward is 2.5× the stake, 25% above direct purchase in every tier. No duplicates or
+  completed-tier spending. A queued atomic transaction saves debit, reward, sequence and receipt together before display;
+  the expected sequence rejects stale repeat submissions. Receipt viewing is read-only and cannot replay a reward.
 - Room's completed, non-abandoned game sessions after initialization earn one credit per five accumulated whole minutes,
-  capped at 120 counted minutes per session. App/shortcut sessions and prior history do not count. Game ID plus start time
-  prevents double credit after reopening or re-importing history. This measures recorded session duration, not active input.
-  Charge drain uses accumulated-minute boundaries, independent of how Room batches session notifications.
+  capped at 120 counted minutes per session and a 50-credit earning ceiling. Overflow and partial credit are discarded at
+  the ceiling, but sessions are still consumed and Bond/Charge statistics advance. Spending below 50 permits only new
+  play to earn again. Existing balances above 50 are retained; no extra earning until they fall below the ceiling.
+  App/shortcut sessions and prior history do not count. Game ID plus start time prevents double credit after reopening
+  or re-importing history. This measures recorded session duration, not active input. Charge drain uses accumulated-minute
+  boundaries, independent of how Room batches session notifications.
 - State, inventory and credited-session identities are atomically saved together in app-private `files/mecha/state.json`.
-  Failed writes leave the prior state intact; unreadable saves require explicit recovery and are preserved before starting
-  fresh. No writes to Cocoon, library manifests, user preferences or play log come from the companion.
+  Version 1 migrates to version 2 before publication, preserving old parts, equipment, balances and session identities;
+  at-cap pending minutes are cleared. Failed writes leave the prior state intact. A failed migration offers nondestructive
+  retry and blocks backup/restore until resolved; unreadable saves require explicit recovery and are preserved before
+  starting fresh. No writes to Cocoon, library manifests, user preferences or play log come from the companion.
 - Limits: a finite authored collection, not arbitrary generated artwork or statistical part affixes; no combat or
   test-course simulation. Preserve app data; do not uninstall to change builds.
 - Backup (format version 2, docs/formats/user.md): export includes the whole save; restore validates it against the parts
   catalog in the preview, writes it before the history is merged and puts it back if a later step fails. The restored save
   keeps every session either side already credited (`restoredOver`); a backup without a save keeps the device's companion
-  and marks the merged sessions credited (`creditedElsewhere`). No session earns salvage twice. The save format itself is
-  unchanged (version 1), so older builds still read saves written by this one.
+  and marks the merged sessions credited (`creditedElsewhere`). No session earns salvage twice. The nested companion save
+  is now version 2, adding owned/applied finishes and the last cabinet receipt. Version 1 saves/backups remain readable;
+  older app builds cannot read the new companion save. Do not downgrade after opening the updated Hangar.
 - DMG acceptance for `0.1.0-mecha-lab.2` (dock era): rename/care/salvage/equipment, unowned-part preview restrictions,
   four animated poses and hide/show persistence exercised on device; reader Select → Hangar → Gallery → B → B preserves the
   article position and resumes D-pad scrolling.

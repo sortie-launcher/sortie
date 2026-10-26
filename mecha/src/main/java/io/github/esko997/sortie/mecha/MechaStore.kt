@@ -9,6 +9,8 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -22,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
@@ -45,7 +48,8 @@ class MechaStore internal constructor(
     private val loadCatalog: () -> List<MechaPart>,
     private val sessions: (from: Long) -> Flow<List<PlaySession>>,
     private val clock: () -> Long = System::currentTimeMillis,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    private val random: Random = Random.Default
 ) {
     constructor(context: Context, sessions: (from: Long) -> Flow<List<PlaySession>>) : this(
         locate = { File(context.applicationContext.filesDir, "mecha/state.json") },
@@ -65,11 +69,13 @@ class MechaStore internal constructor(
     val view: StateFlow<MechaView> = _view
 
     private val jobs = Channel<suspend () -> Unit>(Channel.UNLIMITED)
+    private val pendingChanges = AtomicInteger()
 
     // Touched only by the worker.
     private var parts: List<MechaPart> = emptyList()
     private var state: MechaState? = null
     private var damaged = false
+    private var migrationPending = false
     private var observer: Job? = null
     private var lastPetAt: Long? = null
 
@@ -82,7 +88,7 @@ class MechaStore internal constructor(
                     throw e
                 } catch (e: Exception) {
                     Log.w(TAG, "mecha job", e)
-                    _view.value = _view.value.copy(error = "Hangar trouble: ${describe(e)}", message = null)
+                    _view.update { it.copy(error = "Hangar trouble: ${describe(e)}", message = null) }
                 }
             }
         }
@@ -95,7 +101,36 @@ class MechaStore internal constructor(
 
     internal fun care(action: MechaCare) = change { it.cared(action) }
 
-    internal fun salvage(slot: MechaSlot? = null) = change { it.salvaged(parts, slot) }
+    internal fun buyPart(partId: String) = change { it.buyingPart(partId, parts) }
+
+    internal fun buyFinish(finish: MechaFinish) = change { it.buyingFinish(finish) }
+
+    internal fun setFinish(slot: MechaSlot, finish: MechaFinish) = change { it.finishing(slot, finish) }
+
+    internal fun fitBuild(equipped: Map<MechaSlot, String>) {
+        val selection = equipped.toMap()
+        change { it.fittingBuild(selection, parts) }
+    }
+
+    internal fun spin(tier: MechaCabinetTier, expectedSequence: Int) = change { current ->
+        val available = if (tier == MechaCabinetTier.PART) parts.count { it.id !in current.owned } else 0
+        val problem = when {
+            expectedSequence != current.cabinetSpins -> "That cabinet turn has already finished."
+            current.cabinetSpins == Int.MAX_VALUE -> "The cabinet's turn counter is full."
+            current.salvage < tier.stake -> "Not enough salvage credits."
+            tier == MechaCabinetTier.PART && available == 0 -> "Every part is already owned."
+            tier.finish != null && tier.finish in current.ownedFinishes -> "That finish is already owned."
+            else -> null
+        }
+        if (problem != null) {
+            MechaResult(current, error = problem)
+        } else {
+            // Resolve once on the serialized worker; the receipt, unlock and wallet are committed together.
+            val roll = random.nextInt(100)
+            val rewardIndex = if (available > 0) random.nextInt(available) else 0
+            current.cabinetSpun(tier, parts, roll, rewardIndex)
+        }
+    }
 
     internal fun setEnabled(enabled: Boolean) = change { it.withEnabled(enabled) }
 
@@ -117,12 +152,17 @@ class MechaStore internal constructor(
         commit(current, current.petted())
     }
 
-    /** The hangar as saved now, for a backup; null while none is open (loading, or the save is unreadable). */
-    suspend fun backupSave(): MechaState? = onWorker { state }
+    /** The saved hangar, or null when absent/unreadable; a pending valid migration must not disappear from a backup. */
+    suspend fun backupSave(): MechaState? = onWorker {
+        check(!migrationPending) { "Retry opening the Hangar before exporting or restoring a backup; its saved upgrade is still pending." }
+        state
+    }
 
     /** Why [backup] (a companion save from a backup) can't be restored by this build, or null when it can. */
     suspend fun restoreProblem(backup: MechaState): String? = onWorker {
-        if (parts.isEmpty()) {
+        if (migrationPending) {
+            "open the Hangar and retry its pending save upgrade before restoring"
+        } else if (parts.isEmpty()) {
             "this build's mecha parts catalog is incomplete"
         } else {
             mechaStateProblem(backup, parts)?.let { "the companion save in it can't be used: $it" }
@@ -137,6 +177,7 @@ class MechaStore internal constructor(
      * it with [undoRestore] if the rest of the restore fails.
      */
     suspend fun restore(backup: MechaState?, merged: List<PlaySession>): MechaRestore = onWorker {
+        check(!migrationPending) { "Open the Hangar and retry its pending save upgrade before restoring." }
         val before = state
         if (backup == null) {
             if (before != null) commitOrThrow(before, before.creditedElsewhere(merged))
@@ -146,13 +187,14 @@ class MechaStore internal constructor(
         mechaStateProblem(backup, parts)?.let { throw IllegalArgumentException("the companion save in it can't be used: $it") }
         if (before == null && damaged) {
             val kept = File(file.parentFile, "state.damaged-${clock()}.json")
-            Files.move(file.toPath(), kept.toPath(), StandardCopyOption.ATOMIC_MOVE)
-            damaged = false
+            Files.copy(file.toPath(), kept.toPath())
         }
-        val next = backup.restoredOver(before)
+        val next = backup.upgraded().restoredOver(before)
         save(next)?.let { throw it }
+        damaged = false
+        migrationPending = false
         state = next
-        _view.value = MechaView(next, parts, message = "${next.name} is back from the backup.")
+        publish(MechaView(next, parts, message = "${next.name} is back from the backup."))
         observe(next.initializedAt)
         MechaRestore(before, replaced = true)
     }
@@ -162,7 +204,7 @@ class MechaStore internal constructor(
         val previous = done.previous ?: return@onWorker
         save(previous)?.let { throw it }
         state = previous
-        _view.value = MechaView(previous, parts)
+        publish(MechaView(previous, parts))
         observe(previous.initializedAt)
     }
 
@@ -170,7 +212,7 @@ class MechaStore internal constructor(
         if (result.state == current) return
         save(result.state)?.let { throw it }
         state = result.state
-        _view.value = MechaView(result.state, parts)
+        publish(MechaView(result.state, parts))
     }
 
     /** Re-reads completed sessions now (e.g. when Sortie comes back to the foreground); already credited ones are skipped. */
@@ -187,23 +229,28 @@ class MechaStore internal constructor(
         credit(list)
     }
 
+    /** Retries a failed open without treating a valid legacy file as damaged or replacing it. */
+    internal fun retryOpen() = enqueue {
+        if (state == null) open()
+    }
+
     /**
      * Only when the hangar could not be opened: sets an unreadable save aside as `state.damaged-<time>.json` (same bytes) and
      * opens a new hangar, which counts play from now on. Does nothing while a hangar is open or the parts catalog is incomplete.
      */
     internal fun startFresh() = enqueue {
-        if (state != null || parts.isEmpty()) return@enqueue
+        if (state != null || parts.isEmpty() || migrationPending) return@enqueue
         if (damaged) {
             val kept = File(file.parentFile, "state.damaged-${clock()}.json")
             try {
-                Files.move(file.toPath(), kept.toPath(), StandardCopyOption.ATOMIC_MOVE)
+                Files.copy(file.toPath(), kept.toPath())
             } catch (e: Exception) {
                 Log.w(TAG, "set damaged save aside", e)
-                _view.value = MechaView(parts = parts, error = "Couldn't set the damaged save aside (${describe(e)}); it is still at ${file.path}.")
+                publish(MechaView(parts = parts, error = "Couldn't set the damaged save aside (${describe(e)}); it is still at ${file.path}."))
                 return@enqueue
             }
-            damaged = false
             create("Fresh hangar opened; the damaged save is kept as ${kept.name}.")
+            if (state != null) damaged = false
         } else {
             create(null)
         }
@@ -241,10 +288,23 @@ class MechaStore internal constructor(
         return done.await()
     }
 
-    private fun change(rule: (MechaState) -> MechaResult) = enqueue {
-        // No hangar: the view already says why (loading, incomplete catalog or unreadable save); nothing to change.
-        val current = state ?: return@enqueue
-        commit(current, rule(current))
+    private fun change(rule: (MechaState) -> MechaResult) {
+        pendingChanges.incrementAndGet()
+        _view.update { it.copy(busy = true) }
+        enqueue {
+            try {
+                // No hangar: preserve the existing loading, incomplete catalog or unreadable-save explanation.
+                val current = state ?: return@enqueue
+                commit(current, rule(current))
+            } finally {
+                pendingChanges.decrementAndGet()
+                _view.update { it.copy(busy = pendingChanges.get() > 0) }
+            }
+        }
+    }
+
+    private fun publish(next: MechaView) {
+        _view.update { next.copy(busy = pendingChanges.get() > 0) }
     }
 
     private fun open() {
@@ -252,7 +312,7 @@ class MechaStore internal constructor(
             loadCatalog()
         } catch (e: Exception) {
             Log.w(TAG, "catalog", e)
-            _view.value = MechaView(error = "The mecha parts catalog is incomplete: ${describe(e)}")
+            publish(MechaView(error = "The mecha parts catalog is incomplete: ${describe(e)}"))
             return
         }
         if (!file.exists()) {
@@ -266,29 +326,47 @@ class MechaStore internal constructor(
         } catch (e: Exception) {
             Log.w(TAG, "read ${file.path}", e)
             damaged = true
-            _view.value = MechaView(
-                parts = parts,
-                error = "The hangar save can't be used: ${describe(e)}. It was left untouched at ${file.path}; " +
-                    "Start fresh keeps a copy and opens a new hangar."
+            publish(
+                MechaView(
+                    parts = parts,
+                    error = "The hangar save can't be used: ${describe(e)}. It was left untouched at ${file.path}; " +
+                        "Start fresh keeps a copy and opens a new hangar.",
+                    canStartFresh = true
+                )
             )
             return
         }
-        state = loaded
-        _view.value = MechaView(loaded, parts)
-        observe(loaded.initializedAt)
+        val upgraded = loaded.upgraded()
+        if (upgraded != loaded) {
+            save(upgraded)?.let { e ->
+                // This is a valid legacy save, not damage: never offer to replace it after an upgrade IO failure.
+                migrationPending = true
+                publish(MechaView(parts = parts, error = "Couldn't upgrade the hangar; its save was left untouched: ${describe(e)}"))
+                return
+            }
+        }
+        migrationPending = false
+        damaged = false
+        state = upgraded
+        publish(MechaView(upgraded, parts))
+        observe(upgraded.initializedAt)
     }
 
     private fun create(message: String?) {
         val fresh = starterMechaState(parts, clock())
         save(fresh)?.let { e ->
-            _view.value = MechaView(parts = parts, error = "Couldn't set up the hangar: ${describe(e)}")
+            publish(MechaView(parts = parts, error = "Couldn't set up the hangar: ${describe(e)}"))
             return
         }
+        migrationPending = false
+        damaged = false
         state = fresh
-        _view.value = MechaView(
-            fresh,
-            parts,
-            message = message ?: "${fresh.name} rolled out of the crate with $MECHA_STARTER_CREDITS salvage credits."
+        publish(
+            MechaView(
+                fresh,
+                parts,
+                message = message ?: "${fresh.name} rolled out of the crate with $MECHA_STARTER_CREDITS salvage credits."
+            )
         )
         observe(fresh.initializedAt)
     }
@@ -311,19 +389,19 @@ class MechaStore internal constructor(
 
     private fun sessionTrouble(e: Throwable) {
         Log.w(TAG, "sessions", e)
-        _view.value = _view.value.copy(error = "Couldn't read play sessions: ${describe(e)}")
+        _view.update { it.copy(error = "Couldn't read play sessions: ${describe(e)}") }
     }
 
     /** Saves [result]'s state when it changed and only then publishes it; on failure the previous state stays, with the error. */
     private fun commit(current: MechaState, result: MechaResult) {
         if (result.state != current) {
             save(result.state)?.let { e ->
-                _view.value = MechaView(current, parts, error = "Not saved, nothing changed: ${describe(e)}")
+                publish(MechaView(current, parts, error = "Not saved, nothing changed: ${describe(e)}"))
                 return
             }
             state = result.state
         }
-        _view.value = MechaView(result.state, parts, error = result.error, message = result.message)
+        publish(MechaView(result.state, parts, error = result.error, message = result.message))
     }
 
     /** Writes [next] to state.json via an fsynced temp file and an atomic move; returns the failure, or null. */
@@ -364,7 +442,7 @@ class MechaStore internal constructor(
 
         fun describe(e: Throwable): String = (e.message?.lineSequence()?.firstOrNull()?.takeIf { it.isNotBlank() } ?: e.javaClass.simpleName).take(240)
 
-        /** The three families' parts from the APK's assets, each sheet checked to exist and measure 512x64. */
+        /** All authored families' parts from the APK's assets, each sheet checked to exist and measure 512x64. */
         fun assetCatalog(assets: AssetManager): List<MechaPart> = MECHA_FAMILIES.flatMap { family ->
             val path = "mecha/$family/catalog.json"
             val text = try {

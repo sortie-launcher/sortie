@@ -5,6 +5,21 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
+- Rivet's production Hangar gains Shop, Build bench and Cabinet. Four new authored families bring the collection to
+  56 parts; the free bench proposes compatible owned two-family builds. Parts cost 2 credits; reusable Alloy and Holo
+  finishes cost 6 and 10, with animated previews and per-slot application. Direct purchase is always available alongside
+  the optional, explicitly priced cabinet; no duplicates, automatic equips or reward replay.
+- Credit earning stops at 50 without banking overflow. Capped sessions still count toward companion stats and cannot
+  earn again after spending. Existing balances above 50 are preserved. Save version 2 migrates existing inventory and
+  history safely, includes finishes and receipts in backup/restore, and offers nondestructive retry on migration failure.
+  Older builds cannot read this new companion save.
+- The Hangar shows the companion's name as plain text until **Rename** is pressed. **Save** (or the keyboard's Done)
+  commits a valid name and closes the keyboard; **Cancel** discards edits. Browsing or tapping the name cannot open an editor.
+- Add an isolated Rivet review workshop under `tools/mecha/workshop/`: 32 original part sheets, deterministic mixed-family
+  assembly/replay, finish and palette previews, a fictional-credit salvage cabinet and a small Scrap Catch arcade game.
+  Serve the repository root with `python3 -m http.server 8746 --bind 127.0.0.1`, then open `/tools/mecha/workshop/`.
+  The browser remains an offline experiment; the four authored part families and constrained assembly rules now also
+  feed the production Hangar above. Browser palette/arcade demos and their fictional wallet do not change app state.
 - Review every user guide, format reference and project document against current code. Correct launch-choice semantics,
   import/backup limits, indexing, guide matching and configuration examples; distinguish historical checks and proposals
   from shipped behavior. Replace the remaining old screenshots with current Nova/Thor captures and a fresh beta 2138

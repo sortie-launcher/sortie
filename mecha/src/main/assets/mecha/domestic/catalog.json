@@ -1,0 +1,58 @@
+[
+  {
+    "id": "domestic_head_1",
+    "slot": "HEAD",
+    "family": "domestic",
+    "name": "Pressure brow",
+    "asset": "mecha/domestic/domestic_head_1.png"
+  },
+  {
+    "id": "domestic_head_2",
+    "slot": "HEAD",
+    "family": "domestic",
+    "name": "Timer wink",
+    "asset": "mecha/domestic/domestic_head_2.png"
+  },
+  {
+    "id": "domestic_body_1",
+    "slot": "BODY",
+    "family": "domestic",
+    "name": "Service bell",
+    "asset": "mecha/domestic/domestic_body_1.png"
+  },
+  {
+    "id": "domestic_body_2",
+    "slot": "BODY",
+    "family": "domestic",
+    "name": "Mending cabinet",
+    "asset": "mecha/domestic/domestic_body_2.png"
+  },
+  {
+    "id": "domestic_arms_1",
+    "slot": "ARMS",
+    "family": "domestic",
+    "name": "Pour and pinch",
+    "asset": "mecha/domestic/domestic_arms_1.png"
+  },
+  {
+    "id": "domestic_arms_2",
+    "slot": "ARMS",
+    "family": "domestic",
+    "name": "Driver and vice",
+    "asset": "mecha/domestic/domestic_arms_2.png"
+  },
+  {
+    "id": "domestic_legs_1",
+    "slot": "LEGS",
+    "family": "domestic",
+    "name": "Quiet slippers",
+    "asset": "mecha/domestic/domestic_legs_1.png"
+  },
+  {
+    "id": "domestic_legs_2",
+    "slot": "LEGS",
+    "family": "domestic",
+    "name": "Repair stands",
+    "asset": "mecha/domestic/domestic_legs_2.png"
+  }
+]

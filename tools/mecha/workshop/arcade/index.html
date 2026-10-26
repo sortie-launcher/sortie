@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#274b6d">
+  <title>Scrap Catch — Rivet’s workshop</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <main class="cabinet">
+    <header class="masthead">
+      <div><p class="signature">Rivet’s workshop</p><h1>Scrap Catch</h1></div>
+      <p class="round-tag">One little bot. <br>45 seconds of sorting.</p>
+    </header>
+    <div class="machine">
+      <section class="playfield" aria-label="Scrap Catch game">
+        <div class="readout">
+          <div><span>Round points</span><strong id="score">0</strong></div>
+          <div class="clock"><span>Seconds left</span><strong id="time">45</strong></div>
+        </div>
+        <div class="screen">
+          <canvas id="game" width="320" height="288" tabindex="0" aria-label="Move Rivet left and right to catch bolts. Avoid the red crossed-out junk." aria-describedby="controls scoring">Your browser needs canvas support to play Scrap Catch.</canvas>
+          <div class="screen-message" id="overlay">
+            <strong id="headline">Sorting bay ready</strong>
+            <p id="screen-copy">Rivet is waiting for you.</p>
+          </div>
+        </div>
+        <div class="bay-label"><span>Catch tray</span><span>Hand-operated salvage sorter</span></div>
+      </section>
+      <aside class="operator">
+        <h2>A good bolt deserves <br>a second job.</h2>
+        <p>Steer Rivet’s tray under the falling bolts. Let the broken scrap fall past.</p>
+        <ul class="legend" id="scoring">
+          <li><svg class="item-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#f4d27c" stroke="#18232d" stroke-width="2" d="M8 2h8l4 6-4 6H8L4 8zM10 14h4v8h-4z"/><path stroke="#18232d" stroke-width="2" d="M9 8h6m-5 10h5"/></svg><span><strong>Useful bolt</strong><br>Catch for +10 points</span></li>
+          <li><svg class="item-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#e2695b" stroke="#18232d" stroke-width="2" d="M6 2h12l4 5v11l-5 4H6l-4-5V7z"/><path stroke="#18232d" stroke-width="3" d="m7 7 10 10M17 7 7 17"/></svg><span><strong>Broken junk</strong><br>Avoid it: −5 round points</span></li>
+        </ul>
+        <div class="controls" id="controls">
+          <h3>Your controls</h3>
+          <p><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> to move.<br>Drag across the bay with a finger or pointer.<br><kbd>P</kbd> or <kbd>Esc</kbd> to pause.</p>
+        </div>
+        <button class="primary" id="action" type="button" disabled>Loading Rivet…</button>
+        <p class="status" id="status" role="status" aria-live="polite">Preparing the four-part bot.</p>
+      </aside>
+    </div>
+    <footer><strong>Just a pocket-sized game.</strong> Points stay in this round. No credits, unlocks, stamina or changes to your companion. This demo is separate from Sortie.</footer>
+  </main>
+</body>
+</html>
