@@ -563,6 +563,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         val s = stage.scale
         val aim = MechaThrows.aim(transfer, s, b, toward, stage.minTap)
         val target = MechaPlay.drop(0f, 0f, aim.x, aim.floor, options(s, b, spread = false), b, null, 0, false)
+        Log.i("MechaThrowProbe", "arrival display=${stage.displayId} target=$target")
         if (target !is MechaDrop.Land) {
             outOfSight()
             return
@@ -589,6 +590,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
                 stage.busy = false
             }
             if (!landed && motion) {
+                Log.i("MechaThrowProbe", "landing stopped layout=${stage.layoutChanged} interrupted=${stage.interrupted} quiet=${stage.quiet} resting=$resting")
                 outOfSight()
                 return
             }
@@ -604,7 +606,9 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
     private fun validLanding(p: MechaPlacement): Boolean {
         val b = stage.bounds ?: return false
         val element = stage.elements[p.spotId] ?: return false
-        return !stage.hangarOpen && MechaRoam.place(element, stage.scale, b, elements(), p.x, stage.minTap) == p
+        val current = MechaRoam.place(element, stage.scale, b, elements(), p.x, stage.minTap)
+        if (stage.hangarOpen || current != p) Log.i("MechaThrowProbe", "landing invalid old=$p current=$current hangar=${stage.hangarOpen}")
+        return !stage.hangarOpen && current == p
     }
 
     /** Display-paced, whole-pixel flight. No hit target, physics allocations or timer loop survive the flight. */
@@ -627,6 +631,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
                     if (!motion || !stage.active || MechaPresence.owner !== stage || stage.layoutChanged ||
                         stage.interrupted || stage.hangarOpen || stage.carried || destination?.active == false
                     ) {
+                        Log.i("MechaThrowProbe", "flight stopped display=${stage.displayId} motion=$motion active=${stage.active} owner=${MechaPresence.owner === stage} layout=${stage.layoutChanged} interrupted=${stage.interrupted} hangar=${stage.hangarOpen} carried=${stage.carried} destination=${destination?.active}")
                         return@withFrameMillis false
                     }
                     if (started < 0) started = frame
