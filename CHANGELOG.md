@@ -5,6 +5,11 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
+- Review the full curated blurb catalog, including inherited notes that previously counted as covered simply because
+  they were nonempty. Replace title-only entries, cryptic shorthand and unsupported praise with useful 1–3 sentence
+  recommendations; expand every CPS II note and correct gameplay and edition errors found during research.
+  Contribution guidance explicitly welcomes grounded criticism and reasons to skip a game, without forcing praise
+  or padding to a word count. Preserve release UUIDs, matching evidence and local-note precedence.
 - Rivet's production Hangar gains Shop, Build bench and Cabinet. Four new authored families bring the collection to
   56 parts; the free bench proposes compatible owned two-family builds. Parts cost 2 credits; reusable Alloy and Holo
   finishes cost 6 and 10, with animated previews and per-slot application. Direct purchase is always available alongside

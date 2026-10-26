@@ -201,10 +201,17 @@ delete community work. Intentional removal must be reviewed in the public JSON i
 
 ### Writing and contributing notes
 
-Write a short, direct, original note about what a player actually does and what distinguishes this release. **20–45 words
-is typical, not a minimum**: a precise shorter note beats padding. Longer prose is justified only by useful distinctions.
-Avoid boilerplate summaries, sales language, a universal taste score, device compatibility claims without evidence, and
-private ownership, storage, save or play-history details. Controls should describe the game, not somebody's handheld setup.
+Write **1–3 complete, useful sentences** about what a player actually does and what distinguishes this release.
+Explain a meaningful strength, limitation, friction or reason to choose or skip it. Be direct without reducing the note
+to a title, genre label, sequel designation or cryptic feature list. An informative single sentence is fine; there is no
+rigid word target, and brevity must not displace useful information.
+
+Negative judgments are welcome. Explain specific, supported weaknesses rather than forcing praise or merely calling
+a game bad. Distinguish deliberate difficulty or personal genre preference from poor execution. Preserve important
+edition, patch and control caveats; avoid unsupported superlatives, boilerplate summaries and sales language.
+A nonempty hook is not proof of editorial quality: review whether it helps someone choose or understand the game.
+Do not include a universal taste score, unevidenced device compatibility claims, or private ownership, storage, save
+or play-history details. Controls should describe the game, not somebody's handheld setup.
 
 Consult primary manuals, official release/patch documentation and identifiable gameplay where available. Add public
 source URLs and enough edition information for another contributor to check the claim. Sources support facts and identity;
