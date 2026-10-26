@@ -2,15 +2,13 @@ package io.github.esko997.sortie.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -66,35 +64,30 @@ fun BackupScreen(vm: SortieViewModel) {
 
     // Plain text in a LazyColumn is unreachable on the D-pad, so every passage sits in a focusable block that scrolls into view.
     Column(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            item { Text("Backup and restore", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp)) }
+        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(12.dp)) {
+            item { PageTitle("Backup and restore") }
             when (val s = state) {
-                is BackupState.Working -> item { Note(s.what) }
+                is BackupState.Working -> item { WorkProgress(s.what) }
                 is BackupState.Preview -> preview(s, session?.gameId, primary, onConfirm = backup::confirmRestore, onCancel = backup::dismiss)
-                is BackupState.Result -> item {
-                    FocusRow(onClick = backup::dismiss, modifier = Modifier.focusRequester(primary)) {
-                        Column {
-                            Text(s.title, style = MaterialTheme.typography.titleSmall, color = if (s.ok) Amber else MaterialTheme.colorScheme.error)
-                            s.lines.forEach { Note(it, error = !s.ok) }
-                            Text("A: OK", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 8.dp))
-                        }
-                    }
-                }
+                is BackupState.Result -> item { OutcomeRow(s.title, s.ok, s.lines, onDismiss = backup::dismiss, modifier = Modifier.focusRequester(primary)) }
                 BackupState.Idle -> {
-                    item {
-                        FocusRow(onClick = pickExport, modifier = Modifier.focusRequester(primary)) {
-                            Line("Export backup…", "save preferences, layout, dock, game notes and play history to a file you choose")
+                    settingsGroup(null) {
+                        row {
+                            FocusRow(onClick = pickExport, modifier = Modifier.focusRequester(primary)) {
+                                Line("Export backup…", "Save preferences, layout, dock, game notes and play history to a file you choose")
+                            }
                         }
-                    }
-                    item {
-                        FocusRow(onClick = pickRestore) {
-                            Line("Restore from backup…", "pick a backup file; you see what it holds before anything changes")
+                        row {
+                            FocusRow(onClick = pickRestore) {
+                                Line("Restore from backup…", "Pick a backup file; you see what it holds before anything changes")
+                            }
                         }
                     }
                     session?.let { item { Note("${it.gameId} is being played. Export leaves its open session out; restore waits until it ends.") } }
                 }
             }
             writeError?.let { item { Note("Preferences are not being saved: $it", error = true) } }
+            item { Spacer(Modifier.height(12.dp)) }
             item {
                 InfoBlock("What a backup holds") {
                     Note("Now on this device: ${summary(current)}.")
@@ -163,19 +156,15 @@ private fun LazyListScope.preview(p: BackupState.Preview, playing: String?, prim
     if (playing != null) {
         item { Note("Restore is blocked while $playing is being played. Quit it and return to Sortie first.", error = true) }
     }
-    item { FocusRow(onClick = onCancel) { Line("Cancel", "keep everything as it is") } }
-    if (playing == null) {
-        item { FocusRow(onClick = onConfirm) { Line("Replace preferences and merge history", "writes user.json, the companion save and the play database") } }
-    }
-}
-
-/** A focusable passage of text (A does nothing), so the D-pad can reach and scroll to it. */
-@Composable
-private fun InfoBlock(title: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    FocusRow(onClick = {}, modifier = modifier) {
-        Column {
-            Text(title, style = MaterialTheme.typography.titleSmall)
-            content()
+    item { Spacer(Modifier.height(8.dp)) }
+    settingsGroup(null) {
+        row { FocusRow(onClick = onCancel) { Line("Cancel", "Keep everything as it is") } }
+        if (playing == null) {
+            row {
+                FocusRow(onClick = onConfirm) {
+                    Line("Replace preferences and merge history", "Writes user.json, the companion save and the play database", accent = Amber)
+                }
+            }
         }
     }
 }
@@ -192,13 +181,3 @@ private fun summary(u: UserData): String = listOf(
     "${u.journalEntries.size} journal ${if (u.journalEntries.size == 1) "entry" else "entries"}",
     plural(u.shortcuts.size, "opted-in shortcut")
 ).joinToString(" · ")
-
-@Composable
-private fun Note(text: String, error: Boolean = false) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodySmall,
-        color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-    )
-}

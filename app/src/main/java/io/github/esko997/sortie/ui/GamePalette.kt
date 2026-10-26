@@ -4,6 +4,7 @@ import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -25,9 +26,10 @@ suspend fun paletteFor(path: String?): GamePalette? {
             val p = Palette.from(bmp).clearFilters().generate().also { bmp.recycle() }
             val swatch = p.vibrantSwatch ?: p.lightVibrantSwatch ?: p.dominantSwatch ?: return@runCatching null
             val dark = p.darkMutedSwatch ?: p.darkVibrantSwatch ?: p.mutedSwatch
+            val backdrop = (dark?.let { Color(it.rgb) } ?: Ink).copy(alpha = 1f).blend(Ink, 0.75f)
             GamePalette(
-                accent = Color(swatch.rgb).ensureContrastOn(Ink),
-                backdrop = (dark?.let { Color(it.rgb) } ?: Ink).copy(alpha = 1f).blend(Ink, 0.75f)
+                accent = Color(swatch.rgb).ensureContrastOn(if (backdrop.luminance() > Ink.luminance()) backdrop else Ink),
+                backdrop = backdrop
             )
         }.getOrNull().also { synchronized(cache) { cache[path] = it } }
     }
@@ -42,8 +44,15 @@ private fun Color.blend(other: Color, towardsOther: Float): Color = Color(
     blue = blue + (other.blue - blue) * towardsOther
 )
 
-/** Lift very dark accents so they still read against the ink background. */
+/** Keep artwork-coloured labels and Ink-on-accent buttons readable, using linear-light WCAG contrast rather than RGB brightness. */
 private fun Color.ensureContrastOn(bg: Color): Color {
-    val lum = 0.2126f * red + 0.7152f * green + 0.0722f * blue
-    return if (lum < 0.35f) blend(Color.White, (0.35f - lum) * 1.6f) else this
+    val denominator = bg.luminance() + 0.05f
+    if ((luminance() + 0.05f) / denominator >= 4.5f) return this
+    var low = 0f
+    var high = 1f
+    repeat(10) {
+        val middle = (low + high) / 2f
+        if ((blend(Color.White, middle).luminance() + 0.05f) / denominator >= 4.5f) high = middle else low = middle
+    }
+    return blend(Color.White, high)
 }

@@ -1,9 +1,12 @@
 package io.github.esko997.sortie.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -31,9 +34,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.InputMode
@@ -48,6 +53,7 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -57,12 +63,16 @@ import kotlinx.coroutines.launch
 
 /**
  * Controller hints wrap as whole button/action pairs, never as narrow columns of letters. In a built-in app's own window
- * ([LocalWindowActions]; not in its dialogs) the bar ends with that window's Other screen and Close, for touch.
+ * ([LocalWindowActions]; not in its dialogs) the bar ends with that window's Other screen and Close, for touch. A Hairline
+ * along its top edge sets the bar off from the content above it.
  */
 @Composable
 fun HintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modifier) {
     val window = LocalWindowActions.current?.takeIf { it.root === LocalView.current.rootView }
-    val bar = modifier.fillMaxWidth().background(Color(0xFF0B0D10)).padding(horizontal = 14.dp, vertical = 6.dp)
+    val bar = modifier.fillMaxWidth()
+        .background(BarFill)
+        .drawBehind { drawRect(Hairline, size = Size(size.width, 1.dp.toPx())) }
+        .padding(horizontal = 14.dp, vertical = 6.dp)
     if (window == null) {
         Hints(hints, bar)
         return
@@ -73,25 +83,40 @@ fun HintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modifier) {
     }
 }
 
+private val BarFill = Color(0xFF0B0D10)
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Hints(hints: Array<out Pair<String, String>>, modifier: Modifier) {
     FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         hints.forEach { (button, action) ->
-            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(
-                    button,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    color = Ink,
-                    modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFF9AA3AD)).padding(horizontal = 5.dp, vertical = 1.dp)
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                KeyCap(button)
                 Text(action, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
         }
     }
 }
+
+/**
+ * A controller button as every hint shows it: its name on a small raised cap, at least as wide as it is tall so single letters
+ * read as buttons. Opaque enough to hold its contrast over artwork in the browse bar's fade.
+ */
+@Composable
+private fun KeyCap(button: String) {
+    Text(
+        button,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        textAlign = TextAlign.Center,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.clip(KeyCapShape).background(KeyCapFill).widthIn(min = 20.dp).padding(horizontal = 5.dp, vertical = 1.dp)
+    )
+}
+
+private val KeyCapShape = RoundedCornerShape(5.dp)
+private val KeyCapFill = Color(0xEB2E3742)
 
 /**
  * Browsing chrome stays in the layout, so a focused final row is never hidden under the hints. Compact mode keeps the
@@ -116,6 +141,7 @@ fun BrowseHintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modif
     val inputMode = LocalInputModeManager.current
     val controlInteraction = remember { MutableInteractionSource() }
     val controlsFocused by controlInteraction.collectIsFocusedAsState()
+    val controlsPressed by controlInteraction.collectIsPressedAsState()
     var restoreFocus by remember { mutableStateOf(false) }
     val windowFocused = LocalWindowInfo.current.isWindowFocused
     LaunchedEffect(controls, windowFocused) {
@@ -149,7 +175,7 @@ fun BrowseHintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modif
                 interactionSource = controlInteraction,
                 shape = ControlsShape,
                 modifier = Modifier.focusRequester(opener).heightIn(min = 48.dp)
-                    .focusGlow(controlsFocused, ControlsShape)
+                    .focusGlow(controlsFocused, ControlsShape, pressed = controlsPressed)
                     .mechaObstacle("browse:controls", interactive = true)
             ) { Text("Controls", style = MaterialTheme.typography.labelLarge, color = Amber, maxLines = 1) }
         }
@@ -165,17 +191,13 @@ fun BrowseHintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modif
 /** The compact bar's Controls button: its touch ripple and its controller glow share this shape. */
 private val ControlsShape = RoundedCornerShape(10.dp)
 
+/** The Controls dialog: the same card as the context sheets. */
+private val DialogShape = RoundedCornerShape(16.dp)
+
 @Composable
 private fun BrowseHint(button: String, action: String, modifier: Modifier = Modifier) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            button,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Slate.copy(alpha = 0.85f)).padding(horizontal = 5.dp, vertical = 2.dp)
-        )
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        KeyCap(button)
         Text(
             action,
             style = MaterialTheme.typography.labelSmall,
@@ -201,7 +223,7 @@ private fun BrowseControls(hints: List<Pair<String, String>>, onDismiss: (Boolea
         SideEffect { controller = keyboard }
         Column(
             Modifier.widthIn(max = 440.dp).fillMaxWidth().heightIn(max = maxHeight)
-                .clip(RoundedCornerShape(16.dp)).background(Slate).padding(16.dp)
+                .clip(DialogShape).background(Slate).border(1.dp, Hairline, DialogShape).padding(16.dp)
                 .onPreviewKeyEvent { event ->
                     val direction = when (event.key) {
                         Key.DirectionDown, Key.PageDown -> 1
@@ -224,11 +246,12 @@ private fun BrowseControls(hints: List<Pair<String, String>>, onDismiss: (Boolea
             ) {
                 Text(
                     "Tap or pull down the header strip to reveal it. With the controller, press Up from the first row.",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 hints.forEach { (button, action) ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(button, fontWeight = FontWeight.Bold, color = Amber, modifier = Modifier.widthIn(min = 72.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.widthIn(min = 72.dp)) { KeyCap(button) }
                         Text(action, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                     }
                 }

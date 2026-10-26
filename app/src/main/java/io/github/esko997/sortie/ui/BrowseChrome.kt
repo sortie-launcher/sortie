@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -235,11 +236,12 @@ fun FoldedHeader(
 fun ChromeToggle(open: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val pressed by interaction.collectIsPressedAsState()
     OutlinedButton(
         onClick = onClick,
         modifier = modifier
             .semantics { contentDescription = if (open) HIDE_HEADER else SHOW_HEADER }
-            .focusGlow(focused, ButtonDefaults.outlinedShape),
+            .focusGlow(focused, ButtonDefaults.outlinedShape, pressed = pressed),
         contentPadding = PaddingValues(horizontal = 14.dp),
         interactionSource = interaction
     ) { Text(if (open) "▴" else "▾", style = MaterialTheme.typography.titleMedium, maxLines = 1) }

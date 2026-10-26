@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Environment
 import android.os.storage.StorageManager
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -149,7 +147,7 @@ internal fun FolderBrowser(
         }
     }
     Column(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp)) {
+        Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 16.dp, top = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                 GlowButton("Cancel", onClick = onClose)
@@ -179,37 +177,47 @@ internal fun FolderBrowser(
                 modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
             )
         }
-        LazyColumn(
-            Modifier.weight(1f),
-            state = listState,
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            itemsIndexed(rows, key = { _, r -> r.key }) { i, row ->
-                val mod = if (i == focusIndex) Modifier.focusRequester(target) else Modifier
-                when (row) {
-                    is BrowserRow.Volume -> FocusRow(onClick = { onNavigate(row.volume.dir.path, null) }, modifier = mod) {
-                        Line(row.volume.label, row.volume.dir.path)
-                    }
-                    BrowserRow.Use -> {
-                        val readable = listing is Listing.Ready
-                        val already = path != null && path in chosen
-                        FocusRow(onClick = { if (readable && path != null && !already) onUse(path) }, modifier = mod) {
-                            Line(
-                                when {
-                                    already -> "Already chosen"
-                                    readable -> "Use this folder"
-                                    else -> "This folder can't be used"
-                                },
-                                path?.let { friendlyPath(volumes, it) }.orEmpty()
-                            )
+        // one panel, so the rows keep the lazy indexes the focus and the scroll above are given
+        LazyColumn(Modifier.weight(1f), state = listState, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
+            settingsGroup(null) {
+                rows.forEachIndexed { i, r ->
+                    row(key = r.key) {
+                        val mod = if (i == focusIndex) Modifier.focusRequester(target) else Modifier
+                        when (r) {
+                            is BrowserRow.Volume -> FocusRow(onClick = { onNavigate(r.volume.dir.path, null) }, modifier = mod) {
+                                Line(r.volume.label, r.volume.dir.path)
+                            }
+                            BrowserRow.Use -> {
+                                val readable = listing is Listing.Ready
+                                val already = path != null && path in chosen
+                                FocusRow(onClick = { if (readable && path != null && !already) onUse(path) }, modifier = mod) {
+                                    Line(
+                                        when {
+                                            already -> "Already chosen"
+                                            readable -> "Use this folder"
+                                            else -> "This folder can't be used"
+                                        },
+                                        path?.let { friendlyPath(volumes, it) }.orEmpty(),
+                                        accent = if (readable && !already) Amber else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            BrowserRow.Up -> FocusRow(onClick = { onNavigate(parent, path) }, modifier = mod) {
+                                Line("Up one level", parent?.let { friendlyPath(volumes, it) } ?: "Storage volumes")
+                            }
+                            is BrowserRow.Child -> FocusRow(onClick = { onNavigate(r.dir.path, null) }, modifier = mod) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        r.dir.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Text("›", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
                         }
-                    }
-                    BrowserRow.Up -> FocusRow(onClick = { onNavigate(parent, path) }, modifier = mod) {
-                        Line("Up one level", parent?.let { friendlyPath(volumes, it) } ?: "Storage volumes")
-                    }
-                    is BrowserRow.Child -> FocusRow(onClick = { onNavigate(row.dir.path, null) }, modifier = mod) {
-                        Text(row.dir.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }

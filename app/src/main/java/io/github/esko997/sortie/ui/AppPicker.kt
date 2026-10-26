@@ -2,7 +2,6 @@ package io.github.esko997.sortie.ui
 
 import android.content.Context
 import android.graphics.drawable.Drawable
-import android.widget.ImageView
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -31,7 +29,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import io.github.esko997.sortie.BuiltinApp
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.apps.LibraryItem
@@ -78,7 +75,14 @@ fun AppPicker(
             placeholder = { Text("Search apps") },
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
         )
-        if (entries.isEmpty() && builtins.isEmpty()) Text("No apps", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (entries.isEmpty() && builtins.isEmpty()) {
+            Text(
+                if (query.isBlank()) "No apps" else "Nothing called “${query.trim()}”",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+            )
+        }
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -100,9 +104,11 @@ fun AppPicker(
 private fun PickerCell(label: String, icon: () -> Drawable?, onClick: () -> Unit) {
     FocusRow(onClick = onClick) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(56.dp)) { it.setImageDrawable(icon()) }
+            IconView(icon, 56)
+            // two lines reserved for every label, so a row of cells (and their focus outlines) shares one height
             Text(
                 label,
+                minLines = 2,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,

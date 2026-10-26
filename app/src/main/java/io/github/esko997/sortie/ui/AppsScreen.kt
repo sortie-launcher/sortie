@@ -105,7 +105,18 @@ fun AppsScreen(vm: SortieViewModel) {
             verticalArrangement = Arrangement.spacedBy(if (grid) 10.dp else 2.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            fullItem("title") { Text("Apps · ${apps.size}", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp)) }
+            fullItem("title") {
+                // as on a system's page: the name leads, the count is a quieter fact beside it
+                Row(Modifier.padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Apps", style = MaterialTheme.typography.titleLarge, modifier = Modifier.alignByBaseline())
+                    Text(
+                        "${apps.size}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.alignByBaseline()
+                    )
+                }
+            }
             fullItem("h-sortie") { SectionTitle("Sortie") }
             items(BuiltinApp.entries, key = ::builtinKey) { app ->
                 RememberedItem(memory, builtinKey(app)) {

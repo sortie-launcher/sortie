@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
@@ -144,7 +146,7 @@ private fun StatsStrip(cells: List<StatCell>, dividerAtEnd: Boolean) {
             .width(STRIP_WIDTH)
             .drawBehind {
                 val x = if (dividerAtEnd) size.width - 0.5f else 0.5f
-                drawLine(Slate, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+                drawLine(Hairline, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
             },
         verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -152,16 +154,26 @@ private fun StatsStrip(cells: List<StatCell>, dividerAtEnd: Boolean) {
         for (cell in cells) {
             Column(Modifier.semantics(mergeDescendants = true) {}, horizontalAlignment = Alignment.CenterHorizontally) {
                 StripText(cell.label, 9.sp, Amber.copy(alpha = 0.8f))
-                StripText(cell.value, 13.sp, MaterialTheme.colorScheme.onSurface, FontWeight.Medium)
+                StripText(cell.value, 13.sp, MaterialTheme.colorScheme.onSurface, FontWeight.Medium, figures = true)
                 cell.sub?.let { StripText(it, 9.sp, MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
     }
 }
 
+/** [figures]: a reading that changes in place, set in equal-width digits so it does not shuffle sideways between polls. */
 @Composable
-private fun StripText(text: String, size: TextUnit, color: Color, weight: FontWeight? = null) {
-    Text(text, fontSize = size, color = color, fontWeight = weight, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip)
+private fun StripText(text: String, size: TextUnit, color: Color, weight: FontWeight? = null, figures: Boolean = false) {
+    Text(
+        text,
+        style = if (figures) LocalTextStyle.current.merge(TextStyle(fontFeatureSettings = "tnum")) else LocalTextStyle.current,
+        fontSize = size,
+        color = color,
+        fontWeight = weight,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Clip
+    )
 }
 
 /** Wide enough for `1.8 GHz` under `100%`; the panel keeps the rest. */

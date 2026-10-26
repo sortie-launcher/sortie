@@ -1,7 +1,11 @@
 package io.github.esko997.sortie.ui
 
 import android.graphics.BitmapFactory
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -22,6 +26,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -66,6 +71,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -90,6 +96,7 @@ import java.io.File
 import kotlin.math.max
 import kotlin.math.min
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -180,7 +187,14 @@ private fun TouchChip(text: String, enabled: Boolean = true, onClickLabel: Strin
             .height(40.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Slate.copy(alpha = if (enabled) 0.9f else 0.4f))
-            .clickable(enabled = enabled, onClickLabel = onClickLabel ?: text, onClick = onClick)
+            .clickable(
+                interactionSource = null,
+                indication = PressVeil,
+                enabled = enabled,
+                onClickLabel = onClickLabel ?: text,
+                role = Role.Button,
+                onClick = onClick
+            )
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -273,22 +287,34 @@ private fun ReferenceMarkdown(body: String, modifier: Modifier, controller: Bool
             }
             .focusable(interactionSource = interaction)
     }
-    LazyColumn(modifier.then(keys), state = state, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)) {
+    LazyColumn(
+        modifier.then(keys),
+        state = state,
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        val measure = Modifier.widthIn(max = MarkdownMeasure).fillMaxWidth()
         if (blocks.isEmpty()) {
-            item { Text("This card is empty.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            item { Text("This card is empty.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = measure) }
         }
-        items(blocks) { MarkdownBlock(it) }
+        items(blocks) { MarkdownBlock(it, measure) }
     }
 }
+
+/** A comfortable line length for Markdown text (cards, the manual) on the wide screen; narrower screens use their width. */
+internal val MarkdownMeasure = 720.dp
 
 @Composable
 private fun MarkdownBlocks(blocks: List<MdBlock>) {
     blocks.forEach { MarkdownBlock(it) }
 }
 
-/** The manual's rendering of the shared subset; a card's image lines show their caption (only imported images are shown). */
+/**
+ * One block of the shared Markdown subset as reference cards and the manual show it; image lines show their caption (only a
+ * card's imported image is ever drawn, and the manual ships none).
+ */
 @Composable
-private fun MarkdownBlock(b: MdBlock) {
+internal fun MarkdownBlock(b: MdBlock, modifier: Modifier = Modifier) {
     val body = MaterialTheme.typography.bodyLarge
     when (b) {
         is MdBlock.Heading -> when (b.level) {
@@ -296,32 +322,32 @@ private fun MarkdownBlock(b: MdBlock) {
                 b.text,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                modifier = modifier.padding(top = 8.dp, bottom = 8.dp)
             )
-            2 -> Text(b.text, style = MaterialTheme.typography.titleLarge, color = Amber, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+            2 -> Text(b.text, style = MaterialTheme.typography.titleLarge, color = Amber, modifier = modifier.padding(top = 18.dp, bottom = 6.dp))
             else -> Text(
                 b.text,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 10.dp, bottom = 4.dp)
+                modifier = modifier.padding(top = 12.dp, bottom = 4.dp)
             )
         }
-        is MdBlock.Paragraph -> Text(inlineText(b.text), style = body, modifier = Modifier.padding(bottom = 10.dp))
-        is MdBlock.Bullet -> Row(Modifier.padding(start = 4.dp, bottom = 6.dp)) {
+        is MdBlock.Paragraph -> Text(inlineText(b.text), style = body, modifier = modifier.padding(bottom = 12.dp))
+        is MdBlock.Bullet -> Row(modifier.padding(start = 4.dp, bottom = 6.dp)) {
             Text("•", style = body, color = Amber, modifier = Modifier.width(18.dp))
             Text(inlineText(b.text), style = body)
         }
-        is MdBlock.Quote -> Row(Modifier.padding(vertical = 4.dp).height(IntrinsicSize.Min)) {
+        is MdBlock.Quote -> Row(modifier.padding(top = 4.dp, bottom = 10.dp).height(IntrinsicSize.Min)) {
             Box(Modifier.width(3.dp).fillMaxHeight().background(Amber))
-            Text(inlineText(b.text), style = body, fontStyle = FontStyle.Italic, modifier = Modifier.padding(start = 12.dp, bottom = 6.dp))
+            Text(inlineText(b.text), style = body, fontStyle = FontStyle.Italic, modifier = Modifier.padding(start = 12.dp))
         }
         is MdBlock.Image -> Text(
             "Image not included: " + b.caption.ifBlank { b.src },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 10.dp)
+            modifier = modifier.padding(bottom = 10.dp)
         )
-        MdBlock.Rule -> Box(Modifier.padding(vertical = 10.dp).fillMaxWidth().height(1.dp).background(Hairline))
+        MdBlock.Rule -> Box(modifier.padding(vertical = 12.dp).fillMaxWidth().height(1.dp).background(Hairline))
     }
 }
 
@@ -329,8 +355,9 @@ private fun MarkdownBlock(b: MdBlock) {
  * A local image fitted to the box, pinch-zoomed and dragged by touch, double tap toggling zoom. The decode keeps up to
  * [io.github.esko997.sortie.data.reference.ReferenceLimits.DISPLAY_MAX_PIXELS] (see [ReferenceCards.displaySize]) so a map
  * stays legible when zoomed, and zoom reaches at least 3 screen pixels per image pixel; magnified pixel art is drawn unsmoothed.
- * With [controller]: D-pad pans while zoomed (left/right at rest call [onStep]), A toggles zoom, R2/L2 zoom in/out. [onTap]: a
- * single tap (not a double tap or a drag).
+ * With [controller]: D-pad pans while zoomed (left/right at rest call [onStep]), A toggles zoom, R2/L2 zoom in/out. Those
+ * stepped zooms and the double tap ease over a short tween (snapping with the system's animations off); pinches, drags and
+ * pans follow at once. [onTap]: a single tap (not a double tap or a drag).
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -364,6 +391,11 @@ fun ZoomableImage(
     var box by remember { mutableStateOf(IntSize.Zero) }
     var scale by remember(file) { mutableFloatStateOf(1f) }
     var offset by remember(file) { mutableStateOf(Offset.Zero) }
+    // where an eased zoom is heading: the next step starts from there, so held or repeated presses compound smoothly
+    var goalScale by remember(file) { mutableFloatStateOf(1f) }
+    var goalOffset by remember(file) { mutableStateOf(Offset.Zero) }
+    val zoomJob = remember(file) { arrayOfNulls<Job>(1) }
+    val scope = rememberCoroutineScope()
     val currentTap by rememberUpdatedState(onTap)
     val tap = { currentTap?.invoke() }
     val aspect = dw.toFloat() / dh
@@ -377,12 +409,45 @@ fun ZoomableImage(
         return Offset(o.x.coerceIn(-mx, mx), o.y.coerceIn(-my, my))
     }
 
-    // keeps the image point under [focus] (relative to the box centre) where it is
+    // a direct move (pinch, drag, D-pad pan) starts from where an eased zoom was heading
+    fun settle() {
+        zoomJob[0]?.cancel()
+        zoomJob[0] = null
+        scale = goalScale
+        offset = goalOffset
+    }
+
+    fun place(s: Float, o: Offset) {
+        scale = s
+        offset = o
+        goalScale = s
+        goalOffset = o
+    }
+
+    // the image point under [focus] (relative to the box centre) stays where it is; at once, for a pinch
     fun zoomTo(target: Float, focus: Offset) {
         val s = target.coerceIn(1f, maxScale)
         val k = s / scale
-        offset = clamp(focus * (1 - k) + offset * k, s)
-        scale = s
+        place(s, clamp(focus * (1 - k) + offset * k, s))
+    }
+
+    // as [zoomTo] from the goal, eased; each frame is clamped at its own scale, so no edge beyond the picture shows on the way
+    fun easeZoomTo(target: Float, focus: Offset) {
+        val s = target.coerceIn(1f, maxScale)
+        val k = s / goalScale
+        val o = clamp(focus * (1 - k) + goalOffset * k, s)
+        goalScale = s
+        goalOffset = o
+        val fromScale = scale
+        val fromOffset = offset
+        zoomJob[0]?.cancel()
+        zoomJob[0] = scope.launch {
+            animate(0f, 1f, animationSpec = tween(ZOOM_EASE_MS, easing = FastOutSlowInEasing)) { t, _ ->
+                val frameScale = fromScale + (s - fromScale) * t
+                scale = frameScale
+                offset = clamp(fromOffset + (o - fromOffset) * t, frameScale)
+            }
+        }
     }
 
     val interaction = remember { MutableInteractionSource() }
@@ -407,7 +472,7 @@ fun ZoomableImage(
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .focusGlow(focused, RoundedCornerShape(8.dp), focusedScale = 1f)
             .onPreviewKeyEvent { e ->
-                val zoomed = scale > 1.01f
+                val zoomed = goalScale > 1.01f
                 when (e.key) {
                     Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp, Key.DirectionDown -> {
                         if (!zoomed) {
@@ -426,23 +491,17 @@ fun ZoomableImage(
                                 Key.DirectionUp -> Offset(0f, dy)
                                 else -> Offset(0f, -dy)
                             }
-                            offset = clamp(offset + pan, scale)
+                            settle()
+                            place(scale, clamp(offset + pan, scale))
                         }
                         true
                     }
                     Key.ButtonA, Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                        if (e.freshDown()) {
-                            if (zoomed) {
-                                scale = 1f
-                                offset = Offset.Zero
-                            } else {
-                                zoomTo(2.5f, Offset.Zero)
-                            }
-                        }
+                        if (e.freshDown()) easeZoomTo(if (zoomed) 1f else 2.5f, Offset.Zero)
                         true
                     }
                     Key.ButtonR2, Key.ButtonL2 -> {
-                        if (e.type == KeyEventType.KeyDown) zoomTo(scale * if (e.key == Key.ButtonR2) 1.5f else 1 / 1.5f, Offset.Zero)
+                        if (e.type == KeyEventType.KeyDown) easeZoomTo(goalScale * if (e.key == Key.ButtonR2) 1.5f else 1 / 1.5f, Offset.Zero)
                         true
                     }
                     else -> false
@@ -467,20 +526,16 @@ fun ZoomableImage(
             .onSizeChanged { box = it }
             .pointerInput(file, fw, fh, maxScale) {
                 detectTransformGestures { centroid, pan, zoom, _ ->
+                    settle()
                     zoomTo(scale * zoom, centroid - Offset(box.width / 2f, box.height / 2f))
-                    offset = clamp(offset + pan, scale)
+                    place(scale, clamp(offset + pan, scale))
                 }
             }
             .pointerInput(file, fw, fh, maxScale, onTap != null) {
                 detectTapGestures(
                     onTap = if (onTap == null) null else { _ -> tap() },
                     onDoubleTap = { p ->
-                        if (scale > 1.01f) {
-                            scale = 1f
-                            offset = Offset.Zero
-                        } else {
-                            zoomTo(3f, p - Offset(box.width / 2f, box.height / 2f))
-                        }
+                        if (goalScale > 1.01f) easeZoomTo(1f, Offset.Zero) else easeZoomTo(3f, p - Offset(box.width / 2f, box.height / 2f))
                     }
                 )
             }
@@ -516,10 +571,14 @@ fun ZoomableImage(
     }
 }
 
+/** A stepped zoom (A, L2/R2, double tap) eases over this long: quick enough that a held trigger still feels direct. */
+private const val ZOOM_EASE_MS = 200
+
 /** Small preview of an image card for lists; nothing when the file is missing (the row says so). */
 @Composable
 fun ReferenceThumbnail(card: ReferenceCard, sortieDir: File, modifier: Modifier = Modifier) {
-    Box(modifier.size(72.dp, 56.dp).clip(RoundedCornerShape(6.dp)).background(Slate), contentAlignment = Alignment.Center) {
+    val shape = RoundedCornerShape(6.dp)
+    Box(modifier.size(72.dp, 56.dp).clip(shape).background(Slate).border(1.dp, Hairline, shape), contentAlignment = Alignment.Center) {
         val file = ReferenceFiles.resolve(sortieDir, card.image)
         if (card.image == null) {
             Text("¶", color = Amber, fontSize = 24.sp)

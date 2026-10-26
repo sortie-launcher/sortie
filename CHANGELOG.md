@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Full UI polish: a consistent amber/ink palette, clearer type and cover treatments, quieter keycaps, and more room for
+  content on compact screens. Home actions use a scrolling rail on smaller windows; detail actions and launch choices
+  stay together, and Select opens or closes **Launch with…**. Settings offer direct touch choices as well as controller
+  cycling. Magazine, journal, manual, setup, diagnostics and switcher surfaces share the same visual treatment.
+- Motion follows interaction: a brief focus flare settles to a steady glow, held controller buttons have press feedback,
+  navigation and image zoom ease into place, and artwork-derived accents retain readable contrast. Ambient transitions,
+  clocks and journal timers stop when hidden; there is no continuous decorative focus animation behind games.
 - Magazines and Performance are now independent Sortie built-in apps, available from Apps and the app pickers.
   On two screens choose where to open them; X / Other screen moves only that window, preserving the reader's place.
   Each has its own switcher entry and Close action. Controller keys stay with the receiving window; opening a built-in

@@ -173,8 +173,20 @@ Re-record after an intended visual change, look at every changed image, and comm
 flock /tmp/sortie-gradle.lock distrobox enter ubuntu -- bash -c 'cd <worktree> && ./gradlew :app:recordRoborazziDebug'
 ```
 
-Production seams: `uiNow` in `ui/Components.kt`, the wall clock behind Home's clock and "last played"; and the focus-glow
-pulse (`design/…/Focus.kt`) times itself on the composition's frame clock instead of `System.nanoTime`, which tests drive.
+Production seams: `uiNow` in `ui/Components.kt`, the wall clock behind Home's clock and "last played"; and the finite
+focus flare/spring (`design/…/Focus.kt`) use the composition's frame clock, which tests drive. Compact Home captures
+scroll the header toggle into view before tapping it and assert that the collapsed header is actually displayed.
+
+Full-polish hardware smoke covered the Nova and DMG: touch/controller browsing, held-confirm context menus, folding
+and pulling the header back, detail launch-choice focus restoration, direct Settings choices, magazine reading and
+zoom/return, journal/manual/reference views, and the DMG switcher/Perf overlay. Nova also exercised 1.3× font scale with
+Android animations disabled. Backup/import screens were inspected without running destructive operations.
+The four screenshot configurations cover Thor layouts; no Thor hardware deployment was part of this pass.
+
+Background measurement over 64.8 seconds: Nova behind a running RetroArch game drew zero additional Sortie frames
+and used four CPU ticks; DMG behind Android Settings drew zero additional frames and used one tick. With 100 ticks/s,
+these are approximately 0.06% and 0.02% of one CPU core, respectively. This is a bounded smoke measurement, not a
+guarantee of zero background CPU or a long-duration battery benchmark.
 
 ### Tier 3: recorded device output
 

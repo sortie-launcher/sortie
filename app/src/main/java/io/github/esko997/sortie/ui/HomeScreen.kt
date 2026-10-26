@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
@@ -121,6 +122,12 @@ private const val SHORT_HEIGHT_DP = 400
 
 /** Below this window width (portrait) the title gets its own line, followed by one sideways-scrolling line of actions. */
 private const val NARROW_WIDTH_DP = 480
+
+/**
+ * Below this width the actions would wrap onto two or more lines under the title (the DMG in landscape, the Thor's bottom
+ * screen, the Nova): they keep one sideways-scrolling line instead, as on narrow screens, so the tiles start higher.
+ */
+private const val WRAP_ACTIONS_MIN_WIDTH_DP = 720
 
 /**
  * One home entry: a system, or on Custom only, a smart folder, the Apps folder, Continue, a game, app or shortcut. [colour]
@@ -427,6 +434,8 @@ fun HomeScreen(
     val configuration = LocalConfiguration.current
     val short = configuration.screenHeightDp < SHORT_HEIGHT_DP
     val narrow = configuration.screenWidthDp < NARROW_WIDTH_DP
+    // the title on its own line and the actions on one scrolling line beneath, unless a short screen puts both on one line
+    val actionsLine = narrow || (!short && configuration.screenWidthDp < WRAP_ACTIONS_MIN_WIDTH_DP)
 
     val empty = total == 0 && !index.running
     val sortLabel = SORTS.firstOrNull { it.first == sort }?.second ?: sort
@@ -457,18 +466,22 @@ fun HomeScreen(
             val header = Modifier.fillMaxWidth()
             // the actions block is a control the companion keeps clear of; when it wraps below the title he may stand on it
             val actionSpot = Modifier.mechaSpot("home:actions", MechaSpotKind.LEDGE, interactive = true)
+            // A scrolling line clips at its viewport, so the viewport runs to the screen edges and the 12 dp margin is inset
+            // inside the scroll: the end buttons' focus glow and lift paint in it, and the buttons still line up with the
+            // title and the tiles.
             when {
-                narrow -> Column(header.padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    identity()
+                actionsLine -> Column(header.padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Box(Modifier.padding(horizontal = 12.dp)) { identity() }
                     Row(
-                        actionSpot.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        actionSpot.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) { actions() }
                 }
-                short -> Row(header.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                // the inset's start half is the gap after the title; its end half is the screen margin
+                short -> Row(header.padding(start = 12.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     identity()
                     Row(
-                        actionSpot.padding(start = 12.dp).weight(1f).horizontalScroll(rememberScrollState()),
+                        actionSpot.weight(1f).horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
                     ) { actions() }
                 }
@@ -485,9 +498,11 @@ fun HomeScreen(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(horizontal = 12.dp)
+                // the margin inside the scroll, as on the actions line: the last chip's glow is not cut at the edge
+                modifier = Modifier
                     .mechaSpot("home:sorts", MechaSpotKind.BESIDE_END, interactive = true)
                     .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp)
             ) {
                 Text("Sort", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 SORTS.forEach { (id, label) ->
@@ -512,10 +527,12 @@ fun HomeScreen(
         }
 
         if (empty) {
-            Column(Modifier.weight(1f).fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // a readable measure on the wide top screen, and one filled button: the single way forward
+            Column(Modifier.weight(1f).fillMaxWidth().padding(24.dp).widthIn(max = 560.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     if (manifest.systems.isEmpty()) "Set up your library" else "No games found",
-                    style = MaterialTheme.typography.headlineSmall
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     if (manifest.systems.isEmpty()) {
@@ -525,7 +542,7 @@ fun HomeScreen(
                     },
                     style = MaterialTheme.typography.bodyLarge
                 )
-                GlowButton(if (manifest.systems.isEmpty()) "Set up library" else "Manage library", onClick = onLibrary)
+                GlowButton(if (manifest.systems.isEmpty()) "Set up library" else "Manage library", primary = true, onClick = onLibrary)
                 Text(
                     "You can also use Apps, read Magazines or open the Manual without adding games.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -790,8 +807,15 @@ private fun FolderLine(title: String, subtitle: String, colour: Color, modifier:
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         ColourChip(colour)
         Column(Modifier.padding(start = 12.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // a missing BIOS lengthens the line: two lines at most, never a row that grows without end
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

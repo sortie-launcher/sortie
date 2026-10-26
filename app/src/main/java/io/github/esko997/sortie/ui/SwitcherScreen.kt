@@ -1,7 +1,13 @@
 package io.github.esko997.sortie.ui
 
 import android.widget.ImageView
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,6 +27,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,9 +49,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -125,9 +138,10 @@ fun SwitcherScreen(
         return
     }
     Column(Modifier.fillMaxSize()) {
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Running", style = MaterialTheme.typography.titleLarge)
+        // narrow outer padding: the carousels run nearly edge to edge so a focused card's glow is not clipped; text keeps 16dp
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 4.dp, vertical = 16.dp)) {
+            Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Running", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 header()
             }
             Text(
@@ -138,7 +152,7 @@ fun SwitcherScreen(
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp)
             )
             // The first card takes the controller focus when the list first has cards (coming back from a game leaves nothing
             // focused and Y / Select would act on nothing) and again on the freed row after a move. Leaving a card for the
@@ -174,10 +188,18 @@ fun SwitcherScreen(
                 }
             }
             val spot = restore
-            ScreenRow("Top screen", TaskSwitcher.TOP, state, switcher, requesters[TaskSwitcher.TOP], spot, returning, onFocus, onBlur)
-            if (secondary != null) ScreenRow("Bottom screen", secondary, state, switcher, requesters[secondary], spot, returning, onFocus, onBlur)
+            val row = focusedScreen.takeIf { focused != null }
+            ScreenRow("Top screen", TaskSwitcher.TOP, row == TaskSwitcher.TOP, state, switcher, requesters[TaskSwitcher.TOP], spot, returning, onFocus, onBlur)
+            if (secondary != null) {
+                ScreenRow("Bottom screen", secondary, row == secondary, state, switcher, requesters[secondary], spot, returning, onFocus, onBlur)
+            }
+            Box(Modifier.padding(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 12.dp).fillMaxWidth().height(1.dp).background(Hairline))
             // wraps instead of running off the right edge of a narrow screen
-            FlowRow(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(
+                Modifier.padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 GlowButton("Sortie", enabled = !state.busy) { switcher.goHome(focusedScreen) }
                 GlowButton("Open app…", enabled = !state.busy) { switcher.startPicking(state.freed ?: focusedScreen) }
                 if (secondary != null) {
@@ -201,12 +223,14 @@ fun SwitcherScreen(
 /**
  * One screen's carousel. A free screen lists the apps from the other screen so one can be brought over. [first] is attached
  * to the first card so the screen can give it the controller focus; [returning] to the card at [restore], which the row
- * starts scrolled to so that card is laid out.
+ * starts scrolled to so that card is laid out. [active]: the controller focus is on one of this row's cards, marked beside
+ * the title so the two rows are told apart at a glance.
  */
 @Composable
 private fun ScreenRow(
     title: String,
     displayId: Int,
+    active: Boolean,
     state: TaskSwitcher.State,
     switcher: TaskSwitcher,
     first: FocusRequester?,
@@ -216,17 +240,24 @@ private fun ScreenRow(
     onBlur: (TaskSwitcher.Entry, Int) -> Unit
 ) {
     val (shown, bringing) = state.offers(displayId)
-    Text(
+    val freed = displayId == state.freed
+    RowTitle(
+        title,
+        active,
         when {
-            displayId == state.freed -> "$title · freed · choose what goes here"
-            bringing && shown.isNotEmpty() -> "$title · free · bring an app here"
-            else -> title
+            freed -> "Freed · choose what goes here"
+            bringing && shown.isNotEmpty() -> "Free · bring an app here"
+            else -> null
         },
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(top = 8.dp, bottom = 6.dp)
+        urgent = freed
     )
     if (shown.isEmpty()) {
-        Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
+        Text(
+            if (state.ready) "Nothing running on this screen" else "—",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp).border(1.dp, Hairline, CardShape).padding(horizontal = 16.dp, vertical = 14.dp)
+        )
         return
     }
     val returnTask = restore?.takeIf { it.row == displayId }?.task
@@ -239,34 +270,106 @@ private fun ScreenRow(
         val laidOut = snapshotFlow { list.layoutInfo }.first { it.totalItemsCount > 0 }
         if (laidOut.visibleItemsInfo.none { it.index == index }) list.scrollToItem(index)
     }
-    LazyRow(state = list, horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 6.dp, horizontal = 4.dp)) {
+    val front = state.on(displayId).firstOrNull()
+    LazyRow(state = list, horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(vertical = 8.dp, horizontal = 12.dp)) {
         itemsIndexed(shown, key = { _, e -> "$displayId/${e.task.id}" }) { i, e ->
             val elsewhere = e.task.displayId != displayId
-            FocusRow(
+            AppCard(
+                e,
+                note = if (elsewhere) "other screen" else if (e !== front) "behind" else null,
                 onClick = { if (elsewhere) switcher.moveTo(e, displayId) else switcher.bringToFront(e) },
-                modifier = Modifier.width(150.dp)
+                onClose = { switcher.closeApp(e) },
+                // the remaining cards slide into a closed or moved card's place; nothing fades, so a card never lingers
+                // focusable after it has gone
+                modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null)
                     .then(if (i == 0 && first != null) Modifier.focusRequester(first) else Modifier)
                     .then(if (e.task.id == returnTask) Modifier.focusRequester(returning) else Modifier)
                     .onFocusChanged { if (it.isFocused) onFocus(e, displayId) else onBlur(e, displayId) }
-            ) {
-                Box {
-                    Text(
-                        "✕",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        // touch only: the controller closes the focused card with Select, so focus never lands on this mark
-                        modifier = Modifier.align(Alignment.TopEnd).focusProperties { canFocus = false }
-                            .clip(CircleShape).clickable(onClickLabel = "Close app") { switcher.closeApp(e) }.padding(4.dp)
-                    )
-                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(56.dp)) { it.setImageDrawable(e.icon) }
-                        Spacer(Modifier.size(6.dp))
-                        Text(e.label, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium)
-                        val note = if (elsewhere) "other screen" else if (e !== state.on(displayId).firstOrNull()) "behind" else null
-                        if (note != null) Text(note, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+            )
+        }
+    }
+}
+
+/** A row's title; an amber tick grows beside it while the row holds the focus, and [status] follows ([urgent] in amber). */
+@Composable
+private fun RowTitle(title: String, active: Boolean, status: String?, urgent: Boolean) {
+    val mark by animateFloatAsState(if (active) 1f else 0f, tween(180), label = "rowMark")
+    Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier.size(width = 3.dp, height = 18.dp)
+                .graphicsLayer {
+                    alpha = mark
+                    scaleY = 0.3f + 0.7f * mark
                 }
-            }
+                .background(Amber, RoundedCornerShape(2.dp))
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        status?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (urgent) Amber else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 12.dp)
+            )
+        }
+    }
+}
+
+private val CardShape = RoundedCornerShape(14.dp)
+
+/** Cards are objects on the dark scrim: Slate lit faintly from the top left, as Sortie's app tiles are. */
+private val CardLight = Brush.linearGradient(listOf(Color(0x14FFFFFF), Color.Transparent))
+
+/** The focused card's surface: a step above Slate, so the lift reads even where the glow is faint. */
+private val CardLifted = Color(0xFF252D37)
+
+/**
+ * One running app: its icon and name, [note] when it is not the one in front on this row's screen. The controller focus lifts
+ * the card (holding A sinks it); ✕ closes the app by touch, while the controller uses Select, so the mark never takes focus.
+ * Every card has the same height, with or without a note, so a row of them lines up.
+ */
+@Composable
+private fun AppCard(entry: TaskSwitcher.Entry, note: String?, onClick: () -> Unit, onClose: () -> Unit, modifier: Modifier) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    var held by remember { mutableStateOf(false) }
+    Box(
+        modifier
+            .width(150.dp)
+            .focusGlow(focused, CardShape, focusedScale = 1.06f, pressed = held)
+            .clip(CardShape)
+            .background(if (focused) CardLifted else Slate)
+            .background(CardLight)
+            .confirmHeld { held = it }
+            .clickable(interactionSource = interaction, indication = PressVeil, role = Role.Button, onClick = onClick)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 14.dp, bottom = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(56.dp)) { it.setImageDrawable(entry.icon) }
+            Spacer(Modifier.size(8.dp))
+            Text(
+                entry.label,
+                maxLines = 2,
+                minLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(note.orEmpty(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
+        Box(
+            Modifier.align(Alignment.TopEnd)
+                .padding(4.dp)
+                .focusProperties { canFocus = false }
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(Ink.copy(alpha = 0.55f))
+                .clickable(onClickLabel = "Close app", role = Role.Button, onClick = onClose),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("✕", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

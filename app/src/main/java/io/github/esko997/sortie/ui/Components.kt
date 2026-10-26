@@ -2,9 +2,12 @@ package io.github.esko997.sortie.ui
 
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -30,8 +33,12 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.db.PlayStat
@@ -42,6 +49,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 
 /**
  * Wall-clock time (epoch ms) for the times the UI displays: Home's [Clock] and "last played" in [playedLine]. Screenshot tests
@@ -74,10 +82,14 @@ fun Stars(fit: Int, modifier: Modifier = Modifier) {
     Text("★".repeat(fit.coerceIn(0, 5)) + "☆".repeat(5 - fit.coerceIn(0, 5)), color = Amber, style = MaterialTheme.typography.labelMedium, modifier = modifier)
 }
 
+/** A row's cover, letterboxed on Slate inside a Hairline frame so dark art keeps its edge on Ink; the initial when there is none. */
 @Composable
 fun Cover(game: GameEntity, width: Int = 56, height: Int = 72, modifier: Modifier = Modifier) {
     val path = game.cover ?: game.screenshot
-    Box(modifier.size(width.dp, height.dp).clip(RoundedCornerShape(6.dp)).background(Slate), contentAlignment = Alignment.Center) {
+    Box(
+        modifier.size(width.dp, height.dp).clip(CoverShape).background(Slate).border(1.dp, Hairline, CoverShape),
+        contentAlignment = Alignment.Center
+    ) {
         if (path != null) {
             CoverImage(path, Modifier.size(width.dp, height.dp), contentScale = ContentScale.Fit)
         } else {
@@ -86,6 +98,9 @@ fun Cover(game: GameEntity, width: Int = 56, height: Int = 72, modifier: Modifie
     }
 }
 
+private val CoverShape = RoundedCornerShape(6.dp)
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GameRow(
     game: GameEntity,
@@ -109,8 +124,9 @@ fun GameRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Cover(game)
             Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                val title = displayTitle(game)
                 Text(
-                    (if (favourite) "★ " else "") + displayTitle(game),
+                    remember(title, favourite) { if (favourite) starred(title) else AnnotatedString(title) },
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -128,7 +144,8 @@ fun GameRow(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Row {
+                // badges wrap onto a second line rather than run off a narrow row
+                FlowRow {
                     label?.let { Badge(it, Color(0xFF78350F)) }
                     if (game.hack) Badge("hack")
                     if (game.placeholder) Badge("not on device", Color(0xFF7F1D1D))
@@ -140,6 +157,12 @@ fun GameRow(
             }
         }
     }
+}
+
+/** "★ title" with the star in Amber, as the tiles show it. */
+private fun starred(title: String): AnnotatedString = buildAnnotatedString {
+    withStyle(SpanStyle(color = Amber)) { append("★ ") }
+    append(title)
 }
 
 @Composable
@@ -185,15 +208,19 @@ fun Modifier.heroOnFocus(game: GameEntity): Modifier = onFocusChanged { if (it.i
 
 /**
  * The time, 24-hour, recomposed once a minute on the minute boundary and never faster — the same budget as the companion's
- * play timer. The format comes from the device locale's 24-hour pattern.
+ * play timer — and only while this surface is shown ([rememberShown]): behind a game, or on a dark screen, the ticker sleeps and
+ * catches up the moment the surface is back. The format comes from the device locale's 24-hour pattern.
  */
 @Composable
 fun Clock(modifier: Modifier = Modifier) {
     var now by remember { mutableStateOf(localTimeNow()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            now = localTimeNow()
-            delay(60_000L - (uiNow() % 60_000L) + 50)
+    val shown = rememberShown()
+    LaunchedEffect(shown) {
+        shown.collectLatest { visible ->
+            while (visible) {
+                now = localTimeNow()
+                delay(60_000L - (uiNow() % 60_000L) + 50)
+            }
         }
     }
     Text(now.format(CLOCK_FORMAT), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = modifier)

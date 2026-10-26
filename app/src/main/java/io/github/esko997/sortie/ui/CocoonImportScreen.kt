@@ -5,18 +5,17 @@ import android.text.format.Formatter
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -117,10 +117,10 @@ fun CocoonImportScreen(graph: SortieApp.Graph) {
 
     // Plain text in a LazyColumn is unreachable on the D-pad, so every passage sits in a focusable block that scrolls into view.
     Column(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            item { Text("Import from Cocoon", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp)) }
+        LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(12.dp)) {
+            item { PageTitle("Import from Cocoon") }
             when (val s = state) {
-                CocoonImportState.Idle -> item { Note("Looking for Cocoon…") }
+                CocoonImportState.Idle -> item { WorkProgress("Looking for Cocoon…") }
                 is CocoonImportState.Working -> working(s, primary, bytes, onStop = model::cancel)
                 is CocoonImportState.Located -> located(
                     s,
@@ -141,15 +141,10 @@ fun CocoonImportScreen(graph: SortieApp.Graph) {
                 is CocoonImportState.Preview ->
                     preview(s, space, primary, bytes, onOptions = model::setOptions, onConfirm = model::confirm, onCancel = model::dismiss)
                 is CocoonImportState.Result -> item {
-                    FocusRow(onClick = model::dismiss, modifier = Modifier.focusRequester(primary)) {
-                        Column {
-                            Text(s.title, style = MaterialTheme.typography.titleSmall, color = if (s.ok) Amber else MaterialTheme.colorScheme.error)
-                            s.lines.forEach { Note(it, error = !s.ok) }
-                            Text("A: OK", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 8.dp))
-                        }
-                    }
+                    OutcomeRow(s.title, s.ok, s.lines, onDismiss = model::dismiss, modifier = Modifier.focusRequester(primary))
                 }
             }
+            item { Spacer(Modifier.height(12.dp)) }
             item { InfoBlock("Nothing in Cocoon changes") { Note(READ_ONLY) } }
         }
         HintBar("A" to "choose", "B" to "back")
@@ -162,22 +157,19 @@ private const val READ_ONLY = "The import only reads Cocoon's folder: nothing in
 
 private fun LazyListScope.working(s: CocoonImportState.Working, primary: FocusRequester, bytes: (Long) -> String, onStop: () -> Unit) {
     item {
-        Column {
-            Text(s.step, style = MaterialTheme.typography.titleSmall, color = Amber, modifier = Modifier.padding(horizontal = 8.dp))
-            if (s.total > 0) {
-                val fraction = (s.done.toFloat() / s.total).coerceIn(0f, 1f)
-                LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth().padding(8.dp), color = Amber, trackColor = Slate)
-                Note("${bytes(s.done)} of ${bytes(s.total)}")
-            } else {
-                LinearProgressIndicator(Modifier.fillMaxWidth().padding(8.dp), color = Amber, trackColor = Slate)
-            }
-            Note("You can leave this screen: the import carries on.")
-        }
+        WorkProgress(
+            s.step,
+            fraction = if (s.total > 0) s.done.toFloat() / s.total else null,
+            detail = (if (s.total > 0) "${bytes(s.done)} of ${bytes(s.total)}. " else "") + "You can leave this screen: the import carries on."
+        )
     }
     if (s.step == CocoonImporter.ARTWORK_STEP) {
-        item {
-            FocusRow(onClick = onStop, modifier = Modifier.focusRequester(primary)) {
-                Line("Stop copying artwork", "keeps what is copied so far; run the import again later to copy the rest")
+        item { Spacer(Modifier.height(8.dp)) }
+        settingsGroup(null) {
+            row {
+                FocusRow(onClick = onStop, modifier = Modifier.focusRequester(primary)) {
+                    Line("Stop copying artwork", "Keeps what is copied so far; run the import again later to copy the rest")
+                }
             }
         }
     }
@@ -228,32 +220,39 @@ private fun LazyListScope.located(
                 }
             }
         }
-        s.backups.forEachIndexed { i, b ->
-            item {
-                FocusRow(onClick = { onPreview(b.dir) }, modifier = if (problem == null && i == 0) Modifier.focusRequester(primary) else Modifier) {
-                    Line("Use backup ${b.dir.name}", "made ${BackupManager.formatTime(b.createdAt)} · ${b.dir.path}")
+        item { Spacer(Modifier.height(4.dp)) }
+        settingsGroup(null) {
+            s.backups.forEachIndexed { i, b ->
+                row(key = "backup:${b.dir.path}") {
+                    FocusRow(onClick = { onPreview(b.dir) }, modifier = if (problem == null && i == 0) Modifier.focusRequester(primary) else Modifier) {
+                        Line("Use backup ${b.dir.name}", "Made ${BackupManager.formatTime(b.createdAt)} · ${b.dir.path}")
+                    }
+                }
+            }
+            row {
+                val focused = problem == null && s.backups.isEmpty()
+                FocusRow(onClick = { onPreview(null) }, modifier = if (focused) Modifier.focusRequester(primary) else Modifier) {
+                    Line(
+                        "Continue without a backup",
+                        if (s.backups.isEmpty()) "No backup found in ${chosen.path}/backups" else "Systems, favourites, emulators and artwork only"
+                    )
                 }
             }
         }
-        item {
-            val focused = problem == null && s.backups.isEmpty()
-            FocusRow(onClick = { onPreview(null) }, modifier = if (focused) Modifier.focusRequester(primary) else Modifier) {
-                Line(
-                    "Continue without a backup",
-                    if (s.backups.isEmpty()) "no backup found in ${chosen.path}/backups" else "systems, favourites, emulators and artwork only"
-                )
-            }
-        }
+        item { Spacer(Modifier.height(8.dp)) }
         item { Note("Another backup… (its cocoon_backup_… folder, or a folder holding backups; absolute, or relative to the card root)") }
         item { PathField(typedBackup, onTypedBackup, "e.g. /storage/emulated/0/Download/cocoon_backup_…") }
-        item {
-            FocusRow(onClick = onUseTypedBackup) {
-                Line("Use the backup typed above", if (typedBackup.isBlank()) "type a path first" else typedBackup.trim())
+        item { Spacer(Modifier.height(6.dp)) }
+        settingsGroup(null) {
+            row {
+                FocusRow(onClick = onUseTypedBackup) {
+                    Line("Use the backup typed above", if (typedBackup.isBlank()) "Type a path first" else typedBackup.trim())
+                }
             }
-        }
-        item {
-            FocusRow(onClick = onPickBackup) {
-                Line("Pick a backup with file browser…", "a cocoon_backup_… folder or a folder holding backups; Sortie keeps no access grant")
+            row {
+                FocusRow(onClick = onPickBackup) {
+                    Line("Pick a backup with file browser…", "A cocoon_backup_… folder or a folder holding backups; Sortie keeps no access grant")
+                }
             }
         }
     }
@@ -262,26 +261,33 @@ private fun LazyListScope.located(
         item { Note("No Cocoon folder was found on this device's storage. Type its path or pick it with the file browser.", error = true) }
     }
     // the model lists the remembered folder under its stored path, so plain path equality identifies it without disk access
-    s.candidates.forEach { dir ->
-        item {
-            val tags = listOfNotNull(
-                "in use".takeIf { dir == chosen },
-                "used last time".takeIf { remembered != null && File(remembered) == dir },
-                gamelists[dir]?.let { plural(it, "gamelist") }
-            )
-            FocusRow(onClick = { onChoose(dir) }) {
-                Line(dir.path, tags.joinToString(" · ").ifEmpty { "detected" })
+    settingsGroup(null) {
+        s.candidates.forEach { dir ->
+            row(key = "cocoon:${dir.path}") {
+                val tags = listOfNotNull(
+                    "in use".takeIf { dir == chosen },
+                    "used last time".takeIf { remembered != null && File(remembered) == dir },
+                    gamelists[dir]?.let { plural(it, "gamelist") }
+                )
+                val summary = tags.joinToString(" · ").replaceFirstChar { it.uppercase() }.ifEmpty { "Detected" }
+                FocusRow(onClick = { onChoose(dir) }) {
+                    Line(dir.path, summary, accent = if (dir == chosen) Amber else Color.Unspecified)
+                }
             }
         }
     }
+    item { Spacer(Modifier.height(8.dp)) }
     item { Note("Enter a folder… (absolute, or relative to the card root)") }
     item { PathField(typed, onTyped, "e.g. /storage/emulated/0/Cocoon") }
-    item {
-        FocusRow(onClick = onUseTyped, modifier = if (chosen == null) Modifier.focusRequester(primary) else Modifier) {
-            Line("Use the folder typed above", if (typed.isBlank()) "type a path first" else typed.trim())
+    item { Spacer(Modifier.height(6.dp)) }
+    settingsGroup(null) {
+        row {
+            FocusRow(onClick = onUseTyped, modifier = if (chosen == null) Modifier.focusRequester(primary) else Modifier) {
+                Line("Use the folder typed above", if (typed.isBlank()) "Type a path first" else typed.trim())
+            }
         }
+        row { FocusRow(onClick = onPick) { Line("Pick with file browser…", "Choose Cocoon's folder; Sortie reads it directly and keeps no access grant") } }
     }
-    item { FocusRow(onClick = onPick) { Line("Pick with file browser…", "choose Cocoon's folder; Sortie reads it directly and keeps no access grant") } }
 }
 
 private fun LazyListScope.preview(
@@ -327,34 +333,46 @@ private fun LazyListScope.preview(
             )
         }
     }
-    if (plan.newSystems.isNotEmpty()) item { Toggle("Add ${plural(plan.newSystems.size, "system")}", o.systems) { onOptions(o.copy(systems = it)) } }
-    // the legacy cleanup stays selectable when every favourite is already here
-    if (d.favourites.add > 0 || plan.legacyFavourites > 0) {
-        item { Toggle(favouritesToggle(d.favourites, plan.legacyFavourites), o.favourites) { onOptions(o.copy(favourites = it)) } }
-    }
-    if (plan.legacyFavourites > 0) item { InfoBlock("Old Favourites folder entry") { Note(legacyFavouritesNote(plan.legacyFavourites, o.favourites)) } }
-    if (d.hidden.add > 0) {
-        item { Toggle("Hide ${plural(d.hidden.add, "game")}${alreadyHere(d.hidden.present)}", o.hidden) { onOptions(o.copy(hidden = it)) } }
-    }
-    if (plan.artwork.isNotEmpty()) {
-        item { Toggle("Copy ${plural(plan.artwork.size, "artwork file")} (${bytes(plan.artworkBytes)})", o.artwork) { onOptions(o.copy(artwork = it)) } }
-    }
-    if (backup != null) {
-        if (d.folders.create + d.folders.update > 0) item { Toggle(foldersToggle(d.folders), o.folders) { onOptions(o.copy(folders = it)) } }
-        if (d.sessions.add > 0) {
-            val label = "Add ${plural(d.sessions.add, "play session")} (${d.sessions.addedMinutes} min)${alreadyHere(d.sessions.present)}"
-            item { Toggle(label, o.sessions) { onOptions(o.copy(sessions = it)) } }
+    settingsGroup("Bring over") {
+        if (plan.newSystems.isNotEmpty()) row { Toggle("Add ${plural(plan.newSystems.size, "system")}", o.systems) { onOptions(o.copy(systems = it)) } }
+        // the legacy cleanup stays selectable when every favourite is already here
+        if (d.favourites.add > 0 || plan.legacyFavourites > 0) {
+            row { Toggle(favouritesToggle(d.favourites, plan.legacyFavourites), o.favourites) { onOptions(o.copy(favourites = it)) } }
         }
-        if (d.overrides.add > 0) {
-            val kept = if (d.overrides.present > 0) " · ${plural(d.overrides.present, "game")} keep your choice" else ""
-            item { Toggle("Set ${plural(d.overrides.add, "per-game emulator")}$kept", o.overrides) { onOptions(o.copy(overrides = it)) } }
+        if (plan.legacyFavourites > 0) row { InfoBlock("Old Favourites folder entry") { Note(legacyFavouritesNote(plan.legacyFavourites, o.favourites)) } }
+        if (d.hidden.add > 0) {
+            row { Toggle("Hide ${plural(d.hidden.add, "game")}${alreadyHere(d.hidden.present)}", o.hidden) { onOptions(o.copy(hidden = it)) } }
+        }
+        if (plan.artwork.isNotEmpty()) {
+            row { Toggle("Copy ${plural(plan.artwork.size, "artwork file")} (${bytes(plan.artworkBytes)})", o.artwork) { onOptions(o.copy(artwork = it)) } }
+        }
+        if (backup != null) {
+            if (d.folders.create + d.folders.update > 0) row { Toggle(foldersToggle(d.folders), o.folders) { onOptions(o.copy(folders = it)) } }
+            if (d.sessions.add > 0) {
+                val label = "Add ${plural(d.sessions.add, "play session")} (${d.sessions.addedMinutes} min)${alreadyHere(d.sessions.present)}"
+                row { Toggle(label, o.sessions) { onOptions(o.copy(sessions = it)) } }
+            }
+            if (d.overrides.add > 0) {
+                val kept = if (d.overrides.present > 0) " · ${plural(d.overrides.present, "game")} keep your choice" else ""
+                row { Toggle("Set ${plural(d.overrides.add, "per-game emulator")}$kept", o.overrides) { onOptions(o.copy(overrides = it)) } }
+            }
         }
     }
     if (tooBig) {
         item { Note("The artwork doesn't fit in the free space (see below). Turn off the artwork copy or free some space first.", error = true) }
     }
-    item { FocusRow(onClick = onCancel) { Line("Cancel", "change nothing") } }
-    if (!tooBig) item { FocusRow(onClick = onConfirm) { Line("Import", "writes Sortie's library files, user.json, the play database and media folders") } }
+    item { Spacer(Modifier.height(12.dp)) }
+    settingsGroup(null) {
+        row { FocusRow(onClick = onCancel) { Line("Cancel", "Change nothing") } }
+        if (!tooBig) {
+            row {
+                FocusRow(onClick = onConfirm) {
+                    Line("Import", "Writes Sortie's library files, user.json, the play database and media folders", accent = Amber)
+                }
+            }
+        }
+    }
+    item { Spacer(Modifier.height(8.dp)) }
     val present = alreadyPresent(p)
     if (present.isNotEmpty()) {
         item { InfoBlock("Already in Sortie") { Note("Nothing new to add for: ${present.joinToString()}. The import leaves them as they are.") } }
@@ -550,24 +568,3 @@ private fun existingAncestor(f: File): File {
 private fun capped(items: List<String>): List<String> = items.take(LIST_CAP) + listOfNotNull(more(items.size))
 
 private fun more(size: Int): String? = if (size > LIST_CAP) "+${size - LIST_CAP} more" else null
-
-/** A focusable passage of text (A does nothing), so the D-pad can reach and scroll to it. */
-@Composable
-private fun InfoBlock(title: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    FocusRow(onClick = {}, modifier = modifier) {
-        Column {
-            Text(title, style = MaterialTheme.typography.titleSmall)
-            content()
-        }
-    }
-}
-
-@Composable
-private fun Note(text: String, error: Boolean = false) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodySmall,
-        color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-    )
-}

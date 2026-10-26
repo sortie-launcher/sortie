@@ -4,8 +4,6 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -13,12 +11,12 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -32,6 +30,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
@@ -167,8 +166,13 @@ internal fun JournalEditor(
     LaunchedEffect(seed.id) { runCatching { first.requestFocus() } }
     val enabled = busy == null
     Column(Modifier.fillMaxSize()) {
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(if (isNew) "New note" else "Edit note", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        // a form, not a page: on the wide screen it keeps a readable width instead of stretching the note across it
+        Column(
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(12.dp)
+                .wrapContentWidth(Alignment.Start).widthIn(max = EDITOR_MEASURE),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(if (isNew) "New note" else "Edit note", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
 
             Label("Day")
             Text(date.format(LONG_DATE), style = MaterialTheme.typography.titleMedium)
@@ -247,25 +251,22 @@ internal fun JournalEditor(
             }
 
             FlowRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                val saveInteraction = remember { MutableInteractionSource() }
-                Button(
-                    onClick = {
-                        val next = draft.copy(text = draft.text.trimEnd(), updatedAt = System.currentTimeMillis())
-                        val keep = next.attachments.mapTo(HashSet()) { it.path }
-                        val discard = (saved?.attachments.orEmpty().map { it.path } + imported).filterNot { it in keep }
-                        busy = "Saving…"
-                        scope.launch {
-                            val failure = store.save(next, discard)
-                            busy = null
-                            error = failure
-                            if (failure == null) onClose(next)
-                        }
-                    },
+                GlowButton(
+                    "Save",
                     enabled = enabled && !draft.isBlank() && (changed || error != null),
-                    modifier = Modifier.focusGlow(saveInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape),
-                    colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = Ink),
-                    interactionSource = saveInteraction
-                ) { Text("Save") }
+                    primary = true
+                ) {
+                    val next = draft.copy(text = draft.text.trimEnd(), updatedAt = System.currentTimeMillis())
+                    val keep = next.attachments.mapTo(HashSet()) { it.path }
+                    val discard = (saved?.attachments.orEmpty().map { it.path } + imported).filterNot { it in keep }
+                    busy = "Saving…"
+                    scope.launch {
+                        val failure = store.save(next, discard)
+                        busy = null
+                        error = failure
+                        if (failure == null) onClose(next)
+                    }
+                }
                 GlowButton("Cancel", enabled = enabled, onClick = cancel)
                 if (!isNew && !confirmDelete) GlowButton("Delete note…", enabled = enabled) { confirmDelete = true }
             }
@@ -326,8 +327,12 @@ private fun GamePicker(graph: SortieApp.Graph, weekItems: List<String>, onPick: 
         value = ids.mapNotNull { id -> titles[id]?.let { id to it } }
     }
     Column(Modifier.fillMaxSize()) {
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Choose the game", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Column(
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(12.dp)
+                .wrapContentWidth(Alignment.Start).widthIn(max = EDITOR_MEASURE),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text("Choose the game", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             OutlinedTextField(
                 query,
                 { query = it },
@@ -380,3 +385,6 @@ private fun GamePicker(graph: SortieApp.Graph, weekItems: List<String>, onPick: 
 private fun Label(text: String) {
     Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
 }
+
+/** The editor and game chooser's widest column: the note field and button rows stay a comfortable reach on the wide screen. */
+private val EDITOR_MEASURE = 760.dp

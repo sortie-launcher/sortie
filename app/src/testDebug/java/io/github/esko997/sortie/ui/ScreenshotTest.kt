@@ -2,12 +2,15 @@ package io.github.esko997.sortie.ui
 
 import android.view.View
 import androidx.compose.ui.test.ComposeTimeoutException
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RoborazziOptions
@@ -90,7 +93,7 @@ abstract class ScreenshotTest(private val device: String) {
         } catch (e: ComposeTimeoutException) {
             throw AssertionError("still loading: pictures ${ImageLoads.pending()}, mech sprite ${mechLoading()}", e)
         }
-        // let time-bound effects settle: the focus glow's pulse (3 s) and the background's colour blend (2.5 s)
+        // Let finite focus and artwork-colour transitions settle before capturing the static layout.
         compose.mainClock.advanceTimeBy(3_500)
         compose.waitForIdle()
         if (window == null) captureScreenRoboImage("$device/$name.png", OPTIONS) else window.captureRoboImage("$device/$name.png", OPTIONS)
@@ -105,7 +108,11 @@ abstract class ScreenshotTest(private val device: String) {
     @Test
     fun homeCompactBrowsing() {
         awaitHome()
-        compose.onNodeWithContentDescription("Hide header").performClick()
+        val toggle = compose.onNodeWithContentDescription(HIDE_HEADER)
+        // Compact windows keep header actions on a horizontal rail; bring the toggle into view before tapping it.
+        if (!toggle.isDisplayed()) toggle.performScrollTo()
+        toggle.performClick()
+        compose.onNodeWithContentDescription(SHOW_HEADER).assertIsDisplayed()
         capture("home-compact")
     }
 
