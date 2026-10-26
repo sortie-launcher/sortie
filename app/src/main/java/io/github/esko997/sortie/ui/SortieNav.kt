@@ -180,7 +180,7 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
                 ReferenceCardsScreen(graph, id)
             }
             composable("apps") { AppsScreen(vm) }
-            composable("switcher") { SwitcherScreen() }
+            composable("switcher") { SwitcherScreen(onHome = { nav.popBackStack("home", inclusive = false) }) }
         }
     }
 }

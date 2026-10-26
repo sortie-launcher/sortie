@@ -1,18 +1,18 @@
 package io.github.esko997.sortie.smoke
 
+import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.os.SystemClock
 import android.view.Display
 import android.view.InputDevice
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.Configurator
-import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.UiDevice
-import java.util.regex.Pattern
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -65,6 +65,16 @@ class DualScreenSmokeTest {
     @Test
     fun homeShowsNavigationOnThePrimaryDisplay() {
         await("the controller on the primary display") { focusedDisplay() == PRIMARY }
+    }
+
+    @Test
+    fun activitySwitcherSortieButtonReturnsToNavigation() {
+        val navigation = mainTasks().single()
+        shell("am start --display $PRIMARY -n $MAIN --ez switcher true")
+        awaitText("Running", "the activity switcher")
+        device.findObject(By.pkg(PKG).text("Sortie").displayId(PRIMARY)).click()
+        awaitNavigationOn(PRIMARY)
+        assertEquals("the existing navigation task is reused", navigation.id, mainTasks().single().id)
     }
 
     @Test
@@ -291,39 +301,58 @@ class DualScreenSmokeTest {
         // handled in one burst that runs straight past the articles, so A landed on the games filter.
         var presses = 0
         while (!firstArticleFocused(display)) {
-            assertTrue("no article after $presses presses; it shows ${texts(display)}", presses++ < 40)
+            if (presses++ >= 40) fail("no article after $presses presses; it shows ${texts(display)}")
             val before = contentsState(display)
             shell("input keyevent KEYCODE_DPAD_DOWN")
             await("Down $presses to move the focus or scroll from $before", timeoutMs = 5_000, detail = { "now ${contentsState(display)}" }) {
                 contentsState(display).let { it != null && it != before }
             }
         }
-        val title = try {
-            device.findObject(firstArticle(display))?.findObjects(By.text(ANY_TEXT))?.mapNotNull { it.text }?.firstOrNull { it != "01" && it.length > 3 }
-        } catch (e: StaleObjectException) {
-            null
-        }
+        val title = screenNodes(display).firstOrNull { it.inFocusedClickable && it.text != "01" && (it.text?.length ?: 0) > 3 }?.text
         // One A must open the focused article; retrying would hide a real activation regression.
         shell("input keyevent KEYCODE_BUTTON_A")
         awaitText("reader menu", "an article", display)
         return title
     }
 
-    /**
-     * What a Down on the contents can change: the focused entry, and where every text is (a scroll inside a passage taller
-     * than the screen moves its lines but not its clipped bounds). Null only when a node went stale while being read.
-     */
-    private fun contentsState(display: Int): String? = try {
-        val focused = device.findObject(By.pkg(PKG).displayId(display).focused(true))?.visibleBounds?.toShortString() ?: "none"
-        val lines = device.findObjects(By.pkg(PKG).displayId(display).text(ANY_TEXT)).map { "${it.text.orEmpty().take(12)}@${it.visibleBounds.top}" }
-        "focus=$focused $lines"
-    } catch (e: StaleObjectException) {
-        null
+    /** The focused entry and visible text positions: a Down must change focus or actually scroll the contents. */
+    private fun contentsState(display: Int): String? {
+        val nodes = screenNodes(display)
+        if (nodes.isEmpty()) return null
+        val focused = nodes.firstNotNullOfOrNull { it.focusedBounds } ?: "none"
+        val lines = nodes.mapNotNull { n -> n.text?.let { "${it.take(12)}@${n.top}" } }
+        return "focus=$focused $lines"
     }
 
-    private fun firstArticle(display: Int): BySelector = By.pkg(PKG).displayId(display).focused(true).clickable(true).hasDescendant(By.text("01"))
+    private data class ScreenNode(val text: String?, val top: Int, val focusedBounds: String?, val inFocusedClickable: Boolean)
 
-    private fun firstArticleFocused(display: Int): Boolean = device.hasObject(firstArticle(display))
+    /**
+     * Read one accessibility-tree snapshot, not UiObject2 handles that refresh themselves later. Compose can remove a
+     * clipped paragraph between finding those handles and reading them; one stale paragraph then hid every valid scroll
+     * observation, and even building an assertion's diagnostic message could throw instead of checking navigation.
+     */
+    private fun screenNodes(display: Int): List<ScreenNode> {
+        val nodes = ArrayList<ScreenNode>()
+        val bounds = Rect()
+        fun visit(node: AccessibilityNodeInfo, inFocusedClickable: Boolean = false) {
+            // API 33's accessibility cache can retain pre-scroll children/bounds. Refresh each parent before its children;
+            // a node removed during this traversal is absent, not an exception that invalidates the remaining viewport.
+            if (!node.refresh()) return
+            val focusedClickable = inFocusedClickable || (node.isFocused && node.isClickable)
+            if (node.packageName?.toString() == PKG && node.isVisibleToUser) {
+                val text = node.text?.toString()?.takeIf(String::isNotBlank)
+                if (text != null || node.isFocused) {
+                    node.getBoundsInScreen(bounds)
+                    nodes.add(ScreenNode(text, bounds.top, if (node.isFocused) bounds.toShortString() else null, focusedClickable))
+                }
+            }
+            for (i in 0 until node.childCount) node.getChild(i)?.let { visit(it, focusedClickable) }
+        }
+        for (window in instrumentation.uiAutomation.windowsOnAllDisplays[display].orEmpty()) window.root?.let { visit(it) }
+        return nodes
+    }
+
+    private fun firstArticleFocused(display: Int): Boolean = screenNodes(display).any { it.inFocusedClickable && it.text == "01" }
 
     // ---------- helpers ----------
 
@@ -349,12 +378,11 @@ class DualScreenSmokeTest {
 
     private fun awaitText(text: String, what: String, display: Int = PRIMARY) =
         await("$what (\"$text\") on display $display", detail = { "it shows ${texts(display)}; ${describe()}" }) {
-            device.hasObject(By.pkg(PKG).text(text).displayId(display))
+            screenNodes(display).any { it.text == text }
         }
 
     /** Sortie's texts on [display], for failure messages. */
-    private fun texts(display: Int): List<String> =
-        device.findObjects(By.pkg(PKG).displayId(display)).mapNotNull { it.text?.takeIf(String::isNotBlank) }.take(30)
+    private fun texts(display: Int): List<String> = screenNodes(display).mapNotNull { it.text }.take(30)
 
     /** Every leaf task, top-most first; components in short form (`pkg/.Activity`) whichever form the shell printed. */
     private fun tasks(): List<Task> {
@@ -448,6 +476,5 @@ class DualScreenSmokeTest {
         val ROOT_LINE = Regex("""^\s*RootTask id=(\d+)\b.*\bdisplayId=(\d+)""")
         val TASK_LINE = Regex("""taskId=(\d+): ([\w.]+/[\w.$]+).*visible=(true|false)""")
         val COMPONENT = Regex("""[\w.]+/[\w.$]+""")
-        val ANY_TEXT: Pattern = Pattern.compile(".+", Pattern.DOTALL)
     }
 }

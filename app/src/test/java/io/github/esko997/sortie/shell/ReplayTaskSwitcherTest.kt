@@ -2,6 +2,8 @@ package io.github.esko997.sortie.shell
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -9,6 +11,46 @@ import org.junit.Test
  * AYANEO DMG. Activity starts (the controller anchor, Sortie's own tasks) are outside the shell and not replayed here.
  */
 class ReplayTaskSwitcherTest {
+    // Relevant WindowManager fields from a DMG overlay hidden by Android Settings; no task history or device IDs.
+    private val protectedOverlay = """
+        WINDOW MANAGER WINDOWS (dumpsys window windows)
+          Window #0 Window{abc u0 Sortie switcher}:
+            mDisplayId=0 mSession=Session{abc}
+            mOwnerUid=10000 showForAllUsers=false package=io.github.esko997.sortie appop=SYSTEM_ALERT_WINDOW
+            mViewVisibility=0x0 mHaveFrame=true mObscured=false
+            mPolicyVisibility=false mAppOpVisibility=true mForceHideNonSystemOverlayWindow=true
+            mHasSurface=true isReadyForDisplay()=false
+    """.trimIndent()
+
+    @Test
+    fun protectedOverlayRequiresAnOwnedWindowOnTheInvokingDisplay() {
+        assertTrue(TaskSwitcher.overlayHiddenByPolicy(protectedOverlay, 0, "io.github.esko997.sortie"))
+        assertFalse(TaskSwitcher.overlayHiddenByPolicy(protectedOverlay, 4, "io.github.esko997.sortie"))
+        assertFalse(TaskSwitcher.overlayHiddenByPolicy(protectedOverlay, 0, "another.package"))
+        assertFalse(TaskSwitcher.overlayHiddenByPolicy(protectedOverlay.replace("Sortie switcher", "Another overlay"), 0, "io.github.esko997.sortie"))
+    }
+
+    @Test
+    fun visibleOrUnknownOverlayPolicyDoesNotDismissTheSwitcher() {
+        assertFalse(
+            TaskSwitcher.overlayHiddenByPolicy(
+                protectedOverlay.replace("mForceHideNonSystemOverlayWindow=true", "mForceHideNonSystemOverlayWindow=false"),
+                0,
+                "io.github.esko997.sortie"
+            )
+        )
+        assertFalse(TaskSwitcher.overlayHiddenByPolicy("Bad window command, or no windows match: Sortie switcher", 0, "io.github.esko997.sortie"))
+        assertFalse(TaskSwitcher.overlayHiddenByPolicy(protectedOverlay.substringBefore("mPolicyVisibility="), 0, "io.github.esko997.sortie"))
+    }
+
+    @Test
+    fun overlayPolicyNeverLeaksAcrossDisplayWindowBlocks() {
+        val visible = protectedOverlay.replace("mForceHideNonSystemOverlayWindow=true", "mForceHideNonSystemOverlayWindow=false")
+        val hiddenOtherDisplay = protectedOverlay.replace("mDisplayId=0", "mDisplayId=4")
+        assertFalse(TaskSwitcher.overlayHiddenByPolicy(visible + "\n" + hiddenOtherDisplay, 0, "io.github.esko997.sortie"))
+        assertTrue(TaskSwitcher.overlayHiddenByPolicy(visible + "\n" + hiddenOtherDisplay, 4, "io.github.esko997.sortie"))
+    }
+
     private fun switcher(capture: String): Pair<TaskSwitcher, ReplayShell> {
         val (mover, shell) = replayMover(capture.substringBefore('/'), DeviceCaptures.stackList(capture))
         return TaskSwitcher(SortieContext(), mover) { 0 } to shell

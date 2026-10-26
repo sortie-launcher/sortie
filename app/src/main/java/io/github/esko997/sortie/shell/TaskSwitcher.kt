@@ -166,6 +166,11 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
             return
         }
         if (presenter?.invoke(focusDisplay, homeTask) == true) return
+        showActivity()
+    }
+
+    /** Protected foreground windows can forbid overlays; use the ordinary activity instead of bypassing that policy. */
+    private fun showActivity() {
         open()
         val options = ActivityOptions.makeBasic().setLaunchDisplayId(TOP)
         val intent = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra(EXTRA_SWITCHER, true)
@@ -258,6 +263,20 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
             }
         }
         anchor(displayId)
+        // A protected app (Settings, permission prompts, etc.) may hide the overlay we just placed over it. The View
+        // remains attached/VISIBLE, so only WindowManager's policy is authoritative. Probe once after restoring the app;
+        // never keep polling, guess from focus timing, or exempt a package from Android's overlay protection.
+        if (_state.value.overlay && overlayDisplay == displayId) {
+            val windows = mover.read("dumpsys window 'Sortie switcher'")
+            if (windows != null && overlayHiddenByPolicy(windows, displayId, context.packageName)) {
+                withContext(Dispatchers.Main) {
+                    if (_state.value.overlay && overlayDisplay == displayId) {
+                        dismisser?.invoke()
+                        showActivity()
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -327,6 +346,30 @@ class TaskSwitcher(private val context: Context, private val mover: ScreenMover,
     }
 
     companion object {
+        /** Positive evidence only: a missing window/field or a different display must not dismiss a healthy overlay. */
+        internal fun overlayHiddenByPolicy(dump: String, displayId: Int, packageName: String): Boolean {
+            var switcherWindow = false
+            var targetDisplay = false
+            var owned = false
+            for (raw in dump.lineSequence()) {
+                val line = raw.trim()
+                if (line.startsWith("Window #")) {
+                    switcherWindow = line.endsWith(" Sortie switcher}:")
+                    targetDisplay = false
+                    owned = false
+                } else if (switcherWindow) {
+                    if (line.startsWith("mDisplayId=")) {
+                        targetDisplay = line.substringAfter('=').substringBefore(' ').toIntOrNull() == displayId
+                    }
+                    if (line.startsWith("mOwnerUid=")) {
+                        owned = line.substringAfter("package=", "").substringBefore(' ') == packageName
+                    }
+                    if (targetDisplay && owned && line.substringAfter("mForceHideNonSystemOverlayWindow=", "").substringBefore(' ') == "true") return true
+                }
+            }
+            return false
+        }
+
         private const val TAG = "Switcher"
         const val TOP = Display.DEFAULT_DISPLAY
 

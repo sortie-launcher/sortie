@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Home over an app that blocks overlays (such as Android Settings) now opens the ordinary activity switcher instead of
+  leaving an invisible overlay behind. Android's overlay protection remains intact. Single-screen switchers omit
+  second-screen controller actions and use **Running apps** rather than **Top screen**.
+- The activity switcher's **Sortie** button now returns to Home instead of raising the activity that was already showing
+  the switcher. The overlay button still restores the existing navigation task.
 - Full UI polish: a consistent amber/ink palette, clearer type and cover treatments, quieter keycaps, and more room for
   content on compact screens. Home actions use a scrolling rail on smaller windows; detail actions and launch choices
   stay together, and Select opens or closes **Launch with…**. Settings offer direct touch choices as well as controller

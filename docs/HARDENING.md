@@ -55,6 +55,38 @@ anomaly), `logcat.txt`, and `anomalies/<n>/` with both screens, task/focus dumps
 
 ## Findings
 
+### Protected foreground windows hide the Home overlay (fixed)
+
+Android Settings can set `HIDE_NON_SYSTEM_OVERLAY_WINDOWS`. On the Pocket DMG, Home briefly raised Sortie, then restored
+Settings under a switcher that WindowManager had hidden. Its View was still attached and `VISIBLE`; the hidden window
+could appear later when Settings closed.
+
+After restoring the foreground app, Sortie makes one title-filtered WindowManager probe. Positive evidence that its own
+switcher window on the invoking display has `mForceHideNonSystemOverlayWindow=true` removes the overlay and opens the
+existing activity switcher. Missing fields, other packages and other displays do not trigger the fallback. This does not
+bypass Android's protection or continuously poll WindowManager. Five Settings → Home cycles on the DMG opened a visible,
+focused activity switcher; B returned to Sortie's navigation with no stale overlay. Ordinary Clock/Shizuku overlay
+round trips were also exercised. One initial Clock round trip used the activity fallback without a retained diagnostic
+log; its cause is unconfirmed, not evidence of a package-specific exception.
+
+The activity switcher's **Sortie** button also used to raise its own task without leaving the switcher route. It now
+pops that route back to Home; the overlay retains its task-raising behavior. The emulator smoke checks that the button
+returns to Home in the same navigation task, without needing Shizuku.
+
+### Rapid grid navigation can lose its column (known framework limitation)
+
+With the shipped Compose Foundation 1.7.6, repeated vertical D-pad movement can select the edge of an off-screen row
+instead of retaining the current column. On the DMG it occurred with injected events arriving about 80–90 ms apart,
+not only an instantaneous synthetic burst. A disposable API 33 emulator reproduced it in a five-column, 60-system
+fixture: System 00 → six Down → System 30 → six Up → System 04. Disabling animations did not change that result.
+
+This matches the upstream [lazy-grid focus report](https://issuetracker.google.com/issues/363984115) and its
+[public reproduction](https://stackoverflow.com/questions/79412856/how-to-maintain-column-during-focus-traversal-lazyverticalgrid-on-tv).
+The shared beyond-bounds search adds one item at a time, rather than making the entire next row available for directional
+search; the inspected Foundation 1.8.3 implementation still does so. No dependency upgrade, key-dropping throttle or
+replacement focus engine was introduced during this hardening pass. This remains a controller-navigation limitation;
+the passing Back/focus-restoration checks must not be presented as proof that rapid traversal is correct.
+
 ### AYN Thor: the Thor-button panel leaks until the bottom screen locks up
 
 Observed 25 October 2026 after an evening of games on the top screen and video on the bottom one. In order: the Thor button
@@ -188,6 +220,38 @@ and used four CPU ticks; DMG behind Android Settings drew zero additional frames
 these are approximately 0.06% and 0.02% of one CPU core, respectively. This is a bounded smoke measurement, not a
 guarantee of zero background CPU or a long-duration battery benchmark.
 
+### Overnight native-refresh and idle checks (26 October 2026)
+
+The release after the full-polish pass was measured on real hardware, not against an assumed 120 Hz target. Thor and
+Nova expose 60/120 Hz modes; the DMG exposes 60 Hz only. Static pages should stop drawing, not manufacture frames to
+inflate an FPS counter. These are bounded interaction samples, not a guarantee that every transition meets its deadline.
+
+- Thor, actual controller tile movement: median presentation intervals were 8.44 ms on the top screen and 8.39 ms on the
+  bottom. Android's app-deadline counters reported 3/1,101 and 4/1,110 missed frames respectively. No presentation gap
+  reached 20.8 ms in either sample. The top trace nevertheless carried BufferStuffing/late-present flags and roughly
+  33 ms of queue latency: near-native presentation cadence does not establish ideal input latency.
+- Thor, 20 folder-open/Back cycles: 64/2,911 app-deadline misses (2.20%); p99 presentation interval 32.79 ms.
+  Focus returned to the selected Favourites tile. Route changes still have longer frames than steady tile movement.
+- Nova, steady tile movement: median presentation interval about 8.34 ms, with 1–2% app-deadline misses. Folder
+  transitions were costlier (about 5%); traces attributed work to recomposition, lazy layout and accessibility semantics.
+  A local compilation-mode comparison improved some tails but did not eliminate misses; it was not shipped as a fix.
+- The DMG's as-found vendor power-saving profile capped CPU/GPU clocks heavily. Its initial 63–69 ms frame sample
+  must not be treated as an uncapped 60 Hz performance result or compared directly with the two 120 Hz devices.
+
+Thor kept the same Sortie process through three ten-minute samples while a game ran on the top screen. Both displays
+remained on. CPU percentages below are relative to **one core**, not the whole SoC; PSS is Android's process estimate.
+
+| Bottom-screen state | Sortie CPU | New Sortie frames | PSS, first → last |
+| --- | ---: | ---: | ---: |
+| Visible animated companion | 0.69% | 393 | 214,478 → 141,832 KiB |
+| Visible magazine article | 0.18% | 58 | 273,987 → 212,758 KiB |
+| Settings covering Performance and the companion | 0.53% | 0 | 151,746 → 149,970 KiB |
+
+Memory settled rather than continuing to rise. A separate 90-second `/proc`-only hidden control, without Binder dumps
+during the interval, measured 0.40% of one core. Zero rendered frames is not a claim of zero background work.
+Settings → Home used the activity fallback on Thor; its Sortie button returned to Home by controller and touch.
+Clock → Home still used the ordinary overlay, and B removed it. The reader's touch Close also closed its own task.
+
 ### Tier 3: recorded device output
 
 `ScreenMover` and `TaskSwitcher` decide from what the shell prints: which tasks `cmd activity stack list` shows on which
@@ -229,12 +293,15 @@ Covered:
   The end state is always checked; when a slow runner spaces the presses too far apart (1.5 s for the first, 500 ms for the
   pair, which is tried twice) the test is reported as skipped with the measured gap instead of failing.
 - Home from another app (Settings) returns to the same navigation task.
+- The activity switcher's **Sortie** button leaves the switcher route and returns to Home without replacing navigation's task.
 - Back on Home leaves Sortie in front, both as HOME and in an ordinary task (started from the launcher intent while another
   app is HOME), the case behind "Back on Home sent Sortie away" above.
 - The magazine reader, with the pinned magazines: shelf, issue contents, first article, controller only. Each Down waits
   until the focus or the list has visibly moved: presses sent blind piled up while a slow runner was busy and were then
-  handled in one burst past every article, so A toggled the games filter instead. Once the first article is focused,
-  one A must open it; the smoke does not retry activation.
+  handled in one burst past every article, so A toggled the games filter instead. Scroll observations read accessibility
+  node snapshots rather than retaining UiObject2 handles to paragraphs that Compose may remove when clipped. Each node
+  is refreshed before its children, including the focused article check: cached focus/bounds could otherwise skip the
+  first article despite observing the scroll. Once it is focused, one A must open it; the smoke does not retry activation.
 - Built-in apps: Magazines is its own task; X keeps the article while moving only that reader, then Back climbs contents
   and shelf before closing it. Performance opens cold on the second display, reopens the same task, moves to the primary
   display and closes with Back; navigation's task survives. These own-window moves need no Shizuku.
