@@ -451,6 +451,8 @@ private fun Panel(
                 subtitle,
                 color = Amber,
                 textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 56.dp, top = 8.dp, end = 56.dp, bottom = 8.dp).mechaObstacle("companion:subtitle")
             )
         }
