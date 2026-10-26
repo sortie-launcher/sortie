@@ -28,6 +28,8 @@ These are UI captures, not emulator-compatibility tests.
 - **Device:** physical AYN Thor running Android 13; primary display 1920×1080, companion display 1240×1080.
 - **Shows:** the PS2 grid focused on Armored Core 3 and its companion panel. The capture commands ran concurrently at
   16:21:13 local time with a stable selection and no intervening input; this is not a claim of frame-locked capture.
+  The two-line companion blurb limit landed after this capture; newer builds truncate that preview while the game page
+  retains the full text.
 - `companion-top.png` and `companion-bottom.png` are the native originals. The website uses them directly.
   `companion.png` places the top at `(0, 0)` and the bottom at `(340, 1104)` on a 1920×2184 background, RGB `(8, 10, 11)`.
   The gap is 24 pixels; neither screen is cropped, scaled or retouched.

@@ -428,6 +428,7 @@ leaving the list. This also works when another game is running behind Sortie. Wh
 game's timer, bookmark and the guide's control notes. With nothing selected or playing, it rotates through recommended unplayed games;
 tapping one opens it.
 The line below a game's title shows its platform, year, developer and genre when available, separately from the guide hook.
+The curated blurb is a two-line preview here, with an ellipsis when it runs longer. Open the game's main page to read it in full.
 
 - **+** (bottom-right): start any app on that screen.
 - **Dot** (bottom-left): the dock. Tap to unfurl five slots up the left edge; the controller moves to them. A / tap an empty
