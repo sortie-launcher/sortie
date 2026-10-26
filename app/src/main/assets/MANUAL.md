@@ -158,17 +158,19 @@ Touch and keyboard arrows still position the caret, and **A** on a text field br
 
 ## Hangar companion (experimental)
 
-The little mech on Home is an optional, experimental companion, about a centimetre tall on any screen. He lives behind the
-interface, in its margins: beside the clock, at the end of the sort chips, peeking over the first row of tiles or standing
-on the hint bar. Every tile, button and line of text stays in front of him, so he never covers anything you need, and he
-only stops where enough of him shows to tap. When nowhere has room he goes to his home base at the end of the hint bar.
+The little mech on Home is an optional, experimental companion, about a centimetre tall on any screen. He lives above the
+interface, in its free spaces: beside the clock, at the end of the sort chips, peeking over tiles or visiting the hint bar.
+He keeps clear of labels and controls, and only stops where enough of him shows to tap. The bar stays its normal height
+and full width, with a light transparent gradient. If nowhere has room, he hides rather than stretching the interface.
 On a dual-screen handheld he also roams the other screen (near the battery and bell, on or beside **Want to play**, over
 the game's picture, by the **+**, with his base under the bell) and can walk off one screen and onto the other. There is
 only one of him.
 
-- While you can see him he is alive: he breathes, blinks and glances about, and every minute or so he strolls to another
-  spot. Now and then he does something instead: naps on top of something, sits on an edge with his legs dangling over it,
-  pokes the battery (or the clock on Home), or stands under the battery and lifts it a few pixels, straining. Any button or
+- While you can see him he breathes, blinks, shifts his weight and sometimes glances toward your selection. When you pause
+  browsing he explores: looking before he moves, walking along clear edges, crouching into a small jump and settling after
+  landing. If there is no safe route, he slips out of sight and reappears elsewhere instead. Reading and other quiet views
+  keep him calmer. Now and then he naps, sits on an edge with his legs dangling, pokes the battery (or the clock on Home),
+  or stands under the battery and lifts it a few pixels, straining. Any button or
   touch stops that at once and puts the battery back. When you come back from a game he waves and says what the session
   earned; news from the Hangar shows in a speech bubble where there is empty space. After a few quiet minutes he dozes
   until you press something. On a dual-screen handheld he keeps living on the other screen while you play (hide him in the

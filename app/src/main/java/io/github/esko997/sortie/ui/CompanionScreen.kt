@@ -157,7 +157,7 @@ fun CompanionScreen(displayId: Int) {
         dockSlot = -1
     }
     Surface(Modifier.fillMaxSize(), color = Ink) {
-        MechaStageHost(stage) {
+        MechaStageHost(stage, quiet = magazine != null || picking || switcher.open) {
             when {
                 switcher.open && !switcher.overlay -> TouchSwitcher(graph.switcher, switcher, displayId)
                 launcher -> TouchLauncher(graph, displayId, scope, onClose = { launcher = false })

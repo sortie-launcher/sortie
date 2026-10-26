@@ -25,6 +25,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.currentCompositeKeyHash
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -120,19 +121,24 @@ private val KeyCapFill = Color(0xEB2E3742)
 
 /**
  * Browsing chrome stays in the layout, so a focused final row is never hidden under the hints. Compact mode keeps the
- * common commands on one line; Controls retains every command without a tall footer. The fade leaves the backdrop visible.
+ * common commands on one line; Controls retains every command without a tall footer. A light fade leaves the backdrop
+ * visible. Each hint's label (not the free rest of its share of the bar) and Controls are obstacles the companion keeps
+ * clear of.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BrowseHintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modifier, compact: Boolean = false) {
-    val fade = remember { Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = 0.72f))) }
+    val barKey = currentCompositeKeyHash
+    val boundary = remember(barKey) { "browse:$barKey" }
+    val fade = remember { Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = 0.4f))) }
+    val bar = modifier.fillMaxWidth().background(fade)
     if (!compact) {
         FlowRow(
-            modifier.fillMaxWidth().background(fade).padding(horizontal = 14.dp, vertical = 6.dp),
+            bar.padding(horizontal = 14.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            hints.forEach { (button, action) -> BrowseHint(button, action) }
+            hints.forEachIndexed { i, (button, action) -> BrowseHint("$boundary:hint:$i", button, action) }
         }
         return
     }
@@ -152,7 +158,7 @@ fun BrowseHintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modif
             opener.requestFocus()
         }
     }
-    BoxWithConstraints(modifier.fillMaxWidth().background(fade)) {
+    BoxWithConstraints(bar) {
         val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
         val width = maxWidth / fontScale
         val count = when {
@@ -167,8 +173,10 @@ fun BrowseHintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modif
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                essentials.forEach { (button, action) -> BrowseHint(button, action, Modifier.weight(1f)) }
+            // the hints sit together at the start, so the bar's free stretch before Controls is one open run (the companion's
+            // walkway on Home)
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                essentials.forEachIndexed { i, (button, action) -> BrowseHint("$boundary:hint:$i", button, action) }
             }
             TextButton(
                 onClick = { controls = true },
@@ -176,7 +184,7 @@ fun BrowseHintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modif
                 shape = ControlsShape,
                 modifier = Modifier.focusRequester(opener).heightIn(min = 48.dp)
                     .focusGlow(controlsFocused, ControlsShape, pressed = controlsPressed)
-                    .mechaObstacle("browse:controls", interactive = true)
+                    .mechaObstacle("$boundary:controls", interactive = true)
             ) { Text("Controls", style = MaterialTheme.typography.labelLarge, color = Amber, maxLines = 1) }
         }
     }
@@ -194,9 +202,10 @@ private val ControlsShape = RoundedCornerShape(10.dp)
 /** The Controls dialog: the same card as the context sheets. */
 private val DialogShape = RoundedCornerShape(16.dp)
 
+/** Each bar owns its label boundaries, including while outgoing and incoming screens overlap. */
 @Composable
-private fun BrowseHint(button: String, action: String, modifier: Modifier = Modifier) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun BrowseHint(id: String, button: String, action: String) {
+    Row(Modifier.mechaObstacle(id), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         KeyCap(button)
         Text(
             action,

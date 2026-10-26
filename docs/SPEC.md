@@ -194,25 +194,26 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 
 ### Hangar companion (experimental)
 
-- Lives behind the interface on Home (navigation display) and on the other display's idle panel, never in a strip of its
-  own. `MechaStageHost` (in `:mecha`) wraps a window's content: the mech is drawn under it (every tile, control and text
-  wins; occlusion makes peeking free) and only a speech bubble is drawn over it, on empty space. Screens only declare
-  spots with `Modifier.mechaSpot(id, kind)` / `mechaObstacle(id)`; every declared element is also an obstacle.
-  Spot kinds: LEDGE (on an element's top edge), PEEK (head above an element's top edge, the rest clipped away),
-  BESIDE_END/START (on its bottom line, just outside it), ROOM (inside empty space), EDGE_START/END (partly off screen at
-  the edge, standing on the element: the way in and out). A spot counts only while its element is laid out and whole on
-  screen, the exposed art is inside the window and clear of every other element, and at least 40 dp × 40 dp of him shows
-  free of controls (so he is always tappable; a peek shows as many rows as that takes: head and shoulders). Scale: the
-  smallest whole multiple of the 64 px frame at least 9 mm tall from the display's real dpi (`ydpi`, or the density bucket
+- Lives above Home and the other display's idle panel without changing their layout. `MechaStageHost` (in `:mecha`)
+  draws one foreground layer after its content. Normal poses are clipped away from declared solid content and controls,
+  including a prop's temporary drawing offset; peek edges and the window bounds also clip the art. Carrying and sitting
+  intentionally allow overlap. Screens declare geometry with `Modifier.mechaSpot(id, kind)` / `mechaObstacle(id)`.
+  ROOM, FOOTER and BASE are empty-space anchors, not solid obstacles.
+  Spot kinds: LEDGE (on an element's top edge), PEEK (head and shoulders above an element), BESIDE_END/START (outside its
+  bottom edge), ROOM (inside empty space), EDGE_START/END (partly off screen), FOOTER (inside a bottom-aligned bar, with
+  legs clipped at the window edge if necessary), BASE (reserved empty space). Every resting place must leave at least
+  40 dp × 40 dp exposed and clear of controls; motion reserves two extra sprite pixels above and beside the art.
+  Scale is the smallest whole multiple of the 64 px frame at least 9 mm tall from real dpi (`ydpi`, or the density bucket
   when it reports nonsense): 2× on the Thor, DMG and Nova; one step smaller only if fewer than two spots qualify.
-- Home base: when no spot qualifies he stands in empty space the host reserves for him (`mechaBaseSize`,
-  `Modifier.mechaHomeBase`): on Home at the end of the hint bar row, on the other display under the bell (the picture keeps
-  clear of it). A hidden companion reserves nothing. If even the base cannot hold him he hides; he is never visible and
-  untappable.
+- Home reserves no companion space. Its natural-height, full-width hint bar has a lighter transparent-to-ink gradient;
+  compact hints sit together on the left, Controls on the right, with any safe gap available to Rivet. Each bar owns its
+  obstacle IDs across navigation transitions. A short expanded bar may not provide a tappable spot: if neither it nor
+  another anchor fits, he hides rather than enlarging the bar or shrinking his tap target. The other display retains its
+  base under the bell (`mechaBaseSize`, `Modifier.mechaHomeBase`), available as an ordinary destination, not only a fallback.
 - Home spots: after the clock/game count, on the header actions when they wrap below the title, after the sort chips,
   over every laid-out tile (in practice the first visible row: elsewhere the head would be inside another tile), on the
-  hint bar, both edges along the hint bar. Other display: after the battery, before the bell, on and after **Want to
-  play**, over the hero picture (sized to the picture's real aspect ratio), before the **+**, both edges just above the
+  hint bar's free stretches. Section-title obstacles cover their text, not the blank row beside it. Other display: after
+  the battery, before the bell, on and after **Want to play**, over the hero picture (sized to its real aspect ratio), before the **+**, both edges just above the
   bottom. Text, the dock and the detail block are obstacles.
 - One mech per process (`MechaPresence`): he is on one display; the latest shown, allowed stage there draws him. He
   stays on that display while its window is paused, adopts the latest active window when his display has none left, and
@@ -224,16 +225,19 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   (`displayLitFlow` in `:design`, shared with device stats), never composition or the frame clock, and the director
   (`whileShown`) exists only while its stage owns the mech. Stopped, backgrounded behind a game, screen off, hidden
   companion: no coroutine, no timer, no frame of his.
-- Idle life (`MechaIdle`) while he stands still with motion on: a breath every 1.4 s (body, arms and head rise one sprite
-  pixel), a 140 ms blink about one beat in four, a one-pixel head glance to either side for two or three beats now and then;
-  asleep (dozing or resting) a slower breath on the sleep frame every 2.2 s. Only steps that change the picture are
-  scheduled: about one layer redraw a second.
-- Movement: a stroll every 45–90 s while the stage is shown: walking (3 frame pixels per 120 ms walk frame) along a
-  shared floor up to half the screen, a seven-step hop for a small nearby step, otherwise sinking out of sight through
-  his floor line and rising into the next spot. With nothing qualifying he stands at the home base, or stays out of
-  sight. A spot that loses its room (scrolling, rewrapping) makes him sink away; he comes back to a qualifying place once
-  the layout has been still for 1.2 s. He follows his element while it moves. Motion off: always the first qualifying
-  place in declaration order (deterministic for screenshots), no idle life, vignettes or hops.
+- Idle life (`MechaIdle`) uses varied breath timing, occasional blinks and tiny weight shifts or glances. A settled focus
+  change can draw his attention after 600 ms, at most once every five seconds; he never requests focus or chases held
+  keys. Quiet surfaces use slower idle beats and suppress strolls and vignettes. Only changed poses schedule redraws.
+- Movement: a stroll becomes due every 45–90 s, but waits for eight seconds without input and two seconds of settled
+  layout. The bounded route search prefers connected floors and nearby steps, checking the swept art, headroom, floor
+  support and the exact hop arc against current geometry. A wide anchor can offer multiple destinations. Unreachable
+  places remain occasional sink-and-rise visits; there is no walking through tiles or hopping through controls.
+  `MechaMotion` supplies looking, leaning, distance-matched walking, crouch, push-off, flight, compression and recovery
+  beats. Moving beats interpolate whole-pixel positions on the display clock, with consecutive beats sharing a timeline;
+  stationary poses use timers. Hops draw the same analytic arc that collision checking validates.
+  Changed geometry stops travel immediately; recovery revalidates the nearest supported position or hides until layout
+  settles. Turning motion off in flight lands only at a still-valid destination. Motion off otherwise selects a
+  deterministic qualifying spot with no idle animation, vignettes or hops.
 - Vignettes (`MechaPlay.vignettes`): one due stroll in three is a short vignette instead, when one fits: a nap where he
   stands (8–12 breaths, a rising Z), a sit on a LEDGE or PEEK anchor's top edge (hips on the edge, drawn over the
   interface with the legs dangling over that anchor's face only, kicking, 7–11 s), a poke of a `MechaProp.POKE` element from
@@ -252,9 +256,9 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   a 5 s bubble after the Hangar closes. A bubble only appears beside him on empty space; he moves to a spot with room or
   skips it. Three minutes without key or touch input: he dozes (sleep frame, slow breath) until the next input or a pet.
   Resting shows the sleep frame and never strolls; motion off places him still at a spot; hidden: nothing roams.
-- Cost: positions and rigs are snapshot state read only while drawing the layer (one layer behind the interface, one over
-  it for a carried or seated mech, the pet heart and the nap Z); a lifted or poked element redraws only itself. Idle life
-  about 1 redraw/s, strolls, hops and vignettes are short bursts; not shown: nothing at all.
+- Cost: positions and rigs are snapshot state read only while drawing the foreground layer; clipping uses only intersecting
+  declared boundaries, without per-frame paths or bitmaps. A lifted or poked element redraws itself. Idle life uses sparse
+  changed-pose timers; frame-clock work exists only during short movements. Not shown: no companion work.
 - Touch (`MechaGesture`, watched at the host in the Initial pass on a finger that went down on his tap target): released
   before 500 ms without moving past touch slop = **pet** (bounce and heart; wakes a doze; `MechaStore.pet` adds 1 bond at most
   once per 5 minutes, the window's start kept in `files/mecha/pet.txt` and written before the bond so a crash can only lose

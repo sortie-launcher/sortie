@@ -186,7 +186,7 @@ internal object MechaPlay {
         val x = preferX.coerceIn(minX, maxX)
         val art = MechaBody.art(x, floor, s)
         if (!stage.contains(art)) return null
-        if (elements.any { it !== anchor && it.solid && it.visible.intersects(art) }) return null
+        if (elements.any { it !== anchor && it.blocks && it.visible.intersects(art) }) return null
         if (!anchor.visible.contains(art.copy(top = edge))) return null
         return MechaPlacement(anchor.id, kind, x, floor, Int.MAX_VALUE, art)
     }
@@ -219,7 +219,7 @@ internal object MechaPlay {
             for (x in intArrayOf(centre - offset, centre + offset)) {
                 if (x < minX || x > maxX) continue
                 val art = MechaBody.art(x, floor, s)
-                if (stage.contains(art) && elements.none { it !== prop && it.solid && it.visible.intersects(art) }) {
+                if (stage.contains(art) && elements.none { it !== prop && it.blocks && it.visible.intersects(art) }) {
                     return MechaPlacement(prop.id, MechaSpotKind.ROOM, x, floor, Int.MAX_VALUE, art)
                 }
             }

@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
@@ -151,7 +152,7 @@ class MechaStage internal constructor(
     internal var bob by mutableIntStateOf(0)
     internal var clip by mutableIntStateOf(Int.MAX_VALUE)
 
-    /** Drawn over the interface instead of behind it: while carried, and seated with the legs over an element's face. */
+    /** Explicit overlap permission while carried or seated; ordinary roaming stays clear of UI surfaces. */
     internal var front by mutableStateOf(false)
 
     /** A pet's heart rising over his head, by whole sprite pixels (-1: none); a nap's Z likewise. */
@@ -171,6 +172,31 @@ class MechaStage internal constructor(
     internal var dozing = false
     internal var wakeRequested = false
     internal var lastInput = SystemClock.uptimeMillis()
+
+    /** Reading and utility surfaces permit quiet idle life, not autonomous trips or prop play. */
+    internal var quiet = false
+        private set
+
+    /** The smallest focused surface is the subject of a glance, never a movement target or a new focus request. */
+    internal val attentionX: Int?
+        get() {
+            var subject: MechaRect? = null
+            for (id in focused) {
+                val r = elements[id]?.visible ?: continue
+                if (!r.isEmpty && (subject == null || r.width * r.height < subject.width * subject.height)) subject = r
+            }
+            return subject?.let { (it.left + it.right) / 2 }
+        }
+
+    internal fun setQuiet(value: Boolean) {
+        if (quiet == value) return
+        quiet = value
+        if (value) {
+            nudge = null
+            interrupted = true
+        }
+        signal.trySend(Unit)
+    }
 
     /** A vignette is playing; any input ends it ([interrupted]). */
     internal var busy = false
@@ -211,12 +237,13 @@ class MechaStage internal constructor(
     }
 
     internal fun setFocused(id: String, has: Boolean) {
-        if (has) {
-            focused += id
+        val changed = if (has) {
             if (nudge?.id == id) nudge = null
+            focused.add(id)
         } else {
-            focused -= id
+            focused.remove(id)
         }
+        if (changed) signal.trySend(Unit)
     }
 
     internal fun setBounds(b: MechaRect) {
@@ -371,18 +398,18 @@ fun mechaBaseSize(): DpSize {
 fun Modifier.mechaHomeBase(id: String): Modifier = mechaSpot(id, MechaSpotKind.BASE)
 
 /**
- * Hosts the companion in one window: [content] with the mech drawn behind it (so every control, tile and text wins and peeks
- * cost nothing) and its speech bubble over it, only on empty space; while carried or seated he is drawn over it. Screens
- * inside declare where he may go with [Modifier.mechaSpot]. He lives (idles, strolls, plays) only while this window is
- * resumed on a lit display and [active]; otherwise nothing of his runs at all. He is on one stage at a time, process-wide
- * ([MechaPresence]).
+ * Hosts the companion above [content], using declared collision boundaries rather than reserving layout space. Peek poses
+ * remain clipped at their perch; ordinary motion is also clipped away from UI surfaces if a layout changes mid-frame.
+ * Screens declare where he may go with [Modifier.mechaSpot]. He lives (idles, strolls, plays) only while this window is
+ * resumed on a lit display and [active]; otherwise nothing of his runs at all. [quiet] keeps autonomous trips and prop play
+ * out of reading and utility surfaces. He is on one stage at a time, process-wide ([MechaPresence]).
  *
  * Touch on him (watched at this common ancestor in the Initial pass, [MechaGesture]): a tap pets him, a still hold opens the
  * Hangar (as does [MechaStage.openHangar]), a hold then a move carries him. A move before the hold is never taken, so a
  * scroll that starts on him still scrolls what is under him.
  */
 @Composable
-fun MechaStageHost(stage: MechaStage, modifier: Modifier = Modifier, active: Boolean = true, content: @Composable () -> Unit) {
+fun MechaStageHost(stage: MechaStage, modifier: Modifier = Modifier, active: Boolean = true, quiet: Boolean = false, content: @Composable () -> Unit) {
     val view by stage.store.view.collectAsState()
     val state = view.state
     // allowed by the host and shown: from composition; resumed on a lit display: from the lifecycle's state flow and the
@@ -390,6 +417,7 @@ fun MechaStageHost(stage: MechaStage, modifier: Modifier = Modifier, active: Boo
     val allowed = active && state?.enabled == true
     SideEffect {
         stage.allowed = allowed
+        stage.setQuiet(quiet)
         MechaPresence.setActive(stage, stage.resumed && allowed)
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -437,19 +465,12 @@ fun MechaStageHost(stage: MechaStage, modifier: Modifier = Modifier, active: Boo
                 }
                 .pointerInput(stage) { watchTouches(stage, haptics) }
         ) {
-            Spacer(
-                Modifier.fillMaxSize().drawBehind {
-                    if (!stage.shown || stage.front) return@drawBehind
-                    val sheets = (load as? SpriteLoad.Ready)?.layers ?: return@drawBehind
-                    drawMech(stage, sheets)
-                }
-            )
             content()
-            // over the interface: a carried or seated mech, a pet's heart and a nap's Z (small, short-lived)
+            // One foreground drawing layer: no layout reservation and no input handler on the sprite itself.
             Spacer(
                 Modifier.fillMaxSize().drawBehind {
                     if (!stage.shown) return@drawBehind
-                    if (stage.front) (load as? SpriteLoad.Ready)?.layers?.let { drawMech(stage, it) }
+                    (load as? SpriteLoad.Ready)?.layers?.let { drawMech(stage, it) }
                     drawMarks(stage)
                 }
             )
@@ -459,17 +480,49 @@ fun MechaStageHost(stage: MechaStage, modifier: Modifier = Modifier, active: Boo
     if (stage.hangarOpen) Hangar(stage.store, onClose = stage::closeHangar)
 }
 
-/** The mech at his stage position, clipped under a peek's edge while drawn behind the interface. */
+/** A foreground resident, clipped at peek edges and clear of controls even during a layout change. */
 private fun DrawScope.drawMech(stage: MechaStage, sheets: List<ImageBitmap>) {
     val b = stage.bounds ?: return
     val s = stage.scale
     val left = stage.x - b.left
     val top = MechaBody.frameTop(stage.floor, s) + stage.bob * s - b.top
     val c = stage.clip
-    if (c == Int.MAX_VALUE || stage.front) {
-        drawMechaFrame(sheets, stage.rig, left, top, s)
-    } else {
-        clipRect(bottom = (c - b.top).toFloat()) { drawMechaFrame(sheets, stage.rig, left, top, s) }
+    val canvas = drawContext.canvas
+    canvas.save()
+    try {
+        canvas.clipRect(0f, 0f, b.width.toFloat(), b.height.toFloat())
+        if (!stage.front) {
+            val x0 = stage.x
+            val x1 = x0 + MechaBody.FRAME * s
+            val y0 = top + b.top - MECHA_HEADROOM * s
+            val y1 = top + b.top + (MechaBody.FRAME + MECHA_HEADROOM) * s
+            val nudge = stage.nudge
+            for (e in stage.elements.values) {
+                if (!e.blocks && !e.interactive) continue
+                val r = e.visible
+                val dx = if (nudge?.id == e.id) nudge.dx else 0
+                val dy = if (nudge?.id == e.id) nudge.dy else 0
+                val l = r.left + dx
+                val t = r.top + dy
+                val right = r.right + dx
+                val bottom = r.bottom + dy
+                if (r.isEmpty || right <= x0 || l >= x1 || bottom <= y0 || t >= y1) continue
+                canvas.clipRect(
+                    (l - b.left).toFloat(),
+                    (t - b.top).toFloat(),
+                    (right - b.left).toFloat(),
+                    (bottom - b.top).toFloat(),
+                    ClipOp.Difference
+                )
+            }
+        }
+        if (c == Int.MAX_VALUE || stage.front) {
+            drawMechaFrame(sheets, stage.rig, left, top, s)
+        } else {
+            clipRect(bottom = (c - b.top).toFloat()) { drawMechaFrame(sheets, stage.rig, left, top, s) }
+        }
+    } finally {
+        canvas.restore()
     }
 }
 

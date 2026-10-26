@@ -27,6 +27,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import io.github.esko997.sortie.BuiltinApp
 import io.github.esko997.sortie.SortieApp
@@ -101,10 +102,15 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
         PermissionScreen()
         return
     }
-    // The companion roams Home's margins behind the screens (MechaStageHost draws him under them); Home declares the spots.
+    // One foreground resident; browsing surfaces declare safe perches and collision boundaries.
     val stage = rememberMechaStage(graph.mecha)
+    val entry by nav.currentBackStackEntryAsState()
+    val browsing = when (entry?.destination?.route) {
+        "home", "system/{id}", "folder/{id}" -> true
+        else -> false
+    }
     val routeOffset = with(LocalDensity.current) { 18.dp.roundToPx() }
-    MechaStageHost(stage) {
+    MechaStageHost(stage, quiet = !browsing) {
         NavHost(
             nav,
             startDestination = "home",

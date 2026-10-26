@@ -18,9 +18,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
@@ -70,8 +70,6 @@ import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.mecha.MechaProp
 import io.github.esko997.sortie.mecha.MechaSpotKind
 import io.github.esko997.sortie.mecha.ui.LocalMechaStage
-import io.github.esko997.sortie.mecha.ui.mechaBaseSize
-import io.github.esko997.sortie.mecha.ui.mechaHomeBase
 import io.github.esko997.sortie.mecha.ui.mechaObstacle
 import io.github.esko997.sortie.mecha.ui.mechaSpot
 import kotlinx.coroutines.delay
@@ -583,7 +581,7 @@ fun HomeScreen(
             tiles.forEach { t ->
                 if (headers && t.section != section) {
                     val s = t.section
-                    fullItem("h:$s") { Box(Modifier.mechaObstacle("section:$s")) { SectionTitle(s) } }
+                    fullItem("h:$s") { Box(Modifier.wrapContentWidth(Alignment.Start).mechaObstacle("section:$s")) { SectionTitle(s) } }
                 }
                 section = t.section
                 item(key = t.id) {
@@ -642,44 +640,37 @@ fun HomeScreen(
         }
         val layoutHint = "Select" to if (grid) "list view" else "grid view"
         val swapHint = ("X" to "swap screens").takeIf { canSwap }
-        // he stands on the hint bar, and comes and goes at the screen's edges along it; the space reserved at its end is his
-        // home base for when nothing else on Home leaves him room to be seen and tapped (none while he is hidden)
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-            val hintSpots = Modifier
-                .weight(1f)
-                .mechaSpot("home:hints", MechaSpotKind.LEDGE)
-                .mechaSpot("home:edge-start", MechaSpotKind.EDGE_START)
-                .mechaSpot("home:edge-end", MechaSpotKind.EDGE_END)
-            when {
-                lifted != null -> BrowseHintBar("D-pad" to "move", "A" to "drop here", "B" to "cancel", modifier = hintSpots, compact = chrome.foldable)
-                custom -> BrowseHintBar(
-                    *listOfNotNull(
-                        "A" to "open",
-                        "hold A" to "move / remove",
-                        "hold R1" to "random",
-                        "Y" to "search",
-                        layoutHint,
-                        "L1/R1" to "systems",
-                        swapHint
-                    ).toTypedArray(),
-                    modifier = hintSpots,
-                    compact = chrome.foldable
-                )
-                else -> BrowseHintBar(
-                    *listOfNotNull(
-                        "A" to "open",
-                        "hold A" to "add to home",
-                        "hold R1" to "random",
-                        "Y" to "search",
-                        layoutHint,
-                        "L1/R1" to "systems",
-                        swapHint
-                    ).toTypedArray(),
-                    modifier = hintSpots,
-                    compact = chrome.foldable
-                )
-            }
-            Spacer(Modifier.size(mechaBaseSize()).mechaHomeBase("home:base"))
+        // the free space between the hints is where he stands; the bar keeps its own height, so where it is shorter than he is
+        // the screen's bottom edge hides his legs
+        val hintSpots = Modifier.mechaSpot("home:footer", MechaSpotKind.FOOTER)
+        when {
+            lifted != null -> BrowseHintBar("D-pad" to "move", "A" to "drop here", "B" to "cancel", modifier = hintSpots, compact = chrome.foldable)
+            custom -> BrowseHintBar(
+                *listOfNotNull(
+                    "A" to "open",
+                    "hold A" to "move / remove",
+                    "hold R1" to "random",
+                    "Y" to "search",
+                    layoutHint,
+                    "L1/R1" to "systems",
+                    swapHint
+                ).toTypedArray(),
+                modifier = hintSpots,
+                compact = chrome.foldable
+            )
+            else -> BrowseHintBar(
+                *listOfNotNull(
+                    "A" to "open",
+                    "hold A" to "add to home",
+                    "hold R1" to "random",
+                    "Y" to "search",
+                    layoutHint,
+                    "L1/R1" to "systems",
+                    swapHint
+                ).toTypedArray(),
+                modifier = hintSpots,
+                compact = chrome.foldable
+            )
         }
     }
 

@@ -39,54 +39,83 @@ internal object MechaRigs {
 }
 
 /**
- * Always-on idle life while he stands still: a slow breath (the upper body rises a pixel), a blink now and then and an
- * occasional glance to either side. Asleep (dozing or resting): a slower breath on the sleeping frame. Each step says how
- * long it lasts; only steps that change the picture are produced, so idling costs about one redraw a second.
+ * Idle life while he stands still: a breath (the upper body rises a pixel), a blink now and then, an occasional glance to
+ * one side (likelier toward the player's focus) and, now and then, his weight shifting a pixel to one side for a few
+ * breaths. Beat lengths vary so it never settles into a fixed loop. Quiet (a reading surface) breathes slower, blinks and
+ * glances seldom and never shifts. Asleep (dozing or resting): a slower breath on the sleeping frame. The legs never move.
+ * Each step says how long it lasts and only steps that change the picture are produced, so idling costs about one redraw a
+ * second or less.
  */
 internal class MechaIdle(private val random: Random) {
     private var inhale = false
     private var look = 0
     private var lookBeats = 0
+    private var sway = 0
+    private var swayBeats = 0
     private var reopen = false
 
     fun reset() {
         inhale = false
         look = 0
         lookBeats = 0
+        sway = 0
+        swayBeats = 0
         reopen = false
     }
 
-    /** The next idle rig and how long it shows. */
-    fun next(asleep: Boolean): Pair<MechaRig, Long> {
+    /** The player settled on something to the [dir] side (-1 or 1): the next beats glance that way; the breath carries on. */
+    fun glance(dir: Int) {
+        if (dir == 0) return
+        look = dir
+        lookBeats = 2 + random.nextInt(2)
+    }
+
+    /** The next idle rig and how long it shows; [attention] (-1, 0, 1) is the side the player's focus is on. */
+    fun next(asleep: Boolean, quiet: Boolean = false, attention: Int = 0): Pair<MechaRig, Long> {
         if (asleep) {
             inhale = !inhale
             look = 0
+            lookBeats = 0
+            sway = 0
+            swayBeats = 0
             reopen = false
             return MechaRigs.ASLEEP.upper(0, if (inhale) -1 else 0) to SLEEP_BEAT_MS
         }
-        val base = MechaRig(0, headX = look).upper(0, if (inhale) -1 else 0)
+        val beat = if (quiet) QUIET_BEAT_MS + random.nextLong(-400, 401) else BEAT_MS + random.nextLong(-300, 301)
         if (reopen) {
             reopen = false
-            return base to BEAT_MS - BLINK_MS
+            return rig() to beat - BLINK_MS
         }
         inhale = !inhale
         if (lookBeats > 0) {
             lookBeats--
             if (lookBeats == 0) look = 0
-        } else if (random.nextInt(6) == 0) {
-            look = if (random.nextBoolean()) 1 else -1
+        } else if (random.nextInt(if (quiet) 14 else 6) == 0) {
+            look = if (attention != 0 && random.nextInt(3) != 0) attention else if (random.nextBoolean()) 1 else -1
             lookBeats = 2 + random.nextInt(2)
         }
-        val breath = MechaRig(0, headX = look).upper(0, if (inhale) -1 else 0)
-        if (random.nextInt(4) == 0) {
-            reopen = true
-            return breath.copy(frame = MechaRigs.BLINK.frame) to BLINK_MS
+        if (quiet) {
+            sway = 0
+            swayBeats = 0
+        } else if (swayBeats > 0) {
+            swayBeats--
+            if (swayBeats == 0) sway = 0
+        } else if (random.nextInt(10) == 0) {
+            sway = if (random.nextBoolean()) 1 else -1
+            swayBeats = 3 + random.nextInt(3)
         }
-        return breath to BEAT_MS
+        if (random.nextInt(if (quiet) 7 else 4) == 0) {
+            reopen = true
+            return rig().copy(frame = MechaRigs.BLINK.frame) to BLINK_MS
+        }
+        return rig() to beat
     }
+
+    private fun rig(): MechaRig = MechaRig(0, headX = look).upper(sway, if (inhale) -1 else 0)
 
     companion object {
         const val BEAT_MS = 1_400L
+        const val QUIET_BEAT_MS = 2_600L
         const val BLINK_MS = 140L
         const val SLEEP_BEAT_MS = 2_200L
     }

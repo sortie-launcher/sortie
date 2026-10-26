@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Rivet now lives above the UI without reserving extra footer space. Home's controls bar keeps its natural height,
+  spans the full width and uses a lighter gradient. Declared boundaries keep him clear of labels and controls; if a
+  cramped layout has no tappable perch, he hides instead of stretching it.
+- Rivet's movement adds anticipation, weight shifts, crouching, display-frame-synchronised travel and landing recovery.
+  He can walk between positions on the same safe floor, follow connected perches and glance toward settled focus.
+  Browsing input delays exploration; quiet surfaces suppress it. Motion-off and hidden-screen lifecycle gates remain.
 - On single-screen devices, X in a built-in app no longer falls through to Android's confirm-key fallback and activates
   the focused reader control. The stress harness no longer chooses a user's ROM automatically; emulator/game launches
   require an explicit test ROM, and its documentation now distinguishes card-setting restoration from unprotected saves/history.
