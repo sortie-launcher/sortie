@@ -25,13 +25,13 @@ launch games.
 | `controls` | Optional control notes; see below. |
 | `flags` | Short cautions such as pacing, difficulty or unusual controls. |
 | `tags` | Editorial labels available to folder rules. |
-| `auto` | `false` for an individually authored entry; `true` (the default) for an automatically generated entry. |
+| `auto` | `false` for an individually authored/curated entry; `true` (the default) for an automatically generated entry. This controls precedence and the notes filter, not whether a human or AI wrote the prose. |
 
 Bookmarks, controller requirements and Finished/Shelved verdicts belong to the reader's [user data](user.md), not this editorial file.
 
 ### `controls`
 
-Optional hand-written control notes per game (`"controls": "L2/R2 strafe · hold Select = menu"`). Shown on the game page and
+Optional authored control notes per game (`"controls": "L2/R2 strafe · hold Select = menu"`). Shown on the game page and
 on the companion screen while the game is played.
 
 ## Sharing a guide.json
@@ -47,10 +47,9 @@ need an account, an AI service or a connection to obtain either.
 
 ## Bundled curated guide
 
-Every APK carries `assets/guide/catalog.json`: authored hooks, control notes and cautions keyed by **portable identities**
-instead of file names, so they reach a fresh install with no `guide.json` and attach to other people's copies of the same
-game. It is optional coverage for the games that already had authored prose, not a description of every game, and it
-carries no fit scores or taste tags.
+Every APK carries `assets/guide/catalog.json`: AI-assisted editorial hooks, control notes and cautions keyed by
+**portable identities** instead of file names, so they attach to matching copies without a local `guide.json`.
+Coverage is selective, not a description of every game, and carries no fit scores or taste tags.
 
 ```json
 {
@@ -86,7 +85,8 @@ arcade sets, never for hacks. A file that two variants could claim gets neither 
 
 - an individually authored entry (`"auto": false`) is used exactly as written, blank fields included;
 - a generated entry (`"auto": true`, usually a fit score and tags without a hook) keeps every value it has, and the bundled
-  guide supplies only an empty `hook`, `controls` or `flags`; the game then counts as hand-written;
+  guide supplies only an empty `hook`, `controls` or `flags`. Filling the hook sets `auto` to `false`, so it qualifies
+  for the notes filter; filling only controls or flags does not change that classification;
 - with no entry, the bundled one is used with fit 0 and no tags.
 
 An app update that changes the bundled catalogue changes its digest, which is part of the indexer's per-system stamp, so the

@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Refresh the README, website, onboarding, manual and format references for Quiet Home, Tonight, bookmarks and their
+  archive/backup limits, bundled guide precedence, Rivet gestures and current switcher/reader controls. Add native Nova
+  beta 2136 captures of Home, Tonight, game details and the bookmark editor; keep older setup images clearly identified.
 - Home's header shows the amber Split-S mark instead of the word "Sortie" and keeps four actions: Apps, Search, Extras and
   Settings. Extras holds Tonight, the Hangar and Magazines; B returns the focus to Extras. Library setup and the manual
   (no longer a 📖 button) are in Settings; an empty library still offers Set up library on Home.

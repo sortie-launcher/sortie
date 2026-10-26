@@ -1,21 +1,26 @@
 # Screenshot provenance
 
-`home.png` is a current physical-device capture. The other images are earlier Android-emulator captures, retained for the
-setup walkthrough and feature tour. No interface elements are drawn or retouched.
+`home.png`, `tonight.png`, `game-detail.png` and `bookmark.png` are physical-device captures from beta 2136.
+The other images are earlier Android-emulator captures retained for setup and dual-screen examples. Those older images
+predate the simplified Home and bookmarks; follow the guides' text for current steps. No interface elements are drawn or retouched.
 
-## Home: Retroid Pocket Nova, 25 October 2026
+## Home, Tonight and bookmarks: Retroid Pocket Nova, 26 October 2026
 
-- **App:** official signed Sortie `0.1.0-beta.2115` (versionCode 2115), from commit
-  `060690c75231be0070736da1fbe6a17b2a811f49`.
-- **APK SHA-256:** `f36ef849db858247fdbb324fec3083566a92cb1dbef061c60299364e3c676014`.
-  The downloaded checksum passed; its signer matched the permanent release certificate documented in
-  [Releases](../../RELEASE.md#one-permanent-release-key). It was installed as an in-place update, never uninstalled.
+- **App:** existing official signed Sortie `0.1.0-beta.2136` (versionCode 2136), the Quiet Home release.
+  No APK was installed for this capture session.
+- **Installed APK SHA-256:** `569792a4aa491f19b09faa9139c413df3732b88860438668e463ecc43c0e8960`.
 - **Device:** Retroid Pocket Nova, Android 13, landscape 1280×960 at 320 dpi. Captured through Android's
-  `screencap` over USB ADB; the PNG is unedited at native resolution.
-- **Shows:** Home → By Console → PS2, with Armored Core 3 focused, the compact folded header and **Controls** footer.
-  This is the device's existing library and artwork, not a synthetic library. No game was launched for this capture;
-  it is UI evidence, not an emulator-compatibility test.
-- Only the Nova was used. Its original Generation sort and sleeping state were restored after capture.
+  `screencap` over USB ADB; PNGs are unedited at native resolution.
+- **Shows:** Home in Generation sort with the Split-S header and Rivet; Tonight's God Hand recommendation through
+  Field Notes; God Hand's game page; its empty bookmark editor with the Android keyboard dismissed.
+  This is the device's existing library, guide and artwork, not a synthetic library. The fit stars come from its
+  custom guide, not the bundled catalogue. No game was launched and no bookmark was saved.
+- **Coordination:** exclusive lock on the canonical `DEVICE_ACCESS_NOVA.md` held throughout hardware access.
+  Nova was asleep with Sortie on top; Thor and DMG were not accessed.
+- **Preservation:** `user.json`, `device.json`, `systems.json`, `launchers.json`, `folders.json`, `guide.json` and
+  `playlog.jsonl` were byte-identical before and after. Android system, secure and global settings were unchanged.
+  Returned to Home in the original Generation sort, then to sleep; lock released.
+- These are UI captures, not emulator-compatibility tests.
 
 ## Earlier captures: build and device
 
@@ -39,7 +44,7 @@ setup walkthrough and feature tour. No interface elements are drawn or retouched
   [uCity](https://hh.gbdev.io/game/ucity/) by AntonioND (GPL-3.0-or-later), from Homebrew Hub. RetroArch 1.22.2
   opened it with the Gambatte core. The core file was copied in before the launch instead of being downloaded through
   RetroArch's Online Updater. Sortie shows the title as `ucity` because it comes from the file name; no gamelist was used.
-- **Demo library** (`library`, `game-detail`, `companion`, `magazine`): the other 37 games are illustrative
+- **Demo library** (`library`, `companion`, `magazine`): the other 37 games are illustrative
   stand-in files carrying real names. They are not games, cannot be played, and none was launched. Titles, descriptions
   and art come from ES-DE-style gamelists and scraped media, and the systems were added through Library setup. The pins,
   favourites and Want to play entry are sample actions. Before the Home capture, uCity was given a short gamelist entry
@@ -49,10 +54,12 @@ setup walkthrough and feature tour. No interface elements are drawn or retouched
 
 | File | Size | Shows |
 |---|---|---|
-| `home.png` | 1280×960 | Current Nova capture described above: Home in By Console mode, PS2 grid, Armored Core 3 focused |
+| `home.png` | 1280×960 | Beta 2136 Nova: Generation-sorted Home, current header and Rivet |
+| `tonight.png` | 1280×960 | Beta 2136 Nova: God Hand as the From Field Notes pick, with its reason and actions |
+| `bookmark.png` | 1280×960 | Beta 2136 Nova: empty bookmark editor, keyboard dismissed, nothing saved |
 | `library.png` | 1280×720 | A system grid (PlayStation 2) with filters and the controller focus on one game |
 | `companion.png` | 1280×1432 | The same moment on both screens: the grid on top, the companion's art and description for the focused game below |
-| `game-detail.png` | 1280×720 | A game page: cover, Play / Launch with…, notes, reference cards, Want to play, and a *Featured in* magazine link |
+| `game-detail.png` | 1280×960 | Beta 2136 Nova: God Hand, curated hook, Leave a note, reference cards and verdict controls |
 | `magazine.png` | 1280×720 | A Field Notes article opened from that link (optional content build) |
 | `setup.png` | 1280×720 | Library setup's system editor: game folder, file types, emulator order and installed status |
 | `first-start.png` | 1280×720 | First start: the All files access explanation |

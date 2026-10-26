@@ -7,9 +7,10 @@ all-files access Sortie already uses; Cocoon does not have to be installed or ru
 
 Step-by-step pictures for first-time users: [Getting started → Coming from Cocoon](GETTING_STARTED.md#coming-from-cocoon).
 
-**Tested:** on an Android 13 emulator with an invented Cocoon library (fresh install, import with a backup, a second run,
-Cancel, and a refused overlapping folder; Cocoon's files were byte-identical throughout). Physical-device results are not
-claimed here. Capture details: [screenshots/cocoon/PROVENANCE.md](screenshots/cocoon/PROVENANCE.md).
+**Evidence and pictures:** the walkthrough uses an Android 13 emulator and an invented Cocoon library, not a physical
+device. Its captures predate the current Home header and import count/default-preservation fixes. Later single-screen and
+Thor import checks are recorded under [Acceptance check on a device](#acceptance-check-on-a-device), with their limits;
+they do not prove emulator compatibility. [Capture details](screenshots/cocoon/PROVENANCE.md).
 
 Code: `app/src/main/java/io/github/esko997/sortie/data/cocoon/` and `ui/CocoonImportScreen.kt`; tests and fixtures under
 `app/src/test/.../data/cocoon/` and `app/src/test/resources/cocoon/`.
@@ -40,6 +41,11 @@ Code: `app/src/main/java/io/github/esko997/sortie/data/cocoon/` and `ui/CocoonIm
    import again and it continues where it stopped.
 5. **Read the result.** It says what was added and what was skipped, what stays only in Cocoon, and, on its own line, how
    many old Favourites entries were removed. Running the import again adds nothing twice and finds no entry left to remove.
+
+Afterwards, use **Settings → Library and emulators** to check the new systems and try a game in each. The manual is under
+**Settings → Sortie manual**; Home's **Extras** menu holds **Tonight**, **Hangar** and **Magazines**. The bundled curated
+guide can add recommendations for covered games without importing or preparing a guide. Artwork still comes from your
+files or the import; Sortie never downloads it.
 
 ## What is imported
 
@@ -99,10 +105,11 @@ entry only repeated the built-in folder.
 ## Safety copy and undo
 
 Before writing, Sortie saves `<card>/sortie/backups/pre-cocoon-import-<yyyyMMdd-HHmmss>.json`. It holds **your preferences
-(`user.json`), play sessions and, when one exists, the Hangar companion's save only**, in the Backup and restore format; if
-it cannot be written, the import does not start. Restoring it (Settings → Backup and restore) brings back the preferences
-from before the import: favourites, hidden games, emulator choices and per-game overrides. It also puts the companion back
-as it was then, losing parts and salvage gained since; sessions already credited stay credited. It is not a full rollback:
+and personal records (`user.json`, including bookmarks), play sessions and, when one exists, the Hangar companion's save
+only**, in the Backup and restore format; if it cannot be written, the import does not start. Restoring it
+(**Settings → Backup and restore**) replaces those preferences and personal records with the pre-import copy, including
+bookmarks, favourites, hidden games and emulator choices. It also puts the companion back as it was then, losing parts and
+salvage gained since; sessions already credited stay credited. It is not a full rollback:
 
 - systems and launch profiles added to `systems.json`/`launchers.json`, media folders set on existing systems, and
   `cocoon-<n>` folders in `folders.json` stay; remove them in Library setup or by editing those files. A removed old
@@ -115,6 +122,13 @@ There is no complete rollback. A copy of the card's `sortie/` folder made before
 Sortie's app-private play database (Room, `sortie.db`) and copied artwork may sit outside `sortie/` (for example in an
 ES-DE `downloaded_media` tree). Neither is removed by restoring files or a backup. To keep those irreversible parts out,
 turn off the preview's play-session and artwork switches.
+
+The safety copy does not include reference images, `sortie/archive/` or old journal screenshots in `sortie/journal/media/`;
+keep those files too. It also excludes app-private magazine reading positions and Tonight's daily picks. Older Sortie
+journal entries, mapping notes and *Where was I?* text must be archived before a safety copy can be made; restoring an old
+backup likewise archives its writing before replacing preferences. *Where was I?* text becomes a bookmark unless one
+already exists. The readable archive is not a way to restore the removed writing screens. See
+[Getting started → Troubleshooting](GETTING_STARTED.md#troubleshooting).
 
 ## Cocoon's folder after importing
 
