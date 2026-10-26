@@ -32,7 +32,10 @@ class CartridgeFingerprintsTest {
 
     private fun catalog(system: String, representation: String = "raw"): CuratedCatalog {
         val entry = CuratedEntry(
-            id = "00000000-0000-4000-8000-000000000001", system = system, hook = "Verified payload's note.", aliases = listOf("Original (USA).md"),
+            id = "00000000-0000-4000-8000-000000000001",
+            system = system,
+            hook = "Verified payload's note.",
+            aliases = listOf("Original (USA).md"),
             fingerprints = listOf(CatalogFingerprint("crc32", crc(payload), representation, payload.size.toLong(), "payload-verified", "Regression payload"))
         )
         return CuratedCatalog.parse(Json.encodeToString(CuratedCatalogFile.serializer(), CuratedCatalogFile(1, "test", listOf(entry))).toByteArray())

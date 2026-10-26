@@ -16,12 +16,18 @@ import org.junit.Test
 
 class CuratedGuideTest {
     private fun entry(number: Int = 1, system: String = "genesis", aliases: List<String> = listOf("Sonic (USA).md")) = CuratedEntry(
-        id = "00000000-0000-4000-8000-${number.toString().padStart(12, '0')}", system = system, title = "Sonic", aliases = aliases,
-        hook = "Shared hook.", controls = "Shared controls.", flags = listOf("fast")
+        id = "00000000-0000-4000-8000-${number.toString().padStart(12, '0')}",
+        system = system,
+        title = "Sonic",
+        aliases = aliases,
+        hook = "Shared hook.",
+        controls = "Shared controls.",
+        flags = listOf("fast")
     )
 
     private fun bytes(vararg entries: CuratedEntry, revision: String = "one") = Json.encodeToString(
-        CuratedCatalogFile.serializer(), CuratedCatalogFile(schemaVersion = 1, revision = revision, entries = entries.toList())
+        CuratedCatalogFile.serializer(),
+        CuratedCatalogFile(schemaVersion = 1, revision = revision, entries = entries.toList())
     ).toByteArray()
 
     private fun catalog(vararg entries: CuratedEntry, revision: String = "one") = CuratedCatalog.parse(bytes(*entries, revision = revision))
@@ -84,7 +90,16 @@ class CuratedGuideTest {
         for (name in listOf("Game.exe", "Game", "games/Other Adventure/Game.exe", "games/An Adventure/Game.ini")) {
             assertNull(name, c.match("rpgmaker", name))
         }
-        for (unsafe in listOf("/absolute/Game.exe", "../Game.exe", "games/../Game.exe", "games/./Game.exe", "games//Game.exe", "C:/Game.exe", "games\\Game.exe")) {
+        val unsafeAliases = listOf(
+            "/absolute/Game.exe",
+            "../Game.exe",
+            "games/../Game.exe",
+            "games/./Game.exe",
+            "games//Game.exe",
+            "C:/Game.exe",
+            "games\\Game.exe"
+        )
+        for (unsafe in unsafeAliases) {
             assertThrows(IllegalArgumentException::class.java) { catalog(project.copy(aliases = listOf(unsafe))) }
         }
     }
@@ -139,7 +154,13 @@ class CuratedGuideTest {
     fun `duplicate ids unsupported evidence and dangling parents are rejected`() {
         assertThrows(IllegalArgumentException::class.java) { catalog(entry(), entry()) }
         assertThrows(IllegalArgumentException::class.java) { catalog(entry().copy(parentId = entry(2).id)) }
-        for (bad in listOf(fingerprint.copy(verification = "filename"), fingerprint.copy(source = ""), fingerprint.copy(size = 0), fingerprint.copy(representation = "archive"))) {
+        val invalidFingerprints = listOf(
+            fingerprint.copy(verification = "filename"),
+            fingerprint.copy(source = ""),
+            fingerprint.copy(size = 0),
+            fingerprint.copy(representation = "archive")
+        )
+        for (bad in invalidFingerprints) {
             assertThrows(IllegalArgumentException::class.java) { catalog(entry().copy(fingerprints = listOf(bad))) }
         }
     }
@@ -151,7 +172,10 @@ class CuratedGuideTest {
         assertNotEquals(a.stamp, catalog(entry().copy(hook = "Corrected text.")).stamp)
         assertNotEquals(a.stamp, CuratedCatalog.EMPTY.stamp)
         var reads = 0
-        val guide = CuratedGuide { reads++; catalog(entry()) }
+        val guide = CuratedGuide {
+            reads++
+            catalog(entry())
+        }
         val first = guide.catalog
         assertSame(first, guide.catalog)
         assertEquals(1, reads)

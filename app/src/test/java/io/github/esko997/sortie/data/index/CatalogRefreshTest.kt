@@ -90,8 +90,12 @@ class CatalogRefreshTest {
         } else {
             listOf("Shared.md", "Local.md", "Generated.md").mapIndexed { index, alias ->
                 CuratedEntry(
-                    id = "00000000-0000-4000-8000-${(index + 1).toString().padStart(12, '0')}", system = "genesis", aliases = listOf(alias),
-                    hook = hook, controls = "Shared controls", flags = listOf("shared flag")
+                    id = "00000000-0000-4000-8000-${(index + 1).toString().padStart(12, '0')}",
+                    system = "genesis",
+                    aliases = listOf(alias),
+                    hook = hook,
+                    controls = "Shared controls",
+                    flags = listOf("shared flag")
                 )
             }
         }

@@ -11,7 +11,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Exercises the shipped catalog through the same parser/resolver as a user's library, without a private guide.json. */
