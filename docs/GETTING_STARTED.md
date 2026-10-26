@@ -16,8 +16,8 @@ account, an AI service or any other launcher to follow it.
 Everything after that is optional. The [full manual](../app/src/main/assets/MANUAL.md) is also built into the app:
 **Settings → Sortie manual**.
 
-The setup walkthrough uses earlier Android-emulator captures; Home, Tonight and bookmark pictures are from a Nova running
-beta 2136. Older pictures predate the current header and **Extras** menu, so follow the written routes when they differ.
+Screenshots show the current interface: setup and Cocoon import on an Android emulator running beta 2138, and the
+feature tour on a Nova running beta 2136. The import library is an invented example; the Nova library is real.
 Open an image to see it full-size; Android's own Settings screens vary by device.
 [Capture details and image credits](screenshots/readme/PROVENANCE.md).
 
@@ -168,9 +168,9 @@ not started, stopped or reconfigured. Cocoon doesn't need to be running, and no 
 | Play sessions | Play history with the real dates and times | Yes |
 | Per-game emulator choices | Per-game emulators, only where you haven't set one | Yes |
 
-Not imported: lifetime play counts and play time (shown in the preview only), themes, wallpapers, widgets, grid
-placement, custom game names and per-game "launch on external display". DroidDeck pins belong to the launcher that made
-them; the result lists the DroidDeck games to pin again from DroidDeck.
+Not imported: lifetime play counts and play time (shown in the preview only), descriptions, ratings, themes, wallpapers,
+widgets, grid placement, custom game names and per-game "launch on external display". DroidDeck pins belong to the launcher
+that made them; the result lists the DroidDeck games to pin again from DroidDeck.
 
 **Before you start**
 
@@ -200,10 +200,7 @@ them; the result lists the DroidDeck games to pin again from DroidDeck.
    with their folders and emulator (and whether that emulator is installed), and the games that were not found or were
    ambiguous. Counts distinguish new entries from those already here; repeat imports do not promise to add them again.
 
-   ![Preview switches for favourites, hidden games, emulators for 2 systems, 10 artwork files, 1 folder and 4 play sessions, with Cancel](screenshots/cocoon/cocoon-05-preview-options.png)
-
-   These walkthrough captures predate the default-preservation and count fixes: the current preview has no switch to
-   replace existing systems' emulators, and lists already-present entries separately from additions.
+   ![Cocoon import preview with category switches for additions and a Cancel action](screenshots/cocoon/cocoon-05-preview-options.png)
 
    Existing systems keep their emulator defaults. New systems put Cocoon's emulator first; if its RetroArch package is
    missing and an equivalent build is installed, the preview identifies the substitution. You still need its core and BIOS.
@@ -213,7 +210,7 @@ them; the result lists the DroidDeck games to pin again from DroidDeck.
    - **Copy *N* artwork files.** Import is not offered while the artwork doesn't fit the free space shown; turn the copy
      off or free some space. On a card set up for ES-DE, artwork goes into that system's existing ES-DE media folder.
 
-   ![Import, the artwork block (245 kB to copy, 5.0 GB free, one reference to another device skipped) and two systems to add, one with its emulator installed and one not installed yet](screenshots/cocoon/cocoon-06-preview-artwork-systems.png)
+   ![Artwork copy size and free space, followed by systems to add with their folders and emulator availability](screenshots/cocoon/cocoon-06-preview-artwork-systems.png)
 
 5. **Choose Import.** A broken library configuration must be repaired first. If library settings changed since the preview,
    Sortie asks you to review a fresh plan before anything is written. Otherwise it saves a safety copy of your preferences,
@@ -221,16 +218,16 @@ them; the result lists the DroidDeck games to pin again from DroidDeck.
    then adds systems, re-indexes, adds missing per-game profiles, saves favourites, hidden games and per-game choices, adds
    sessions and folders, and copies artwork last. You can leave the screen while Sortie keeps running. Only the artwork
    copy can be stopped (**Stop copying artwork**); files already copied stay.
-6. **Read the result.** It lists what was added, where the safety copy is, which DroidDeck games to pin again, and what
+6. **Read the result.** It lists what was added, where the safety copy is, any DroidDeck games to pin again, and what
    stays only in Cocoon.
 
-   ![Import complete: 2 systems, 4 favourites, 1 hidden game, emulators for 2 systems, 4 play sessions, 1 folder and 10 artwork files, the safety-copy path, a DroidDeck game to re-pin and a reminder before uninstalling Cocoon](screenshots/cocoon/cocoon-10-result.png)
+   ![Completed Cocoon import with added and skipped items, the safety-copy path and advice about what remains in Cocoon](screenshots/cocoon/cocoon-10-result.png)
 
 **Checkpoint:** your Cocoon systems are on Home with their artwork. Press **L1/R1** to the **Custom** sort to see
 **Continue**, **Favourites** and your imported folders; **Alphabetical**, **Game count** and **Generation** show systems
 only.
 
-![Home in the Custom sort after importing: a Continue tile from an imported play session, the imported folder Pocket Picks with 3 games, and Favourites with 3](screenshots/cocoon/cocoon-12-home-grid.png)
+![Home in the Custom sort after importing, with Continue, Favourites and an imported folder](screenshots/cocoon/cocoon-12-home-grid.png)
 
 Then open **Settings → Library and emulators** and check each new system: install any emulator marked *not installed*, and if a system
 indexed no games, compare its **File types** with your files (for example `.7z` or `.zip`) and add the missing ending.
@@ -246,8 +243,9 @@ Sortie during the import, open it and run the import again.
 - **Preferences:** restoring the safety copy (**Settings → Backup and restore**) brings back favourites, hidden games and
   emulator choices from before the import. It also puts the Hangar companion back as it was then, so parts and salvage he
   gained since are lost.
-- **Library settings:** systems, folders and launch profiles added by the import stay. Remove them in Library setup, or put
-  back a copy of the `sortie` folder made before importing and use **Library setup → Re-index every system**.
+- **Library settings:** systems, folders and launch profiles added by the import stay. Systems can be removed in Library
+  setup; imported custom folders and unused launch profiles require a file edit. Alternatively restore a pre-import copy
+  of the `sortie` folder, then use **Library setup → Re-index every system**.
 - **Play sessions stay.** They live in Sortie's private database, not the `sortie` folder, and restoring a backup only adds
   sessions, never removes them.
 - **Copied artwork stays** in each system's media folder, which on a card set up for ES-DE is outside the `sortie` folder.
@@ -283,8 +281,8 @@ The Library setup screen lists your systems; it starts empty.
    ![Inside Games/gbc, the folder browser reports one matching file and offers Use this folder](screenshots/readme/folder-picker.png)
 
 4. **File types** is already filled in (for Game Boy Color: `gbc, zip, 7z`). Leave it unless you know your files use a
-   different ending. Empty means every file in the folder is listed. If you change it, **Use the suggested file types**
-   puts the suggestion back.
+   different ending. Empty removes the extension filter; hidden files and recognised support files such as images, saves
+   and text are still skipped. **Use the suggested file types** puts the suggestion back.
 
 5. **Emulators** is a numbered fallback list. Sortie tries it in order, skipping entries marked *not installed*, so you
    do not need to remove those. Select an entry to **Move up (try earlier)**, **Move down (try later)** or
@@ -293,8 +291,8 @@ The Library setup screen lists your systems; it starts empty.
 
    ![The chosen folder, GBC file types and ordered emulator choices, with RetroArch installed and a separate core requirement](screenshots/readme/setup.png)
 
-6. Read **Before the first game**. It lists what the emulator still needs (a RetroArch core, BIOS, a first-run setup) and
-   which launch methods were actually tested on a device and which were only checked against the emulator's source code.
+6. If shown, read **Before the first game**. Preset systems list emulator requirements (a RetroArch core, BIOS, first-run
+   setup) and distinguish device-tested launch methods from those only checked against the emulator's source code.
 
 7. Press **Save**. Sortie shows *Saving…* and *Indexing…*, then a summary such as *Saved Game Boy Color* and *1 game
    indexed for this system*, followed by **Try a launch** with a few of your games.
@@ -314,7 +312,7 @@ You can leave Library setup while it saves or indexes; the work carries on. Repe
 
    ![The plain first-game page for ucity, with the Play button and no downloaded box art](screenshots/readme/first-game-page.png)
 
-2. Choose **Play** (or press **A**). The emulator opens the game.
+2. Choose **Play** (**A** activates the focused button, initially Play). The emulator is asked to open the game.
 3. **Check that the game itself is running.** Sortie can only tell that the emulator app opened, not whether the game
    booted.
 
@@ -325,9 +323,11 @@ You can leave Library setup while it saves or indexes; the work carries on. Repe
      drawer or the recent-apps view.
    - If Sortie **is** your Home app, the Home button returns to Sortie (or opens its optional app switcher).
 
-   Sortie never force-closes a game when you switch away. Coming back to Sortie ends the play session; with
-   [Shizuku](#optional-features-and-what-they-need), Sortie keeps timing while the game is still running. If the emulator
-   closes within about three seconds and you didn't press Home, the game's page says so and no play is recorded.
+   Sortie never force-closes a game when you switch away. Without Shizuku, returning ends the play session. With
+   [Shizuku](#optional-features-and-what-they-need), it keeps timing while the emulator's task is still present; if that check
+   is unavailable, returning also ends it. A return within about three seconds without a Home press is treated as a failed
+   launch unless Sortie can see the emulator still running. That attempt is not counted as played. Time includes idle time,
+   not just active play.
 
 **Checkpoint:** back in Sortie, Home now shows your system. On the **Custom** sort a **Continue** tile points at the game you
 just played.
@@ -345,10 +345,11 @@ offer a small card after it sees a game you launched close—not just when you v
 changing games. RetroArch 1.22 closes itself when asked to open a *different* game while it runs; Sortie then says so on
 the game's page (*RetroArch closed while switching cores — press Play again*). Press **Play** again.
 
-**Which emulator starts a game?** Sortie checks three places, in this order: a per-game choice made with **Launch with…**
-on the game's page; the system's choice under **Settings → Default launcher per system**; otherwise the system's
-**Emulators** list in Library setup, in order, skipping entries that aren't installed. A Settings choice therefore wins over
-reordering in Library setup; pick **Manifest default** there to go back to the list order.
+**Which emulator starts a game?** Sortie tries a per-game choice first, then **Settings → Default launcher per system**,
+then the system's **Emulators** list in Library setup, skipping uninstalled entries. A Settings choice therefore wins over
+reordering in Library setup; **Manifest default** clears it. On a game's page, **Launch with…** opens the choices:
+selecting an installed emulator saves it for that game **and launches immediately**. **Clear override** removes the
+per-game choice without launching. **Open with…** is never an automatic last resort: you must choose it or add it to the list.
 
 **Your first library may look plain.** Without artwork or gamelists, games appear with tidied-up file names (`ucity` in
 this example), no box art and no scraped descriptions or ratings. Sortie does not fetch these. Its bundled curated guide
@@ -362,9 +363,9 @@ Sortie never downloads artwork, but it reads what these leave behind:
 - **Coming from Cocoon:** [Import from Cocoon](#coming-from-cocoon) copies the art Cocoon downloaded. Nothing else needed.
 - **On the device, without a computer:** [ES-DE](https://es-de.org/) (a paid Android frontend) has a built-in scraper
   that writes gamelists and media in the exact layout Sortie reads. Run its scraper once, then link each system's
-  `gamelist` and `media` folders in `systems.json` ([systems.md](formats/systems.md)). ES-DE keeps them in its `ES-DE`
-  folder on internal storage by default. Paths in `systems.json` are relative to Sortie's library location, so if your
-  `sortie` folder is on a memory card, write the full path instead, for example for PlayStation 2:
+  `gamelist` file and `media` folder in `systems.json` ([systems.md](formats/systems.md)). ES-DE keeps them in its `ES-DE`
+  folder on internal storage by default. Relative paths start at the library's configured card root, not inside its
+  `sortie` folder. Full paths avoid that ambiguity, for example for PlayStation 2:
 
   ```json
   "gamelist": "/storage/emulated/0/ES-DE/gamelists/ps2/gamelist.xml",
@@ -383,11 +384,11 @@ Sortie never downloads artwork, but it reads what these leave behind:
 |---|---|---|
 | Open / choose | **A** | tap |
 | Back | **B** | Android's Back gesture or button |
-| Options for a game, app or system (favourite, add to home, launch with…) | hold **A** | long-press |
+| Options for a game, app or system (favourite, add to home; choices vary) | hold **A** | long-press |
 | Previous / next system, or Home sort | **L1 / R1** | tap the sort chips |
 | Favourite | hold **R1** (on a game page: **Y**) | ☆ on the game page |
 | *Want to play* queue | **R2** | **+ Want to play** on the game page |
-| List ↔ grid | **Select** | — |
+| List ↔ grid | **Select** | **Settings → Home layout / Browse layout** |
 | Search (on Home) | **Y** | **Search** |
 | Switch which screen has the controller (two screens) | **X** | — (touch works directly on either screen) |
 
@@ -441,11 +442,11 @@ enable only the extras you want. No Shizuku, Home role, overlay permission or se
 | **Home key opens the switcher** | Default Home app role **and** Shizuku | Both of the above |
 | **Switcher drawn over a running game** | Shizuku, plus *Display over other apps*; without that grant, the switcher opens as a normal Sortie screen | **Settings → Overlay over running games (optional)** |
 | **Companion bell** (opens the notification shade) | Shizuku | — |
-| **Device stats** and the **Perf** page: CPU and GPU load and clocks, RAM, temperatures, fan | Nothing for RAM and battery temperature; Shizuku for the rest | **Settings → Device stats** (off by default). The Perf page is in the switcher overlay (**R1**) or, on two screens, the companion screen |
+| **Device stats** and the **Perf** page: CPU and GPU load and clocks, RAM, temperatures, fan | Nothing for RAM and battery temperature; Shizuku for the rest | **Settings → Device stats** (strips off by default). The same Perf view is in **Apps → Performance**, the switcher overlay (**R1**) or, on two screens, the companion |
 | **Automatic fixes**: play time keeps running when Home only brings up the switcher over a game; other launchers' leftover windows are closed so a finished game returns to Sortie; on the AYN Thor, the Thor button's panel is restarted before it jams | Shizuku | Automatic |
 | **Radial keyboard** for typing with the sticks | Enabling it as an Android keyboard | **Settings → Enable radial keyboard…**, then **Choose keyboard…** |
-| **Box art, screenshots, game descriptions** | ES-DE-style `gamelist.xml` and media folders on storage, linked by hand in `systems.json`; or artwork copied by **Import from Cocoon** | Prepared files: [systems.md](formats/systems.md), or [Coming from Cocoon](#coming-from-cocoon) |
-| **Your own fit stars, tags, hooks, cautions and control notes** | An optional `guide.json`; authored entries take precedence, while the bundled guide can fill gaps in generated entries | Prepared file: [guide.md](formats/guide.md) |
+| **Box art, screenshots, game descriptions** | ES-DE-style `gamelist.xml` and media folders on storage, linked by hand in `systems.json`; Cocoon import copies artwork only, not descriptions | Prepared files: [systems.md](formats/systems.md), or [Coming from Cocoon](#coming-from-cocoon) |
+| **Your own fit stars, tags, hooks, cautions and control notes** | An optional `guide.json` can override bundled notes and add your own ratings and tags | Prepared file: [guide.md](formats/guide.md) |
 | **Smart folders** (rule-based shelves such as "added this month, never played") | A `folders.json` file | Prepared file: [folders.md](formats/folders.md) |
 | **System logos** on Home tiles | PNG files in `sortie/logos/` | Prepared files: [formats](formats/README.md) |
 | **Magazines**, with a full-screen picture viewer (tap a picture, or **R2**) and experimental picture sequences | Included in the signed releases; extra issue packs can be copied into `sortie/magazines/` | **Extras → Magazines** on Home or **Apps → Magazines**; opens as its own app on either screen; packs: [formats](formats/README.md#magazine-packs-version-2) |
@@ -456,8 +457,8 @@ enable only the extras you want. No Shizuku, Home role, overlay permission or se
 On a device without root it is started through Android's *Wireless debugging* (Sortie's **Settings → Diagnostics → Wireless
 debugging** opens that page) and usually has to be started again after every reboot. If you skip it, the basics still
 work; you lose the switcher, moving other apps between screens, the bell, device stats beyond RAM and battery temperature,
-the bookmark card after playing and the automatic fixes above, and returning to Sortie always ends the current play session. **X** still swaps Sortie's
-own screens without it.
+the bookmark card after playing and the automatic fixes above. Returning to Sortie's main screen ends the current play
+session without it. **X** still swaps Sortie's own screens.
 
 **"Prepared files" means exactly that.** The bundled guide and release magazines need no preparation. For your own
 additions, there is no in-app editor or download for artwork, guides, smart folders, logos or custom emulators. Tools such
@@ -484,19 +485,21 @@ and its emulators. Every game belongs to exactly one system. A *smart folder* is
 time, how long since you played…) in a prepared `folders.json`; a game can appear in many. **Favourites**, **Want to play**,
 **Finished** and **Shelved** are built-in shelves you fill yourself, no files needed.
 
-**Editorial fit versus your verdict.** *Fit* stars, hooks and cautions come from a guide someone wrote: the curated guide
-built into Sortie (hooks, badges and a few control notes, no fit stars) or a `guide.json` on your card. They describe how
-well a game suits that guide's taste, not a review score or a compatibility promise. Your bookmarks, *What it needs* and
+**Editorial fit versus your verdict.** *Fit* stars, hooks and cautions are editorial guidance: Sortie's built-in AI-assisted
+guide supplies hooks, badges and some control notes, but no fit stars; an optional `guide.json` can supply all of them.
+Fit reflects that guide's taste, not a review score or compatibility promise. The `auto`/authored classification controls
+which guide takes precedence—it does not mean AI versus human writing. Your bookmarks, *What it needs* and
 Finished/Shelved verdicts are yours and never change either guide.
 
 **Game references versus local files.** Magazines and articles talk about games whether or not you have them. *Games
 mentioned* lists games linked by an issue's editors; **On this device** filters to ones found in your library.
-Choosing a mention opens a game page or the article, never starts a game. A local match means a readable file is available,
-not that it will run.
+Choosing a mention opens a game page or the article, never starts a game. **On this device** requires a readable, nonempty
+file and excludes detected Syncthing transfers; other copying may not be detected. Finish copying before playing.
+A name match does not verify the file's contents or prove that it will run.
 
 **Optional content is optional.** Signed releases include the magazine issues; a build made without them has an empty
 shelf. Every build includes the curated guide, which covers only some games. A `guide.json`, artwork and smart folders exist
-only if someone prepared them for your library. A missing optional file just leaves that part empty.
+only if someone prepared them for your library; none is needed for the first-game setup above.
 
 **Your state and shared content are kept apart.** Your favourites, queue, shelves, bookmarks, reference cards, play
 history and Hangar companion are yours (`user.json`, Sortie's own database and the companion's save; export them with
@@ -519,11 +522,11 @@ game with **Launch with…** on its page, or for a whole system in **Settings �
 **"… didn't accept the game."** The installed emulator version may not match Sortie's launch method. Try another emulator
 for the game with **Launch with…**. **Settings → Diagnostics** keeps the exact launch attempts if you need to report it.
 
-**The emulator opens, but shows its own menu, an error or a black screen.** That is the emulator's side: a missing
-RetroArch core, missing BIOS, an unfinished first-run setup, missing storage permission for the emulator, or a game file it
-cannot read. Go back to [Set up and test one emulator](#set-up-and-test-one-emulator) and make the game run inside the
-emulator first. For PSP homebrew, start loose `.elf`/`.prx` files and `EBOOT.PBP` folders inside PPSSPP; disc images
-work from Sortie.
+**The emulator opens, but shows its own menu, an error or a black screen.** Possible causes include a missing RetroArch
+core or BIOS, unfinished first-run setup, the emulator's storage permission, an unreadable file, or an incompatible
+launch method. First [make the game run inside the emulator](#set-up-and-test-one-emulator). If that works but launching
+from Sortie does not, try **Launch with…** and include the **Diagnostics** launch log when reporting it. For PSP homebrew,
+start loose `.elf`/`.prx` files and `EBOOT.PBP` folders inside PPSSPP; Sortie's preset targets disc images.
 
 **A BIOS file is missing.** Sortie never supplies BIOS files. Install the BIOS in the emulator as its documentation says.
 Sortie's own **BIOS folder** setting only shows a *BIOS missing* hint for a few systems; it does not configure emulators.
@@ -538,8 +541,8 @@ choose it. **Do not set up the library again on other storage**: your bookmarks 
 folder (shown under **Library setup → Where these settings live**).
 
 **Library setup says a settings file can't be used, or that settings changed on the card.** Sortie will not overwrite a
-file it cannot read or one that changed while you were editing. Use **Reload library settings** (your draft is kept), or
-fix or move the named file after making a copy.
+file it cannot read or one that changed while you were editing. For an edit conflict, choose **Reload library settings**
+(your draft is kept). For an unreadable file, fix or move the named file after making a copy, then return to Library setup.
 
 **Android settings opened the wrong page.** Sortie shows the path to use instead, for example **Settings → Apps → Special
 app access → All files access → Sortie**.

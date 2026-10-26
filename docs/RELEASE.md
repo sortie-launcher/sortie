@@ -3,7 +3,7 @@
 Sortie is distributed as signed APKs on [GitHub releases](https://github.com/sortie-launcher/sortie/releases): successful
 Android builds on `main` publish automated beta releases marked Latest. Site-only changes skip the Android build and release.
 A signed APK can also be built locally for isolated testing. There is no Google Play listing, app store account, update server, in-app updater, telemetry or download service.
-This file is the maintainer's procedure plus the current beta's goal, acceptance criteria, evidence and known limitations.
+This file is the maintainer's current procedure, followed by beta acceptance goals and explicitly dated historical evidence.
 
 ## Publishing the repositories
 
@@ -14,7 +14,7 @@ sources. Do not merge their old branches into this history or push them with `--
 patches so removed material cannot return through ancestry.
 
 Private maintainer notes belong under ignored `.local/`, not `docs/`. Keep signing files outside both repositories; the
-only hosted copy is the pair of encrypted environment secrets described in [Automatic beta releases](#automatic-beta-releases).
+hosted signing copy is the pair of encrypted environment secrets described in [Automatic beta releases](#automatic-beta-releases).
 The repositories are [sortie-launcher/sortie](https://github.com/sortie-launcher/sortie) and
 [sortie-launcher/sortie-zines](https://github.com/sortie-launcher/sortie-zines). Their SSH origins are configured on the
 sanitized checkouts. Changes reach `main` through reviewed pull requests; never force-push it. **A push to `main` that
@@ -44,9 +44,9 @@ again; leaking it means anyone can sign an "update" that Android accepts.
 - The certificate SHA-256 fingerprint is public information. The release workflow pins it, refuses an APK signed by
   anything else and prints it in every release's notes so downloads can be compared against it.
 
-**Custody status:** the release key remains outside the repositories. Its certificate SHA-256 is
+**Custody record (24 October 2026):** the release key was kept outside the repositories. Its certificate SHA-256 is
 `c4fc71bdee0987939c7af166465241c9c1bd3fc6c0a486d9dd76546975414cf4`; key creation refuses to overwrite it.
-Both signing files have verified owner-only backups on two separate machines: directory mode `0700`, files `0600`.
+Both signing files had verified owner-only backups on two separate machines: directory mode `0700`, files `0600`.
 Each stored copy was reopened, its bytes checked against the source, and its password used to recover a private key
 matching that certificate. Temporary transfer authorization was removed. Hostnames and paths are recorded privately.
 These are online backups; remote disk encryption and an additional offline copy have not been verified.
@@ -78,21 +78,25 @@ the machine backups.
   Never hand-build in the hosted range (apart from the pull-request candidates below) or create a `vX.Y.Z-beta.N` release
   or tag by hand: a higher manual number makes the workflow skip every hosted release below it.
 - **Candidates for everyday devices before merge** (a release-signed APK built from a pull request to check on the Thor
-  or another device that must keep its data): use code `2000 +` the run number of that pull request's latest `build`
-  run, and name `0.1.0-beta.<code>-<topic>`. Pull-request runs never publish, so the code is unused, and the release made
-  when the pull request merges comes from a later run with a higher code, which installs over the candidate in place.
-  Never invent a higher code for convenience: anything above the next hosted release blocks it on that device, which
-  can then only catch up by uninstalling (losing the play history database and the Shizuku grant) or waiting for the
-  run number to pass it. Test devices that may be wiped (the DMG) can take debug builds instead.
+  or another device that must keep its data): reserve code `2000 +` the run number of that pull request's `build`
+  run, and name `0.1.0-beta.<code>-<topic>`. Use each reserved code for only one candidate; a CI re-run does not allocate
+  another code. The code must exceed the device's installed version. Pull-request runs never publish, and a later merge
+  build has a higher code that can update the candidate in place.
+  Never invent a higher code for convenience or uninstall to bypass a downgrade. If no suitable code is available, use
+  a disposable emulator or wait for a later run. No named handheld is assumed disposable.
 - Record user-visible changes under `## Unreleased` in `CHANGELOG.md` in the same pull request. Hosted release notes are
   generated from merged pull requests; releases do not edit the changelog.
 
 ## Building a release
 
 ```
-tools/build.sh                 # style check, debug + release unit tests, debug APK and an UNSIGNED release APK
-tools/release.sh -PsortieVersionCode=10 -PsortieVersionName=0.1.0-beta.9
+tools/build.sh                 # style, both unit-test variants, screenshot verification, debug + unsigned release APKs
+tools/release.sh -PsortieVersionCode="$CODE" -PsortieVersionName="$VERSION"
 ```
+
+Set `CODE` and `VERSION` to an unused pair allowed by [Versions](#versions); the helper does not allocate them or check
+the installed device's version. Use JDK 17 and the Android SDK (platform 35 and build-tools 35.0.0). The helpers use the
+host JDK when available, otherwise an existing `ubuntu` distrobox; they do not create that container.
 
 Both helpers forward extra arguments to Gradle, so a release that bundles magazines adds
 `-PsortieMagazinesDir=/path/to/sortie-zines/issues` (see [Magazine content](#magazine-content-separate-repository)).
@@ -144,9 +148,9 @@ Release jobs share one concurrency group and never cancel a running one. GitHub 
 group, so when several merges land quickly an intermediate release can be cancelled; that merge gets no release of its own
 and the next one supersedes it.
 
-Automatic releases retain beta version labels; GitHub's Latest designation is not a claim of stable maturity. Their gate is the hosted style check, unit tests, signature check
-and checksum; they are not installed on hardware one by one. Device evidence in [Beta 0.1](#beta-01) applies only to the
-builds it names.
+Automatic releases retain beta version labels; GitHub's Latest designation is not a claim of stable maturity.
+Their gate is hosted style, unit and screenshot checks, signature verification and checksum; they are not installed on
+hardware one by one. Device evidence in [Beta 0.1](#beta-01) applies only to the builds it names.
 
 ### Secrets and the `release` environment
 
@@ -222,10 +226,10 @@ repinned. Missing or inconsistent content fails the build; there is no fallback 
 Normal path: merge to `main`. When the run passes, the release appears on the Releases page marked Latest; check that
 it carries exactly the APK and its `.sha256`.
 
-Manual signed builds from `tools/release.sh` are for an isolated test device or for preparing a device before hosted
-releases; never attach them to GitHub releases. Before one leaves the machine: the key backup exists, `tools/build.sh`
-passes, it has a new manual version (see [Versions](#versions)), and it was installed over the previous release on an
-isolated test device (below) with data surviving.
+Manual signed builds from `tools/release.sh` are for isolated tests or the reserved pull-request candidates described in
+[Versions](#versions); never attach them to GitHub releases. Before distributing one, confirm key recovery, run
+`tools/build.sh`, allocate an unused version and exercise a release-to-release update on an isolated installation.
+Candidate installs on everyday devices additionally need the owner's permission and verified backups.
 
 Tester instructions: download the Latest release's `.apk` (and its `.sha256`) from the
 [Releases page](https://github.com/sortie-launcher/sortie/releases). Check the SHA-256 if you can, open the APK and allow
@@ -238,15 +242,18 @@ compatibility can cause installation failures; uninstalling is not a safe diagno
 
 ## Debug and release signatures
 
-Debug and release builds share the app id but not the certificate: `tools/build.sh` and `tools/dev.sh` produce
-debug-key-signed builds, `tools/release.sh` release-key-signed ones. Android therefore refuses to install a release APK over
-a debug install (and the reverse), usually as "App not installed" or `INSTALL_FAILED_UPDATE_INCOMPATIBLE`.
+Debug and release builds share the app id but not the certificate: `tools/build.sh` builds a debug-signed APK and,
+without signing variables, an unsigned release APK. `tools/dev.sh` builds/installs debug; `tools/release.sh` signs release.
+Android refuses an update between debug and release signers, usually as "App not installed" or `INSTALL_FAILED_UPDATE_INCOMPATIBLE`.
 
 **Never uninstall a daily-use debug installation to get past this error.** Uninstalling deletes Sortie's app database
 (play history not yet exported), magazine reading positions, the remembered library location, shortcut pins, granted
 permissions and the Home role. Instead:
 
-- Keep daily development devices on debug builds, updated with `tools/dev.sh install` (`adb install -r`).
+- Keep an existing debug installation on the same debug key until a deliberate migration. To build then update it,
+  use `tools/dev.sh build` followed by `tools/dev.sh install`; `install` alone uses the existing debug APK.
+  The helper also grants All files access and overlay app-ops, so it is not a permission-onboarding test.
+  An existing production-signed installation must stay on production-signed updates, not `tools/dev.sh install`.
 - Exercise release builds and release-to-release upgrades on an **isolated test device**: an Android emulator (AVD) or a
   spare handheld that holds no one's daily setup. A second Android user on the same device is not isolation: Android
   requires every user's copy of a package to have the same signer.
@@ -296,10 +303,10 @@ No accounts, server, app store, automatic updater, ROM/BIOS downloads or telemet
 
 ### Evidence (2026-10-24)
 
-Signed candidates were built locally with `tools/release.sh`; none has been published. The recorded beta acceptance runs
-cover version codes 2–7, with the focused retests identified below. The latest local candidate,
-`sortie-0.1.0-beta.6-code7.apk` (SHA-256 `727c6e4dbd6f616458a146ebc72d6bad98497cd02259ac8af00d5f1b0ea067e0`),
-verifies with `apksigner` as a single v2 signer with the certificate above.
+These locally built signed candidates were not published. The recorded beta acceptance runs cover version codes 2–7,
+with focused retests below. The last candidate in this evidence set was
+`sortie-0.1.0-beta.6-code7.apk` (SHA-256 `727c6e4dbd6f616458a146ebc72d6bad98497cd02259ac8af00d5f1b0ea067e0`);
+it verified with `apksigner` as a single v2 signer with the certificate above.
 
 These are historical results for those candidates. Where they mention the weekly journal or game notes, those features
 existed then; later builds replaced them with one bookmark per game and archive the older writing (see the changelog).
@@ -339,11 +346,12 @@ existed then; later builds replaced them with one bookmark per game and archive 
 
 ### Known limitations
 
-- RetroArch 1.22.2 exits on the first attempt to open *different* content and boots it on the second; same-game resume
-  works. Sortie does not force-stop it. Old custom profiles keep `CLEAR_TASK` until edited (see LAUNCHERS.md); one long run
-  hit an external RetroArch ANR with that legacy flag, and a separate background RetroArch native crash was seen on the
-  x86_64 emulator with unestablished cause.
-- Loose PSP ELF homebrew does not start from Sortie; homebrew ISOs do.
+- Tested RetroArch 1.22.2 configurations exited on the first attempt to open different content and booted it on the second;
+  same-game resume worked. Sortie reports quick exits but does not retry or force-stop it. Old custom profiles keep
+  `CLEAR_TASK` until edited (see [LAUNCHERS.md](LAUNCHERS.md)). External RetroArch ANRs and a background native crash
+  were also observed; these findings are not a guarantee of every core or later version's behaviour.
+- In the tested PPSSPP 1.20.4 configuration, loose PSP ELF homebrew failed through a single-file content URI while a
+  homebrew ISO booted. Open loose homebrew inside PPSSPP; do not generalize that result to every PSP emulator.
 - Only the emulator versions and devices named here and in LAUNCHERS.md were exercised. Other presets carry their stated
   untested/source-checked status; an installed package does not prove its core, BIOS or game is ready.
 
@@ -354,10 +362,9 @@ existed then; later builds replaced them with one bookmark per game and archive 
 - [ ] Hardware coverage beyond the devices actually tested: Android versions, single/dual screen, touch/controller,
   storage layouts and OEM settings screens.
 - [x] Hosted GitHub CI passed after source publication: [build run 40135126335](https://github.com/sortie-launcher/sortie/actions/runs/40135126335)
-  checked style, ran both unit-test variants and built/uploaded debug and unsigned-release artifacts. CI does not sign
-  releases or bundle zines by default.
-  That was the state at source publication; the workflow has since been extended to bundle the pinned zines and to sign
-  and publish beta releases from `main` (see [Automatic beta releases](#automatic-beta-releases)).
+  checked style, ran both unit-test variants and built/uploaded debug and unsigned-release artifacts. That historical
+  workflow did not sign releases or bundle zines. The current workflow bundles its pinned zines snapshot and signs and
+  publishes beta releases from `main` (see [Automatic beta releases](#automatic-beta-releases)).
 
 After changing signing or publication automation, download its first hosted release, verify its checksum and certificate,
 and install it over a release-signed copy on an isolated test device. Record the result in that release's notes; workflow
@@ -391,7 +398,7 @@ code can be cloned, built and distributed without third-party magazine media.
 
   ```sh
   tools/build.sh -PsortieMagazinesDir=../sortie-zines/issues
-  tools/release.sh -PsortieVersionCode=10 -PsortieVersionName=0.1.0-beta.9 -PsortieMagazinesDir=../sortie-zines/issues
+  tools/release.sh -PsortieVersionCode="$CODE" -PsortieVersionName="$VERSION" -PsortieMagazinesDir=../sortie-zines/issues
   ```
 
   `:app:stageMagazineAssets` verifies the directory and copies it into
@@ -439,10 +446,11 @@ repository; the next hosted app build picks them up automatically. Do not hand-e
   links and Featured in, B hierarchy, page/shoulder navigation, Continue reading after restart, and dual-screen section
   navigation where available. Upgrade with `install -r`; verify user data and card packs stay untouched.
 
-The current content set is Field Notes 001–009, revision 2: 41 articles, 131 images, about 12 MB. A debug APK built with
-it was installed in place on an AYN Thor and every article's lead image, prose and offline sources were opened; local
-filtering, reciprocal links, paging, section jumps, screen swaps and restart/resume were exercised, and the existing user
-data and card packs were unchanged. That pass did not test emulation or install a release APK.
+Historical reader smoke before repository separation covered Field Notes 001–009, revision 2: 41 articles, 131 images,
+about 12 MB. A debug APK with that set was installed in place on an AYN Thor and every article's lead image, prose and
+offline sources were opened; local filtering, reciprocal links, paging, section jumps, screen swaps and restart/resume
+were exercised, and user data and card packs were unchanged. It did not test emulation or install a release APK.
+This is not the current issue inventory: each hosted release records its own content commit and catalog digest.
 
 ### Publication verification — 2026-10-24
 

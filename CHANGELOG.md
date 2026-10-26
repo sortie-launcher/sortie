@@ -1,5 +1,9 @@
 # Changelog
 
+Beta development history, newest first. Older entries describe behavior at that point, not current setup instructions.
+Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub Releases](https://github.com/sortie-launcher/sortie/releases)
+for published builds.
+
 ## Unreleased
 - Rivet's production Hangar gains Shop, Build bench and Cabinet. Four new authored families bring the collection to
   56 parts; the free bench proposes compatible owned two-family builds. Parts cost 2 credits; reusable Alloy and Holo
@@ -16,6 +20,11 @@
   Serve the repository root with `python3 -m http.server 8746 --bind 127.0.0.1`, then open `/tools/mecha/workshop/`.
   The browser remains an offline experiment; the four authored part families and constrained assembly rules now also
   feed the production Hangar above. Browser palette/arcade demos and their fictional wallet do not change app state.
+- Review every user guide, format reference and project document against current code. Correct launch-choice semantics,
+  import/backup limits, indexing, guide matching and configuration examples; distinguish historical checks and proposals
+  from shipped behavior. Replace the remaining old screenshots with current Nova/Thor captures and a fresh beta 2138
+  setup/import walkthrough, including a real uCity launch. Publish the hardening reference and use native Thor screen
+  originals in the website hero instead of cropping a composite.
 - Limit the companion screen's curated blurb to two lines with an ellipsis, keeping long recommendations from crowding
   the art and controls. The game detail page still shows the full, unchanged blurb.
 - Refresh the README, website, onboarding, manual and format references for Quiet Home, Tonight, bookmarks and their

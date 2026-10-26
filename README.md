@@ -7,7 +7,7 @@ recommendations and control notes for the games it covers. No account or AI serv
 permission and never downloads games, BIOS files, emulators or artwork.
 
 > [!IMPORTANT]
-> **Sortie is built in collaboration with AI.** The code, the documentation and the optional Field Notes magazine are
+> **Sortie is built in collaboration with AI.** The code, documentation, bundled game guide and Field Notes magazine are
 > written with AI assistance. If that's a dealbreaker, better to know now than after setup.
 
 <img src="docs/screenshots/readme/home.png" alt="Sortie on a Retroid Pocket Nova: the Split-S header with Apps, Search, Extras and Settings above a Generation-sorted library, with Rivet perched on a system tile" width="100%">
@@ -48,7 +48,7 @@ the generator and landing page, and its build fails on any broken link or anchor
 JDK 17 and Android SDK platform 35. Copy `local.properties.example` to `local.properties` and set `sdk.dir`.
 
 ```
-tools/build.sh        # ktlintCheck, debug + release unit tests, debug APK and an unsigned release APK (no formatting)
+tools/build.sh        # style, debug/release unit tests, screenshot verification and both APK variants; no formatting
 tools/dev.sh install  # adb install -r of the debug APK + grants; SORTIE_HOME=1 also restores the Home role
 tools/release.sh      # signed release APK + SHA-256 in dist/, using the key from tools/init-release-key.sh
 ```
@@ -60,9 +60,9 @@ builds accept `am start … --es open <route>`, `--es launch '<system>/<file>'`,
 These debug hooks are disabled in release builds. Releases, signing and versions:
 [docs/RELEASE.md](docs/RELEASE.md).
 
-**Magazines are opt-in locally.** Local builds contain no issues and never download any; hosted CI resolves
-[sortie-zines](https://github.com/sortie-launcher/sortie-zines) `main` once per build and uses that exact commit and
-catalog digest for testing and signing. To bundle a reviewed content checkout yourself:
+**Magazines are bundled in signed releases and opt-in locally.** Local builds contain no issues and never download any;
+hosted CI resolves [sortie-zines](https://github.com/sortie-launcher/sortie-zines) `main` once per build and uses that exact
+commit and catalog digest for testing and signing. To bundle a reviewed content checkout yourself:
 
 ```
 git clone https://github.com/sortie-launcher/sortie-zines.git ../sortie-zines
@@ -80,6 +80,6 @@ Code and original text are MIT-licensed ([LICENSE](LICENSE)). Third-party materi
 - **System logos**, for example rendered from the CC-BY-NC-SA [slate-es-de](https://gitlab.com/es-de/themes/slate-es-de)
   theme, aren't in this repository; they live only on a user's card.
 - **Documentation screenshots** include third-party game art and descriptions, excluded from MIT; capture notes distinguish
-  the Nova's library, illustrative entries and tested homebrew. Game-art packs and gamelists are not distributed with the source.
+  real handheld libraries from the disposable emulator's setup and import fixtures. Game-art packs are not distributed here.
 
 Branding (the amber Split-S): [branding/](branding/README.md).

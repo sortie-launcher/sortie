@@ -13,9 +13,11 @@ The SVGs are self-contained, with lettering outlined from Lato Heavy Italic and 
 installed. Colours: amber `#F2B134`, ink `#101418`, light text `#E6E8EB`.
 
 The Android adaptive-icon foreground uses the same geometry inside the 66dp safe circle, and its alpha shape supplies
-Android 13+ themed icons. Keep the SVG mark and the Android vector in sync when changing the geometry.
+Android 13+ themed icons. Home uses a separately cropped vector of the same mark. Keep `mark.svg`,
+`app/src/main/res/drawable/ic_launcher_foreground.xml` and `app/src/main/res/drawable/sortie_mark.xml` in sync when changing
+the geometry; regenerate the other SVG compositions and PNG exports too.
 
-Regenerate the PNG exports with ImageMagick:
+Regenerate the PNG exports from the repository root with ImageMagick 7:
 
 ```
 magick -background none branding/icon.svg branding/icon.png

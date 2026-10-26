@@ -25,10 +25,24 @@ Smart and manual folders. A folder is a query over the index plus optional manua
 }
 ```
 
-Predicates: `name`, `path`, `system` (`regex`, `eq`, `in`); `genre`, `developer` (`regex`);
-`players` (`gte`, `lte`); `year` (`gte`, `lte`); `fit` (`gte`, `lte`, `eq`); `playMinutes`,
-`daysSincePlayed`, `daysSinceAdded` (`gte`, `lte`, `eq`); `tags`/`flags` (`has`, `hasAny`,
-`hasAll`); `favourite` (bool); `hack` (bool); `recentTags` (below). Combinators: `all`, `any`, `not`.
+`id` is required; `label` defaults to it. Without `rule`, a folder contains only its `include` list. An empty rule object
+matches every eligible candidate. `exclude` wins over both the rule and `include`; neither can bring back hidden or
+unavailable entries. `limit` defaults to `0` (unlimited); a positive value caps the sorted result.
+
+Predicates:
+
+- Text: `name`/`title`, `path`, `file`, `system`, `genre`, `developer`, `publisher`, `desc`, `kind`, `package`, `source`.
+  All support `regex`, `eq`, `in` and `contains`. Equality, membership and substring tests ignore case; regexes need
+  `(?i)` for that.
+- Numbers: `players`, `year`, `fit`, scraped `rating`, `playMinutes`, `daysSincePlayed`, `daysSinceAdded`.
+  All support `gte`, `lte`, `gt`, `lt` and `eq`. Never-played entries have no `daysSincePlayed` value and do not match it.
+- Lists: `tags`/`flags` support `has`, `hasAny`, `hasAll`; use lowercase guide labels.
+- Booleans: `favourite`, `hack`, `handWritten`. `handWritten` means the effective guide entry has `auto: false`,
+  not that its prose was written by a human, and does not test for a personal bookmark.
+- `recentTags`: see below.
+
+Combinators are `all`, `any` and `not`; multiple keys in one object are implicitly ANDed. Unknown fields/operators and
+invalid regexes are reported as rule problems and their predicates do not match.
 
 Sort keys: `fit`, `title`, `year`, `lastPlayed`, `playMinutes`, `added`, `system`, each `:asc` (default) or
 `:desc`, comma-separated. `random` shuffles the members each time the folder is re-evaluated (library, play
@@ -50,7 +64,7 @@ A Cocoon user folder merely named "Favourites" keeps its separate `cocoon-<id>` 
 
 `{ "recentTags": { "minShared": 1, "window": 3 } }` matches a game whose guide `tags` share at least
 `minShared` entries (default 1) with the union of the tags of the `window` (default 3) most recently played
-games (latest start in the play log). Only `tags` count, not `genre` text. The recent set is computed once per
+games (latest session start in Sortie's database). Only `tags` count, not `genre` text. The recent set is computed once per
 evaluation from the same candidates the folder sees, so hidden games do not count, and with nothing played yet
 nothing matches. Game-only: apps and shortcuts never match. With `playMinutes` and `fit` it makes an offline
 "what next" folder ("Pick one" on it is the recommendation):

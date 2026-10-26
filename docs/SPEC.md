@@ -1,42 +1,47 @@
 # Sortie: specification (living document)
 
+Current implementation reference, reviewed against main on 26 October 2026. Milestone labels record the original grouping,
+not unfinished release gates. Performance targets are goals; dated acceptance paragraphs describe only their named builds.
+
 ## Purpose
 
 Sortie browses and launches a handheld's game library. The library can be set up entirely on the device (Library setup), or
 curated on a desktop by the user's own tooling, which then owns naming, metadata, artwork, deduplication, backups and taste
-scoring. Either way Sortie reads files and writes very little: its configuration (when set up on the device), a play log and
-the user's on-device edits (favourites, overrides), all as plain files that any sync tool can carry back to a desktop.
+scoring. Sortie reads those files, maintains an app-private index and play history, and writes configuration and personal
+edits as portable files. The play-log file is a best-effort mirror, not the authoritative history or a complete backup.
 
 ## Principles
 
-1. **Fast over pretty.** Cold start under two seconds with 8,000 entries. No scanning at launch;
-   an incremental index keyed on file path and modification time. Pre-sized thumbnails. Lists
-   over carousels on small screens.
+1. **Fast over pretty.** Cold start under two seconds with 8,000 entries is a target, not a measured guarantee.
+   Browse the cached index; index an empty library, after manifest changes, setup/import or an explicit re-index.
+   Incremental updates compare path, size, modification time and metadata stamps. Lists and grids suit different windows.
 2. **Portable configuration and personal data.** Library configuration and user edits live as plain files under one
    root. The index, authoritative play history, reading positions, daily picks and companion state are app-private;
    backups carry preferences, completed history and the companion, not every app-private cache.
-3. **No gatekeeping of launchers.** Any installed app can be a launcher for any system. Launch
-   profiles are user data, not a database the app ships. Unknown emulators work through the
-   generic "open with" path on day one.
+3. **No gatekeeping of launchers.** Launch profiles are editable user data. Library setup ships presets, not a closed
+   compatibility list; custom profiles can target other installed apps. An explicitly configured "Open with…" profile
+   delegates to Android's chooser, but the chosen app must support the file and intent.
 4. **Controller first, touch second.** One consistent button grammar on every screen.
 5. **Offline by construction.** The manifest declares no network permission.
-6. **Release-ready hygiene.** Idiomatic Kotlin, ktlint, MIT, no secrets or device paths in code;
-   device specifics live in the on-card manifest.
+6. **Release-ready hygiene.** Idiomatic Kotlin, ktlint, MIT, no secrets or personal device identifiers in code.
+   Device-specific configuration lives in manifests; reusable emulator presets live in Library setup.
 
 ## Data model
 
-Canonical inputs (read-only for Sortie; the folder names below are examples, each system's paths come from `systems.json`):
+Library inputs (ROMs and artwork are read-only; setup can edit configuration):
 
-- `roms/<system>/` and similar per-system folders: game files (0-byte placeholders are ignored, in-progress sync temp
-  files such as `.syncthing.*.tmp` are shown as "arriving").
+- `roms/<system>/` and similar folders: immediate game files under each `systems.json` root, not recursive scans.
+  Zero-byte files are indexed as non-playable placeholders and hidden by the default on-device filter. Syncthing temp
+  files mark their target names as "arriving".
 - `scraped-esde/gamelists/<system>/gamelist.xml` : ES-DE gamelist (name, desc, rating, releasedate,
   developer, publisher, genre, players). Only `<path>`, `<name>` and the listed fields are used.
 - `scraped-esde/downloaded_media/<system>/{covers,screenshots,marquees,...}/<stem>.png|jpg`.
 - `sortie/guide.json` : optional taste layer from a desktop guide builder (fit 1-5, hook, flags,
   tags) keyed by system + filename. It takes precedence over the bundled curated guide.
-- APK asset `guide/catalog.json` : the bundled curated guide (authored hooks, flags and a few control notes; no fit or
-  tags), keyed by stable portable work/variant IDs and matched conservatively to local files; it only fills what
-  `guide.json` leaves empty (formats/guide.md, `data/guide/CuratedGuide.kt`).
+- APK asset `guide/catalog.json`: bundled AI-assisted editorial hooks, flags and a few control notes (no fit or tags),
+  keyed by portable work/variant IDs and matched conservatively to local files. An `auto: false` card entry wins as a
+  whole; otherwise the bundle fills empty fields. Authored/auto is precedence, not human authorship. See
+  [guide format](formats/guide.md) and `data/guide/CuratedGuide.kt`.
 - `sortie/systems.json`, `sortie/launchers.json`, `sortie/folders.json`, `sortie/device.json` :
   see docs/formats.
 - APK assets at `magazines/<issue-id>/` (only in builds made with a magazine content directory; see RELEASE.md) and
@@ -46,7 +51,7 @@ Canonical inputs (read-only for Sortie; the folder names below are examples, eac
 
 Outputs (owned by Sortie, append-only or small):
 
-- `sortie/playlog.jsonl` : one line per session (see formats).
+- `sortie/playlog.jsonl`: append-only start/end events mirrored from Room sessions (see formats); never read back as history.
 - `sortie/user.json` : favourites, queue, bookmarks, controller requirements, Finished/Shelved, reference-card metadata,
   clippings, per-game overrides and layout/switcher/device-stats preferences (see formats/user.md).
 - `sortie/archive/personal-notes-<hash>.{md,json}` : readable and structured copies of legacy notes and journal entries,
@@ -86,12 +91,15 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Rules in `folders.json`: regex over name/path/system; predicates over genre, players, year,
   tags, fit, play time, last played, favourite, flags; AND/OR/NOT; manual include/exclude lists.
 - Live counts; "Pick one" (random) scoped to any folder.
-- Built-in examples: Unplayed 4+, Recently added, Short sessions, Two-player.
+- Built-in folders: Favourites, Want to play, Finished and Shelved. Other smart folders come from `folders.json`;
+  Unplayed 4+, Recently added, Short sessions and Two-player are possible configurations, not shipped defaults.
 
 ### Dual screen (M3, revised in feedback round 2)
-- Roles: top = art and detail, bottom = navigation; swappable. The companion panel is an activity on whichever screen the
-  navigation is not on: `CompanionActivity` on the default display, `SecondaryHomeActivity` (SECONDARY_HOME) on the second,
-  so the second screen always falls back to Sortie when an emulator exits. Single-screen layout otherwise.
+- Roles follow the navigation activity's current display, not a fixed top/bottom layout; X exchanges navigation and
+  companion. `screens.presentationIndex` selects the secondary presentation display. The companion uses
+  `CompanionActivity` on the default display and `SecondaryHomeActivity` (SECONDARY_HOME) on the selected second display,
+  where Android can return to it after an emulator exits. Without a second display, navigation uses the single-screen layout.
+  The manifest's `screens.navigation` affects the default game-launch target, not navigation's initial placement.
 - Launch target display per profile (ActivityOptions.setLaunchDisplayId).
 - Controller anchoring: the controller follows the game's display. Companion screens are touch only and hand the controller
   back to the other screen when they appear or are tapped (`AnchorActivity`).
@@ -214,8 +222,9 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   Its bottom-left + opens an app picker for that display; launching returns controller focus to the reader. B or Close
   cancels without losing the contents tab or list position. This also works with the reader on the bottom display.
 
-  Thor acceptance: opened Prime Video below the article and Clock above it after X; the article remained on its own
-  display. Picker cancellation preserved the Articles tab and scrolled Sections list pixel-for-pixel. Home opened the
+  Historical Thor acceptance (before the current Home header): opened Prime Video below the article and Clock above it
+  after X; the article remained on its own display. Picker cancellation preserved the Articles tab and scrolled Sections
+  list pixel-for-pixel. Home opened the
   overlay from both reader placements, and B returned to the article; denying overlay permission used the ordinary
   switcher page instead. Video playback/DRM was not exercised. Shizuku authorization had to be renewed after an earlier
   uninstall/reinstall: Android's package-permission listing alone did not establish Shizuku authorization.
@@ -345,7 +354,8 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   No new activity, overlay permission or input interception outside Sortie's own windows is involved. The companion's
   existing controller handback waits until the carry/drop finishes on either display: its transient `AnchorActivity`
   must not pause navigation midway through an incoming landing. Hiding or replacing the owning window releases that hold.
-- Roaming acceptance (`0.1.0-mecha-roam` debug on the DMG, `0.1.0-beta.1044-roam.1` on the Thor): DMG Home at the clock,
+- Historical roaming acceptance (`0.1.0-mecha-roam` debug on the DMG, `0.1.0-beta.1044-roam.1` on the Thor;
+  the tap-to-Hangar interaction below predates today's pet/hold gestures): DMG Home at the clock,
   on the wrapped header buttons, on the hint bar (list view) and peeking over first-row tiles (grid view); peek-to-peek
   strolls; 0 frames in 10 s windows between strolls, while dozing (only the clock's minute tick) and with motion off; a
   real 70 s game session greeted with "Welcome back!" plus the credit message; Home Hangar button by controller with focus
@@ -400,14 +410,15 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   rows were preserved; the three smoke sessions were the only appended history.
 
 ### Library hygiene (M3)
-- Multi-disc grouping (.m3u or disc tags), duplicate-format hiding (PBP next to CHD), hacks
-  grouped under base game, badges for missing BIOS, present save, arriving file, placeholder.
+- Disc-tag and same-stem container grouping (`data/index/Variants.kt`), with alternate files on the game page.
+  `.m3u` files can launch playlists; Sortie does not parse their contents to hide every referenced disc.
+- Explicit modified-game marks, not automatic hack-to-base-game grouping; badges for configured missing BIOS,
+  detected saves, arriving files and placeholders.
 
-### Juice (M4, nice to have)
-- Procedural theme engine: derive a palette from the selected game's cover (dominant and accent
-  colours, contrast-checked) and apply it to the folder or detail screen. Cached per image.
-- Optional HOME-intent mode so Sortie can be the default launcher.
-- Per-device manifests (subsets, emulators, screen count) for several handhelds sharing one desktop library.
+### Juice (M4, implemented)
+- Artwork-derived, contrast-checked accents and ambient palettes, cached per image.
+- Optional default-Home role.
+- Per-device manifests for library subsets, emulators and screen roles.
 
 ## Non-goals (for now)
 Scraping, cloud sync, RetroAchievements UI, themes marketplace, video previews, any network use.
@@ -453,8 +464,9 @@ Code map (`app/src/main/java/io/github/esko997/sortie/`):
   `MechaStore`, `SortieNav` and `CompanionScreen` host stages and declare spots and props, the view model reports returns
   from play, and `BackupManager` carries the save through `backupSave`/`restore`/`undoRestore`.
 - `app/src/test/`, `mecha/src/test/` JVM unit tests; `smoke/` emulator smoke tests (`tools/emulator/smoke.sh`,
-  docs/HARDENING.md). Device paths, serials and emulator package names belong in the on-card manifests or environment
-  variables (`tools/dev.sh` reads `SORTIE_SERIAL`, `SORTIE_TOP_DISPLAY`, `SORTIE_BOTTOM_DISPLAY`), never in code.
+  docs/HARDENING.md). Personal device paths and serials belong in manifests or environment variables
+  (`tools/dev.sh` reads `SORTIE_SERIAL`, `SORTIE_TOP_DISPLAY`, `SORTIE_BOTTOM_DISPLAY`); emulator contracts live in the
+  setup presets and launch profiles.
 
 Android behaviour that shaped the design (observed on Android 13 dual-screen hardware):
 
@@ -471,10 +483,13 @@ Android behaviour that shaped the design (observed on Android 13 dual-screen har
 - Android 13 rejects singleTask/singleInstance activities for SECONDARY_HOME.
 - Full-table Room reads concurrent with indexer writes can fail with "Couldn't read row N from CursorWindow": read inside
   a transaction, debounce and catch.
-- Reinstalling an APK drops the default-home choice (`SORTIE_HOME=1 tools/dev.sh install` restores it).
-- Idle cost is checked with `dumpsys gfxinfo` (no new frames while idle), `dumpsys meminfo` and `top`; covers go through
-  `CoverImage` (constraint-sized, hardware bitmaps) with a fixed 96 MB memory cache and no disk cache. No frames is not
-  enough: timers and flows keep running in a stopped activity or on a dark screen, and Compose still recomposes there. Work a
+- An installation can disturb the default-Home choice on tested devices; recheck it after updating.
+  `SORTIE_HOME=1 tools/dev.sh install` explicitly selects Sortie as Home on a debug development device.
+- Measure idle cost with `dumpsys gfxinfo`, `dumpsys meminfo` and `top`, recording which surfaces and animations are visible.
+  Visible Rivet motion intentionally draws idle poses and movement; clocks, hero rotation and stats can also update.
+  Hidden or screen-off surfaces should stop their own animation and polling, not just draw fewer frames.
+  Covers use `CoverImage` (constraint-sized, hardware bitmaps), a fixed 96 MB memory cache and no disk cache.
+  No frames is not enough: timers and flows can keep running in a stopped activity or on a dark screen. Work a
   surface starts itself (stats polls, the companion's 20 s hero rotation, which loads a picture and a palette and makes the
   navigation background blend) is gated on `shownFlow` (lifecycle RESUMED and display lit, from their own events;
   `rememberShown()` in Compose). With both Thor screens off the hero rotation cost ~134 jiffies a minute; gated, ~12.
