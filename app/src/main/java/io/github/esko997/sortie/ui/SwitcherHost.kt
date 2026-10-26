@@ -64,6 +64,7 @@ class SwitcherHost(private val graph: SortieApp.Graph) {
                     when {
                         page[displayId] == SwitcherPages.Page.PERF -> OverlayPerf(controller, onApps = { pages.back(displayId) })
                         controller -> SwitcherScreen(
+                            onHome = { switcher.goHome(it) },
                             keys = keys,
                             claimHotkeys = false,
                             owner = false,

@@ -76,6 +76,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SwitcherScreen(
+    onHome: (Int) -> Unit,
     keys: Flow<Hotkeys.Key> = LocalHotkeys.current.events,
     claimHotkeys: Boolean = true,
     owner: Boolean = true,
@@ -128,7 +129,7 @@ fun SwitcherScreen(
         val scope = rememberCoroutineScope()
         AppPicker(
             graph,
-            "Open on the ${if (picking == TaskSwitcher.TOP) "top" else "bottom"} screen",
+            if (secondary == null) "Open app" else "Open on the ${if (picking == TaskSwitcher.TOP) "top" else "bottom"} screen",
             columns = 6,
             onClose = switcher::stopPicking,
             onBuiltin = { app -> if (openBuiltin(context, app, picking)) switcher.picked(picking) else switcher.stopPicking() }
@@ -189,7 +190,10 @@ fun SwitcherScreen(
             }
             val spot = restore
             val row = focusedScreen.takeIf { focused != null }
-            ScreenRow("Top screen", TaskSwitcher.TOP, row == TaskSwitcher.TOP, state, switcher, requesters[TaskSwitcher.TOP], spot, returning, onFocus, onBlur)
+            ScreenRow(
+                if (secondary == null) "Running apps" else "Top screen",
+                TaskSwitcher.TOP, row == TaskSwitcher.TOP, state, switcher, requesters[TaskSwitcher.TOP], spot, returning, onFocus, onBlur
+            )
             if (secondary != null) {
                 ScreenRow("Bottom screen", secondary, row == secondary, state, switcher, requesters[secondary], spot, returning, onFocus, onBlur)
             }
@@ -200,20 +204,20 @@ fun SwitcherScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                GlowButton("Sortie", enabled = !state.busy) { switcher.goHome(focusedScreen) }
+                GlowButton("Sortie", enabled = !state.busy) { onHome(focusedScreen) }
                 GlowButton("Open app…", enabled = !state.busy) { switcher.startPicking(state.freed ?: focusedScreen) }
                 if (secondary != null) {
                     GlowButton("Quick swap", enabled = !state.busy && state.entries.isNotEmpty()) { switcher.quickSwap(TaskSwitcher.TOP, secondary) }
                     GlowButton("Controller → bottom", enabled = state.on(secondary).isNotEmpty()) { switcher.anchor(secondary) }
+                    GlowButton("Controller → top", enabled = state.on(TaskSwitcher.TOP).isNotEmpty()) { switcher.anchor(TaskSwitcher.TOP) }
                 }
-                GlowButton("Controller → top", enabled = state.on(TaskSwitcher.TOP).isNotEmpty()) { switcher.anchor(TaskSwitcher.TOP) }
                 GlowButton("Refresh", enabled = !state.busy) { switcher.refresh() }
             }
         }
         val cur = current()
-        val hints = listOf(
+        val hints = listOfNotNull(
             "A" to (if (cur != null && cur.task.displayId != focusedScreen) "bring here" else "to front"),
-            "Y" to "other screen",
+            if (secondary != null) "Y" to "other screen" else null,
             "Select" to "close app"
         ) + extraHints + ("B" to "back")
         HintBar(*hints.toTypedArray())
