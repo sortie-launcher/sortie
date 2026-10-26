@@ -2,18 +2,17 @@
 
 **An offline, controller-first game launcher for Android handhelds.** Sortie lists the games already on your device,
 starts them in the emulators you've installed, and keeps a bookmark per game, your backlog and play history beside them.
-A curated guide of short hand-written game notes ships inside the app, and **Tonight** picks up to five of your own games
-each day from your history and library metadata. It has no internet permission and never downloads games, BIOS files,
-emulators or artwork.
+**Tonight** offers up to five games from your library each day, with a reason for each pick. A bundled guide adds short
+recommendations and control notes for the games it covers. No account or AI service needed: Sortie has no internet
+permission and never downloads games, BIOS files, emulators or artwork.
 
 > [!IMPORTANT]
 > **Sortie is built in collaboration with AI.** The code, the documentation and the optional Field Notes magazine are
 > written with AI assistance. If that's a dealbreaker, better to know now than after setup.
 
-<img src="docs/screenshots/readme/home.png" alt="Sortie on a Retroid Pocket Nova: Home in By Console mode, a PlayStation 2 game grid with Armored Core 3 focused, the folded header and compact controller hints with a Controls button" width="100%">
+<img src="docs/screenshots/readme/home.png" alt="Sortie on a Retroid Pocket Nova: the Split-S header with Apps, Search, Extras and Settings above a Generation-sorted library, with Rivet perched on a system tile" width="100%">
 
-<sub>Captured on a Retroid Pocket Nova running signed beta 2115, with an existing library and artwork, before Home's header
-gained the Split-S mark and Extras menu.
+<sub>Captured on a Retroid Pocket Nova running signed beta 2136, with an existing library and artwork.
 [Capture notes and image credits](docs/screenshots/readme/PROVENANCE.md).</sub>
 
 ### **[Documentation → sortie-launcher.github.io/sortie](https://sortie-launcher.github.io/sortie/)**
@@ -27,12 +26,15 @@ gained the Split-S mark and Extras menu.
 
 ## Install
 
-Beta. Download the newest `.apk` (and its `.sha256`) from
-[GitHub releases](https://github.com/sortie-launcher/sortie/releases): merges to `main` that run and pass the Android build
-publish a signed beta release marked Latest, checked by hosted tests and signature verification but not tested on hardware build by build. Needs
-Android 11 or newer. Install newer APKs over the old one. **Never uninstall to update**, and don't use the debug-signed
-[Actions](https://github.com/sortie-launcher/sortie/actions/workflows/build.yml) artifacts as a daily install
-([why](https://sortie-launcher.github.io/sortie/project/release/)).
+Download the newest signed beta APK from [GitHub releases](https://github.com/sortie-launcher/sortie/releases).
+Requires Android 11 or newer. **Install updates over the old copy; never uninstall to update.**
+
+Releases include a checksum and pass hosted tests and signature checks, but aren't hardware-tested build by build.
+Use the release download, not the debug-signed [Actions artifacts](https://github.com/sortie-launcher/sortie/actions/workflows/build.yml).
+[Signing and update details](https://sortie-launcher.github.io/sortie/project/release/).
+
+Upgrading from the journal and older game notes? Sortie archives that writing before moving to bookmarks.
+[What carries over, and what to back up](https://sortie-launcher.github.io/sortie/manual/#older-journal-and-notes-archive).
 
 ## Documentation source
 

@@ -1,6 +1,6 @@
 # user.json (device-owned)
 
-Written by Sortie on the device (`<card>/sortie/user.json`, atomically via `user.json.tmp`); the desktop only reads it.
+Written by Sortie in the active configuration folder (`sortie/user.json`, atomically via `user.json.tmp`); desktop tools should treat it as device-owned.
 Every key is optional; unknown keys are ignored.
 
 ```json
@@ -61,7 +61,7 @@ Each annotation holds `controller` (`unknown`, `gamepad`, `pointer`, `motion`, `
 
 `bookmarks[id]` holds `text` (trimmed, 1–2,000 characters) and `savedAt` (epoch milliseconds of the save; `0` when unknown,
 as for a bookmark migrated from an older `returnNote`). A game has at most one bookmark: Save replaces the previous text,
-Cancel/B leaves it unchanged, and saving an empty draft (Clear, then Save) removes the entry. Longer drafts are refused, never
+Cancel/B leaves it unchanged, and saving an empty draft (**Clear**, then **Remove bookmark**) removes the entry. Longer drafts are refused, never
 truncated. Bookmarks are personal and separate from the guide's authored blurbs, which they never change. The game page and
 the companion screen show the bookmark; the browse lists' ✍ notes filter includes games that have one.
 
@@ -84,9 +84,10 @@ Versions before bookmarks stored a weekly journal (`journalEntries`) and per-gam
 file. When such a `user.json` loads, or a backup holding them is restored, Sortie first writes all of that writing to
 `sortie/archive/personal-notes-<hash>.md` (readable: every note in full, journal entries with dates, linked game and session,
 screenshot paths and sizes) and `personal-notes-<hash>.json` (`format: "sortie-personal-notes-archive"`, `version` 1,
-`source`, `archivedAt`, plus the exact `gameNotes` and `journalEntries` values, unknown fields included). Both are fsynced;
-the hash is of the content, so the same writing is archived once. Only then is the migrated file written: `returnNote`
-becomes the game's bookmark (an existing bookmark wins), and `mappingNotes` and `journalEntries` are removed. If the archive
+`source`, `archivedAt`, plus `gameNotes` holding the original note strings and the raw `journalEntries` value, including
+unknown journal fields). Both files are fsynced; the content hash prevents duplicate archives of the same writing.
+Only then is the migrated file written: `returnNote` becomes the game's bookmark (an existing nonblank bookmark wins),
+and `mappingNotes` and `journalEntries` are removed. If the archive
 cannot be written, `user.json` is not written at all (saves fail and say so), and backup export, restore and Cocoon import
 (whose safety copies would leave that writing out) are refused, until it can. Journal screenshot files under
 `journal/media/` are never moved or deleted.
@@ -162,6 +163,6 @@ so; restoring it first archives that writing as described under [Older personal 
 to archive prevents the restore, nothing changed) and restores `returnNote` as the bookmark. Backups written now never hold
 these fields.
 
-Excluded: ROMs, artwork, emulator saves, the rebuilt game index, desktop manifests, `playlog.jsonl`, Android shortcut pins,
-permissions and default-home selection. Stored app/shortcut IDs are retained, but may require reinstalling or re-pinning
-their source before they resolve on another device.
+Excluded: ROMs, artwork, emulator saves, the rebuilt game index, library configuration files, `playlog.jsonl`, magazine
+reading positions, Tonight's saved daily sets, Android shortcut pins, permissions and default-home selection. Stored
+app/shortcut IDs are retained, but may require reinstalling or re-pinning their source before they resolve on another device.

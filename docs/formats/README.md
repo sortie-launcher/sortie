@@ -16,9 +16,10 @@ ignored so files can evolve. For the normal on-device path, start with the [begi
 | `launchers.json` | Library screen or desktop | launch profiles: how to start a file with an app |
 | `folders.json` | desktop | smart and manual folders |
 | `guide.json` | desktop (optional) | taste layer: fit, hook, flags, tags per game; the app's bundled curated guide fills its gaps ([guide.md](guide.md)) |
-| `user.json` | device | favourites, overrides, hidden entries, home sort and custom layout, list/grid and header/hint choices, switcher, companion and device-stats preferences, opted-in shortcuts ([user.md](user.md)) |
+| `user.json` | device | bookmarks, favourites, queue, shelves/verdicts, reference-card metadata, clippings, overrides and interface preferences ([user.md](user.md)) |
 | `playlog.jsonl` | device | one JSON object per play session, append-only |
 | `backups/pre-restore-<time>.json`, `backups/pre-cocoon-import-<time>.json` | device | safety copy taken before each restore or Cocoon import; same format as an exported backup ([format](user.md#backup-export-and-restore)) |
+| `archive/personal-notes-<hash>.md` and `.json` | device | readable and structured archive of notes/journal entries from older versions, written before migration ([user.md](user.md#older-personal-notes-archive)) |
 | `logos/<systemId>.png` | desktop (optional) | system logos for the home tiles; transparent PNG, ~512 px wide |
 | `magazines/<issue-id>/issue.json` | user/desktop | offline magazine issue, with local `articles/` and `media/` |
 
@@ -131,10 +132,11 @@ caption (alt text, or `imageCaption` for the lead) sits under the picture and in
 A blank line or any other line ends the sequence. Every panel needs its own caption; the title is only the marker and is
 never shown. Use a sequence when the order of the pictures is the point (a route, a build, before and after), not as a
 gallery. On a screen at least 560 dp wide, Sortie shows one row with the chosen panel centred and its neighbours at the
-sides, at up to 55% of the view's height; a swipe or tap chooses a panel. With a controller, L2 browses the sequence in
-view: ←/→ choose a panel instead of turning the page, R2 opens it full screen, ↑/↓ keep scrolling, and L2 or B stop. On a
-narrower screen the panels stack as ordinary pictures. The chosen panel is remembered with the reading position. Readers
-without sequence support, including Markdown previews, show the same lines as separate captioned pictures, so the pack
+sides, at up to 55% of the view's height. A swipe selects a panel; a tap selects it and opens the full-screen viewer.
+With a controller, L2 browses the sequence most in view: ←/→ choose a panel instead of turning the page, R2 opens it full
+screen, ↑/↓ keep scrolling, and L2, B or scrolling the sequence out of view stop browsing. On a narrower screen the panels
+stack as ordinary pictures. The chosen panel is remembered with the reading position; browsing mode is not restored.
+Readers without sequence support, including Markdown previews, show the same lines as separate captioned pictures, so the pack
 stays readable and keeps schema version 2. The publication tool rejects a single panel, more than twelve panels and
 panels without captions.
 

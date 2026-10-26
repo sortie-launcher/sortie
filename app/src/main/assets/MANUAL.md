@@ -137,9 +137,9 @@ screens put that row beside them, leaving room for tiles. Larger screens keep th
 (touch or D-pad), and controller hints wrap as whole button/action pairs. Switching list/grid retains the selected tile.
 **Settings → Header and hints** can fold this header and the hints out of the way while you browse (see Settings).
 
-System and folder filter chips: **Fit 4+** (guide rating 4 or 5), **✍ notes** (a hand-written guide note, including the
+System and folder filter chips: **Fit 4+** (guide rating 4 or 5), **✍ notes** (an authored guide note, including the
 built-in curated guide, or your bookmark), **💾 started** (a save or state exists
-on the card), **on device** (hide placeholders for games not copied yet). **🎲 Pick one** opens a random game from what is shown.
+in the configured save folders), **on device** (hide placeholders for games not copied yet). **🎲 Pick one** opens a random game from what is shown.
 The title stays above these controls. On smaller screens, the controls wrap onto additional rows rather than shrinking.
 
 ## Search and filters
@@ -180,8 +180,8 @@ only one of him.
   touch stops that at once and puts the battery back. When you come back from a game he waves and says what the session
   earned; news from the Hangar shows in a speech bubble where there is empty space. After a few quiet minutes he dozes
   until you press something. On a dual-screen handheld he keeps living on the other screen while you play (hide him in the
-  Hangar if you would rather he didn't). Whenever his screen is off, or Sortie is behind a game or in the background, he
-  does nothing at all.
+  Hangar if you would rather he didn't). He stops whenever his own screen is off or his Sortie window is hidden behind
+  another app.
 - Touch him: a **tap** pets him (a happy bounce and a little heart; it wakes him if he dozed off, and adds a little bond
   at most once every few minutes). **Hold still** for half a second and let go to open the Hangar. **Hold, then move** to
   pick him up and carry him: he dangles from your finger, and when you let go he drops to the nearest place he can stand,
@@ -215,6 +215,7 @@ know which screen you chose.
 
 - Reopening a built-in brings back its existing window. **X / Other screen** moves only that built-in, keeping the reader's
   page and position; it does not swap the launcher or move the app on the other screen.
+  On a single-screen device, **X** does nothing; it never opens the selected item instead.
 - **Close** closes only that built-in. **B** closes Performance immediately; in Magazines it first goes back through the
   article, contents and shelf. An article opened from a game page's **Featured in** returns to that game page with B.
 - The switcher lists **Magazines** and **Performance** separately, so each can be brought forward, moved or closed.
@@ -292,22 +293,23 @@ D-pad. The buttons stay in view. **B** goes back. Returning from Details or the 
 
 Each pick follows one plain rule, and its reason says which rule and what it used:
 - **Pick up again**: a game you have played, bookmarked games first, then the most recently played. Its bookmark is shown.
-- **From Field Notes**: a game here that a magazine article discusses, articles you haven't finished first.
+- **From Field Notes**: a game that a magazine reference matches to exactly one available local copy, articles you haven't
+  finished first. If several copies match, Tonight leaves that reference for you to choose from in the reader.
 - **Familiar ground**: an unplayed game by the same developer as one of your five most-played games, or else in the same genre.
 - **Something different**: an unplayed game on a system and in a genre your play history hasn't touched, or else one of the two.
 - **Wild card**: today's random draw from the rest of your library.
 
 When a rule has nothing to work with (no play history yet, no playable Field Notes game), that pick is labelled
-**Discovery** and says why. It is then a Want to play game, else an unplayed game with a hand-written guide note, else the
-best-rated unplayed game in your library's metadata, else any unplayed game. No game appears twice. Hidden, Finished,
-Shelved, not-yet-copied, still-arriving and missing games are left out, so a small library gets fewer than five.
+**Discovery** and says why. It then tries Want to play, an unplayed game with an authored guide hook, the best-rated unplayed
+game in your library's metadata, then any unplayed game. When the set is chosen, Hidden, Finished, Shelved, not-yet-copied,
+still-arriving and missing games are left out. Alternate indexed variants and repeated titles are also skipped,
+so a small library gets fewer than five.
 
-There are no questions, settings or rerolls, and nothing is fetched: Sortie chooses from what it already knows. The first
-time you open Tonight on a date, it chooses that day's set and saves it on this device before showing it. Opening Tonight
-again that day, after a restart, a re-index or more play, shows the same set. While you stay in Tonight, including trips to
-Details and back, it keeps the date it opened on, even past midnight. Opening Tonight again later, or after Sortie has
-restarted, uses the current date: a new date gets its own set, never yesterday's. A saved pick that can no longer be played (removed, hidden since,
-not copied or missing) stays in its place, dimmed with the reason, instead of being replaced.
+There are no questions, settings or rerolls, and nothing is fetched. Your first visit each day saves a set on this device;
+later visits keep it, even after a restart, re-index or more play. A visit that crosses midnight keeps its original date,
+including trips to Details and back. Leave Tonight and open it again to get the new day's set.
+A saved pick that becomes unavailable (removed, hidden, not copied, still arriving or missing) stays in place, dimmed with
+the reason, instead of being replaced. These file checks do not guarantee that its emulator is ready.
 
 - If the day's picks can't be saved, Tonight says so instead of showing a set it could not keep. Free some storage on the
   device, then open Tonight again.
@@ -351,15 +353,16 @@ Sortie can't be sure the game ended, no card appears and you leave bookmarks fro
 
 ## The built-in curated guide
 
-Sortie comes with short, hand-written notes about more than a thousand games: a one-line hook, badges such as *hack*,
-*Japanese only* or *long*, and for a few games control notes. They attach to your own copies of those games automatically,
-on a fresh install with nothing to prepare, and show on the game page, the companion screen and Tonight.
+Sortie comes with short, curated notes about more than a thousand games: a hook, badges such as *hack*,
+*Japanese only* or *long*, and sometimes control notes. This AI-assisted editorial content attaches to matching copies in
+your library and appears on the game page, the companion screen and Tonight. No extra guide file is needed.
 
 - Matching is deliberately strict. The system must match, and the title must be the same once region, language, disc and
-  revision labels are set aside. Hacks, translations, remakes and other editions only get notes written for them, and a
-  file that two entries could claim gets neither. Most games in a large library have no curated note; that is expected.
-- A **guide.json** on the card (prepared on a computer) always comes first. Its hand-written entries are used as they are;
-  the built-in guide only fills empty hooks, control notes and badges. The built-in guide has no fit stars or tags.
+  revision labels are set aside. Hacks, translations, remakes and other editions only get matching notes; ambiguous matches
+  are left out unless the filename identifies just one entry. Many games have no curated note; that is expected.
+- A **guide.json** in your Sortie folder takes priority. Entries marked as individually authored are kept exactly as written,
+  including blank fields. In generated entries, the built-in guide only fills missing hooks, control notes and badges;
+  it never supplies fit stars or taste tags.
 - Updates to the built-in guide arrive with app updates and apply at the next index pass (**Library setup → Re-index every
   system** runs one).
 - Your bookmarks, controller assessments, verdicts, reference cards and clippings are stored separately and never change
@@ -400,7 +403,7 @@ game replaces them. When Sortie finds that older writing in its settings file (o
 saves all of it, readable, in the **archive** folder inside the **sortie** folder:
 - a Markdown file named **personal-notes-**, followed by a code, with every note in full and the journal entries with their
   dates, linked games and sessions, and the paths of their screenshots;
-- a JSON file of the same name holding the exact original data.
+- a JSON file of the same name preserving the old note text and journal data.
 
 Only after both files are written does Sortie save its settings without the old fields. Each *Where was I?* note becomes
 that game's bookmark (a bookmark you already have is kept). Mapping notes and journal entries remain only in the archive:
@@ -433,17 +436,18 @@ Touching the companion hands the controller back to the other screen a moment la
 
 ## The switcher (Home key)
 
-Shows what is running on each screen. **A** brings an app to the front, **Y** moves it to the other screen, **✕** closes it,
-*Quick swap* exchanges the two screens, *Open app…* starts something on a freed screen, *Sortie* returns here. With the overlay
-switcher on (Settings) it draws over the running games; off, it opens as a normal Sortie screen.
+Shows the apps running on each screen. **A** brings an app to the front; **Select** or its **✕** closes it.
+With two screens, **Y** moves it across and **Quick swap** exchanges the screens. **Open app…** starts an app;
+**Sortie** returns to Home. On a single-screen device, cross-screen actions are left out.
+With **Overlay switcher** on, it draws over running apps; off, or without overlay permission, it uses a normal Sortie screen.
 When opened over Sortie, the overlay leaves your current page or companion underneath; **B** returns there without raising
 an old background app. This also holds after swapping screens: Home does not reset the browsing page or move navigation back.
 With Shizuku available, Home also opens the switcher while reading a magazine or when no external app is running;
 **Open app…** can start the first one. If Home does nothing, check **Settings → Diagnostics → Allow Sortie in Shizuku**;
 reinstalling Sortie can require authorizing it again even while the Shizuku service is running.
-Android Settings and other security-sensitive screens can deliberately hide third-party overlays. Leave that screen with
-**Back** first, or turn off *Overlay switcher* in Sortie's Settings to use the normal-screen version. Sortie respects this
-Android protection; granting overlay permission does not override it.
+Android Settings and other security-sensitive screens can hide third-party overlays. When Sortie detects that protection,
+it opens the normal-screen switcher instead. If the overlay is still hidden, leave the protected screen with **Back**, or
+turn off **Overlay switcher** in Settings. Granting overlay permission does not override Android's protection.
 Choosing or moving a picture-in-picture player restores its existing task to fullscreen. Internal controller-focus changes
 do not ask the player to enter PiP again. If you do not want an app to use PiP at all, disable its **Picture-in-picture**
 permission in Android's app settings.

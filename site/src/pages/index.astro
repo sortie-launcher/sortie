@@ -13,6 +13,7 @@ import home from '../assets/repo/docs/screenshots/readme/home.png';
 import library from '../assets/repo/docs/screenshots/readme/library.png';
 import magazine from '../assets/repo/docs/screenshots/readme/magazine.png';
 import setup from '../assets/repo/docs/screenshots/readme/setup.png';
+import tonight from '../assets/repo/docs/screenshots/readme/tonight.png';
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const RELEASES = 'https://github.com/sortie-launcher/sortie/releases';
@@ -91,8 +92,8 @@ const canonical = new URL(base, Astro.site).href;
 					<h1 id="hero-title">An offline, controller-first game launcher for Android handhelds.</h1>
 					<p class="lede">
 						Sortie lists the games already on your device, starts them in the emulators you've installed, and keeps
-						notes, backlog and play history beside them. It has no internet permission and never downloads games, BIOS
-						files, emulators or artwork.
+						a bookmark per game, your backlog and play history beside them. It has no internet permission and never
+						downloads games, BIOS files, emulators or artwork.
 					</p>
 					<div class="actions">
 						<a class="button primary" href={RELEASES}>Get the beta on GitHub Releases</a>
@@ -134,7 +135,7 @@ const canonical = new URL(base, Astro.site).href;
 						</div>
 					</div>
 					<figcaption>
-						One moment on both screens of a dual-screen setup: the controller browses on top, the companion follows below.
+						Earlier emulator capture: the controller browses on top, the companion follows below.
 					</figcaption>
 				</figure>
 			</section>
@@ -144,7 +145,8 @@ const canonical = new URL(base, Astro.site).href;
 					<h2 id="home-title">Home is yours to arrange</h2>
 					<p>
 						Pin systems, games, apps and shelves where you want them, with a Continue tile for the last game you played.
-						Compact headers leave room for games; <strong>Controls</strong> lists the commands hidden from the light footer.
+						Apps, Search, Extras and Settings keep the header simple. Compact mode folds it away; <strong>Controls</strong>
+						lists the commands.
 					</p>
 				</div>
 				<figure>
@@ -152,12 +154,12 @@ const canonical = new URL(base, Astro.site).href;
 						src={home}
 						widths={[640, 960, 1280]}
 						sizes="(min-width: 80rem) 76rem, 96vw"
-						alt="Sortie on a Retroid Pocket Nova: Home in By Console mode, a PlayStation 2 grid with Armored Core 3 focused, a folded header and compact controller hints"
+						alt="Sortie on a Retroid Pocket Nova: Apps, Search, Extras and Settings above a Generation-sorted library, with Rivet perched on a system tile"
 					/>
 					<figcaption>
-						Home on a Retroid Pocket Nova running signed beta 2115, with an existing library and artwork. The other
-						tour images are earlier emulator captures with illustrative entries. A fresh library starts without
-						artwork. <a href={provenanceHref}>Capture notes and image credits</a>.
+						Nova, signed beta 2136, with an existing library and artwork. Tonight and game details below are from
+						the same session; the dual-screen and setup examples are older emulator captures.
+						Art is bring-your-own. <a href={provenanceHref}>Capture notes and image credits</a>.
 					</figcaption>
 				</figure>
 			</section>
@@ -169,9 +171,9 @@ const canonical = new URL(base, Astro.site).href;
 					<div class="feature-text">
 						<h3>Find something to play</h3>
 						<p>
-							<kbd>L1</kbd>/<kbd>R1</kbd> cycle Home's sort: A–Z, game count, generation, or Custom, your own layout.
-							Systems open as a list or grid with filters, and <strong>Pick one</strong> chooses a random game. Search
-							needs no typing: pick a system, tag or genre.
+							Browse systems, arrange your own Home, or use By Console to flip between platforms. Systems open as a
+							list or grid with filters, and <strong>Pick one</strong> chooses a random game. Search needs no typing:
+							pick a system, tag or genre.
 						</p>
 						<p>On Home, hold <kbd>R1</kbd> on a system for a random game from it.</p>
 					</div>
@@ -186,11 +188,47 @@ const canonical = new URL(base, Astro.site).href;
 
 				<article class="feature">
 					<div class="feature-text">
+						<h3>Let Tonight narrow it down</h3>
+						<p>
+							<strong>Extras → Tonight</strong> offers up to five games from your library: something to return to,
+							familiar ground, a departure, a Field Notes connection and a wild card. Each pick explains its reason.
+						</p>
+						<p>
+							One set per day, kept when you restart. Fixed rules use your history and library metadata; no setup,
+							reroll, AI service or network.
+						</p>
+						<p><a href={page('manual') + '#tonight'}>How Tonight chooses</a></p>
+					</div>
+					<Image
+						class="shot"
+						src={tonight}
+						widths={[640, 960, 1280]}
+						sizes="(min-width: 64rem) 42rem, 96vw"
+						alt="Tonight on Nova: God Hand is the From Field Notes pick, with an article-based reason and Play, Details and Read article buttons"
+					/>
+				</article>
+
+				<article class="feature feature-split">
+					<div class="feature-text">
+						<h3>A guide already on board</h3>
+						<p>
+							Bundled recommendations, control notes and cautions appear for games the guide covers. Matching respects
+							platforms and editions; a patched game does not borrow the original's entry.
+						</p>
+					</div>
+					<div class="feature-aside">
+						<p>Your own guide takes precedence. There are no bundled ratings, and artwork is separate.</p>
+						<p><a href={page('reference/formats/guide')}>Guide coverage and matching</a></p>
+					</div>
+				</article>
+
+				<article class="feature">
+					<div class="feature-text">
 						<h3>Keep track of a game</h3>
 						<p>
 							<strong>Play</strong> follows your game's emulator choice, then the system default and fallback list.
 							<strong>Launch with…</strong> picks one for that game. Play time adds up on the game page; one text
-							bookmark keeps your place. Writing a new bookmark replaces the old one.
+							bookmark keeps your place: save slot, next objective, whatever you'll need next time. Saving replaces it.
 						</p>
 						<p>
 							<kbd>R2</kbd> adds a game to <em>Want to play</em>; hold <kbd>A</kbd> to favourite or pin it. Mark games
@@ -203,7 +241,7 @@ const canonical = new URL(base, Astro.site).href;
 						src={gameDetail}
 						widths={[640, 960, 1280]}
 						sizes="(min-width: 64rem) 42rem, 96vw"
-						alt="The Armored Core 3 game page: cover art, Play, Launch with…, Add notes, Reference cards, a favourite star, Want to play, Mark finished or shelved, and a Featured in link to a magazine article"
+						alt="God Hand's game page on Nova: cover, curated hook, Play, Launch with…, Want to play, Leave a note, What it needs, Reference cards and Mark finished or shelved"
 					/>
 				</article>
 
@@ -247,7 +285,7 @@ const canonical = new URL(base, Astro.site).href;
 							passage, add a note, keep it in your scrapbook. Tap a picture or press <kbd>R2</kbd> to zoom it full screen.
 						</p>
 						<p>
-							<strong>Home → Magazines</strong> or <strong>Apps → Magazines</strong> opens a separate reader window.
+							<strong>Extras → Magazines</strong> or <strong>Apps → Magazines</strong> opens a separate reader window.
 							On two screens, choose where it goes without replacing the app on the other screen.
 						</p>
 						<p><a class="zines-link" href={ZINES}>Read Field Notes in your browser</a></p>
@@ -265,9 +303,9 @@ const canonical = new URL(base, Astro.site).href;
 					<div class="feature-text">
 						<h3>Set up on the handheld</h3>
 						<p>
-							<strong>Library setup</strong> adds systems from a built-in list or your own, points them at your game
-							folders and puts installed emulators in fallback order. Each system says what its emulators need before the
-							first game. No JSON, computer or terminal.
+							<strong>Settings → Library and emulators</strong> adds systems, points them at your game folders and
+							puts installed emulators in fallback order. An empty Home offers <strong>Set up library</strong>.
+							Each system explains its emulator prerequisites. No JSON, computer or terminal needed.
 						</p>
 						<p><a href={page('getting-started')}>The guide walks through it</a></p>
 					</div>
@@ -291,9 +329,9 @@ const canonical = new URL(base, Astro.site).href;
 					</div>
 					<div class="feature-aside">
 						<p>
-							Cocoon's folder and the chosen backup are only read: artwork is copied, never moved, and Sortie saves a
-							safety copy of its preferences and play sessions before writing. Cocoon doesn't have to be installed or
-							running.
+							Cocoon's files are read-only; artwork is copied, never moved. Sortie saves preferences, play history and
+							the Hangar companion before importing, but that safety copy is not a complete undo. The guide explains
+							what stays after a restore.
 						</p>
 						<p><a href={cocoonHref}>Moving from Cocoon</a></p>
 					</div>
@@ -302,14 +340,14 @@ const canonical = new URL(base, Astro.site).href;
 					<div class="feature-text">
 						<h3>A little company</h3>
 						<p>
-							The optional <strong>Hangar companion</strong> roams Home's margins. Pet him, carry him, mix parts and
-							spend salvage earned from completed play sessions. He asks for no daily check-in.
+							<strong>Rivet</strong>, the optional Hangar companion, roams Home's margins. Pet him, carry him or
+							flick him toward the other screen. He crosses only when a visible Sortie surface has room, never over a game.
 						</p>
 					</div>
 					<div class="feature-aside">
 						<p>
-							Open <strong>Hangar</strong> to change his parts, stop his animations or hide him. Backups include his
-							name, parts and progress.
+							<strong>Extras → Hangar</strong> lets you mix parts, spend salvage from completed play sessions,
+							stop his motion or hide him. No daily check-in; backups carry his name, parts and progress.
 						</p>
 						<p><a href={page('manual') + '#hangar-companion-experimental'}>Hangar controls</a></p>
 					</div>

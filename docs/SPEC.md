@@ -12,8 +12,9 @@ the user's on-device edits (favourites, overrides), all as plain files that any 
 1. **Fast over pretty.** Cold start under two seconds with 8,000 entries. No scanning at launch;
    an incremental index keyed on file path and modification time. Pre-sized thumbnails. Lists
    over carousels on small screens.
-2. **Data lives on the card, as text.** Everything Sortie needs is in plain files under one root,
-   written by the Library screen or delivered from a desktop, hot-reloaded on change. The app is a renderer.
+2. **Portable configuration and personal data.** Library configuration and user edits live as plain files under one
+   root. The index, authoritative play history, reading positions, daily picks and companion state are app-private;
+   backups carry preferences, completed history and the companion, not every app-private cache.
 3. **No gatekeeping of launchers.** Any installed app can be a launcher for any system. Launch
    profiles are user data, not a database the app ships. Unknown emulators work through the
    generic "open with" path on day one.
@@ -46,8 +47,10 @@ Canonical inputs (read-only for Sortie; the folder names below are examples, eac
 Outputs (owned by Sortie, append-only or small):
 
 - `sortie/playlog.jsonl` : one line per session (see formats).
-- `sortie/user.json` : favourites, per-game overrides, hidden entries, home sort and custom layout, list/grid choices,
-  header/hint density, switcher, companion and device-stats preferences, opted-in launcher shortcuts (see formats/user.md).
+- `sortie/user.json` : favourites, queue, bookmarks, controller requirements, Finished/Shelved, reference-card metadata,
+  clippings, per-game overrides and layout/switcher/device-stats preferences (see formats/user.md).
+- `sortie/archive/personal-notes-<hash>.{md,json}` : readable and structured copies of legacy notes and journal entries,
+  saved before those fields are removed from `user.json` or an older backup is restored.
 - App-private `files/tonight.json` : each local date's saved Tonight set (newest two dates; device-local, not on the card
   and not in backups; see Feature set → Tonight).
 
@@ -69,8 +72,8 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Quick exit: an emulator gone within 3 s of the start, with no Home press since, ends the session uncounted (no Room
   row; `playlog.jsonl` end has `quickExit: true`) and says so beside Play for 12 s (a toast off the page), naming a
   RetroArch core or game switch (`launch/QuickExit.kt`, LAUNCHERS.md). No automatic retry.
-- Bookmarks: one text bookmark per game (`user.bookmarks`), edited on the game page (Save replaces, Cancel/B keeps, Clear then
-  Save removes) and shown there and on the companion. They replace the former journal and personal mapping/"where was I?"
+- Bookmarks: one text bookmark per game (`user.bookmarks`), edited on the game page (Save replaces, Cancel/B keeps,
+  Clear → Remove bookmark deletes) and shown there and on the companion. They replace the former journal and personal mapping/"where was I?"
   notes; older writing is archived readable under `sortie/archive/` before migration (formats/user.md). After a game really
   ends (`launch/SessionEndWatch.kt`: its own task, identified through Shizuku after launch, absent from a trustworthy task
   list) the navigation offers a nonmodal invitation once, never on transient Home/switcher/companion visits, quick exits or
@@ -102,6 +105,9 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   switcher request); framework fallback launches do not. A temporary primary HOME focuses the existing own task with
   `ActivityManager.AppTask.moveToFront()` or starts its companion before finishing. If neither succeeds, it remains a usable
   Home instead of leaving an empty focused Home task that the framework would continually relaunch.
+- If Android reports that a protected foreground window hides the switcher overlay, Sortie dismisses the overlay and
+  opens the activity-based switcher; it does not bypass overlay protection. The ordinary switcher's Sortie action returns
+  to Home. Single-screen devices show Running apps and omit cross-screen move/swap/controller-target actions.
 - AYN panel guard (Thor): the vendor's Thor-button panel leaks one network callback per opening (system uid cap 250, shared
   with system_server). At the cap its next opening crashes inside `onAttachedToWindow`, its crash handler keeps the process,
   and the undrawn window keeps input focus on its display, so Sortie there gets "no focused window" ANRs. With Shizuku,
@@ -179,6 +185,7 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   Two-screen entry asks here/other; single-screen entry opens directly. Reopen resumes one instance; X moves only that
   built-in with saved state. The switcher includes these two named tasks but still excludes Sortie's HOME/companion/anchors.
   Every activity owns its hotkey dispatcher, so visible windows never consume each other's controller events.
+  A single-screen built-in consumes X without moving or activating the focused item.
   Built-in resume neither starts a companion nor runs navigation's play-session-return handling. Game launches from the
   reader use that window for the "same" display rule and do not run navigation's after-launch hook.
 - Offline magazines: shelf → contents → article, B one level back; article D-pad scroll, Left/Right page, L1/R1 previous/next
@@ -227,9 +234,10 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   one of the two); **Wild card** — a random draw. Ties follow an order seeded by the date. Reasons state the rule and the
   data it used (dates, play time, bookmark, article), never a guess such as session length.
 - A role with nothing to work with (no history yet, no playable Field Notes game) becomes a labelled **Discovery** pick
-  saying why: Want to play first, then unplayed games with a hand-written guide note, then the best metadata rating, then
-  any unplayed game. Never the same id or cleaned title twice; hidden, Finished/Shelved, placeholder, arriving and missing
-  files are left out at selection, so a small library gets fewer picks.
+  saying why: Want to play first, then unplayed games with an authored guide hook, then the best-rated unplayed game, then
+  any unplayed game. Never the same id or cleaned title twice; hidden, Finished/Shelved, alternate indexed variants,
+  placeholder, arriving and missing files are left out at selection, so a small library gets fewer picks. Availability
+  checks establish file presence/readability, not emulator readiness.
 - `data/tonight/TonightStore.kt`: the first visit of a date chooses and saves the set (picks, reasons, article) to the
   app-private `tonight.json` (fsynced, replaced by rename) before showing it; later visits, restarts, re-indexes and new
   history reuse it. If that write fails the screen reports it and shows no set (retry by reopening); an unpersisted
