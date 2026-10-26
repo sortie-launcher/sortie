@@ -1,0 +1,874 @@
+{
+  "assemblies": [
+    {
+      "id": "assembly-001",
+      "idle_metrics": {
+        "ARMS": {
+          "area": 312,
+          "width": 50
+        },
+        "BODY": {
+          "area": 478,
+          "width": 31
+        },
+        "HEAD": {
+          "area": 502,
+          "width": 27
+        },
+        "LEGS": {
+          "area": 340,
+          "width": 31
+        }
+      },
+      "layers": [
+        {
+          "asset": "mecha/tidal/tidal_legs_2.png",
+          "bundle_asset": "assets/56bbdfcf9d32a28c97a7e91f2f8ce95cd753bc5bb6edbc8df5e515efebf0881e.png",
+          "catalog_sha256": "6741f7d6a9bcda8cccc19f2fd0f359b735a25431942d183bf265e3a4d02f88e4",
+          "family": "tidal",
+          "id": "tidal_legs_2",
+          "name": "Ballast shoes",
+          "pixel_sha256": "c84d27db3dd0dfe855e4e8d7b81a79ad739c23bd4f882235132fe5fbe3431d4e",
+          "sha256": "56bbdfcf9d32a28c97a7e91f2f8ce95cd753bc5bb6edbc8df5e515efebf0881e",
+          "slot": "LEGS"
+        },
+        {
+          "asset": "mecha/domestic/domestic_body_2.png",
+          "bundle_asset": "assets/8b28bdb7dc2f98386d897d6ab693024b94d427e5902b38cbd292850f27a11905.png",
+          "catalog_sha256": "4c5d5b12c8a4dbac3585e10d634f9f1bec0f3073f3fb0a0a0c99606e0b1c9b9c",
+          "family": "domestic",
+          "id": "domestic_body_2",
+          "name": "Mending cabinet",
+          "pixel_sha256": "672faef233e17227bb338085e057369b1efd7c5c33304db21928461533bad43e",
+          "sha256": "8b28bdb7dc2f98386d897d6ab693024b94d427e5902b38cbd292850f27a11905",
+          "slot": "BODY"
+        },
+        {
+          "asset": "mecha/domestic/domestic_arms_1.png",
+          "bundle_asset": "assets/3248ac9f4c2c5e6f28bb0a8c0f81b1e25893984527f514a601e283560858cce8.png",
+          "catalog_sha256": "4c5d5b12c8a4dbac3585e10d634f9f1bec0f3073f3fb0a0a0c99606e0b1c9b9c",
+          "family": "domestic",
+          "id": "domestic_arms_1",
+          "name": "Pour and pinch",
+          "pixel_sha256": "234cf2ea5ba6843182f9aff3f5fa7d19d70ed914e4ebe2943f4098f73d4b7338",
+          "sha256": "3248ac9f4c2c5e6f28bb0a8c0f81b1e25893984527f514a601e283560858cce8",
+          "slot": "ARMS"
+        },
+        {
+          "asset": "mecha/tidal/tidal_head_1.png",
+          "bundle_asset": "assets/5ec8aaf64bf53e63e193758c1878480af08fd4f233c61f12a2003254007bdd6d.png",
+          "catalog_sha256": "6741f7d6a9bcda8cccc19f2fd0f359b735a25431942d183bf265e3a4d02f88e4",
+          "family": "tidal",
+          "id": "tidal_head_1",
+          "name": "Brass bell",
+          "pixel_sha256": "5ca203b64f9e4cbc278d49d7afe1ee4b78414d8a548ec15f969398162357bfe5",
+          "sha256": "5ec8aaf64bf53e63e193758c1878480af08fd4f233c61f12a2003254007bdd6d",
+          "slot": "HEAD"
+        }
+      ]
+    },
+    {
+      "id": "assembly-002",
+      "idle_metrics": {
+        "ARMS": {
+          "area": 466,
+          "width": 49
+        },
+        "BODY": {
+          "area": 497,
+          "width": 33
+        },
+        "HEAD": {
+          "area": 503,
+          "width": 28
+        },
+        "LEGS": {
+          "area": 260,
+          "width": 27
+        }
+      },
+      "layers": [
+        {
+          "asset": "mecha/foundry/foundry_legs_2.png",
+          "bundle_asset": "assets/9cf49b07dd91834b24831dcec03f83820a0df92f107484a8a1d44b7c0bebf395.png",
+          "catalog_sha256": "159995d9d4c79c77e429afd9a13a63124ee531c4e116a10df7ccc5709545d044",
+          "family": "foundry",
+          "id": "foundry_legs_2",
+          "name": "Split-toe gaiters",
+          "pixel_sha256": "3ea4e1ae0457a1989dda737f552596104460e648010a4217a606216b1c2b1f77",
+          "sha256": "9cf49b07dd91834b24831dcec03f83820a0df92f107484a8a1d44b7c0bebf395",
+          "slot": "LEGS"
+        },
+        {
+          "asset": "mecha/courier/courier_body_1.png",
+          "bundle_asset": "assets/95d23cbebc9c843f466c5890bbd957ad647c06673123da47cbe6735081bb4d91.png",
+          "catalog_sha256": "6cbdfe5fa6c1811358fa5144b9c33ecc8c03e49c27477f8a84a9c7ba4c21271b",
+          "family": "courier",
+          "id": "courier_body_1",
+          "name": "Satchel drum",
+          "pixel_sha256": "f4d889e0110f7139c84690d28693f44a475e40acf7ea281e8966cbf1f96364b3",
+          "sha256": "95d23cbebc9c843f466c5890bbd957ad647c06673123da47cbe6735081bb4d91",
+          "slot": "BODY"
+        },
+        {
+          "asset": "mecha/courier/courier_arms_2.png",
+          "bundle_asset": "assets/a377e6cbe2ecef770f94c58ace280c5c2ac09a1740687ce3c81d1f204f126914.png",
+          "catalog_sha256": "6cbdfe5fa6c1811358fa5144b9c33ecc8c03e49c27477f8a84a9c7ba4c21271b",
+          "family": "courier",
+          "id": "courier_arms_2",
+          "name": "Parcel tongs",
+          "pixel_sha256": "766ec4b494fe57fa71ea2ee42be8d1cd815f9728a74713163c69c05cd2c2c310",
+          "sha256": "a377e6cbe2ecef770f94c58ace280c5c2ac09a1740687ce3c81d1f204f126914",
+          "slot": "ARMS"
+        },
+        {
+          "asset": "mecha/foundry/foundry_head_1.png",
+          "bundle_asset": "assets/893f0fb253cf465674f2035ee2e65563bbe5665eaabd51d3b12228a4070f1cd9.png",
+          "catalog_sha256": "159995d9d4c79c77e429afd9a13a63124ee531c4e116a10df7ccc5709545d044",
+          "family": "foundry",
+          "id": "foundry_head_1",
+          "name": "Welder's hood",
+          "pixel_sha256": "b44698e69b25da497d87d099f8069e849070ac8276405270279082060ee0f8da",
+          "sha256": "893f0fb253cf465674f2035ee2e65563bbe5665eaabd51d3b12228a4070f1cd9",
+          "slot": "HEAD"
+        }
+      ]
+    },
+    {
+      "id": "assembly-003",
+      "idle_metrics": {
+        "ARMS": {
+          "area": 282,
+          "width": 49
+        },
+        "BODY": {
+          "area": 551,
+          "width": 33
+        },
+        "HEAD": {
+          "area": 490,
+          "width": 30
+        },
+        "LEGS": {
+          "area": 430,
+          "width": 31
+        }
+      },
+      "layers": [
+        {
+          "asset": "mecha/yard/yard_legs_1.png",
+          "bundle_asset": "assets/4312ace95d54fccda68d953cce279fc5cdcb6f98a7bf67631f980a305ec2142c.png",
+          "catalog_sha256": "deed16433f3e45de61b6f636af57e5a1a8fc75810e6fde441ddcf1ca85247405",
+          "family": "yard",
+          "id": "yard_legs_1",
+          "name": "Crawler boots",
+          "pixel_sha256": "8c4a5330dbd41cad307cdcb4d5725c23c188cb582543add7e0af15d2dba48e28",
+          "sha256": "4312ace95d54fccda68d953cce279fc5cdcb6f98a7bf67631f980a305ec2142c",
+          "slot": "LEGS"
+        },
+        {
+          "asset": "mecha/tidal/tidal_body_2.png",
+          "bundle_asset": "assets/b9ff4b886004dd9bfa6f908e365b55eebc27d79b52073ec77e6d4adc73daf892.png",
+          "catalog_sha256": "6741f7d6a9bcda8cccc19f2fd0f359b735a25431942d183bf265e3a4d02f88e4",
+          "family": "tidal",
+          "id": "tidal_body_2",
+          "name": "Twin tanks",
+          "pixel_sha256": "9b812b1132a9124088840831918d9b710f87c1f846b328cbdd3b533d227d189e",
+          "sha256": "b9ff4b886004dd9bfa6f908e365b55eebc27d79b52073ec77e6d4adc73daf892",
+          "slot": "BODY"
+        },
+        {
+          "asset": "mecha/tidal/tidal_arms_1.png",
+          "bundle_asset": "assets/9bb1cb3f940f8d268673cc7d48e95b28e2fbccb759677f0bac5ef2e8d06588be.png",
+          "catalog_sha256": "6741f7d6a9bcda8cccc19f2fd0f359b735a25431942d183bf265e3a4d02f88e4",
+          "family": "tidal",
+          "id": "tidal_arms_1",
+          "name": "Specimen hooks",
+          "pixel_sha256": "06defb5d0c668c224f576030feff62615daa565aabd6a633250be87a37409e8c",
+          "sha256": "9bb1cb3f940f8d268673cc7d48e95b28e2fbccb759677f0bac5ef2e8d06588be",
+          "slot": "ARMS"
+        },
+        {
+          "asset": "mecha/yard/yard_head_2.png",
+          "bundle_asset": "assets/e23eeace4964869d8fbf2f9634fdcaedf3c7c9508addc2e8d8696c1bdb562602.png",
+          "catalog_sha256": "deed16433f3e45de61b6f636af57e5a1a8fc75810e6fde441ddcf1ca85247405",
+          "family": "yard",
+          "id": "yard_head_2",
+          "name": "Jib cab",
+          "pixel_sha256": "1e6319f89b8a396b532fe017b2716648912943fa15d3ebae1865f438ce722cfe",
+          "sha256": "e23eeace4964869d8fbf2f9634fdcaedf3c7c9508addc2e8d8696c1bdb562602",
+          "slot": "HEAD"
+        }
+      ]
+    },
+    {
+      "id": "assembly-004",
+      "idle_metrics": {
+        "ARMS": {
+          "area": 460,
+          "width": 46
+        },
+        "BODY": {
+          "area": 536,
+          "width": 29
+        },
+        "HEAD": {
+          "area": 490,
+          "width": 30
+        },
+        "LEGS": {
+          "area": 430,
+          "width": 31
+        }
+      },
+      "layers": [
+        {
+          "asset": "mecha/yard/yard_legs_1.png",
+          "bundle_asset": "assets/4312ace95d54fccda68d953cce279fc5cdcb6f98a7bf67631f980a305ec2142c.png",
+          "catalog_sha256": "deed16433f3e45de61b6f636af57e5a1a8fc75810e6fde441ddcf1ca85247405",
+          "family": "yard",
+          "id": "yard_legs_1",
+          "name": "Crawler boots",
+          "pixel_sha256": "8c4a5330dbd41cad307cdcb4d5725c23c188cb582543add7e0af15d2dba48e28",
+          "sha256": "4312ace95d54fccda68d953cce279fc5cdcb6f98a7bf67631f980a305ec2142c",
+          "slot": "LEGS"
+        },
+        {
+          "asset": "mecha/survey/survey_body_2.png",
+          "bundle_asset": "assets/35dbce82d8b83979c52e6042e5e669c38ffa56167ac136eaee9456beddf3a825.png",
+          "catalog_sha256": "f6cbe0ea25ec0bc1e6e256e27df9a5effc45596d19161d44c4f2824d93495a37",
+          "family": "survey",
+          "id": "survey_body_2",
+          "name": "Sounding drum",
+          "pixel_sha256": "5f312d2f9b8e6cd9b2b99396dd4f910851f65316da21787cc736d85b8bbe9b9c",
+          "sha256": "35dbce82d8b83979c52e6042e5e669c38ffa56167ac136eaee9456beddf3a825",
+          "slot": "BODY"
+        },
+        {
+          "asset": "mecha/survey/survey_arms_2.png",
+          "bundle_asset": "assets/b7d913ec0db83db228be0ac20ba41ad7f5a00268957c8e8bedb5684030806e9b.png",
+          "catalog_sha256": "f6cbe0ea25ec0bc1e6e256e27df9a5effc45596d19161d44c4f2824d93495a37",
+          "family": "survey",
+          "id": "survey_arms_2",
+          "name": "Scoop and loupe",
+          "pixel_sha256": "2817f83e61898f9ed70eff9fc5bf896b40d2dedd051f3d9f15c3334e21b2b9c1",
+          "sha256": "b7d913ec0db83db228be0ac20ba41ad7f5a00268957c8e8bedb5684030806e9b",
+          "slot": "ARMS"
+        },
+        {
+          "asset": "mecha/yard/yard_head_2.png",
+          "bundle_asset": "assets/e23eeace4964869d8fbf2f9634fdcaedf3c7c9508addc2e8d8696c1bdb562602.png",
+          "catalog_sha256": "deed16433f3e45de61b6f636af57e5a1a8fc75810e6fde441ddcf1ca85247405",
+          "family": "yard",
+          "id": "yard_head_2",
+          "name": "Jib cab",
+          "pixel_sha256": "1e6319f89b8a396b532fe017b2716648912943fa15d3ebae1865f438ce722cfe",
+          "sha256": "e23eeace4964869d8fbf2f9634fdcaedf3c7c9508addc2e8d8696c1bdb562602",
+          "slot": "HEAD"
+        }
+      ]
+    },
+    {
+      "id": "assembly-005",
+      "idle_metrics": {
+        "ARMS": {
+          "area": 316,
+          "width": 47
+        },
+        "BODY": {
+          "area": 519,
+          "width": 31
+        },
+        "HEAD": {
+          "area": 602,
+          "width": 31
+        },
+        "LEGS": {
+          "area": 345,
+          "width": 29
+        }
+      },
+      "layers": [
+        {
+          "asset": "mecha/survey/survey_legs_1.png",
+          "bundle_asset": "assets/4adce05783a648242bd412fac4b27ebc5e5978a5816c027bc48b3ad4e1f32808.png",
+          "catalog_sha256": "f6cbe0ea25ec0bc1e6e256e27df9a5effc45596d19161d44c4f2824d93495a37",
+          "family": "survey",
+          "id": "survey_legs_1",
+          "name": "Snowshoe struts",
+          "pixel_sha256": "0d667a47b231039c74acef65994f8a26615624e3227634921ee49183133fd403",
+          "sha256": "4adce05783a648242bd412fac4b27ebc5e5978a5816c027bc48b3ad4e1f32808",
+          "slot": "LEGS"
+        },
+        {
+          "asset": "mecha/foundry/foundry_body_2.png",
+          "bundle_asset": "assets/edc37bec6ce77406c09e47482c778e1f6fe442b46a53b9050e24eae9348a911d.png",
+          "catalog_sha256": "159995d9d4c79c77e429afd9a13a63124ee531c4e116a10df7ccc5709545d044",
+          "family": "foundry",
+          "id": "foundry_body_2",
+          "name": "Draft bellows",
+          "pixel_sha256": "5040464225fba49c710a9f22fbc8d658ef5a6707507c4c0d6e7e1fb651fb4858",
+          "sha256": "edc37bec6ce77406c09e47482c778e1f6fe442b46a53b9050e24eae9348a911d",
+          "slot": "BODY"
+        },
+        {
+          "asset": "mecha/foundry/foundry_arms_1.png",
+          "bundle_asset": "assets/70d5a5f08fc1b96e812596b2a8aff367709a4e06df5299a167fc34b2b973e042.png",
+          "catalog_sha256": "159995d9d4c79c77e429afd9a13a63124ee531c4e116a10df7ccc5709545d044",
+          "family": "foundry",
+          "id": "foundry_arms_1",
+          "name": "Hammer and tongs",
+          "pixel_sha256": "55c7e3f42df1577d11c99d7fe55f0552894bbfb45f5ff1eca374d7a5be52cf64",
+          "sha256": "70d5a5f08fc1b96e812596b2a8aff367709a4e06df5299a167fc34b2b973e042",
+          "slot": "ARMS"
+        },
+        {
+          "asset": "mecha/survey/survey_head_2.png",
+          "bundle_asset": "assets/aae2ebdd7388957381c5906715031ec6431f1014e1b9c70eb0ea179b2e44bfe6.png",
+          "catalog_sha256": "f6cbe0ea25ec0bc1e6e256e27df9a5effc45596d19161d44c4f2824d93495a37",
+          "family": "survey",
+          "id": "survey_head_2",
+          "name": "Twin-lens scope",
+          "pixel_sha256": "5a71a3d233832ca0d8755a658d848a9015f69a35c678cf4e82c65f47c760921d",
+          "sha256": "aae2ebdd7388957381c5906715031ec6431f1014e1b9c70eb0ea179b2e44bfe6",
+          "slot": "HEAD"
+        }
+      ]
+    },
+    {
+      "id": "assembly-006",
+      "idle_metrics": {
+        "ARMS": {
+          "area": 316,
+          "width": 47
+        },
+        "BODY": {
+          "area": 561,
+          "width": 31
+        },
+        "HEAD": {
+          "area": 519,
+          "width": 28
+        },
+        "LEGS": {
+          "area": 310,
+          "width": 29
+        }
+      },
+      "layers": [
+        {
+          "asset": "mecha/orbital/orbital_legs_2.png",
+          "bundle_asset": "assets/d2217da851deb7bdb1fd222b4ea2cab796555fc2a2cf4c61c50db58ae84956ed.png",
+          "catalog_sha256": "a3678de9fb050f2233b16dd07876e57dd231e90d6e889cdfd0a53222a3b76f1b",
+          "family": "orbital",
+          "id": "orbital_legs_2",
+          "name": "Magnetic gaiters",
+          "pixel_sha256": "540478be28a6c4bd9a7768e44f78539cd119b0337624f78b13b1518b3617acdf",
+          "sha256": "d2217da851deb7bdb1fd222b4ea2cab796555fc2a2cf4c61c50db58ae84956ed",
+          "slot": "LEGS"
+        },
+        {
+          "asset": "mecha/foundry/foundry_body_1.png",
+          "bundle_asset": "assets/9e1b19297ec0f052c075825aa8ff1e66490e7de548783893a6b80693b1987d97.png",
+          "catalog_sha256": "159995d9d4c79c77e429afd9a13a63124ee531c4e116a10df7ccc5709545d044",
+          "family": "foundry",
+          "id": "foundry_body_1",
+          "name": "Hearth chest",
+          "pixel_sha256": "3fa02fe6b2067ade783d7de6353bfa51a9696be485dce6c92d6a68f286ac4138",
+          "sha256": "9e1b19297ec0f052c075825aa8ff1e66490e7de548783893a6b80693b1987d97",
+          "slot": "BODY"
+        },
+        {
+          "asset": "mecha/foundry/foundry_arms_1.png",
+          "bundle_asset": "assets/70d5a5f08fc1b96e812596b2a8aff367709a4e06df5299a167fc34b2b973e042.png",
+          "catalog_sha256": "159995d9d4c79c77e429afd9a13a63124ee531c4e116a10df7ccc5709545d044",
+          "family": "foundry",
+          "id": "foundry_arms_1",
+          "name": "Hammer and tongs",
+          "pixel_sha256": "55c7e3f42df1577d11c99d7fe55f0552894bbfb45f5ff1eca374d7a5be52cf64",
+          "sha256": "70d5a5f08fc1b96e812596b2a8aff367709a4e06df5299a167fc34b2b973e042",
+          "slot": "ARMS"
+        },
+        {
+          "asset": "mecha/orbital/orbital_head_1.png",
+          "bundle_asset": "assets/d1b589788d5c3aff830218407ad1c50f94121ab3ff6b996aeee248384dcff5d5.png",
+          "catalog_sha256": "a3678de9fb050f2233b16dd07876e57dd231e90d6e889cdfd0a53222a3b76f1b",
+          "family": "orbital",
+          "id": "orbital_head_1",
+          "name": "Pressure bell",
+          "pixel_sha256": "8e921d7674c54d39dd23050f8269c384adfa5ad0cca2be9b35f68eb19fc659f5",
+          "sha256": "d1b589788d5c3aff830218407ad1c50f94121ab3ff6b996aeee248384dcff5d5",
+          "slot": "HEAD"
+        }
+      ]
+    },
+    {
+      "id": "assembly-007",
+      "idle_metrics": {
+        "ARMS": {
+          "area": 499,
+          "width": 49
+        },
+        "BODY": {
+          "area": 481,
+          "width": 26
+        },
+        "HEAD": {
+          "area": 650,
+          "width": 31
+        },
+        "LEGS": {
+          "area": 398,
+          "width": 30
+        }
+      },
+      "layers": [
+        {
+          "asset": "mecha/survey/survey_legs_2.png",
+          "bundle_asset": "assets/cb271c298614493fc5122c0ae54dd178147b77856ac96d37e79ed72d800d5aec.png",
+          "catalog_sha256": "f6cbe0ea25ec0bc1e6e256e27df9a5effc45596d19161d44c4f2824d93495a37",
+          "family": "survey",
+          "id": "survey_legs_2",
+          "name": "Tri-toe gaiters",
+          "pixel_sha256": "db92f168dc92156fe1dc63f341a05f1a52f6ffec8826d864f975b099d67ad41c",
+          "sha256": "cb271c298614493fc5122c0ae54dd178147b77856ac96d37e79ed72d800d5aec",
+          "slot": "LEGS"
+        },
+        {
+          "asset": "mecha/yard/yard_body_1.png",
+          "bundle_asset": "assets/b4f692ab8f97bfec7cd48bd5513b38f3724fa641d75ff5e75d6f50c9c3433fe3.png",
+          "catalog_sha256": "deed16433f3e45de61b6f636af57e5a1a8fc75810e6fde441ddcf1ca85247405",
+          "family": "yard",
+          "id": "yard_body_1",
+          "name": "Boiler drum",
+          "pixel_sha256": "9856100d5cca09bdb5ef1dcf5d5454c26e5cc4d22653c40736deb8485b071112",
+          "sha256": "b4f692ab8f97bfec7cd48bd5513b38f3724fa641d75ff5e75d6f50c9c3433fe3",
+          "slot": "BODY"
+        },
+        {
+          "asset": "mecha/yard/yard_arms_2.png",
+          "bundle_asset": "assets/14ef22274a413bb04bac304a508daf62bd8664e10295b97409313ac539f9f6fd.png",
+          "catalog_sha256": "deed16433f3e45de61b6f636af57e5a1a8fc75810e6fde441ddcf1ca85247405",
+          "family": "yard",
+          "id": "yard_arms_2",
+          "name": "Spanner & auger",
+          "pixel_sha256": "f15101e69d318defdd6cfc4565f9062b6cd85f045a42a466b15373e3380662dd",
+          "sha256": "14ef22274a413bb04bac304a508daf62bd8664e10295b97409313ac539f9f6fd",
+          "slot": "ARMS"
+        },
+        {
+          "asset": "mecha/survey/survey_head_1.png",
+          "bundle_asset": "assets/19b016857723ec404d16c94f315ff6764bf728c42d9f13596d81946e2cd0af7f.png",
+          "catalog_sha256": "f6cbe0ea25ec0bc1e6e256e27df9a5effc45596d19161d44c4f2824d93495a37",
+          "family": "survey",
+          "id": "survey_head_1",
+          "name": "Dish crown",
+          "pixel_sha256": "0366b931a440557b1d59cd6309ab046b8483cded6b4821d398600bfbb2ca8510",
+          "sha256": "19b016857723ec404d16c94f315ff6764bf728c42d9f13596d81946e2cd0af7f",
+          "slot": "HEAD"
+        }
+      ]
+    },
+    {
+      "id": "assembly-008",
+      "idle_metrics": {
+        "ARMS": {
+          "area": 268,
+          "width": 47
+        },
+        "BODY": {
+          "area": 497,
+          "width": 33
+        },
+        "HEAD": {
+          "area": 449,
+          "width": 29
+        },
+        "LEGS": {
+          "area": 310,
+          "width": 29
+        }
+      },
+      "layers": [
+        {
+          "asset": "mecha/orbital/orbital_legs_2.png",
+          "bundle_asset": "assets/d2217da851deb7bdb1fd222b4ea2cab796555fc2a2cf4c61c50db58ae84956ed.png",
+          "catalog_sha256": "a3678de9fb050f2233b16dd07876e57dd231e90d6e889cdfd0a53222a3b76f1b",
+          "family": "orbital",
+          "id": "orbital_legs_2",
+          "name": "Magnetic gaiters",
+          "pixel_sha256": "540478be28a6c4bd9a7768e44f78539cd119b0337624f78b13b1518b3617acdf",
+          "sha256": "d2217da851deb7bdb1fd222b4ea2cab796555fc2a2cf4c61c50db58ae84956ed",
+          "slot": "LEGS"
+        },
+        {
+          "asset": "mecha/courier/courier_body_1.png",
+          "bundle_asset": "assets/95d23cbebc9c843f466c5890bbd957ad647c06673123da47cbe6735081bb4d91.png",
+          "catalog_sha256": "6cbdfe5fa6c1811358fa5144b9c33ecc8c03e49c27477f8a84a9c7ba4c21271b",
+          "family": "courier",
+          "id": "courier_body_1",
+          "name": "Satchel drum",
+          "pixel_sha256": "f4d889e0110f7139c84690d28693f44a475e40acf7ea281e8966cbf1f96364b3",
+          "sha256": "95d23cbebc9c843f466c5890bbd957ad647c06673123da47cbe6735081bb4d91",
+          "slot": "BODY"
+        },
+        {
+          "asset": "mecha/courier/courier_arms_1.png",
+          "bundle_asset": "assets/59fdcdcbca6dd5f65f22893b2b0550c5b9c2e3f2dfe0dac5d33f2352764070e4.png",
+          "catalog_sha256": "6cbdfe5fa6c1811358fa5144b9c33ecc8c03e49c27477f8a84a9c7ba4c21271b",
+          "family": "courier",
+          "id": "courier_arms_1",
+          "name": "Letter pincers",
+          "pixel_sha256": "377ed45580305aa0ba54be0f247e61e32089ef3a165d1b52d827f9d6e82e806d",
+          "sha256": "59fdcdcbca6dd5f65f22893b2b0550c5b9c2e3f2dfe0dac5d33f2352764070e4",
+          "slot": "ARMS"
+        },
+        {
+          "asset": "mecha/orbital/orbital_head_2.png",
+          "bundle_asset": "assets/0a6870d8797d5cc4f53d9a343ff8f9f66c85221c2fbd6c9ce96df3273848e9e5.png",
+          "catalog_sha256": "a3678de9fb050f2233b16dd07876e57dd231e90d6e889cdfd0a53222a3b76f1b",
+          "family": "orbital",
+          "id": "orbital_head_2",
+          "name": "Relay receiver",
+          "pixel_sha256": "eb88dd6a0b9fafa0c3c730880dd14181f76d20e0a3c1335f1eb2174ade9673bf",
+          "sha256": "0a6870d8797d5cc4f53d9a343ff8f9f66c85221c2fbd6c9ce96df3273848e9e5",
+          "slot": "HEAD"
+        }
+      ]
+    },
+    {
+      "id": "assembly-009",
+      "idle_metrics": {
+        "ARMS": {
+          "area": 499,
+          "width": 49
+        },
+        "BODY": {
+          "area": 496,
+          "width": 27
+        },
+        "HEAD": {
+          "area": 483,
+          "width": 30
+        },
+        "LEGS": {
+          "area": 292,
+          "width": 29
+        }
+      },
+      "layers": [
+        {
+          "asset": "mecha/courier/courier_legs_1.png",
+          "bundle_asset": "assets/fda334d12e47d79073e65fa72865cbf84febeb1b160486b5521f64c2a2a94c9b.png",
+          "catalog_sha256": "6cbdfe5fa6c1811358fa5144b9c33ecc8c03e49c27477f8a84a9c7ba4c21271b",
+          "family": "courier",
+          "id": "courier_legs_1",
+          "name": "Roller boots",
+          "pixel_sha256": "9ea5b83c84f0ca386713e8500e0f31235368b71adeb9a54993069f5fa57718fe",
+          "sha256": "fda334d12e47d79073e65fa72865cbf84febeb1b160486b5521f64c2a2a94c9b",
+          "slot": "LEGS"
+        },
+        {
+          "asset": "mecha/yard/yard_body_2.png",
+          "bundle_asset": "assets/f1035302310ffc031bf0b2ae8b259e4e39daca3b61384e047af125b5dc59c3b8.png",
+          "catalog_sha256": "deed16433f3e45de61b6f636af57e5a1a8fc75810e6fde441ddcf1ca85247405",
+          "family": "yard",
+          "id": "yard_body_2",
+          "name": "Charge crate",
+          "pixel_sha256": "c6f361bdb31529567479ca4443e109b2a766ead313c5524e4cb26e8a7d2488be",
+          "sha256": "f1035302310ffc031bf0b2ae8b259e4e39daca3b61384e047af125b5dc59c3b8",
+          "slot": "BODY"
+        },
+        {
+          "asset": "mecha/yard/yard_arms_2.png",
+          "bundle_asset": "assets/14ef22274a413bb04bac304a508daf62bd8664e10295b97409313ac539f9f6fd.png",
+          "catalog_sha256": "deed16433f3e45de61b6f636af57e5a1a8fc75810e6fde441ddcf1ca85247405",
+          "family": "yard",
+          "id": "yard_arms_2",
+          "name": "Spanner & auger",
+          "pixel_sha256": "f15101e69d318defdd6cfc4565f9062b6cd85f045a42a466b15373e3380662dd",
+          "sha256": "14ef22274a413bb04bac304a508daf62bd8664e10295b97409313ac539f9f6fd",
+          "slot": "ARMS"
+        },
+        {
+          "asset": "mecha/courier/courier_head_2.png",
+          "bundle_asset": "assets/5ef3a5d10bd6e273ab177367c4328b9e86fb7e4887fd7d95f6dbde292f70b3fe.png",
+          "catalog_sha256": "6cbdfe5fa6c1811358fa5144b9c33ecc8c03e49c27477f8a84a9c7ba4c21271b",
+          "family": "courier",
+          "id": "courier_head_2",
+          "name": "Route cap",
+          "pixel_sha256": "abbbf4495cc828ba3365ac89ec6e39c4f5741d32fa0f8478c471da83a70fd1d5",
+          "sha256": "5ef3a5d10bd6e273ab177367c4328b9e86fb7e4887fd7d95f6dbde292f70b3fe",
+          "slot": "HEAD"
+        }
+      ]
+    },
+    {
+      "id": "assembly-010",
+      "idle_metrics": {
+        "ARMS": {
+          "area": 316,
+          "width": 47
+        },
+        "BODY": {
+          "area": 561,
+          "width": 31
+        },
+        "HEAD": {
+          "area": 502,
+          "width": 27
+        },
+        "LEGS": {
+          "area": 340,
+          "width": 31
+        }
+      },
+      "layers": [
+        {
+          "asset": "mecha/tidal/tidal_legs_2.png",
+          "bundle_asset": "assets/56bbdfcf9d32a28c97a7e91f2f8ce95cd753bc5bb6edbc8df5e515efebf0881e.png",
+          "catalog_sha256": "6741f7d6a9bcda8cccc19f2fd0f359b735a25431942d183bf265e3a4d02f88e4",
+          "family": "tidal",
+          "id": "tidal_legs_2",
+          "name": "Ballast shoes",
+          "pixel_sha256": "c84d27db3dd0dfe855e4e8d7b81a79ad739c23bd4f882235132fe5fbe3431d4e",
+          "sha256": "56bbdfcf9d32a28c97a7e91f2f8ce95cd753bc5bb6edbc8df5e515efebf0881e",
+          "slot": "LEGS"
+        },
+        {
+          "asset": "mecha/foundry/foundry_body_1.png",
+          "bundle_asset": "assets/9e1b19297ec0f052c075825aa8ff1e66490e7de548783893a6b80693b1987d97.png",
+          "catalog_sha256": "159995d9d4c79c77e429afd9a13a63124ee531c4e116a10df7ccc5709545d044",
+          "family": "foundry",
+          "id": "foundry_body_1",
+          "name": "Hearth chest",
+          "pixel_sha256": "3fa02fe6b2067ade783d7de6353bfa51a9696be485dce6c92d6a68f286ac4138",
+          "sha256": "9e1b19297ec0f052c075825aa8ff1e66490e7de548783893a6b80693b1987d97",
+          "slot": "BODY"
+        },
+        {
+          "asset": "mecha/foundry/foundry_arms_1.png",
+          "bundle_asset": "assets/70d5a5f08fc1b96e812596b2a8aff367709a4e06df5299a167fc34b2b973e042.png",
+          "catalog_sha256": "159995d9d4c79c77e429afd9a13a63124ee531c4e116a10df7ccc5709545d044",
+          "family": "foundry",
+          "id": "foundry_arms_1",
+          "name": "Hammer and tongs",
+          "pixel_sha256": "55c7e3f42df1577d11c99d7fe55f0552894bbfb45f5ff1eca374d7a5be52cf64",
+          "sha256": "70d5a5f08fc1b96e812596b2a8aff367709a4e06df5299a167fc34b2b973e042",
+          "slot": "ARMS"
+        },
+        {
+          "asset": "mecha/tidal/tidal_head_1.png",
+          "bundle_asset": "assets/5ec8aaf64bf53e63e193758c1878480af08fd4f233c61f12a2003254007bdd6d.png",
+          "catalog_sha256": "6741f7d6a9bcda8cccc19f2fd0f359b735a25431942d183bf265e3a4d02f88e4",
+          "family": "tidal",
+          "id": "tidal_head_1",
+          "name": "Brass bell",
+          "pixel_sha256": "5ca203b64f9e4cbc278d49d7afe1ee4b78414d8a548ec15f969398162357bfe5",
+          "sha256": "5ec8aaf64bf53e63e193758c1878480af08fd4f233c61f12a2003254007bdd6d",
+          "slot": "HEAD"
+        }
+      ]
+    },
+    {
+      "id": "assembly-011",
+      "idle_metrics": {
+        "ARMS": {
+          "area": 312,
+          "width": 50
+        },
+        "BODY": {
+          "area": 478,
+          "width": 31
+        },
+        "HEAD": {
+          "area": 472,
+          "width": 24
+        },
+        "LEGS": {
+          "area": 402,
+          "width": 33
+        }
+      },
+      "layers": [
+        {
+          "asset": "mecha/foundry/foundry_legs_1.png",
+          "bundle_asset": "assets/c76214b6819cb082d63bbe0f20a88e0dfc42689315434adbce3984d8eb21c535.png",
+          "catalog_sha256": "159995d9d4c79c77e429afd9a13a63124ee531c4e116a10df7ccc5709545d044",
+          "family": "foundry",
+          "id": "foundry_legs_1",
+          "name": "Slag sabatons",
+          "pixel_sha256": "a428c0dbcd61ee88270307b1ec583dcffa01e60f22996ba2b4e2e5e3b69f5cb6",
+          "sha256": "c76214b6819cb082d63bbe0f20a88e0dfc42689315434adbce3984d8eb21c535",
+          "slot": "LEGS"
+        },
+        {
+          "asset": "mecha/domestic/domestic_body_2.png",
+          "bundle_asset": "assets/8b28bdb7dc2f98386d897d6ab693024b94d427e5902b38cbd292850f27a11905.png",
+          "catalog_sha256": "4c5d5b12c8a4dbac3585e10d634f9f1bec0f3073f3fb0a0a0c99606e0b1c9b9c",
+          "family": "domestic",
+          "id": "domestic_body_2",
+          "name": "Mending cabinet",
+          "pixel_sha256": "672faef233e17227bb338085e057369b1efd7c5c33304db21928461533bad43e",
+          "sha256": "8b28bdb7dc2f98386d897d6ab693024b94d427e5902b38cbd292850f27a11905",
+          "slot": "BODY"
+        },
+        {
+          "asset": "mecha/domestic/domestic_arms_1.png",
+          "bundle_asset": "assets/3248ac9f4c2c5e6f28bb0a8c0f81b1e25893984527f514a601e283560858cce8.png",
+          "catalog_sha256": "4c5d5b12c8a4dbac3585e10d634f9f1bec0f3073f3fb0a0a0c99606e0b1c9b9c",
+          "family": "domestic",
+          "id": "domestic_arms_1",
+          "name": "Pour and pinch",
+          "pixel_sha256": "234cf2ea5ba6843182f9aff3f5fa7d19d70ed914e4ebe2943f4098f73d4b7338",
+          "sha256": "3248ac9f4c2c5e6f28bb0a8c0f81b1e25893984527f514a601e283560858cce8",
+          "slot": "ARMS"
+        },
+        {
+          "asset": "mecha/foundry/foundry_head_2.png",
+          "bundle_asset": "assets/0f5a18b7c64c79c691fc3d0ad40a16c316486e6ec6aac3c33afdffce88eb1601.png",
+          "catalog_sha256": "159995d9d4c79c77e429afd9a13a63124ee531c4e116a10df7ccc5709545d044",
+          "family": "foundry",
+          "id": "foundry_head_2",
+          "name": "Kiln keeper",
+          "pixel_sha256": "bf71e68b7d3c094e71f9868fb6865a3aa30158c97aae3b058633bd5be9e98099",
+          "sha256": "0f5a18b7c64c79c691fc3d0ad40a16c316486e6ec6aac3c33afdffce88eb1601",
+          "slot": "HEAD"
+        }
+      ]
+    },
+    {
+      "id": "assembly-012",
+      "idle_metrics": {
+        "ARMS": {
+          "area": 316,
+          "width": 47
+        },
+        "BODY": {
+          "area": 519,
+          "width": 31
+        },
+        "HEAD": {
+          "area": 525,
+          "width": 34
+        },
+        "LEGS": {
+          "area": 430,
+          "width": 31
+        }
+      },
+      "layers": [
+        {
+          "asset": "mecha/yard/yard_legs_1.png",
+          "bundle_asset": "assets/4312ace95d54fccda68d953cce279fc5cdcb6f98a7bf67631f980a305ec2142c.png",
+          "catalog_sha256": "deed16433f3e45de61b6f636af57e5a1a8fc75810e6fde441ddcf1ca85247405",
+          "family": "yard",
+          "id": "yard_legs_1",
+          "name": "Crawler boots",
+          "pixel_sha256": "8c4a5330dbd41cad307cdcb4d5725c23c188cb582543add7e0af15d2dba48e28",
+          "sha256": "4312ace95d54fccda68d953cce279fc5cdcb6f98a7bf67631f980a305ec2142c",
+          "slot": "LEGS"
+        },
+        {
+          "asset": "mecha/foundry/foundry_body_2.png",
+          "bundle_asset": "assets/edc37bec6ce77406c09e47482c778e1f6fe442b46a53b9050e24eae9348a911d.png",
+          "catalog_sha256": "159995d9d4c79c77e429afd9a13a63124ee531c4e116a10df7ccc5709545d044",
+          "family": "foundry",
+          "id": "foundry_body_2",
+          "name": "Draft bellows",
+          "pixel_sha256": "5040464225fba49c710a9f22fbc8d658ef5a6707507c4c0d6e7e1fb651fb4858",
+          "sha256": "edc37bec6ce77406c09e47482c778e1f6fe442b46a53b9050e24eae9348a911d",
+          "slot": "BODY"
+        },
+        {
+          "asset": "mecha/foundry/foundry_arms_1.png",
+          "bundle_asset": "assets/70d5a5f08fc1b96e812596b2a8aff367709a4e06df5299a167fc34b2b973e042.png",
+          "catalog_sha256": "159995d9d4c79c77e429afd9a13a63124ee531c4e116a10df7ccc5709545d044",
+          "family": "foundry",
+          "id": "foundry_arms_1",
+          "name": "Hammer and tongs",
+          "pixel_sha256": "55c7e3f42df1577d11c99d7fe55f0552894bbfb45f5ff1eca374d7a5be52cf64",
+          "sha256": "70d5a5f08fc1b96e812596b2a8aff367709a4e06df5299a167fc34b2b973e042",
+          "slot": "ARMS"
+        },
+        {
+          "asset": "mecha/yard/yard_head_1.png",
+          "bundle_asset": "assets/7ed4eabcf63b91c23461da538414a43d7b30f11747c7e85695f2362068fcbefb.png",
+          "catalog_sha256": "deed16433f3e45de61b6f636af57e5a1a8fc75810e6fde441ddcf1ca85247405",
+          "family": "yard",
+          "id": "yard_head_1",
+          "name": "Lantern helm",
+          "pixel_sha256": "ca6ad6f5cc9eb01e9b0b197a979e8eb91f7160bbc4e486b483bd17bd1b910e4f",
+          "sha256": "7ed4eabcf63b91c23461da538414a43d7b30f11747c7e85695f2362068fcbefb",
+          "slot": "HEAD"
+        }
+      ]
+    }
+  ],
+  "catalogs": [
+    {
+      "sha256": "159995d9d4c79c77e429afd9a13a63124ee531c4e116a10df7ccc5709545d044",
+      "source": "catalog.json"
+    },
+    {
+      "sha256": "4c5d5b12c8a4dbac3585e10d634f9f1bec0f3073f3fb0a0a0c99606e0b1c9b9c",
+      "source": "catalog.json"
+    },
+    {
+      "sha256": "6741f7d6a9bcda8cccc19f2fd0f359b735a25431942d183bf265e3a4d02f88e4",
+      "source": "catalog.json"
+    },
+    {
+      "sha256": "6cbdfe5fa6c1811358fa5144b9c33ecc8c03e49c27477f8a84a9c7ba4c21271b",
+      "source": "catalog.json"
+    },
+    {
+      "sha256": "a3678de9fb050f2233b16dd07876e57dd231e90d6e889cdfd0a53222a3b76f1b",
+      "source": "catalog.json"
+    },
+    {
+      "sha256": "deed16433f3e45de61b6f636af57e5a1a8fc75810e6fde441ddcf1ca85247405",
+      "source": "catalog.json"
+    },
+    {
+      "sha256": "f6cbe0ea25ec0bc1e6e256e27df9a5effc45596d19161d44c4f2824d93495a37",
+      "source": "catalog.json"
+    }
+  ],
+  "eligible_assemblies": 672,
+  "encoding": {
+    "gif": "global-authored-palette/no-dither/optimize=false",
+    "pillow": "13.0.0",
+    "png": "RGBA/compress_level=9/optimize=false",
+    "zlib": "1.3.1.zlib-ng"
+  },
+  "format": "rivet-resolved-assemblies",
+  "generator": "rivet-assembler-1.0.0",
+  "layer_order": [
+    "LEGS",
+    "BODY",
+    "ARMS",
+    "HEAD"
+  ],
+  "outputs": {
+    "assembly-001.png": "a9bb625f7b72b5ae79eab2faa1241ac870b95a20a2eaa38214eecd82d41b6a3e",
+    "assembly-002.png": "e31860c28132ad0f1d03f7c891848aea7b4e31d3e64df37c1615a21efc45d0c5",
+    "assembly-003.png": "8b7c6c197199a85737fe2d34fa1e2829256dc906fa9c1d79a51534dcf6b97e97",
+    "assembly-004.png": "f7017ed538cfba611852d9374aa722cd3f1af2973d866ea9d7d277751b7483b6",
+    "assembly-005.png": "7f72babf45cfe54aa7741baae6516a0bb9809fa50a5fab6c774a173019bc12e1",
+    "assembly-006.png": "242e6291b109574c866cae470d396b5e4e6d705c5ec6743a4860fe62c2e7b2bc",
+    "assembly-007.png": "e8df896944adf3426463463ebe8ed126fb0333f15c3083333789c8cd01173ef1",
+    "assembly-008.png": "9bf4c42de2657e524aca16c1670bd33b3aa0bd638d45fdc05c263528c33f26fd",
+    "assembly-009.png": "a37892e16c2f9666b311a0429f8e115117f84af63acb340d6e799fcb5e349150",
+    "assembly-010.png": "1abb8befede5ad30da8e5d2c66f6cf1c1dc8e051c3c812f99cb52aa5106ebbb0",
+    "assembly-011.png": "9d1b7d649f24a0bc034f6d8bb9d92bc027403a36a185c0003a78d9d826d4cb9c",
+    "assembly-012.png": "d954955af3029363e753484e593272f9b192f662a961aa50cd80470738d0cd8d",
+    "board.png": "846c6f0803c8a1373ed711a3537ab53e4c082fdcfdc276178ca1b9831dee9155",
+    "preview.gif": "2e1a7ff4b0dea66ea3e979a3f558d3d08aa5da34f6e14ae234d19ef1f1b7c8b5"
+  },
+  "policy": "paired-families-balanced-mass-1",
+  "renderer": "rivet-sheet-review-1",
+  "rig": "sortie-64x64-eight-poses-1",
+  "seed": 2136,
+  "version": 1
+}

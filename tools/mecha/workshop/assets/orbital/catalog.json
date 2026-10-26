@@ -1,0 +1,58 @@
+[
+  {
+    "id": "orbital_head_1",
+    "slot": "HEAD",
+    "family": "orbital",
+    "name": "Pressure bell",
+    "asset": "mecha/orbital/orbital_head_1.png"
+  },
+  {
+    "id": "orbital_head_2",
+    "slot": "HEAD",
+    "family": "orbital",
+    "name": "Relay receiver",
+    "asset": "mecha/orbital/orbital_head_2.png"
+  },
+  {
+    "id": "orbital_body_1",
+    "slot": "BODY",
+    "family": "orbital",
+    "name": "Tether tender",
+    "asset": "mecha/orbital/orbital_body_1.png"
+  },
+  {
+    "id": "orbital_body_2",
+    "slot": "BODY",
+    "family": "orbital",
+    "name": "Service harness",
+    "asset": "mecha/orbital/orbital_body_2.png"
+  },
+  {
+    "id": "orbital_arms_1",
+    "slot": "ARMS",
+    "family": "orbital",
+    "name": "Pressure mittens",
+    "asset": "mecha/orbital/orbital_arms_1.png"
+  },
+  {
+    "id": "orbital_arms_2",
+    "slot": "ARMS",
+    "family": "orbital",
+    "name": "Cable handlers",
+    "asset": "mecha/orbital/orbital_arms_2.png"
+  },
+  {
+    "id": "orbital_legs_1",
+    "slot": "LEGS",
+    "family": "orbital",
+    "name": "Lunar overshoes",
+    "asset": "mecha/orbital/orbital_legs_1.png"
+  },
+  {
+    "id": "orbital_legs_2",
+    "slot": "LEGS",
+    "family": "orbital",
+    "name": "Magnetic gaiters",
+    "asset": "mecha/orbital/orbital_legs_2.png"
+  }
+]

@@ -3,6 +3,10 @@
 ## Unreleased
 - The Hangar shows the companion's name as plain text until **Rename** is pressed. **Save** (or the keyboard's Done)
   commits a valid name and closes the keyboard; **Cancel** discards edits. Browsing or tapping the name cannot open an editor.
+- Add an isolated Rivet review workshop under `tools/mecha/workshop/`: 32 original part sheets, deterministic mixed-family
+  assembly/replay, finish and palette previews, a fictional-credit salvage cabinet and a small Scrap Catch arcade game.
+  Serve the repository root with `python3 -m http.server 8746 --bind 127.0.0.1`, then open `/tools/mecha/workshop/`.
+  These are offline review experiments, not APK assets or live credit/inventory changes.
 - Refresh the README, website, onboarding, manual and format references for Quiet Home, Tonight, bookmarks and their
   archive/backup limits, bundled guide precedence, Rivet gestures and current switcher/reader controls. Add native Nova
   beta 2136 captures of Home, Tonight, game details and the bookmark editor; keep older setup images clearly identified.
