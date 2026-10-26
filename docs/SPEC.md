@@ -282,7 +282,9 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   There is one owner throughout. The destination must still be active, current and have room at handoff; its one-shot
   arrival is discarded if that window disappears or is replaced. Layout changes, new input, hidden windows and motion-off
   interrupt flight; a landing is revalidated before it gains a hit target. Animate off permits an immediate handoff.
-  No activity launch, overlay permission or input interception outside Sortie's own windows is involved.
+  No new activity, overlay permission or input interception outside Sortie's own windows is involved. The companion's
+  existing controller handback waits until the carry/drop finishes on either display: its transient `AnchorActivity`
+  must not pause navigation midway through an incoming landing. Hiding or replacing the owning window releases that hold.
 - Roaming acceptance (`0.1.0-mecha-roam` debug on the DMG, `0.1.0-beta.1044-roam.1` on the Thor): DMG Home at the clock,
   on the wrapped header buttons, on the hint bar (list view) and peeking over first-row tiles (grid view); peek-to-peek
   strolls; 0 frames in 10 s windows between strolls, while dozing (only the clock's minute tick) and with motion off; a

@@ -26,6 +26,19 @@ object MechaPresence {
     internal var owner by mutableStateOf<MechaStage?>(null)
         private set
 
+    private var pointerOwner by mutableStateOf<MechaStage?>(null)
+
+    /** Defer companion controller handback until the carried mech has finished landing, on either display. */
+    val handlingPointer: Boolean get() = pointerOwner != null
+
+    internal fun holdPointer(stage: MechaStage) {
+        if (owner === stage) pointerOwner = stage
+    }
+
+    internal fun releasePointer(stage: MechaStage) {
+        if (pointerOwner === stage) pointerOwner = null
+    }
+
     /** The edge he walks in from on the stage that just took him over, until it does. */
     internal var arriving: MechaSpotKind? = null
 
@@ -68,15 +81,7 @@ object MechaPresence {
     }
 
     /** An active stage on another display with room for him, the one a stroll may take him to. */
-    internal fun otherWithRoom(from: MechaStage): MechaStage? {
-        for (candidate in stages) {
-            android.util.Log.i(
-                "MechaThrowProbe",
-                "from=${from.displayId} candidate=${candidate.displayId} active=${candidate.active} room=${candidate.hasRoom()} bounds=${candidate.bounds} elements=${candidate.elements.size}"
-            )
-        }
-        return stages.lastOrNull { it.displayId != from.displayId && canReceive(it) }
-    }
+    internal fun otherWithRoom(from: MechaStage): MechaStage? = stages.lastOrNull { it.displayId != from.displayId && canReceive(it) }
 
     /** A covered, inactive or replaced window must not receive an in-flight handoff. */
     private fun canReceive(to: MechaStage): Boolean = to.active && stages.lastOrNull { it.active && it.displayId == to.displayId } === to && to.hasRoom()
@@ -95,6 +100,7 @@ object MechaPresence {
      */
     internal fun handOffDrop(to: MechaStage, fraction: Float, thrown: MechaThrowTransfer? = null): Boolean {
         if (!canReceive(to)) return false
+        if (pointerOwner === owner) pointerOwner = to
         display = to.displayId
         arriving = null
         carriedIn = MechaArrival(to, fraction, thrown)
@@ -107,5 +113,6 @@ object MechaPresence {
         display = d
         owner = stages.getOrNull(index)
         if (owner !== carriedIn?.stage) carriedIn = null
+        if (pointerOwner !== owner) pointerOwner = null
     }
 }

@@ -326,6 +326,7 @@ class MechaStage internal constructor(
     /** Held still long enough: picked up where he stands, drawn over the interface, dangling. */
     internal fun grab(fx: Float, fy: Float) {
         carried = true
+        MechaPresence.holdPointer(this)
         busy = false
         nudge = null
         bubble = null

@@ -45,6 +45,29 @@ class MechaPresenceTest {
     }
 
     @Test
+    fun controllerHandbackWaitsForTheDestinationLanding() {
+        val source = stage(0)
+        val destination = stage(4)
+        MechaPresence.holdPointer(source)
+        assertTrue(MechaPresence.handlingPointer)
+        assertTrue(MechaPresence.handOffDrop(destination, transfer.fraction, transfer))
+        MechaPresence.releasePointer(source)
+        assertTrue(MechaPresence.handlingPointer)
+        MechaPresence.releasePointer(destination)
+        assertFalse(MechaPresence.handlingPointer)
+    }
+
+    @Test
+    fun interruptedCarryDoesNotRetainTheControllerWhenResumed() {
+        val source = stage(0)
+        MechaPresence.holdPointer(source)
+        MechaPresence.setActive(source, false)
+        assertFalse(MechaPresence.handlingPointer)
+        MechaPresence.setActive(source, true)
+        assertFalse(MechaPresence.handlingPointer)
+    }
+
+    @Test
     fun recipientThatStopsDuringFlightCannotTakeOwnership() {
         val source = stage(0)
         val destination = stage(4)

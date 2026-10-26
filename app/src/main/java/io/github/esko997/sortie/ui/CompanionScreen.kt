@@ -90,6 +90,7 @@ import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.mecha.MechaProp
 import io.github.esko997.sortie.mecha.MechaSpotKind
+import io.github.esko997.sortie.mecha.ui.MechaPresence
 import io.github.esko997.sortie.mecha.ui.MechaStageHost
 import io.github.esko997.sortie.mecha.ui.mechaBaseSize
 import io.github.esko997.sortie.mecha.ui.mechaHomeBase
@@ -147,8 +148,10 @@ fun CompanionScreen(displayId: Int) {
     val stage = rememberMechaStage(graph.mecha)
     // pickers, the open dock and the Hangar keep the controller here: their controls take the D-pad, B closes
     val picking = launcher || dockSlot >= 0 || dock || stage.hangarOpen
-    LaunchedEffect(picking) {
-        if (picking) host?.keepController = true else if (host?.keepController == true) host.releaseController()
+    // AnchorActivity briefly pauses navigation: do not interrupt a carried mech's landing on that screen.
+    val keepingController = picking || MechaPresence.handlingPointer
+    LaunchedEffect(keepingController) {
+        if (keepingController) host?.keepController = true else if (host?.keepController == true) host.releaseController()
     }
     BackHandler(enabled = dock && !launcher && dockSlot < 0) { dock = false }
     // B closes a picker back to the panel it was opened from (the companion activity must not finish under it)
