@@ -1,7 +1,12 @@
 # Emulator launch compatibility
 
-Reference for `launchers.json` authoring. Placeholders: `${file}` absolute path, `${uri}` Sortie FileProvider content URI,
-`${stem}`, `${titleid}`. "Verified" means the game booted and was seen on screen through `adb exec-out screencap`.
+Reference for `launchers.json` authoring and dated launch evidence, not a current certification matrix. See the
+[launcher format](formats/launchers.md) for all fields and placeholders (`${file}`, `${uri}`, `${stem}`, `${name}`,
+`${dir}`, `${system}`, `${titleid}`). In the historical checks, "Verified" means a game booted and was seen in a screenshot,
+not that every game, BIOS, save operation or emulator version worked.
+
+Current setup presets live in `data/setup/LibraryPresets.kt`; installed-package detection establishes presence only.
+Custom profiles are preserved, so an existing library need not use the same intents as a fresh setup.
 
 ## Historical Thor checks
 
@@ -23,7 +28,8 @@ version. On-device Library setup preserves existing custom profiles; its current
 Notes
 - `file://` URIs require the app to relax StrictMode's file-URI check (done once in `SortieApp`).
 - Every attempt and the exact `am start` equivalent are in Diagnostics and in logcat under the `SortieLaunch` tag.
-- Debug builds accept `am start -n io.github.esko997.sortie/.MainActivity --es launch '<systemId>/<file>' [--es profile <id>]`.
+- Debug builds accept `adb shell am start -n io.github.esko997.sortie/.MainActivity --es launch '<systemId>/<file>' [--es profile <id>]`.
+  This really launches a game; use only authorised test content. Release builds ignore this debug hook.
 - **Remembered chooser pick:** only a normal system launch falling through other configured emulators to Open with… may
   remember its first app selection. Per-game overrides, explicit one-off launches, systems starting with Open with…,
   and systems with a default already chosen in Settings are left alone. The callback rechecks the configuration before
@@ -78,7 +84,7 @@ On the AYANEO Pocket DMG (Android 13) with **RetroArch 1.22.2**, Sortie's preset
   session end. On the DMG, Home 2.2 s after starting Gambatte ended the session normally with no notice.
 - Also seen on the DMG: with Snes9x and Genesis Plus GX (Vulkan driver) RetroArch stopped responding about 5 s after Home
   (ANR waiting for `PointerCaptureChangedEvent`), and a later Play of a different game then did not close it. Gambatte did
-  not hang. Force-stop RetroArch in that state.
+  not hang. Force-stopping a hung RetroArch can recover it but loses unsaved state; it is not Sortie's automatic response.
 
 ## Beginner-guide walkthrough — 2026-10-24
 

@@ -1,6 +1,15 @@
 # Changelog
 
+Beta development history, newest first. Older entries describe behavior at that point, not current setup instructions.
+Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub Releases](https://github.com/sortie-launcher/sortie/releases)
+for published builds.
+
 ## Unreleased
+- Review every user guide, format reference and project document against current code. Correct launch-choice semantics,
+  import/backup limits, indexing, guide matching and configuration examples; distinguish historical checks and proposals
+  from shipped behavior. Replace the remaining old screenshots with current Nova/Thor captures and a fresh beta 2138
+  setup/import walkthrough, including a real uCity launch. Publish the hardening reference and use native Thor screen
+  originals in the website hero instead of cropping a composite.
 - Refresh the README, website, onboarding, manual and format references for Quiet Home, Tonight, bookmarks and their
   archive/backup limits, bundled guide precedence, Rivet gestures and current switcher/reader controls. Add native Nova
   beta 2136 captures of Home, Tonight, game details and the bookmark editor; keep older setup images clearly identified.

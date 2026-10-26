@@ -19,10 +19,11 @@ BIOS files or emulators.
    *PlayStation 2* or *Game Boy Advance*, or **Something else…** to name your own. Then:
    - **Add a folder…** and browse to the folder that holds the game files themselves, then **Use this folder**. Add as many
      folders as you need; they can be on internal storage or a memory card.
-   - Check **File types**. The suggestion fits most libraries; leave it empty to list every file in the folders.
-   - Under **Emulators**, the first *installed* one in the list starts games. **Add an emulator…** adds another; select one to
-     move it up/down or remove it. **Open with…** is optional: add it explicitly if you want Android to ask which app to use.
-     Each system shows a **Before the first game** note with the emulator's requirements and compatibility.
+   - Check **File types**. The suggestion fits most libraries; leaving it empty removes the extension filter. Hidden files
+     and recognised support files, such as images, saves and text files, are still skipped.
+   - Under **Emulators**, Sortie tries installed entries in order unless you have a per-game or Settings default.
+     **Add an emulator…** adds another; select one to move it up/down or remove it. **Open with…** is optional: add it
+     explicitly if you want Android to ask which app to use. Preset systems show **Before the first game** with requirements and tested launch methods.
    - **Save.** Sortie writes the settings, reads the folders and shows how many games it found, plus a few games to try.
 
 4. **Test a game.** Open one from the result and choose **Play**. Sortie can only tell that the emulator opened: check that
@@ -51,7 +52,7 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 - Select a system in Library to rename it, add, replace or remove folders, change file types or reorder emulators. A system
   keeps its identity when edited, so its favourites, bookmarks and play history stay attached.
 - **BIOS and save folders** (optional): the BIOS folder lets Sortie mark games whose listed BIOS files are missing; save
-  folders let the **💾 started** filter recognise games with saves. Emulators keep their own BIOS and save settings.
+  folders let the **💾 started** filter recognise matching filenames, not whether you have actually played. Emulators keep their own BIOS and save settings.
 - **Remove from library…** takes a system off Sortie's lists only. Game files, saves and BIOS files stay where they are;
   favourites, bookmarks and play history are kept and return if the games are added again under the same system.
 - A library prepared on a computer keeps working. Library changes only what you edit; other systems and settings stay
@@ -81,7 +82,7 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 ## Controls
 
 - **A** open · **B** back · **X** swap which screen has the controller (dual-screen devices)
-- **Hold A** on anything: the context sheet (favourite, add to home, remove, launch with…)
+- **Hold A** on a game, app, shortcut, system or folder tile: its context sheet (the choices depend on the item)
 - **Hold R1** on a game, app or shortcut: favourite. On a system or folder tile: jump to a random game in it
 - **L1 / R1** (tap): previous / next system in lists; on Home: previous / next sort; in "By Console": previous / next console;
   in the switcher overlay: the Perf page and back
@@ -89,8 +90,8 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
   from favourites. The *Want to play* folder is always on **Home → Custom**; launching a game keeps it queued
 - **Y** on Home: search. On a game's page: favourite
 - **L2**: while the after-playing bookmark card shows, leave a note. In a magazine article: browse the picture sequence in view
-- **Select**: list ↔ grid; on a game's page: "launch with…" (pick the launcher once)
-- **Home key**: the switcher (see below)
+- **Select**: list ↔ grid; on a game's page: **Launch with…** (choosing an emulator saves that game's preference and launches it)
+- **Home key**: the switcher when Sortie is the default Home app and Shizuku is ready; otherwise Android's usual Home action
 - **Swipe down from the top edge**: the status bar
 - **Controls**: the hint bar shows the current screen's buttons. When it is compact (see Settings → Header and hints) it
   keeps only the main ones; tap or select **Controls** at its end for the full list
@@ -137,10 +138,10 @@ screens put that row beside them, leaving room for tiles. Larger screens keep th
 (touch or D-pad), and controller hints wrap as whole button/action pairs. Switching list/grid retains the selected tile.
 **Settings → Header and hints** can fold this header and the hints out of the way while you browse (see Settings).
 
-System and folder filter chips: **Fit 4+** (guide rating 4 or 5), **✍ notes** (an authored guide note, including the
-built-in curated guide, or your bookmark), **💾 started** (a save or state exists
-in the configured save folders), **on device** (hide placeholders for games not copied yet). **🎲 Pick one** opens a random game from what is shown.
-The title stays above these controls. On smaller screens, the controls wrap onto additional rows rather than shrinking.
+System and folder filter chips: **Fit 4+** (guide rating 4 or 5), **✍ notes** (a curated guide entry, including
+the built-in AI-assisted guide, or your bookmark), **💾 started** (a matching save or state exists in the configured save
+folders), **on device** (hide zero-byte placeholders; not a live file or emulator check).
+**🎲 Pick one** opens a random item from what is shown. The title stays above these controls; on smaller screens they wrap.
 
 ## Search and filters
 
@@ -150,6 +151,7 @@ Search accepts a title, tag, genre, developer or description fragment. Text is o
 - Pick several values in a filter to match **any** of them; different filters must **all** match.
 - **More** offers favourites, Want to play, unplayed (never launched), **Fit 4+** and **On device only (default)**.
   The More count counts changes from those defaults, not the default on-device setting itself.
+  Like the browse chip, **On device only** excludes zero-byte placeholders; it does not check whether a card is still mounted.
 - **A / tap** toggles a picker value; **Done / B** closes the picker. Its counts describe the library, not the other active filters.
 - Active filters appear below the buttons. Tap one to remove it; **Clear filters** keeps your search text.
 - The game count includes all matches. More results load as you scroll; the initial page is not a search limit.
@@ -248,7 +250,8 @@ Pictures in issues belong to their rights holders and are credited in each issue
   Browsing also stops when the sequence scrolls out of view. On a narrow screen the pictures are stacked like ordinary
   pictures. The chosen picture is remembered with your reading position; browsing does not resume on its own.
 - **Games mentioned** in an issue lists games regardless of ownership. **All / On this device** toggles the local filter.
-  A file still copying, a placeholder or an unreadable file is not counted as available; availability is not a compatibility promise.
+  Placeholders, detected Syncthing transfers and unreadable files are excluded. Other copy methods may not be detected:
+  finish copying before playing. Availability is not a compatibility promise.
 - **A** in an article opens its game references or a matching library page, never launches the game. Multiple local copies
   are offered separately; games not found here remain listed.
 - **Featured in** on a game page opens the articles that discuss it. **B** returns to the game page.
@@ -301,15 +304,15 @@ Each pick follows one plain rule, and its reason says which rule and what it use
 
 When a rule has nothing to work with (no play history yet, no playable Field Notes game), that pick is labelled
 **Discovery** and says why. It then tries Want to play, an unplayed game with an authored guide hook, the best-rated unplayed
-game in your library's metadata, then any unplayed game. When the set is chosen, Hidden, Finished, Shelved, not-yet-copied,
-still-arriving and missing games are left out. Alternate indexed variants and repeated titles are also skipped,
-so a small library gets fewer than five.
+game in your library's metadata, then any unplayed game. When the set is chosen, Hidden, Finished, Shelved, zero-byte
+placeholders, detected Syncthing transfers and missing games are left out. Other copy methods may not be detected, so
+finish copying before playing. Alternate indexed variants and repeated titles are skipped; a small library gets fewer than five.
 
 There are no questions, settings or rerolls, and nothing is fetched. Your first visit each day saves a set on this device;
 later visits keep it, even after a restart, re-index or more play. A visit that crosses midnight keeps its original date,
 including trips to Details and back. Leave Tonight and open it again to get the new day's set.
-A saved pick that becomes unavailable (removed, hidden, not copied, still arriving or missing) stays in place, dimmed with
-the reason, instead of being replaced. These file checks do not guarantee that its emulator is ready.
+A saved pick that becomes unavailable (removed, hidden, a placeholder, a detected Syncthing transfer or missing) stays in
+place, dimmed with the reason, instead of being replaced. These file checks do not guarantee that its emulator is ready.
 
 - If the day's picks can't be saved, Tonight says so instead of showing a set it could not keep. Free some storage on the
   device, then open Tonight again.
@@ -319,15 +322,20 @@ the reason, instead of being replaced. These file checks do not guarantee that i
 
 ## A game's page
 
-Art, fit stars, hook, description, play time, your bookmark and (when written) control notes. **Play / A** launches with the first working
-launcher; **Select** lets you pick one for this game permanently. The order tried: this game's choice → the system default
-from Settings → the system's emulator list in Library setup. **Open with…** is used only if you explicitly choose it or add it
-to that list. A per-game or one-off chooser pick never changes the system default. A system whose first configured
-emulator is Open with… keeps asking. Only a normal system launch falling through other configured emulators to the
-chooser can remember its first selection; **Default launcher per system → Manifest default** clears that choice.
-Cancelling Android's app chooser does not start a play session. If nothing starts, a message says why.
-If the emulator closes within about three seconds of starting and you did not press Home, the page says so next to
-**Play** for about twelve seconds (a short message elsewhere if you have left the page); Sortie does not retry by itself.
+Art, fit stars, hook, description, play time, your bookmark and (when supplied) control notes. **Play** launches with the
+first emulator that accepts the request; **A** activates the focused control, initially Play. **Select / Launch with…**
+opens the emulator list: choosing an installed one saves it for this game and launches it immediately. **Clear override**
+returns the game to the normal order without launching.
+The order tried is this game's choice → **Settings → Default launcher per system** → the system's Emulators list in
+Library setup. A per-game or one-off choice never changes the system default. **Open with…** is tried only when explicitly
+chosen or included in that list. If it is the first configured emulator, Android keeps asking. Only a normal launch that
+falls through earlier configured emulators to Open with… can remember the selected app as a system default;
+**Default launcher per system → Manifest default** clears it. Cancelling Android's chooser does not start a play session.
+If nothing starts, a message says why.
+If Sortie detects a return within about three seconds without a Home press and cannot see the emulator still running,
+the page reports a quick exit next to **Play** for about twelve seconds (a short message elsewhere if you have left the page).
+Sortie does not retry by itself.
+**Other versions**, when shown, lists grouped variants; choosing **Play** beside one launches that file directly.
 
 **Leave a note** (or **Edit bookmark** once there is one) opens the game's **bookmark**: one short text about where you are
 and what to do next, such as the level, boss or save slot. Each game has one bookmark.
@@ -357,12 +365,12 @@ Sortie comes with short, curated notes about more than a thousand games: a hook,
 *Japanese only* or *long*, and sometimes control notes. This AI-assisted editorial content attaches to matching copies in
 your library and appears on the game page, the companion screen and Tonight. No extra guide file is needed.
 
-- Matching is deliberately strict. The system must match, and the title must be the same once region, language, disc and
-  revision labels are set aside. Hacks, translations, remakes and other editions only get matching notes; ambiguous matches
-  are left out unless the filename identifies just one entry. Many games have no curated note; that is expected.
-- A **guide.json** in your Sortie folder takes priority. Entries marked as individually authored are kept exactly as written,
-  including blank fields. In generated entries, the built-in guide only fills missing hooks, control notes and badges;
-  it never supplies fit stars or taste tags.
+- Matching uses platform and names, not the game's contents. Common region, language, disc and revision labels are
+  ignored; edition names help distinguish variants, and ambiguous matches are left out. A modified game with an unchanged
+  retail filename can still receive retail notes. Many games have no curated note; that is expected.
+- A **guide.json** in your Sortie folder takes priority. Entries classified as authored are kept exactly as supplied,
+  including blank fields. For auto-classified entries, the built-in guide only fills missing hooks, control notes and
+  badges; it never supplies fit stars or taste tags. These classifications describe precedence, not human authorship.
 - Updates to the built-in guide arrive with app updates and apply at the next index pass (**Library setup → Re-index every
   system** runs one).
 - Your bookmarks, controller assessments, verdicts, reference cards and clippings are stored separately and never change
@@ -388,13 +396,14 @@ Open **Reference cards** on a game's page to keep controls, maps, move lists or 
   and its copied image; the original imported file is untouched.
 - **L1/R1** changes cards. **D-pad** scrolls text or pans a zoomed image; **A** toggles image zoom and **L2/R2** zooms out/in.
   Touch supports scrolling, pinch/drag and double-tap zoom. **B** returns to the card list.
-- While that game is running, tap **Reference cards** on the companion. Use its arrows to change cards and **Close** to return
-  to Now playing. These are touch controls: controller focus returns to the game, so reading does not capture its buttons.
-  Single-screen devices can read and edit the same cards on the game page.
+- While that game is running, tap **Reference card** or **Reference cards** on the companion (shown once the game has a card).
+  Use its arrows to change cards and **Close** to return to Now playing. These are touch controls: controller focus returns
+  to the game, so reading does not capture its buttons. Single-screen devices use the game page to read and edit cards.
 
 Cards are short references, not a PDF or web browser. Markdown images/links are not fetched; import a picture as its own card.
-Imports over 256 KiB of Markdown or 24 MiB per image are refused. Each game can hold up to 200 cards, with 100,000 text
-characters per card. Missing images show an explanation; text remains available.
+Imports over 256 KiB of Markdown or 24 MiB per image are refused. Images are also limited to 16,384 pixels on either edge
+and 64 million pixels total. Each game can hold up to 200 cards, with a 120-character title and 100,000 text characters per
+card. Missing images show an explanation; text remains available.
 
 ## Older journal and notes (archive)
 
@@ -423,7 +432,7 @@ The line below a game's title shows its platform, year, developer and genre when
 - **+** (bottom-right): start any app on that screen.
 - **Dot** (bottom-left): the dock. Tap to unfurl five slots up the left edge; the controller moves to them. A / tap an empty
   slot to pin an app, A / tap a pinned app to start it there, hold A / long-press to unpin, B folds it away.
-- **Battery** (top-left) and **bell** (top-right): the bell opens the notification shade.
+- **Battery** (top-left) and, when Shizuku is ready, **bell** (top-right): tap the bell to open the notification shade.
 - **Device stats** (if turned on in Settings): a thin strip down each side. Left: CPU and GPU load with their clocks, and
   RAM in use of the total. Right: CPU, GPU and battery temperatures in °C and the fan speed (AYN Thor; its sensor gives no
   unit, Sortie shows it as rpm). The panel narrows to make room, so nothing is covered.
@@ -439,7 +448,8 @@ Touching the companion hands the controller back to the other screen a moment la
 Shows the apps running on each screen. **A** brings an app to the front; **Select** or its **✕** closes it.
 With two screens, **Y** moves it across and **Quick swap** exchanges the screens. **Open app…** starts an app;
 **Sortie** returns to Home. On a single-screen device, cross-screen actions are left out.
-With **Overlay switcher** on, it draws over running apps; off, or without overlay permission, it uses a normal Sortie screen.
+With **Settings → Overlay over running games (optional)** on, it draws over running apps; off, or without overlay permission,
+it uses a normal Sortie screen.
 When opened over Sortie, the overlay leaves your current page or companion underneath; **B** returns there without raising
 an old background app. This also holds after swapping screens: Home does not reset the browsing page or move navigation back.
 With Shizuku available, Home also opens the switcher while reading a magazine or when no external app is running;
@@ -447,7 +457,7 @@ With Shizuku available, Home also opens the switcher while reading a magazine or
 reinstalling Sortie can require authorizing it again even while the Shizuku service is running.
 Android Settings and other security-sensitive screens can hide third-party overlays. When Sortie detects that protection,
 it opens the normal-screen switcher instead. If the overlay is still hidden, leave the protected screen with **Back**, or
-turn off **Overlay switcher** in Settings. Granting overlay permission does not override Android's protection.
+turn off **Overlay over running games (optional)** in Settings. Granting overlay permission does not override Android's protection.
 Choosing or moving a picture-in-picture player restores its existing task to fullscreen. Internal controller-focus changes
 do not ask the player to enter PiP again. If you do not want an app to use PiP at all, disable its **Picture-in-picture**
 permission in Android's app settings.
@@ -464,11 +474,11 @@ RAM and the battery temperature show. FPS and power draw are not shown.
 ## Settings
 
 **Library and emulators** (systems, game folders, emulators, BIOS/save folders, re-index), **Default home app** (once you
-have games), layouts (home/browse grid, sideways grids, rows and columns, app tile density, header and hints), hero rotation,
+have a system), layouts (home/browse grid, sideways grids, rows and columns, app tile density, header and hints), hero rotation,
 the overlay switcher, **Bookmarks** (whether to offer a bookmark after playing; on by default), device stats, a default
 launcher per system, the optional **Radial keyboard**, and under Help **Sortie manual** (this manual), **Backup and restore**,
-**Import from Cocoon…** and Diagnostics. Smart folders, a **guide.json**, logos and custom launch profiles still come from a
-computer-prepared card if you use one; the curated guide is built in.
+**Import from Cocoon…** and Diagnostics. Custom smart folders, **guide.json**, logos and launch profiles use prepared files;
+they do not require a computer, but have no in-app editor. The curated guide is built in.
 
 **Header and hints (Home and browse)** sets how much room Home, system lists, folders, search and Apps give their header
 and button hints: *Auto* (the default), *Expanded* or *Compact*; **A** cycles. *Auto* is compact when the window is short or
@@ -532,7 +542,7 @@ permission. For other languages or a conventional layout, tap **Switch keyboard*
 
 ## Backup and restore
 
-In Settings, **Export backup…** saves your preferences (including the bookmark setting), favourites, Want to play queue,
+**Settings → Backup and restore → Export backup…** saves your preferences (including the bookmark setting), favourites, Want to play queue,
 Finished/Shelved status and verdicts, custom home, dock, bookmarks, controller assessments (*What it needs*), reference-card
 text, magazine clippings, completed play history and the Hangar companion (name, parts, salvage, bond) to a JSON file in a
 location you choose. An unfinished session is not included.
@@ -572,7 +582,10 @@ refuses an update: ask whoever sent you the APK.
 
 ## Play log and saves
 
-An emulator/app launch starts a session; opening and cancelling the app chooser does not. Sessions end when the game's
-window is gone. A game whose emulator closed right after starting (see A game's page) is not recorded as played.
-Minutes, session counts and "last played" feed the *Continue* tile, Tonight and personal history. The **💾 started**
-chip reads the save folders set in **Library setup → BIOS and save folders**, or on a computer-prepared card.
+Starting a game, app or shortcut from the main launcher starts a session; cancelling the app chooser does not.
+Opening a built-in app or an app beside a game from the companion does not replace that game's session.
+When you return to Sortie, Shizuku lets it keep timing while the emulator's task remains; without Shizuku, or when the task
+list can't be read, returning ends the session. A return within about three seconds without a Home press is treated as a
+failed launch unless Sortie can see the emulator still running, and that attempt is not counted as played.
+Recorded time includes idle time, not just active play. Minutes, session counts and "last played" feed Continue and Tonight.
+The **💾 started** chip instead checks matching files in **Library setup → BIOS and save folders**; re-index to refresh it.

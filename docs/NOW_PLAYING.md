@@ -1,54 +1,49 @@
-# Now playing: RetroArch and RetroAchievements on the companion (scope note, not built)
+# Now playing: RetroArch and RetroAchievements on the companion (unimplemented proposal)
 
-The companion screen already shows the open play session (art, title, "Playing · N min"). This note scopes what it could
-add for RetroArch games without breaking Sortie's rules: offline by construction (no INTERNET permission), no root, device
-knowledge in the on-card manifests rather than the APK.
+This is a retained design note, not setup instructions or a committed roadmap. No RetroArch remote-control buttons,
+UDP client, achievement badge or log reader are implemented. The proposed `control` profile field below is not part of
+the current `launchers.json` schema.
 
-## What RetroArch exposes without root
+## What exists today
 
-- **Launch intent** (what Sortie uses today, docs/LAUNCHERS.md): `RetroActivityFuture` with the `ROM`, `LIBRETRO`,
-  `CONFIGFILE`, `IME`, `DATADIR`, `SDCARD`, `EXTERNAL` extras and CLEAR_TOP (not CLEAR_TASK). `--appendconfig` is the desktop
-  command-line flag; the Android activity takes a whole config through `CONFIGFILE`, so per-launch settings mean pointing
-  `CONFIGFILE` at a separate config file kept on the card, not an extra on top of the user's config.
-- **Network command interface**: with `network_cmd_enable = "true"` (port `network_cmd_port`, default 55355) RetroArch
-  accepts plain-text UDP datagrams on localhost: `SAVE_STATE`, `LOAD_STATE`, `STATE_SLOT_PLUS`/`STATE_SLOT_MINUS`,
-  `PAUSE_TOGGLE`, `SCREENSHOT`, `RESET`, `MENU_TOGGLE`, `QUIT`, and queries that reply on the same socket (`GET_STATUS` →
-  `GET_STATUS PLAYING <system>,<game>,crc32=…` or `CONTENTLESS`, `VERSION`, `GET_CONFIG_PARAM <key>`).
-- **The catch**: opening any socket, even to 127.0.0.1, needs `android.permission.INTERNET`, which Sortie refuses. The shell
-  uid has it: send through the existing Shizuku user service (`ShellService.exec`), e.g.
-  `echo -n SAVE_STATE | nc -u -w1 127.0.0.1 55355` (toybox `nc`). Without Shizuku the controls simply do not appear.
-- **Files**: `retroarch.cfg` (savestate/screenshot dirs, `network_cmd_*`, `cheevos_*` keys) and the save/state/screenshot
-  directories are readable with the all-files grant Sortie already holds.
+The companion shows the open session's art, title, hook, bookmark, guide control notes and reference cards, with
+"Playing · N min" (`ui/CompanionScreen.kt`). That timer follows Sortie's recorded session; it does not query RetroArch
+for active content, input or achievement progress. Browsing another game can temporarily replace the panel.
 
-## What RetroAchievements offers, and what is in scope
+Sortie has no INTERNET permission. Its RetroArch presets send `ROM`, `LIBRETRO`, `CONFIGFILE`, `IME`, `DATADIR`,
+`SDCARD` and `EXTERNAL`, with `NEW_TASK|CLEAR_TOP`, not `CLEAR_TASK` (`data/setup/LibraryPresets.kt`,
+`launch/IntentBuilder.kt`). Existing custom profiles retain their own flags; see [launch compatibility](LAUNCHERS.md).
 
-- The RetroAchievements web API needs a per-user API key and the network. **Live RA data (achievement lists, unlocks,
-  rich presence, leaderboards) requires network, so Sortie will never fetch it.** RetroArch itself talks to RA when
-  `cheevos_enable` is on; that is RetroArch's business, not Sortie's.
-- In scope, offline only:
-  - `retroarch.cfg`: `cheevos_enable`, `cheevos_hardcore_mode_enable` → a "Achievements on · hardcore" badge on the
-    now-playing panel (never read or show `cheevos_token`/password keys).
-  - RetroArch's cheevos log lines (logcat tag `RetroArch`, or `logs/` when `log_to_file` is on): game identified, achievement
-    count loaded, "awarded" lines. Reading logcat needs Shizuku (`logcat -d -s RetroArch`) or an adb-granted `READ_LOGS`;
-    a once-a-minute read on the existing tick, never a stream.
-  - Locally cached badge images, if RetroArch keeps them on shared storage (path to verify on the Thor before relying on it).
-    There is no documented local copy of a game's achievement list or unlock state; offline "progress" is limited to what
-    this session's log says.
+## Research retained for a possible extension
 
-## Recommended minimal first step
+These interfaces would need checking against the selected RetroArch build and device before implementation:
 
-Four touch buttons on the now-playing panel: **Save state · Load state · Screenshot · Quit**.
+- RetroArch's network command interface can be enabled with `network_cmd_enable`, using `network_cmd_port` (normally
+  55355). Candidate commands include save/load state, screenshot, quit and status queries. Availability and reply formats
+  are not a tested Sortie contract.
+- Android sockets, including localhost sockets, require INTERNET permission. A possible offline-only design would send
+  commands through the existing Shizuku shell service instead of adding networking to Sortie. Shell UDP tooling and
+  command acknowledgement still need verification; Shizuku availability alone does not establish either.
+- The Android launch activity receives a complete configuration path through `CONFIGFILE`; a desktop
+  `--appendconfig` command-line option is not an Android intent extra.
+- Config, save, state, screenshot and badge files are useful only where storage access permits reading them.
+  All files access does **not** grant access to another app's private storage or its protected `Android/data` directory.
+  In particular, Sortie's default RetroArch `CONFIGFILE` points into that protected directory.
 
-- Shown only when the open session's profile is a RetroArch one. Mark it in the manifest (`"control": "retroarch-udp"` on
-  the launch profile in launchers.json) rather than matching `com.retroarch` in code (docs/RELEASE.md rule 3); `SessionEntity`
-  already stores `profileId`.
-- Shown only when Shizuku is ready; each tap sends one datagram through `ShellService.exec`. Quit needs `quit_press_twice`
-  off (or a second send) — check on the device.
-- Prerequisite on the card: `network_cmd_enable = "true"` in the config each RetroArch profile's `CONFIGFILE` names.
-- A tap hands the controller back to the game (existing companion hand-off), i.e. one anchor blip per tap; acceptable for
-  these actions.
-- Verify first over adb, before any code: launch a RetroArch game from Sortie, then
-  `adb shell 'echo -n SCREENSHOT | nc -u -w1 127.0.0.1 55355'` and the same for SAVE_STATE / LOAD_STATE / QUIT.
+## Possible scope
 
-Later, if wanted: `GET_STATUS` to confirm content is still running (end the session when RetroArch drops to the menu), and
-the cheevos badge from the config and log.
+An initial experiment could expose **Save state · Load state · Screenshot · Quit**, only for an explicitly opted-in
+profile and an authorised Shizuku connection. The old suggestion was a `"control": "retroarch-udp"` field on the profile;
+adding that field today does nothing. A real implementation would need schema support, failure feedback, safe handling
+of Quit and preservation of the companion's controller handback.
+
+Before changing code, validate commands on disposable content with disposable or verified-backed-up saves and states.
+Loading a state or quitting can lose unsaved play. No command experiment or device compatibility is established by this note.
+
+Later possibilities were `GET_STATUS` to detect a return to RetroArch's menu, and an offline achievements indicator.
+The RetroAchievements web API needs credentials and networking and is outside Sortie's offline scope. RetroArch may
+use that service itself; Sortie does not fetch it.
+
+An offline indicator might read explicitly accessible configuration or session log messages, but enabled achievements
+are not proof of a loaded achievement set or an unlock. Shared badge caches, log formats and access are unverified, and
+there is no supported local achievement database in Sortie. Never read or display RetroAchievements tokens or passwords.

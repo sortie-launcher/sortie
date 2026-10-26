@@ -8,15 +8,14 @@
    "roots": [
     "big-roms/ps2"
    ],
+   "extensions": [".iso", ".chd", ".cso"],
    "gamelist": "scraped-esde/gamelists/ps2/gamelist.xml",
    "media": "scraped-esde/downloaded_media/ps2",
    "profiles": [
     "armsx2-uri",
-    "armsx2",
     "open-with"
    ],
    "colour": "#f59e0b",
-   "count_hint": 97,
    "bios": [],
    "order": 0
   },
@@ -28,6 +27,7 @@
    "roots": [
     "roms/snes"
    ],
+   "extensions": [".sfc", ".smc", ".zip", ".7z"],
    "gamelist": "scraped-esde/gamelists/snes/gamelist.xml",
    "media": "scraped-esde/downloaded_media/snes",
    "profiles": [
@@ -35,7 +35,6 @@
     "open-with"
    ],
    "colour": "#3b82f6",
-   "count_hint": 15,
    "bios": [],
    "order": 31
   }
