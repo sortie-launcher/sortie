@@ -155,9 +155,9 @@ class MechaRoamTest {
         assertEquals("base", p.spotId)
         assertTrue(base.bounds.contains(p.exposed))
         assertNotNull(MechaRoam.hitTarget(p, s, tap, stage, listOf(hints, tiles, base)))
-        // the base is only a fallback: with a real spot qualifying, he goes there instead
+        // the base is one of his places even when a real spot qualifies too, after the spots
         val roomy = el("roomy", MechaSpotKind.ROOM, 0, 100, 600, 380)
-        assertEquals(listOf("roomy"), MechaRoam.places(listOf(hints, tiles, base, roomy), s, stage, tap).map { it.spotId })
+        assertEquals(listOf("roomy", "base"), MechaRoam.places(listOf(hints, tiles, base, roomy), s, stage, tap).map { it.spotId })
         // a base too small for him, or covered, does not hold him: nowhere at all, so he hides
         val small = el("base", MechaSpotKind.BASE, 1180, 960, 1240, 1000)
         assertTrue(MechaRoam.places(listOf(hints, tiles, small), s, stage, tap).isEmpty())
@@ -242,19 +242,184 @@ class MechaRoamTest {
     }
 
     @Test
-    fun movesWalkAlongAFloorHopNearbyAndSinkOtherwise() {
-        val s = 1
-        val a = at("a", MechaSpotKind.LEDGE, 100, 500)
-        assertEquals(MechaMove.WALK, MechaRoam.planMove(a, at("b", MechaSpotKind.LEDGE, 400, 500), s, 1240))
-        assertEquals(MechaMove.SINK, MechaRoam.planMove(a, at("far", MechaSpotKind.LEDGE, 1100, 500), s, 1240))
-        assertEquals(MechaMove.HOP, MechaRoam.planMove(a, at("up", MechaSpotKind.BESIDE_END, 150, 470), s, 1240))
-        assertEquals(MechaMove.SINK, MechaRoam.planMove(a, at("high", MechaSpotKind.LEDGE, 150, 100), s, 1240))
-        // a peek never walks or hops out from behind its element
-        assertEquals(MechaMove.SINK, MechaRoam.planMove(at("p", MechaSpotKind.PEEK, 100, 539, clip = 500), a, s, 1240))
-        assertEquals(
-            MechaMove.WALK,
-            MechaRoam.planMove(at("p", MechaSpotKind.PEEK, 100, 539, clip = 500), at("q", MechaSpotKind.PEEK, 300, 539, clip = 500), s, 1240)
-        )
+    fun routesWalkAlongADeclaredFloorAndFailClosedOnAnythingSolidInTheWay() {
+        val s = 2
+        val bar = el("bar", MechaSpotKind.LEDGE, 0, 900, 1240, 960)
+        val a = MechaRoam.place(bar, s, stage, listOf(bar), preferX = 100)!!
+        val b = MechaRoam.place(bar, s, stage, listOf(bar), preferX = 700)!!
+        assertEquals(listOf(b), MechaRoam.route(a, b, s, stage, listOf(bar)))
+        assertEquals(MechaMove.WALK, MechaRoam.legMove(a, b))
+        // a sign standing on the bar between them: never walked through, and nothing else connects the two
+        val sign = el("sign", null, 400, 860, 440, 900)
+        assertTrue(MechaRoam.route(a, b, s, stage, listOf(bar, sign)).isEmpty())
+        // a transparent row is nothing to pass by, and a declared empty room neither
+        val row = MechaElement("row", null, MechaRect(0, 700, 1240, 900), MechaRect(0, 700, 1240, 900), interactive = true, solid = false)
+        val room = el("room", MechaSpotKind.ROOM, 380, 760, 460, 900)
+        assertEquals(listOf(b), MechaRoam.route(a, b, s, stage, listOf(bar, row, room)))
+    }
+
+    @Test
+    fun aWalkNeedsFloorUnderItsFeetButStepsOverTheGapBetweenTiles() {
+        val s = 2
+        val left = el("left", MechaSpotKind.LEDGE, 0, 900, 400, 960)
+        val far = el("far", MechaSpotKind.LEDGE, 600, 900, 1240, 960)
+        val a = MechaRoam.place(left, s, stage, listOf(left, far), preferX = 100)!!
+        val b = MechaRoam.place(far, s, stage, listOf(left, far), preferX = 800)!!
+        // 200 px of nothing between the two at the same height: he does not walk on air
+        assertTrue(MechaRoam.route(a, b, s, stage, listOf(left, far)).isEmpty())
+        val near = el("near", MechaSpotKind.LEDGE, 420, 900, 1240, 960)
+        val c = MechaRoam.place(near, s, stage, listOf(left, near), preferX = 800)!!
+        assertEquals(listOf(c), MechaRoam.route(a, c, s, stage, listOf(left, near)))
+    }
+
+    private fun steps(y: Int) = listOf(el("low", MechaSpotKind.LEDGE, 0, y, 600, y + 60), el("step", MechaSpotKind.LEDGE, 600, y - 20, 1240, y + 60))
+
+    @Test
+    fun hopsUpAStepOnlyWhereTheWholeArcIsClearAndOnScreen() {
+        val s = 2
+        val m = MechaRoam.MOTION_MARGIN * s
+        val els = steps(900)
+        val a = MechaRoam.place(els[0], s, stage, els, preferX = 430)!!
+        val b = MechaRoam.place(els[1], s, stage, els, preferX = 620)!!
+        assertEquals(430, a.x)
+        assertEquals(620, b.x)
+        val r = MechaRoam.route(a, b, s, stage, els)
+        assertEquals(b, r.last())
+        assertEquals(MechaMove.HOP, MechaRoam.legMove(a, r.first()))
+        // what the renderer draws, sampled its own way, is what the route found clear: over the step's corner, not through it
+        var from = a
+        for (to in r) {
+            if (MechaRoam.legMove(from, to) == MechaMove.HOP) {
+                for (k in 0..7) {
+                    val t = k / 7f
+                    val art = MechaBody.art(MechaRoam.hopX(from, to, s, t), MechaRoam.hopFloor(from, to, s, t), s)
+                    val around = MechaRect(art.left - m, art.top - m, art.right + m, art.bottom)
+                    assertTrue(stage.contains(around))
+                    assertTrue(els.none { it.visible.intersects(around) })
+                }
+            }
+            from = to
+        }
+        assertEquals(b.x, MechaRoam.hopX(a, b, s, 1f))
+        assertEquals(b.floor, MechaRoam.hopFloor(a, b, s, 1f))
+        // a shelf over the middle of the jump, clear of both ends: no hop under it, and no other way up
+        val shelf = el("shelf", null, 540, 700, 560, 740)
+        assertTrue(MechaRoam.route(a, b, s, stage, els + shelf).isEmpty())
+        // the same step right under the top of the screen: both ends fit, the arc would leave the screen
+        val high = steps(160)
+        val ha = MechaRoam.place(high[0], s, stage, high, preferX = 430)!!
+        val hb = MechaRoam.place(high[1], s, stage, high, preferX = 620)!!
+        assertTrue(MechaRoam.route(ha, hb, s, stage, high).isEmpty())
+    }
+
+    @Test
+    fun hopNeverOvershootsOrReversesAtAnOffGridEndpoint() {
+        for (end in listOf(101, 105, 191)) {
+            for ((start, finish) in listOf(100 to end, end to 100)) {
+                val from = at("a", MechaSpotKind.LEDGE, start, 800)
+                val to = at("b", MechaSpotKind.LEDGE, finish, 780)
+                val xs = (0..100).map { MechaRoam.hopX(from, to, 3, it / 100f) }
+                assertEquals(start, xs.first())
+                assertEquals(finish, xs.last())
+                assertTrue(xs.all { it in minOf(start, finish)..maxOf(start, finish) })
+                assertTrue(xs.zipWithNext().all { (a, b) -> if (finish > start) b >= a else b <= a })
+            }
+        }
+    }
+
+    @Test
+    fun theBaseIsADepartureAndReturnLikeAnyPlace() {
+        val s = 2
+        val tap = 90
+        val tiles = el("tiles", null, 0, 400, 1240, 860, interactive = true)
+        val room = el("room", MechaSpotKind.ROOM, 0, 860, 1112, 1000)
+        val base = el("base", MechaSpotKind.BASE, 1112, 1000 - MechaBody.height(s), 1240, 1000)
+        val all = listOf(tiles, room, base)
+        val places = MechaRoam.places(all, s, stage, tap)
+        assertEquals(listOf("room", "base"), places.map { it.spotId })
+        val home = places.last()
+        val out = MechaRoam.place(room, s, stage, all, preferX = 300, minTap = tap)!!
+        assertEquals(listOf(out), MechaRoam.route(home, out, s, stage, all))
+        assertEquals(listOf(home), MechaRoam.route(out, home, s, stage, all))
+        // a label standing in the room between them closes the way: he never passes over it
+        val label = el("label", null, 700, 940, 800, 980)
+        assertTrue(MechaRoam.route(home, out, s, stage, all + label).isEmpty())
+    }
+
+    @Test
+    fun aFooterHoldsHimBetweenItsLabelsWithTheScreenEdgeCuttingOffHisLegs() {
+        val s = 2
+        val tap = 90
+        // a Home-like bottom: the grid right down to a 108 px hint bar, shorter than his 126 px of art
+        val tiles = el("tiles", null, 28, 0, 1212, 892, interactive = true)
+        val footer = el("footer", MechaSpotKind.FOOTER, 0, 892, 1240, 1000)
+        val open = el("hint:0", null, 28, 930, 150, 960)
+        val search = el("hint:1", null, 400, 930, 540, 960)
+        val controls = el("controls", null, 1080, 892, 1220, 1000, interactive = true)
+        val all = listOf(tiles, footer, open, search, controls)
+        val p = MechaRoam.place(footer, s, stage, all, preferX = 560, minTap = tap)!!
+        assertEquals(892 + (MechaBody.FRAME - 1 + MechaRoam.MOTION_MARGIN) * s, p.floor)
+        assertEquals(892 + MechaRoam.MOTION_MARGIN * s, p.exposed.top)
+        assertEquals(stage.bottom, p.exposed.bottom)
+        assertNotNull(MechaRoam.hitTarget(p, s, tap, stage, all))
+        // wherever along the bar he is placed: never over a label, Controls or the tiles above
+        for (x in 0..1240 step 40) {
+            val q = MechaRoam.place(footer, s, stage, all, preferX = x, minTap = tap) ?: continue
+            assertTrue(listOf(tiles, open, search, controls).none { it.visible.intersects(q.exposed) })
+        }
+        // the free run between the hints and Controls is one walkway, and its far end is another place to stroll to
+        val end = MechaRoam.place(footer, s, stage, all, preferX = 940, minTap = tap)!!
+        assertEquals(listOf(end), MechaRoam.route(p, end, s, stage, all))
+        assertEquals(MechaMove.WALK, MechaRoam.legMove(p, end))
+        assertEquals(end, MechaRoam.chooseNext(listOf(p, end), "footer", null, p, 1240, Random(1)))
+        // the gap between two labels is a place too, but across a label is no walk (and no hop: the tiles are right above)
+        val gap = MechaRoam.place(footer, s, stage, all, preferX = 200, minTap = tap)!!
+        assertTrue(gap.x + MechaBody.ART_RIGHT * s <= 400)
+        assertTrue(MechaRoam.route(gap, p, s, stage, all).isEmpty())
+        // a bar that stops above the screen's bottom edge: standing lower he would hang in the air, so no place there
+        val raised = el("footer", MechaSpotKind.FOOTER, 0, 850, 1240, 958)
+        assertNull(MechaRoam.place(raised, s, stage, listOf(raised)))
+    }
+
+    @Test
+    fun aRouteFailsClosedWhenItsEndsNoLongerHoldHim() {
+        val s = 2
+        val bar = el("bar", MechaSpotKind.LEDGE, 0, 900, 1240, 960)
+        val a = MechaRoam.place(bar, s, stage, listOf(bar), preferX = 100)!!
+        val b = MechaRoam.place(bar, s, stage, listOf(bar), preferX = 700)!!
+        val shelf = el("shelf", MechaSpotKind.LEDGE, 0, 600, 1240, 620)
+        val c = MechaRoam.place(shelf, s, stage, listOf(bar, shelf), preferX = 300)!!
+        // the element he was going to, or the one he stands on, is gone (scrolled away, another screen)
+        assertTrue(MechaRoam.route(a, c, s, stage, listOf(bar)).isEmpty())
+        assertTrue(MechaRoam.route(c, a, s, stage, listOf(bar)).isEmpty())
+        // his element moved since: he would stand in the air
+        val moved = el("bar", MechaSpotKind.LEDGE, 0, 880, 1240, 940)
+        assertTrue(MechaRoam.route(a, b, s, stage, listOf(moved)).isEmpty())
+        // something came down over where he was going
+        val toast = el("toast", null, 650, 800, 900, 880)
+        assertTrue(MechaRoam.route(a, b, s, stage, listOf(bar, toast)).isEmpty())
+        // leaving by the screen's edge: the walk may run out past it
+        val edge = el("edge", MechaSpotKind.EDGE_END, 0, 900, 1240, 960)
+        val e = MechaRoam.edges(listOf(bar, edge), s, stage).single()
+        assertEquals(listOf(e), MechaRoam.route(b, e, s, stage, listOf(bar, edge)))
+    }
+
+    @Test
+    fun peeksWalkAlongARowOfTilesBehindTheirTopEdgesAndNeverHopOut() {
+        val s = 2
+        val tap = 90
+        val tiles = (0 until 4).map { i -> el("t$i", MechaSpotKind.PEEK, 28 + i * 250, 400, 258 + i * 250, 630, interactive = true) }
+        val p0 = MechaRoam.place(tiles[0], s, stage, tiles, minTap = tap)!!
+        val p3 = MechaRoam.place(tiles[3], s, stage, tiles, minTap = tap)!!
+        assertEquals(listOf(p3), MechaRoam.route(p0, p3, s, stage, tiles))
+        assertEquals(MechaMove.WALK, MechaRoam.legMove(p0, p3))
+        // a section title over the second tile: the head does not pass through it
+        val title = el("title", null, 250, 330, 520, 380)
+        assertTrue(MechaRoam.route(p0, p3, s, stage, tiles + title).isEmpty())
+        // out from behind a tile onto a ledge would show the body: no route (he sinks and rises instead)
+        val ledge = el("ledge", MechaSpotKind.LEDGE, 0, 900, 1240, 960)
+        val l = MechaRoam.place(ledge, s, stage, tiles + ledge, preferX = 100)!!
+        assertTrue(MechaRoam.route(p0, l, s, stage, tiles + ledge).isEmpty())
     }
 
     @Test

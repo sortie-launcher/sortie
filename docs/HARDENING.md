@@ -243,6 +243,26 @@ and used four CPU ticks; DMG behind Android Settings drew zero additional frames
 these are approximately 0.06% and 0.02% of one CPU core, respectively. This is a bounded smoke measurement, not a
 guarantee of zero background CPU or a long-duration battery benchmark.
 
+### Rivet foreground and movement pass (26 October 2026)
+
+Release-signed candidate `0.1.0-rivet.2` was exercised over USB on Thor, Nova and DMG without launching games.
+
+- Actual layouts: Nova's controls bar keeps its natural height; Thor's top bar spans the full width. Rivet is drawn
+  above the lighter gradient, while tile faces, labels and controls retain their collision boundaries.
+- Recorded movement: Nova walked between first-row tile perches, including the space beside a section title; DMG walked
+  between positions on its compact footer. Thor's held carry visibly overlapped content, then returned to a valid perch.
+  Apps, Search, system/folder browsing and Controls were opened and closed on all three devices.
+- DMG Animate companion off: Rivet's RGB pixels stayed identical across a ten-second sample. One application frame
+  removed the temporary confirmation bubble; this is not a continuous animation. The original On preference was restored.
+- With Settings covering navigation and Clock also covering Thor's other display, each device kept the same Sortie PID
+  for a 90.8–91.1-second sample: zero additional process CPU ticks (100 ticks/s resolution) and zero rendered frames.
+  No screen recorder ran during measurement. Only the test-created covering tasks were removed afterwards.
+- No Sortie entry appeared in any device's crash buffer. This is a bounded smoke, not an overnight soak or an FPS
+  guarantee. The recordings exercise walking and carrying, not every rare hop or prop vignette.
+- The full debug/release build, style checks, unit tests and screenshot verification passed. Geometry and motion tests
+  cover swept hop clearance, unsupported floors, off-grid endpoints, short footers, stale anchors, weighted poses and
+  sparse quiet idle. All thirteen intentionally changed screenshot goldens were visually reviewed.
+
 ### Overnight native-refresh and idle checks (26 October 2026)
 
 The release after the full-polish pass was measured on real hardware, not against an assumed 120 Hz target. Thor and
