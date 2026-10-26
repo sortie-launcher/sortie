@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- On single-screen devices, X in a built-in app no longer falls through to Android's confirm-key fallback and activates
+  the focused reader control. The stress harness no longer chooses a user's ROM automatically; emulator/game launches
+  require an explicit test ROM, and its documentation now distinguishes card-setting restoration from unprotected saves/history.
 - Home over an app that blocks overlays (such as Android Settings) now opens the ordinary activity switcher instead of
   leaving an invisible overlay behind. Android's overlay protection remains intact. Single-screen switchers omit
   second-screen controller actions and use **Running apps** rather than **Top screen**.

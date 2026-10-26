@@ -6,11 +6,12 @@ displays, Recents, force-stops, sleep/wake, controller bursts — while continuo
 focus, leaked tasks/windows/activities, memory growth and network-callback leaks. Every anomaly is captured with both
 screens, dumps and the preceding actions so it can be replayed from the seed.
 
-User data guard: the card's Sortie JSON files are snapshotted first and compared (and restored) at the end. The harness
-never presses A inside Sortie except in the switcher overlay, never launches games through Sortie (no play-log writes)
-and never uninstalls anything.
+User data guard: the card's five Sortie JSON files are snapshotted and restored. This is NOT a sandbox: app-private
+history, emulator saves and other apps' state are not backed up. Use disposable data or verified backups. The reader
+opens a visible article ordinal, never blindly confirms a restored contents selection.
 
-Displays, the card's Sortie folder and a Game Boy ROM for the RetroArch scenario are discovered on the device.
+Displays and the card's Sortie folder are discovered. Emulator/game launches are excluded unless --game-rom explicitly
+names a disposable Game Boy ROM for RetroArch; its configured save/state locations must also be disposable or backed up.
 
 Usage (adb inside distrobox `ubuntu` by default; set SORTIE_ADB_WRAPPER="" to call adb directly):
   tools/stress/ui-stress.py --serial SERIAL --minutes 180 [--seed N] [--out DIR]
@@ -37,8 +38,7 @@ ASSISTANT = "com.odin.dualscreen.assistant"
 GUARDED = ["user.json", "systems.json", "launchers.json", "folders.json", "device.json"]
 CANDIDATE_APPS = [
     "com.android.deskclock", "com.android.settings", "com.peacocktv.peacockandroid", "com.amazon.avod.thirdpartyclient",
-    "com.retroarch", "com.github.stenzek.duckstation", "com.sbro.emucorev", "com.droiddeck.launcher", "com.android.chrome",
-    "com.google.android.youtube", "org.ppsspp.ppsspp", "me.magnum.melonds",
+    "com.droiddeck.launcher", "com.android.chrome", "com.google.android.youtube",
 ]
 RA_GAME = (
     "com.retroarch/com.retroarch.browser.retroactivity.RetroActivityFuture",
@@ -376,6 +376,8 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
         self.act("rapid-home", "; ".join([f"input keyevent KEYCODE_HOME; sleep {gap}"] * n), 1.0)
 
     def sc_swap(self, s):
+        if len(self.profile["displays"]) < 2:
+            return
         # land on Sortie navigation first (Home then B dismisses the overlay), then X
         n = self.rng.choice([1, 1, 1, 2, 3])
         gap = self.rng.choice(["0.1", "0.4", "1.5"])
@@ -441,7 +443,8 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
         comp = self.rng.choice(self.apps)
         d = self.rng.choice(self.profile["displays"])
         self.act("launch-race", f"am start --display {d} -n {shlex.quote(comp)} >/dev/null 2>&1; sleep {self.rng.choice(['0', '0.1', '0.3'])}; "
-                 "input keyevent KEYCODE_HOME; sleep 0.2; input keyevent KEYCODE_BUTTON_X", 2.0)
+                 + "input keyevent KEYCODE_HOME"
+                 + ("; sleep 0.2; input keyevent KEYCODE_BUTTON_X" if len(self.profile["displays"]) > 1 else ""), 2.0)
 
     def sc_trim_memory(self, s):
         level = self.rng.choice(["RUNNING_LOW", "RUNNING_CRITICAL", "MODERATE", "COMPLETE"])
@@ -519,10 +522,14 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
         # contents restore their scroll position, so their header may be off screen; only contents say "B · shelf"
         if not self.showing("shelf"):
             return self.act("reader-exit", "; ".join(["input keyevent KEYCODE_BUTTON_B; sleep 0.3"] * 3), 1.0)
-        self.act("open-article", self.key("KEYCODE_BUTTON_A"), 2.0)
-        steps = [self.rng.choice(["KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_UP",
-                                  "KEYCODE_BUTTON_R1", "KEYCODE_BUTTON_L1", "KEYCODE_BUTTON_X", "KEYCODE_HOME_THEN_B"])
-                 for _ in range(self.rng.randint(4, 12))]
+        # Contents can restore focus on a linked game's Play action. Only open a visibly identified article.
+        if not self.tap_text("01", "open-article", 2.0):
+            return self.act("reader-exit", "; ".join(["input keyevent KEYCODE_BUTTON_B; sleep 0.3"] * 3), 1.0)
+        controls = ["KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_UP",
+                    "KEYCODE_BUTTON_R1", "KEYCODE_BUTTON_L1", "KEYCODE_HOME_THEN_B"]
+        if len(self.profile["displays"]) > 1:
+            controls.append("KEYCODE_BUTTON_X")
+        steps = [self.rng.choice(controls) for _ in range(self.rng.randint(4, 12))]
         script = "; ".join(("input keyevent KEYCODE_HOME; sleep 1; input keyevent KEYCODE_BUTTON_B" if k == "KEYCODE_HOME_THEN_B"
                             else f"input keyevent {k}") + f"; sleep {self.rng.choice(['0.1', '0.4', '1.2'])}" for k in steps)
         self.act("read", script, 1.0)
@@ -538,7 +545,7 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
             self.tap_text("Gallery", "tap-gallery", 1.0)
             self.act("gallery-keys", "; ".join(f"input keyevent {self.rng.choice(['KEYCODE_DPAD_LEFT', 'KEYCODE_DPAD_RIGHT', 'KEYCODE_DPAD_DOWN'])}; sleep 0.15"
                                                for _ in range(self.rng.randint(2, 6))), 0.5)
-        if self.rng.random() < 0.3:
+        if len(self.profile["displays"]) > 1 and self.rng.random() < 0.3:
             self.act("hangar-swap", self.key("KEYCODE_BUTTON_X"), 2.0)  # X while the Hangar dialog is up
         self.act("hangar-close", "; ".join(["input keyevent KEYCODE_BUTTON_B; sleep 0.4"] * 2), 1.0)
 
@@ -565,8 +572,7 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
         card = self.sh.run("for d in /storage/*/sortie /storage/emulated/0/sortie; do [ -f $d/device.json ] && echo $d && break; done").strip()
         if not card:
             raise SystemExit("no Sortie card folder (sortie/device.json) found on the device")
-        root = json.loads(self.sh.run(f"cat {card}/device.json")).get("root", "")
-        rom = self.sh.run(f"ls {shlex.quote(root)}/roms/gb/*.gb 2>/dev/null | head -1").strip() if root else ""
+        rom = self.args.game_rom
         # one display: plain `screencap` (some single-screen devices reject -d)
         self.profile = {"displays": displays, "physical": physical if len(displays) > 1 else {0: None}, "card": card, "rom": rom or None}
         self.log("discover", **self.profile)
@@ -578,7 +584,8 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
         self.log("setup", original=orig.strip())
         (self.out / "restore.txt").write_text(orig)
         self.sh.run("cmd media_session volume --stream 3 --set 0 >/dev/null 2>&1; svc power stayon true; input keyevent KEYCODE_WAKEUP")
-        for p in CANDIDATE_APPS:
+        candidates = CANDIDATE_APPS + (["com.retroarch"] if self.args.game_rom else [])
+        for p in candidates:
             r = self.sh.run(f"cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER {p} | tail -1").strip()
             if "/" in r and "No activity" not in r:
                 self.apps.append(r)
@@ -622,8 +629,12 @@ echo ==PIDS; echo sortie=$(pidof io.github.esko997.sortie) assistant=$(pidof com
         self.setup()
         watcher = threading.Thread(target=self.watch_logcat, daemon=True)
         watcher.start()
-        killers = {"sc_force_stop_sortie", "sc_clear_all"} if self.args.no_kill else set()
-        names, weights = zip(*[(n, w) for n, w in self.SCENARIOS if n not in killers])
+        excluded = {"sc_force_stop_sortie", "sc_clear_all"} if self.args.no_kill else set()
+        if not self.args.game_rom:
+            excluded.add("sc_game")
+        if len(self.profile["displays"]) < 2:
+            excluded.add("sc_swap")
+        names, weights = zip(*[(n, w) for n, w in self.SCENARIOS if n not in excluded])
         end = time.time() + self.args.minutes * 60
         last_deep = last_settle = 0.0
         baseline = None
@@ -698,6 +709,7 @@ def main():
     ap.add_argument("--deep-every", type=float, default=120, help="seconds between memory/network metric samples")
     ap.add_argument("--no-assistant-restart", action="store_true", help="do not `am crash` a wedged AYN panel during recovery")
     ap.add_argument("--no-kill", action="store_true", help="skip scenarios that force-stop Sortie (long single-process runs for leak checks)")
+    ap.add_argument("--game-rom", help="opt in to RetroArch/game launches with this disposable Game Boy ROM; saves/states are NOT backed up")
     ap.add_argument("--restore-only", action="store_true", help="only restore an earlier run's settings and card files (--out of that run)")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()

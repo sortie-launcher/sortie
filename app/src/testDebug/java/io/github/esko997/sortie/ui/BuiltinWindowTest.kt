@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.ui
 
 import android.app.Application
+import android.view.KeyEvent
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -93,6 +94,26 @@ class BuiltinWindowTest {
         compose.onNodeWithText("Close").performClick()
         compose.waitForIdle()
         assertTrue(performance.activity.isFinishing)
+    }
+
+    @Test
+    fun singleScreenXCannotBecomeConfirmOnTheFocusedIssue() {
+        awaitHome()
+        magazines.open()
+        compose.waitUntil(5_000) { shown("The Long Read") }
+        pad.press(DOWN)
+        compose.runOnUiThread {
+            // Android creates a fallback only for an unhandled Down; Virtual.kcm maps X to DPAD_CENTER.
+            assertTrue(
+                "X Down must not create a confirm fallback",
+                magazines.activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BUTTON_X))
+            )
+            magazines.activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_X))
+        }
+        compose.waitForIdle()
+        assertTrue("X leaves the shelf open", shown("scrapbook", substring = false))
+        pad.press(A)
+        compose.waitUntil(5_000) { shown("shelf", substring = false) || shown("contents", substring = false) }
     }
 
     /** B climbs article → contents → shelf, and only the shelf's B closes the reader. */

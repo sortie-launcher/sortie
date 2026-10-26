@@ -65,11 +65,11 @@ fun BuiltinContent(app: BuiltinApp, vm: SortieViewModel, request: BuiltinRequest
     val move by rememberUpdatedState(onMove)
     val close by rememberUpdatedState(onClose)
     val movable = onMove != null
-    // X: this window's own dispatcher, so the launcher (or another built-in) on the other screen never moves with it
-    DisposableEffect(hotkeys, movable) {
+    // Own X even on one screen: an unhandled virtual-keyboard X can fall back to DPAD_CENTER and activate a game link.
+    DisposableEffect(hotkeys) {
         val keys = setOf(Hotkeys.Key.SWAP_SCREENS)
-        if (movable) hotkeys.handle(keys)
-        onDispose { if (movable) hotkeys.release(keys) }
+        hotkeys.handle(keys)
+        onDispose { hotkeys.release(keys) }
     }
     LaunchedEffect(hotkeys) { hotkeys.events.collect { if (it == Hotkeys.Key.SWAP_SCREENS) move?.invoke() } }
     val root = LocalView.current.rootView
