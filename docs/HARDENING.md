@@ -10,18 +10,23 @@ tools/stress/ui-stress.py --serial SERIAL --minutes 90 [--seed N] [--no-kill] [-
 ```
 
 adb runs inside the `ubuntu` distrobox by default; set `SORTIE_ADB_WRAPPER=""` to call adb directly. Displays (and their
-physical ids for screenshots), the card's `sortie/` folder and a Game Boy ROM for the RetroArch scenario are discovered on
-the device. Everything is seeded: the seed is printed and part of the output folder name, so a run can be replayed.
+physical ids for screenshots) and the card's `sortie/` folder are discovered. Everything is seeded: the seed is printed
+and part of the output folder name, so a run can be replayed. No ROM is selected automatically.
+
+The default run excludes emulator apps and game launches. `--game-rom /absolute/path/to/disposable.gb` opts into
+RetroArch and the game scenario. Use a disposable ROM **and disposable or verified-backed-up save/state directories**:
+RetroArch can write battery saves even without in-game progress. Other emulator apps are not generic launch targets.
 
 Scenarios (weighted, random): Home and the switcher overlay with D-pad/A/B/Y/Select inside it (A, Y and Select only while
-the overlay is up); rapid Home; X screen swaps (single, double, triple); launching apps on either display; a RetroArch game
-with Sortie's default flags; moving a task to the other display; Recents; Back bursts; controller bursts on Sortie;
+the overlay is up); rapid Home; X screen swaps (single, double, triple, only with a second display); launching apps on
+either display; an explicitly opted-in RetroArch game with Sortie's default flags; moving tasks; Recents; Back bursts; controller bursts on Sortie;
 force-stopping Sortie; "clear all"; sleep/wake; launching then pressing Home and X before the app has drawn; trim-memory;
 the magazine reader (shelf → last issue → article, reading, X and L1/R1 mid-article, reader menu); the Hangar (Workshop,
 Gallery, X while open). Reader and Hangar steps return Sortie to its Home route, bring navigation to the top display
 (X) and locate controls with `uiautomator`. That dumps the *active* window, which on two screens can be the companion's
 carousel below, so the harness first taps Home's top-left corner on the top display. `--no-kill` drops the force-stop
-scenarios for single-process leak runs.
+scenarios for single-process leak runs. Single-screen runs do not inject X. The reader opens the visible `01` article
+ordinal by touch; if it is off screen, that attempt is skipped rather than confirming an unknown restored selection.
 
 Where `uiautomator dump` cannot work, the run logs one `skip` event with reason `uiautomator unavailable` and leaves out
 the reader and Hangar scenarios; the rest run as usual. It is declared on "null root node" or after three dumps in a row
@@ -30,11 +35,11 @@ Pocket Nova is such a device: every dump, for every app, fails with "null root n
 most likely because Retroid's Game Assistant accessibility service (`com.rp.gameassistant`) is bound. Check the Nova
 with screenshots and key input instead.
 
-Safety: the card's `user.json`, `systems.json`, `launchers.json`, `folders.json` and `device.json` are copied first and
-restored if changed (L1/R1 on Home legitimately changes the saved sort). The harness never presses A in Sortie outside the
-overlay or the reader, never launches games through Sortie (no play-log entries), never edits clippings, never uses care,
-rename, salvage or equip in the Hangar, never uninstalls, mutes media volume and keeps the screen on for the run, then
-restores both. Opening articles does move "Continue reading".
+Safety is limited: the card's `user.json`, `systems.json`, `launchers.json`, `folders.json` and `device.json` are copied
+first and restored if changed (L1/R1 on Home legitimately changes the saved sort). Media volume and stay-awake settings
+are restored too. App-private history, emulator saves/states, reader progress and other apps' state are **not** backed up.
+Use disposable data or verified backups; this harness is not a sandbox. It does not intentionally edit clippings or use
+care, rename, salvage or equip in the Hangar, and never uninstalls. Opening articles moves "Continue reading".
 
 If the device disappears mid-run (see the system crash below), teardown says so; once adb is back,
 `tools/stress/ui-stress.py --serial SERIAL --restore-only --out <that run's folder>` restores its settings and card files.
@@ -54,6 +59,24 @@ anomaly), `logcat.txt`, and `anomalies/<n>/` with both screens, task/focus dumps
   samples in a row is reported as a leak (single samples include instances that have not been collected yet).
 
 ## Findings
+
+### Single-screen built-in X could activate the focused control (fixed)
+
+Built-in windows only claimed the screen-swap hotkey when a second display existed. An unhandled X from Android's virtual
+keyboard falls back to `DPAD_CENTER` (`Virtual.kcm`), unlike the physical DMG pad's `Generic.kcm`. During the overnight run,
+this activated reader game links and produced three real game sessions. Built-ins now always consume X, like navigation:
+with no other screen it leaves the current page alone. The regression checks that Down cannot create a fallback and A still opens the issue.
+On the Nova, injected X left the focused issue on the shelf; one subsequent A opened its contents. A one-minute run of
+the safer default harness discovered no ROM, launched only Clock/Settings/Chrome, injected no X and recorded no anomalies.
+Its five guarded card files and the play log matched their pre-run bytes afterward. Reader/Hangar coverage was skipped
+there because the vendor accessibility service prevents UI dumps; the default-mode smoke is not evidence for those paths.
+
+The stress harness also used to discover a user's first Game Boy ROM and launch it automatically. Its emulator rewrote a
+battery-save file during that run; no pre-run device copy existed, so unchanged content could not be established. The
+post-run file was preserved, not overwritten from an unverified older host copy. Default runs now exclude emulator/game
+launches; explicit test-ROM opt-in does **not** add save backup/restore. Do not delete play-log mirror lines as cleanup:
+Room is authoritative, so doing so would leave inconsistent history.
+
 
 ### Protected foreground windows hide the Home overlay (fixed)
 
@@ -251,6 +274,13 @@ Memory settled rather than continuing to rise. A separate 90-second `/proc`-only
 during the interval, measured 0.40% of one core. Zero rendered frames is not a claim of zero background work.
 Settings → Home used the activity fallback on Thor; its Sortie button returned to Home by controller and touch.
 Clock → Home still used the ordinary overlay, and B removed it. The reader's touch Close also closed its own task.
+
+Nova's 45-minute seeded single-process run completed 952 iterations without a Sortie crash or ANR. Its restricted app
+set contained Clock, Settings and Chrome, with no emulator/game scenario; the play log stayed byte-identical. A subsequent
+602.9-second hidden run kept the same process, drew zero frames and used 0.04% of one core; PSS fell from 84,068 to
+82,788 KiB. Forty-four system-open/Back restoration cycles also returned to the selected system. Foreground Home idle
+was not frame-free: the companion's breath/blink animation produced about one frame per second and 2.5% of one core.
+Original card files, display/timeout/volume settings and the original verify compilation mode were restored.
 
 ### Tier 3: recorded device output
 
