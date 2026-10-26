@@ -51,64 +51,173 @@ need an account, an AI service or a connection to obtain either.
 
 ## Bundled curated guide
 
-Every APK carries `assets/guide/catalog.json`: AI-assisted editorial hooks, control notes and cautions keyed by
-**portable identities** instead of file names, so they attach to matching copies without a local `guide.json`.
-Coverage is selective, not a description of every game, and carries no fit scores or taste tags.
+Every APK carries one public JSON database, `app/src/main/assets/game-blurbs.json`. Its original, AI-assisted editorial
+notes belong to stable **game-release identities**, not a private library. The catalog is checked into Git, works offline
+and contains no fit scores, taste tags, play history, device names, private paths, ROM bytes or scraper descriptions.
+Coverage is selective; an unmatched game simply has no shared editorial note.
 
-```json
-{
-  "format": 1,
-  "source": { "sha256": "9c67…", "records": 1102, "published": 1012, "edited": 62, "merged": 22, "excluded": 6 },
-  "works": [
-    { "id": "armored-core-2", "title": "Armored Core 2", "variants": [
-      { "id": "ps2-armored-core-2", "platform": "ps2", "title": "Armored Core 2", "matchNames": ["Armored Core 2"], "hook": "Martian campaign…" },
-      { "id": "ps2-armored-core-2-true-analogs-v1-0", "platform": "ps2", "title": "Armored Core 2 (True Analogs v1.0)",
-        "edition": "True Analogs v1.0", "matchNames": ["Armored Core 2 (True Analogs v1.0)"], "hook": "…", "flags": ["hack"] }
-    ] }
-  ]
-}
-```
+### Schema and immutable IDs
 
-A **work** is one game across its versions, regions and editions; its `id` never changes once published, even if a title or
-alias later does. A **variant** is one platform/edition of a work: `platform` is a system ID (`arcade` covers every
-arcade-generation system, and arcade variants answer to romset names), `edition` is a reader-facing description
-and `matchNames` are the names it answers to. Variant IDs follow the magazine reference convention
-(`<platform>-<slug>`). Different games that share a name on different platforms are separate works; a work spans platforms
-only when the source prose itself establishes the identity.
+The top level has `schemaVersion: 1`, `revision` and `entries`. Revision is the lowercase SHA-256 of the entries encoded
+as UTF-8 JSON with sorted object keys, compact separators and unescaped Unicode. Array order is significant; the exporter
+sorts entries by system and UUID. There is no build timestamp, so the same inputs and existing identities give the same file.
 
-Matching is the [magazine reference rule](README.md#portable-game-references): same platform, equal names after
-punctuation, accent, region, language, disc, revision and reprint normalisation, with edition, hack and translation
-qualifiers retained after normalisation. So `Alundra (USA) (Rev 1).chd` takes the Alundra prose and
-`Alundra (USA) (Un-Working Designs).chd` takes only matching Un-Working Designs prose. Disc 2 of a set shares the game's
-prose. Scraped titles count only for unqualified serial-named files and arcade sets, never for games marked as hacks.
-A file that two variants could claim gets neither unless exactly one matches its filename. Matching does not inspect ROM
-contents: an unqualified filename can still match retail prose even if a guide flag marks that file as modified.
+Each entry has:
 
-### Precedence
+| Field | Meaning |
+|---|---|
+| `id` | Immutable lowercase UUID. Prose, title and alias corrections must keep it. |
+| `system` | Canonical platform, independent of the reader's local game ID. |
+| `title` | Display name; never an implicit matching alias. |
+| `aliases` | Exact approved basenames, explicit extensionless stems, or safe system-relative game-package paths; all release/patch qualifiers retained. |
+| `hook` | Original editorial note. |
+| `controls`, `flags` | Optional public control advice and cautions; no device-specific setup or private preferences. |
+| `parentId` | Optional related catalog UUID; informational, never permission to inherit its prose or fingerprints. |
+| `fingerprints` | Optional expected payload identities with explicit representation and evidence; see below. |
+| `externalIds` | Optional provider-to-ID cross-references. These are provenance, not a promise that the scanner reads that provider's metadata. |
+| `sources` | Public evidence objects: `kind`, `name`, and optional `url`, `version`, `sha256`, `release`. |
 
-`guide.json` always wins; the bundled guide only fills gaps, per game:
+Initial UUIDs are UUIDv5 under namespace `5ced76a4-4230-5cdb-a657-f975b92eb7ba`, seeded from canonical system, a newline
+and the first exact release alias. That is an allocation rule, **not** an instruction to recalculate an existing ID.
+The committed database is the registry: regeneration reuses UUIDs through its existing aliases and preserves entries
+absent from the import. Keep the old alias when adding a corrected name. A substantial identity correction or split needs
+an explicit editorial review rather than a changed UUID disguised as a spelling fix.
+
+Newly supported container extensions are backfilled as fully qualified stems on existing UUIDs **before** matching new
+imports. Thus a known `.ciso`, `.cdi` or `.32x` release keeps its identity when the same qualified release arrives in another
+container. A stem repair that would join two already published UUIDs fails for explicit editorial resolution.
+New entries and repaired aliases use the same complete recognized suffix chain: `Release (Translation v1.0).nes.zip`
+publishes that exact name, `Release (Translation v1.0).nes`, and `Release (Translation v1.0)` on the first export.
+Expansion stops at any unknown suffix and never removes release qualifiers or version text. It never shortens
+system-relative package paths. Re-exporting therefore cannot progressively broaden an alias one extension at a time.
+
+The previous catalog's work/variant slugs are retained as `sortie-legacy-work` and `sortie-legacy-variant` external IDs.
+Those old groups could cover several discs or regional copies; separate exact-release UUIDs can therefore refer to the
+same legacy slug. All previously published notes are retained, but the old broad normalization rules are not.
+
+### Matching, platforms and variants
+
+Matching is platform-scoped and conservative: usable payload fingerprints can identify a renamed cartridge; exact curated
+aliases cover known release names. There is no fuzzy title search, scraped-title fallback, automatic removal of qualifiers,
+or inference from a parent game's name. Filename aliases are case-insensitive, but punctuation and release qualifiers
+remain meaningful. An explicitly listed extensionless alias allows a different supported container extension with the same
+qualified stem; it does not allow an unknown revision, translation, hack, undub or remake to borrow retail prose.
+Ambiguous identities remain unmatched.
+
+Nested game packages can use their complete system-relative entrypoint path, for example
+`games/Infinity 3.3.4/Infinity 3.3.4/Game.exe`. These aliases are never shortened to `Game.exe`, `Game.ini` or an
+extensionless engine name: unrelated games can share the same executable. Package display titles are explicit inventory
+metadata, not matching aliases. Absolute paths, drive paths, backslashes, empty components and `.`/`..` traversal are
+rejected. Package entrypoint identity does not authorize hashing shared engine binaries or recursively discovering new
+library files; the indexer must actually supply the exact system-relative identity for such an alias to match.
+
+The finite platform mapping folds `tg16` into `pcengine`, `megadrive` into `genesis`, and known arcade system IDs
+(`arcade`, `mame`, `fbneo`, `neogeo`, `cps1`, `cps2`, `cps3`, `toaplan-cave-stg`, `stv`, `model2`, `naomi`, `atomiswave`)
+into `arcade`. Other IDs remain separate; a label or an “arcade” generation is not sufficient to match an unknown system.
+The existing `ngp` catalog includes both monochrome and Color releases; `ngpc` is not automatically folded into it.
+
+Ports, regional revisions and modified editions have independent identities unless documented evidence explicitly justifies
+sharing an entry. A `parentId` can record a relationship without merging it. Never strip an unfamiliar bracketed tag or
+apply the base game's checksum to a patch. A note may explain the common game while still preserving the exact edition.
+The reader's `<systemId>/<filename>` IDs, favourites, bookmarks and play history are unchanged.
+
+### Fingerprints and evidence
+
+A fingerprint has `algorithm: "crc32"`, eight lowercase hexadecimal digits in `value`, a positive byte `size`,
+`representation: "raw"` or `"nes-prg-chr"`, `verification: "dat-release"` or `"payload-verified"`, and a nonempty `source`.
+CRC32 plus size is a release lookup aid, not a cryptographic authenticity or security guarantee.
+
+- **dat-release** means an authoritative DAT's expected release checksum was attached through an exact, unambiguous
+  single-ROM release name. Its source records the DAT name, version, whole-DAT SHA-256, public URL and release name.
+  This does **not** mean the curator's ROM was read or checksum-verified.
+- **payload-verified** is reserved for evidence that the actual declared payload was inspected and matched. A filename,
+  ZIP name, scraper label or matching archive date is not that evidence.
+- **raw** means the unmodified cartridge payload bytes. A ZIP member's CRC/size can describe those bytes; the ZIP archive's
+  checksum cannot. Multi-file arcade sets and disc containers are not one raw cartridge payload.
+- **nes-prg-chr** means exactly the declared NES PRG+CHR bytes, excluding the iNES header and any trainer. Never relabel
+  a generic or header-containing NES DAT checksum as this representation. The initial exporter does not infer NES hashes.
+
+Ordinary scanning never hashes discs. Unmatched supported raw cartridges are read on IO with a 32 MiB limit; unsupported
+representations such as SMC copier-header images, SMD interleaving and uncertain N64 byte order are skipped. ZIP inspection
+uses a bounded central directory and requires exactly one non-directory member with a supported raw cartridge extension.
+NES inspection accepts the supported iNES 1 representation only when the declared lengths account for the whole file;
+NES 2, unknown or trailing payloads are skipped. Unusable or absent fingerprints leave exact aliases as the conservative
+fallback, not a claim of byte verification.
+
+The exporter withholds a fingerprint if the exact DAT name is ambiguous or the same fingerprint would identify multiple
+catalog entries. For platforms whose DAT files are explicitly refreshed, it replaces old `dat-release` assertions with
+the current unique result, or retires them if the release is absent or ambiguous. Independently `payload-verified` evidence
+is preserved; omitting a platform's DAT input preserves its existing evidence. Historical source citations remain
+provenance, not active matching fingerprints. This reconciliation also covers retained community entries absent from
+the private note import. The exporter never downloads ROMs, contacts a matching service or publishes private evidence paths.
+
+### Local precedence and upgrades
+
+`guide.json` always wins; the bundled catalog only fills gaps, per game:
 
 - an individually authored entry (`"auto": false`) is used exactly as written, blank fields included;
-- a generated entry (`"auto": true`, usually a fit score and tags without a hook) keeps every value it has, and the bundled
-  guide supplies only an empty `hook`, `controls` or `flags`. Filling the hook sets `auto` to `false`, so it qualifies
-  for the notes filter; filling only controls or flags does not change that classification;
-- with no entry, the bundled one is used with fit 0 and no tags.
+- a generated entry (`"auto": true`, usually a fit score and tags without a hook) keeps every value it has, and the catalog
+  supplies only an empty `hook`, `controls` or `flags`. Filling the hook sets `auto` to `false`, so it qualifies for the
+  notes filter; filling only controls or flags does not change that classification;
+- with no local entry, the shared note has fit 0 and no taste tags.
 
-An app update that changes the bundled catalogue changes its digest, which is part of the indexer's per-system stamp, so the
-next ordinary scan re-indexes cached games with the new prose. Nothing is written to the card.
+The app streams the APK JSON and content digest without retaining the complete source text, then shares one immutable
+catalog across its application graphs until process exit. Public provenance remains in the asset, not the runtime model.
+Its per-system index stamp includes the catalog format, revision and asset digest;
+startup checks for a changed stamp on IO. An app/catalog update refreshes or retires obsolete shared prose on the next
+normal scan, without a force-rescan or an idle ROM walk when the stamp is unchanged. It rebuilds from the original local
+guide and shared catalog rather than mistaking a previous shared hook for a personal override. Nothing is written to the card.
 
-### Building the catalogue
+### Exporting and validating
 
-`tools/guide/import-blurbs.py SOURCE.jsonl` rebuilds `app/src/main/assets/guide/catalog.json` and
-`tools/guide/import-report.json` from the private AI-assisted editorial source (read-only) and the decisions in
-`tools/guide/curation.json`; `--check` verifies that the committed files are current. Every source record is accounted for
-in the report by its line in the source snapshot, never by file name or a per-record digest (a digest of one short record
-would let anyone confirm guesses about its private fields): published as written, edited (with the reason), merged into the
-variant whose prose describes the game (disc companions, extra copies) or excluded (with the reason). Only the whole
-source's SHA-256 and counts are recorded. Curation decisions name a source line plus that line's public platform and
-title; the importer refuses decisions written for another source snapshot or whose line no longer has that identity. It
-never publishes file names, dump-tool or dump-status tags, local folder names, fit scores or generated taste tags, and it
-refuses personal or library-specific wording; `--private-report FILE` (outside the repository) shows original and
-published text side by side for review. Existing work and variant IDs are kept on rebuild.
+From the repository root:
+
+```sh
+python3 tools/guide/import-blurbs.py /path/to/blurbs.jsonl \
+  --inventory /path/to/full-inventory.jsonl --dats /path/to/dats \
+  --evidence /path/to/public-evidence.jsonl
+python3 tools/guide/import-blurbs.py --validate
+python3 -m unittest discover -s tools/guide
+```
+
+The private source is read-only JSONL (`sys`, `file`, `hook`, optional `controls`, `flags`, `sources`); private fields such
+as `fit` are not copied. Inventory may be JSONL or the existing `window.GUIDE` `data.js`. Only identity/display metadata
+is considered, never its scraped description or private path/share fields. `--dats` and repeatable `--evidence` are optional;
+omitting them preserves already published evidence rather than inventing it. Evidence JSONL uses
+`{"sys":"gba","file":"Exact release.gba","sources":["https://public.example/game-reference"]}`.
+Source objects may instead provide the fields described above. URLs must be public HTTP(S), not private hosts or file paths.
+
+Reviewed wording changes and exclusions live in `tools/guide/curation.json`, keyed by exact `system` and `alias`.
+Decisions can replace the display `title`, `hook`, `controls` or `flags`, add/drop named flags, or exclude an input, with a
+reason. A title correction preserves the UUID and existing aliases: it never creates a matching alias or supplies evidence
+for a fingerprint. These decisions replace the former line-number/private-snapshot curation format. The exporter imports
+no personal scores and rejects obvious private-library wording, ambiguous aliases, duplicate UUIDs, malformed fingerprints
+and missing/cyclic parents. Privacy detection is a guardrail, not a substitute for editorial review.
+
+`--check` compares a regeneration with the committed file without writing. `--validate` needs only the public catalog;
+contributors do not need the original private library. It checks structure, revision, identity collisions, evidence and
+privacy constraints. Entries absent from an import remain in the public catalog, so a smaller private collection cannot
+delete community work. Intentional removal must be reviewed in the public JSON itself.
+
+### Writing and contributing notes
+
+Write a short, direct, original note about what a player actually does and what distinguishes this release. **20–45 words
+is typical, not a minimum**: a precise shorter note beats padding. Longer prose is justified only by useful distinctions.
+Avoid boilerplate summaries, sales language, a universal taste score, device compatibility claims without evidence, and
+private ownership, storage, save or play-history details. Controls should describe the game, not somebody's handheld setup.
+
+Consult primary manuals, official release/patch documentation and identifiable gameplay where available. Add public
+source URLs and enough edition information for another contributor to check the claim. Sources support facts and identity;
+they do not authorize copying their prose. Older migrated notes retain their original editorial provenance but do not
+pretend to have independently verified citations for every claim. A cached metadata description is research context,
+not publishable original writing or proof that a ROM was verified.
+
+To contribute, edit the public JSON in a branch, retain existing UUIDs, add exact aliases only with identity evidence,
+and submit the note, evidence and any intentional variant relationship together. For new identities use the namespace
+allocation rule above or a new UUID, never an existing UUID from another game. If changing imported notes, put the same
+reviewed override in `curation.json` so regeneration retains the edit. Recompute `revision` from the canonical entries,
+run the validator and behavioral tests, then include those results and any unresolved identity doubts in the pull request.
+Do not contribute ROM files, copied descriptions, personal fit scores or private evidence URLs. If identity is uncertain,
+leave it unmatched rather than making a plausible guess.
 
 Magazine game references remain a separate format and are not accepted as `guide.json` keys.
