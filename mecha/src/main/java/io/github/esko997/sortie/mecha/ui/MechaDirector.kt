@@ -488,6 +488,7 @@ internal class MechaDirector(private val stage: MechaStage, private val measure:
         rescale(b)
         val (fx, fy) = release
         val other = if (release.allowAcross) MechaPresence.otherWithRoom(stage) else null
+        Log.i("MechaThrowProbe", "release=$release position=${stage.x},${stage.floor} scale=${stage.scale} tap=${stage.minTap} other=${other?.displayId}")
         // Geometry collected while he was in hand is the starting point, not an interruption of this new flight.
         stage.layoutChanged = false
         layoutAt = now()

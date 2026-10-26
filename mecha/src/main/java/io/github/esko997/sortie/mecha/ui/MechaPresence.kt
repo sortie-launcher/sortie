@@ -68,7 +68,15 @@ object MechaPresence {
     }
 
     /** An active stage on another display with room for him, the one a stroll may take him to. */
-    internal fun otherWithRoom(from: MechaStage): MechaStage? = stages.lastOrNull { it.displayId != from.displayId && canReceive(it) }
+    internal fun otherWithRoom(from: MechaStage): MechaStage? {
+        for (candidate in stages) {
+            android.util.Log.i(
+                "MechaThrowProbe",
+                "from=${from.displayId} candidate=${candidate.displayId} active=${candidate.active} room=${candidate.hasRoom()} bounds=${candidate.bounds} elements=${candidate.elements.size}"
+            )
+        }
+        return stages.lastOrNull { it.displayId != from.displayId && canReceive(it) }
+    }
 
     /** A covered, inactive or replaced window must not receive an in-flight handoff. */
     private fun canReceive(to: MechaStage): Boolean = to.active && stages.lastOrNull { it.active && it.displayId == to.displayId } === to && to.hasRoom()
