@@ -89,6 +89,147 @@ class MechaPlayTest {
         assertEquals(MechaTouch.SWIPE, g.move(12f, 12f, 20))
     }
 
+    // ---- release velocity ----
+
+    private val hold = MechaGesture.HOLD_MS
+
+    /** Down at ([x], [y]) at [t0], then held until picked up. */
+    private fun held(x: Float, y: Float, t0: Long = 0): MechaGesture {
+        val g = MechaGesture(slop)
+        g.down(x, y, t0)
+        assertEquals(MechaTouch.HELD, g.at(t0 + hold))
+        return g
+    }
+
+    @Test
+    fun aHeldFlickReleasesWithItsVelocity() {
+        val g = held(100f, 500f)
+        // up and across, 3 px/ms right and 5 px/ms up, reported every 8 ms
+        for (k in 1..8) assertEquals(MechaTouch.CARRY, g.move(100f + 24f * k, 500f - 40f * k, hold + 8L * k))
+        assertEquals(MechaVelocity.ZERO, g.releaseVelocity) // nothing before the release
+        assertEquals(MechaTouch.DROP, g.up(100f + 24f * 9, 500f - 40f * 9, hold + 72))
+        assertEquals(3000f, g.releaseVelocity.x, 1f)
+        assertEquals(-5000f, g.releaseVelocity.y, 1f)
+    }
+
+    @Test
+    fun aFastSwipeBeforeTheHoldStaysAScrollAndThrowsNothing() {
+        val g = MechaGesture(slop)
+        g.down(100f, 500f, 0)
+        for (k in 1..6) assertEquals(MechaTouch.SWIPE, g.move(100f, 500f - 40f * k, 8L * k))
+        // still going past the hold time and when lifted: a scroll, never a carry or a throw
+        assertEquals(MechaTouch.SWIPE, g.move(100f, 100f, hold + 8))
+        assertEquals(MechaTouch.SWIPE, g.up(100f, 60f, hold + 16))
+        assertEquals(MechaVelocity.ZERO, g.releaseVelocity)
+    }
+
+    @Test
+    fun aGentleCarryReleasesSlowly() {
+        val g = held(100f, 500f)
+        assertEquals(MechaTouch.CARRY, g.move(120f, 500f, hold + 16))
+        // then 1 px every 16 ms (62.5 px/s) for about a second
+        for (k in 2..60) g.move(120f + (k - 1), 500f, hold + 16L * k)
+        assertEquals(MechaTouch.DROP, g.up(180f, 500f, hold + 16L * 61))
+        assertEquals(62.5f, g.releaseVelocity.x, 0.5f)
+        assertEquals(0f, g.releaseVelocity.y, 0f)
+    }
+
+    @Test
+    fun aCarryThatStopsBeforeTheReleaseThrowsNothing() {
+        // fast, then the finger stops: no reports at all until it lifts where it stopped
+        val quiet = held(100f, 500f)
+        for (k in 1..8) quiet.move(100f + 30f * k, 500f, hold + 8L * k)
+        assertEquals(MechaTouch.DROP, quiet.up(340f, 500f, hold + 64 + 200))
+        assertEquals(MechaVelocity.ZERO, quiet.releaseVelocity)
+        // a digitizer that keeps reporting the still finger: exactly still
+        val chatty = held(100f, 500f)
+        for (k in 1..8) chatty.move(100f + 30f * k, 500f, hold + 8L * k)
+        for (k in 1..25) chatty.move(340f, 500f, hold + 64 + 8L * k)
+        assertEquals(MechaTouch.DROP, chatty.up(340f, 500f, hold + 64 + 208))
+        assertEquals(0f, chatty.releaseVelocity.x, 0f)
+        assertEquals(0f, chatty.releaseVelocity.y, 0f)
+    }
+
+    @Test
+    fun aFlickBackTheOtherWayThrowsWhereTheFingerWentLast() {
+        val g = held(100f, 500f)
+        // a long carry to the right, to x 700...
+        for (k in 1..40) g.move(100f + 15f * k, 500f, hold + 8L * k)
+        // ...then a quick flick back left, released still right of where the carry began
+        for (k in 1..12) g.move(700f - 35f * k, 500f, hold + 320 + 8L * k)
+        assertEquals(MechaTouch.DROP, g.up(700f - 35f * 13, 500f, hold + 424))
+        assertTrue(700f - 35f * 13 > 100f)
+        assertEquals(-4375f, g.releaseVelocity.x, 1f)
+        assertEquals(0f, g.releaseVelocity.y, 0f)
+    }
+
+    @Test
+    fun repeatedAndOutOfOrderReportsDoNotBendTheThrow() {
+        val g = held(100f, 500f)
+        for (k in 1..8) {
+            val t = hold + 8L * k
+            // two reports of one instant: the later one wins
+            g.move(100f + 24f * k + 7f, 500f + 5f, t)
+            g.move(100f + 24f * k, 500f, t)
+            // a late report from the past, far off: ignored
+            assertEquals(MechaTouch.CARRY, g.move(-900f, 9000f, t - 5))
+        }
+        // the release shares the last report's time
+        assertEquals(MechaTouch.DROP, g.up(100f + 24f * 8, 500f, hold + 64))
+        assertEquals(3000f, g.releaseVelocity.x, 1f)
+        assertEquals(0f, g.releaseVelocity.y, 0.001f)
+    }
+
+    @Test
+    fun anUnusableReleasePositionLeavesTheReportsBeforeIt() {
+        val nan = held(100f, 500f)
+        for (k in 1..8) nan.move(100f + 24f * k, 500f, hold + 8L * k)
+        assertEquals(MechaTouch.DROP, nan.up(Float.NaN, Float.NaN, hold + 72))
+        assertEquals(3000f, nan.releaseVelocity.x, 1f)
+        // a release timed before the last report is not evidence either
+        val early = held(100f, 500f)
+        for (k in 1..8) early.move(100f + 24f * k, 500f, hold + 8L * k)
+        assertEquals(MechaTouch.DROP, early.up(9999f, 500f, hold + 60))
+        assertEquals(3000f, early.releaseVelocity.x, 1f)
+    }
+
+    @Test
+    fun tooLittleMotionThrowsNothing() {
+        // one report and the release: two points are no evidence
+        val g = held(100f, 500f)
+        assertEquals(MechaTouch.CARRY, g.move(300f, 500f, hold + 10))
+        assertEquals(MechaTouch.DROP, g.up(500f, 500f, hold + 20))
+        assertEquals(MechaVelocity.ZERO, g.releaseVelocity)
+        // a release long after the last report, far away: no motion seen leading up to it
+        val jump = held(100f, 500f)
+        assertEquals(MechaTouch.DROP, jump.up(900f, 100f, hold + 300))
+        assertEquals(MechaVelocity.ZERO, jump.releaseVelocity)
+    }
+
+    @Test
+    fun aReusedGestureStartsAfresh() {
+        val g = held(100f, 500f, 10_000)
+        for (k in 1..8) g.move(100f + 24f * k, 500f, 10_000 + hold + 8L * k)
+        assertEquals(MechaTouch.DROP, g.up(100f + 24f * 9, 500f, 10_000 + hold + 72))
+        assertTrue(g.releaseVelocity.x > 2000f)
+        // the next touch forgets the throw at once, and a pet or the Hangar never throws
+        g.down(100f, 500f, 0)
+        assertEquals(MechaTouch.PENDING, g.state)
+        assertEquals(MechaVelocity.ZERO, g.releaseVelocity)
+        assertEquals(MechaTouch.PET, g.up(102f, 500f, 40))
+        assertEquals(MechaVelocity.ZERO, g.releaseVelocity)
+        g.down(100f, 500f, 100)
+        assertEquals(MechaTouch.HANGAR, g.up(104f, 500f, 100 + hold + 20))
+        assertEquals(MechaVelocity.ZERO, g.releaseVelocity)
+        // a carry earlier on the clock than the first one sees only its own reports
+        g.down(100f, 500f, 1_000)
+        assertEquals(MechaTouch.HELD, g.at(1_000 + hold))
+        for (k in 1..8) g.move(100f, 500f + 20f * k, 1_000 + hold + 8L * k)
+        assertEquals(MechaTouch.DROP, g.up(100f, 500f + 20f * 9, 1_000 + hold + 72))
+        assertEquals(0f, g.releaseVelocity.x, 0f)
+        assertEquals(2500f, g.releaseVelocity.y, 1f)
+    }
+
     // ---- drop ----
 
     private val ledge = at("bar", MechaSpotKind.LEDGE, 400, 900)

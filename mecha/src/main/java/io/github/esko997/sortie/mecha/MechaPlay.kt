@@ -39,23 +39,51 @@ internal enum class MechaTouch {
     DROP
 }
 
+/** A finger's velocity in window pixels per second ([MechaGesture.releaseVelocity]). */
+internal data class MechaVelocity(val x: Float, val y: Float) {
+    companion object {
+        val ZERO = MechaVelocity(0f, 0f)
+    }
+}
+
 /**
  * Classifies one finger that went down on the mech, from its positions and times alone (window pixels, uptime millis):
  * a quick tap is a pet, a still hold opens the Hangar on release, a hold then a move carries him, and a move before the
  * hold is a swipe that belongs to whatever is under him (so a scroll starting on him still scrolls).
+ *
+ * It also keeps the finger's last [HISTORY] positions (preallocated, nothing allocated per move) so a carried release
+ * knows how fast the finger was going ([releaseVelocity]). Feed every reported position in time order, the coalesced
+ * historical ones of an event before its current one, each through [move].
  */
 internal class MechaGesture(private val slop: Float, private val holdMs: Long = HOLD_MS) {
     var state = MechaTouch.PENDING
         private set
+
+    /**
+     * How fast the finger was going as it let go of a carried mech: a straight-line fit over its reports in the last
+     * [HORIZON_MS] before the release, stopping at any gap over [STOPPED_MS] (a finger that paused had stopped). Zero
+     * until then, for every other release (pet, Hangar, swipe), and when fewer than [MIN_SAMPLES] reports spanning
+     * [MIN_SPAN_MS] remain. Reset by [down].
+     */
+    var releaseVelocity = MechaVelocity.ZERO
+        private set
     private var x0 = 0f
     private var y0 = 0f
     private var t0 = 0L
+    private val xs = FloatArray(HISTORY)
+    private val ys = FloatArray(HISTORY)
+    private val ts = LongArray(HISTORY)
+    private var newest = HISTORY - 1
+    private var count = 0
 
     fun down(x: Float, y: Float, t: Long) {
         state = MechaTouch.PENDING
+        releaseVelocity = MechaVelocity.ZERO
         x0 = x
         y0 = y
         t0 = t
+        count = 0
+        record(x, y, t)
     }
 
     /** Milliseconds until a still finger becomes a hold, from [t] (0: due). */
@@ -79,23 +107,109 @@ internal class MechaGesture(private val slop: Float, private val holdMs: Long = 
                 else -> state
             }
         }
+        if (state == MechaTouch.PENDING || state == MechaTouch.HELD || state == MechaTouch.CARRY) record(x, y, t)
         return state
     }
 
     fun up(x: Float, y: Float, t: Long): MechaTouch {
         move(x, y, t)
+        val carried = state == MechaTouch.CARRY
         state = when (state) {
             MechaTouch.PENDING -> MechaTouch.PET
             MechaTouch.HELD -> MechaTouch.HANGAR
             MechaTouch.CARRY -> MechaTouch.DROP
             else -> state
         }
+        if (carried) releaseVelocity = velocityAt(t)
         return state
+    }
+
+    /**
+     * Keeps a report for the velocity: a non-finite position is no evidence, one older than the newest kept is out of
+     * order and dropped, and one at the newest's very instant replaces its position (the later report wins).
+     */
+    private fun record(x: Float, y: Float, t: Long) {
+        if (!x.isFinite() || !y.isFinite()) return
+        if (count > 0) {
+            val last = ts[newest]
+            if (t < last) return
+            if (t == last) {
+                xs[newest] = x
+                ys[newest] = y
+                return
+            }
+        }
+        newest = (newest + 1) % HISTORY
+        xs[newest] = x
+        ys[newest] = y
+        ts[newest] = t
+        if (count < HISTORY) count++
+    }
+
+    /** Least-squares slope of the reports going back from [release] (see [releaseVelocity]). */
+    private fun velocityAt(release: Long): MechaVelocity {
+        if (count == 0) return MechaVelocity.ZERO
+        val ot = ts[newest]
+        val ox = xs[newest]
+        val oy = ys[newest]
+        val anchor = max(release, ot)
+        var n = 0
+        var st = 0.0
+        var stt = 0.0
+        var sx = 0.0
+        var sy = 0.0
+        var stx = 0.0
+        var sty = 0.0
+        var later = anchor
+        var oldest = ot
+        var i = newest
+        var k = 0
+        while (k < count) {
+            val t = ts[i]
+            if (anchor - t > HORIZON_MS || later - t > STOPPED_MS) break
+            // relative to the newest report: constant positions fit to exactly zero
+            val dt = (t - ot).toDouble()
+            val dx = (xs[i] - ox).toDouble()
+            val dy = (ys[i] - oy).toDouble()
+            n++
+            st += dt
+            stt += dt * dt
+            sx += dx
+            sy += dy
+            stx += dt * dx
+            sty += dt * dy
+            later = t
+            oldest = t
+            i = (i - 1 + HISTORY) % HISTORY
+            k++
+        }
+        if (n < MIN_SAMPLES || ot - oldest < MIN_SPAN_MS) return MechaVelocity.ZERO
+        val d = n * stt - st * st
+        if (d <= 0.0) return MechaVelocity.ZERO
+        val vx = (n * stx - st * sx) / d * 1000.0
+        val vy = (n * sty - st * sy) / d * 1000.0
+        if (!vx.isFinite() || !vy.isFinite()) return MechaVelocity.ZERO
+        return MechaVelocity(vx.toFloat(), vy.toFloat())
     }
 
     companion object {
         /** A still hold this long picks him up (released still: the Hangar). */
         const val HOLD_MS = 500L
+
+        /** Positions kept for the release velocity: well over [HORIZON_MS] of reports at a fast digitizer's rate. */
+        const val HISTORY = 48
+
+        /** Only the finger's motion this recent before the release counts toward its velocity. */
+        const val HORIZON_MS = 100L
+
+        /** A gap this long between reports (or before the release) means the finger had stopped. */
+        const val STOPPED_MS = 40L
+
+        /** Fewest reports a release velocity is fitted from. */
+        const val MIN_SAMPLES = 3
+
+        /** Shortest time those reports must span. */
+        const val MIN_SPAN_MS = 8L
     }
 }
 

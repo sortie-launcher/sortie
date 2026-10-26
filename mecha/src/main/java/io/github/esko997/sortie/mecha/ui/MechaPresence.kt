@@ -8,6 +8,10 @@ import io.github.esko997.sortie.mecha.MechaRoam
 import io.github.esko997.sortie.mecha.MechaSeat
 import io.github.esko997.sortie.mecha.MechaSpotKind
 import io.github.esko997.sortie.mecha.MechaState
+import io.github.esko997.sortie.mecha.MechaThrowTransfer
+
+/** A one-shot arrival for this exact window; never replayed when a different stage adopts him. */
+internal data class MechaArrival(val stage: MechaStage, val fraction: Float, val thrown: MechaThrowTransfer?)
 
 /**
  * The one mech, process-wide: which display he is on and so which stage has him ([owner]). Stages register while composed
@@ -25,8 +29,8 @@ object MechaPresence {
     /** The edge he walks in from on the stage that just took him over, until it does. */
     internal var arriving: MechaSpotKind? = null
 
-    /** Carried across: where along the width (0..1) he drops in on the stage that just took him over, until he does. */
-    internal var droppedIn: Float? = null
+    /** A carried or thrown arrival, consumed by its destination's director. */
+    internal var carriedIn: MechaArrival? = null
 
     /** Process-wide reaction bookkeeping, so a second stage never repeats what the first already said. */
     internal var welcomeAt = 0L
@@ -64,13 +68,16 @@ object MechaPresence {
     }
 
     /** An active stage on another display with room for him, the one a stroll may take him to. */
-    internal fun otherWithRoom(from: MechaStage): MechaStage? = stages.lastOrNull { it !== from && it.active && it.displayId != from.displayId && it.hasRoom() }
+    internal fun otherWithRoom(from: MechaStage): MechaStage? = stages.lastOrNull { it.displayId != from.displayId && canReceive(it) }
+
+    /** A covered, inactive or replaced window must not receive an in-flight handoff. */
+    private fun canReceive(to: MechaStage): Boolean = to.active && stages.lastOrNull { it.active && it.displayId == to.displayId } === to && to.hasRoom()
 
     /** He left [from] by its [side] edge: [to]'s display has him now, and he walks in there from the same side. */
     internal fun handOff(to: MechaStage, side: MechaSpotKind) {
         display = to.displayId
         arriving = side
-        droppedIn = null
+        carriedIn = null
         recompute()
     }
 
@@ -78,16 +85,19 @@ object MechaPresence {
      * Carried to the edge facing [to]'s display and let go: that display has him now and he drops in there through the
      * facing edge, at [fraction] of its width.
      */
-    internal fun handOffDrop(to: MechaStage, fraction: Float) {
+    internal fun handOffDrop(to: MechaStage, fraction: Float, thrown: MechaThrowTransfer? = null): Boolean {
+        if (!canReceive(to)) return false
         display = to.displayId
         arriving = null
-        droppedIn = fraction
+        carriedIn = MechaArrival(to, fraction, thrown)
         recompute()
+        return true
     }
 
     private fun recompute() {
         val (d, index) = MechaRoam.host(stages.map { MechaSeat(it.displayId, it.active) }, display)
         display = d
         owner = stages.getOrNull(index)
+        if (owner !== carriedIn?.stage) carriedIn = null
     }
 }
