@@ -41,7 +41,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -251,22 +253,62 @@ private fun Bay(store: MechaStore, view: MechaView, state: MechaState, compact: 
 
 @Composable
 private fun Rename(store: MechaStore, state: MechaState) {
+    var editing by rememberSaveable { mutableStateOf(false) }
     var draft by rememberSaveable(state.name) { mutableStateOf(state.name) }
     val problem = if (draft.trim() == state.name) null else mechaNameProblem(draft.trim())
-    val canSave = draft.trim() != state.name && problem == null
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            value = draft,
-            onValueChange = { draft = it.take(MECHA_NAME_MAX + 4) },
-            label = { Text("Name") },
-            singleLine = true,
-            isError = problem != null,
-            supportingText = { Text(problem ?: "${draft.trim().length}/$MECHA_NAME_MAX") },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { if (canSave) store.rename(draft.trim()) }),
-            modifier = Modifier.weight(1f)
-        )
-        MechaButton("Rename", onClick = { store.rename(draft.trim()) }, enabled = canSave, modifier = Modifier.padding(start = 8.dp))
+    val field = remember { FocusRequester() }
+    val action = remember { FocusRequester() }
+    val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val inputMode = LocalInputModeManager.current
+    val finish = {
+        keyboard?.hide()
+        focus.clearFocus()
+        editing = false
+        if (inputMode.inputMode == InputMode.Keyboard) action.requestFocus()
+    }
+    val save = {
+        if (problem == null) {
+            if (draft.trim() != state.name) store.rename(draft.trim())
+            finish()
+        }
+    }
+    LaunchedEffect(editing) {
+        if (editing) field.requestFocus()
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (editing) {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it.take(MECHA_NAME_MAX + 4) },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    isError = problem != null,
+                    supportingText = { Text(problem ?: "${draft.trim().length}/$MECHA_NAME_MAX") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { save() }),
+                    modifier = Modifier.weight(1f).focusRequester(field)
+                )
+            } else {
+                Column(Modifier.weight(1f)) {
+                    Text("Name", style = MaterialTheme.typography.labelMedium, color = Muted)
+                    Text(state.name, style = MaterialTheme.typography.titleLarge)
+                }
+            }
+            MechaButton(
+                if (editing) "Save" else "Rename",
+                onClick = { if (editing) save() else editing = true },
+                enabled = !editing || problem == null,
+                modifier = Modifier.focusRequester(action)
+            )
+        }
+        if (editing) {
+            MechaButton("Cancel", onClick = {
+                draft = state.name
+                finish()
+            })
+        }
     }
 }
 

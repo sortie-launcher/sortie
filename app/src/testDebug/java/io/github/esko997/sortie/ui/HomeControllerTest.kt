@@ -1,14 +1,20 @@
 package io.github.esko997.sortie.ui
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import io.github.esko997.sortie.SortieApp
@@ -228,5 +234,32 @@ class HomeControllerTest {
         compose.mainClock.advanceTimeBy(500) // the button takes the focus back once the Hangar's window is gone
         compose.waitForIdle()
         assertEquals("Extras", pad.focusedLabel())
+    }
+
+    @Test
+    fun companionNameOnlyEditsAfterRenameAndCancelDoesNotSave() {
+        awaitHome()
+        openExtras()
+        compose.onNodeWithText("Hangar").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Workshop").fetchSemanticsNodes().isNotEmpty() }
+        val store = (sortie.activity.application as SortieApp).graph.mecha
+        val original = store.view.value.state!!.name
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
+        compose.onNodeWithText(original).performScrollTo().performTouchInput { click() }
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
+
+        compose.onNodeWithText("Rename").performScrollTo().performClick()
+        compose.onNode(hasSetTextAction()).performTextReplacement("Unsaved name")
+        compose.onNodeWithText("Cancel").performScrollTo().performClick()
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
+        assertEquals(original, store.view.value.state!!.name)
+
+        compose.onNodeWithText("Rename").performScrollTo().performClick()
+        compose.onNode(hasSetTextAction()).performTextReplacement(" ")
+        compose.onNodeWithText("Save").assertIsNotEnabled()
+        compose.onNode(hasSetTextAction()).performTextReplacement("  Rivet II  ")
+        compose.onNode(hasSetTextAction()).performImeAction()
+        compose.waitUntil(5_000) { store.view.value.state?.name == "Rivet II" }
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
     }
 }

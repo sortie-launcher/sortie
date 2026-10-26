@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- The Hangar shows the companion's name as plain text until **Rename** is pressed. **Save** (or the keyboard's Done)
+  commits a valid name and closes the keyboard; **Cancel** discards edits. Browsing or tapping the name cannot open an editor.
 - Refresh the README, website, onboarding, manual and format references for Quiet Home, Tonight, bookmarks and their
   archive/backup limits, bundled guide precedence, Rivet gestures and current switcher/reader controls. Add native Nova
   beta 2136 captures of Home, Tonight, game details and the bookmark editor; keep older setup images clearly identified.
