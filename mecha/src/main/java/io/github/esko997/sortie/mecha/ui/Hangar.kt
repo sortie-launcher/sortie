@@ -162,7 +162,10 @@ fun Hangar(store: MechaStore, onClose: () -> Unit) {
                                 MechaChip(
                                     item.label,
                                     tab == item,
-                                    { tab = item },
+                                    {
+                                        if (item == HangarTab.ARCADE && tab != item) arcadeBackRequest = 0
+                                        tab = item
+                                    },
                                     Modifier.focusRequester(tabFocus.getValue(item)).onFocusChanged { if (it.hasFocus) focusedAny = true }
                                 )
                             }

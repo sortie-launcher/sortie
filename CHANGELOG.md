@@ -16,6 +16,8 @@ for published builds.
 - Make the slot machine credit-only: identical odds at 1/3/5-credit stakes, 5% returning 5×, 20% returning 2×, 20% returning
   the stake, and 55% returning nothing. Require room under 50 for the full jackpot instead of discarding overflow.
   Companion save version 4 preserves earlier inventory, purchases, arcade tickets and history through disk/backup migration.
+- Keep confirmation and receipt actions visible on short screens, and handle a quick controller A → B when entering Arcade
+  before its first frame has appeared.
 - Rework the Hangar for landscape screens: preview and controls sit side by side, and Parts, Family sets and Mixes share
   one Workshop draft and Fit action. Rename Cabinet to **Slot machine**, with three original pixel-art reels and a brief,
   reduced-motion-aware flourish; its published stakes and odds are unchanged.

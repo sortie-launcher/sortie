@@ -101,7 +101,8 @@ internal fun MechaArcade(store: MechaStore, view: MechaView, state: MechaState, 
     var foreground by remember { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) }
     var confirmingEntry by remember { mutableStateOf(false) }
     var confirmingAbandon by remember { mutableStateOf(false) }
-    var lastBack by remember { mutableIntStateOf(backRequest) }
+    // The parent resets this counter on entry. A rapid A → B can arrive before our first composition.
+    var lastBack by remember { mutableIntStateOf(0) }
     val redraw = remember { mutableIntStateOf(0) }
     var score by remember { mutableIntStateOf(session.score) }
     var seconds by remember { mutableIntStateOf(session.scrap?.secondsLeft ?: 45) }

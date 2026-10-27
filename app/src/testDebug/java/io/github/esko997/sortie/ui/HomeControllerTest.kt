@@ -581,19 +581,23 @@ class HomeControllerTest {
         pad.press(B)
         compose.onNodeWithText("Apply paint").performScrollTo().assertIsNotEnabled()
         assertEquals(bought, mecha.view.value.state)
-        compose.onNodeWithText("Head").performScrollTo().performClick()
+        // Reveal the choices through the vertical scroller, not the target row's horizontal scroller.
+        compose.onNodeWithText("Two-tone schemes").performScrollTo()
+        compose.onNodeWithText("Head").assertIsDisplayed().performClick()
         compose.onNodeWithText("Hazard").performScrollTo().performClick()
         compose.onNodeWithText("Apply paint").performScrollTo().performClick()
         compose.waitUntil(5_000) { mecha.view.value.state!!.equippedPaints[MechaSlot.HEAD] == paint && !mecha.view.value.busy }
         assertEquals(bought.equippedPaints + (MechaSlot.HEAD to paint), mecha.view.value.state!!.equippedPaints)
-        compose.onNodeWithText("Whole bot").performScrollTo().performClick()
+        compose.onNodeWithText("Two-tone schemes").performScrollTo()
+        compose.onNodeWithText("Whole bot").assertIsDisplayed().performClick()
         compose.onNodeWithText("Hazard").performScrollTo().performClick()
         compose.onNodeWithText("Apply paint").performScrollTo().performClick()
         compose.waitUntil(5_000) { MechaSlot.entries.all { mecha.view.value.state!!.equippedPaints[it] == paint } && !mecha.view.value.busy }
         val painted = mecha.view.value.state!!
         assertEquals(14, painted.salvage)
         assertEquals(painted, runBlocking { mecha.backupSave() })
-        compose.onNodeWithText("Body").performScrollTo().performClick()
+        compose.onNodeWithText("Two-tone schemes").performScrollTo()
+        compose.onNodeWithText("Body").assertIsDisplayed().performClick()
         compose.onNodeWithText("Original").performScrollTo().performClick()
         compose.onNodeWithText("Apply paint").performScrollTo().performClick()
         compose.waitUntil(5_000) { (mecha.view.value.state!!.equippedPaints[MechaSlot.BODY] ?: MechaPaint()) == MechaPaint() && !mecha.view.value.busy }
