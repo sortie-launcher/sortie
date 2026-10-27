@@ -64,15 +64,16 @@ import kotlinx.coroutines.launch
 
 /**
  * Controller hints wrap as whole button/action pairs, never as narrow columns of letters. In a built-in app's own window
- * ([LocalWindowActions]; not in its dialogs) the bar ends with that window's Other screen and Close, for touch. A Hairline
+ * ([LocalWindowActions]; not in its dialogs) the bar ends with that window's Other screen and Close, for touch. A RuleColour
  * along its top edge sets the bar off from the content above it.
  */
 @Composable
 fun HintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modifier) {
     val window = LocalWindowActions.current?.takeIf { it.root === LocalView.current.rootView }
+    val rule = RuleColour
     val bar = modifier.fillMaxWidth()
-        .background(BarFill)
-        .drawBehind { drawRect(Hairline, size = Size(size.width, 1.dp.toPx())) }
+        .background(BarColour)
+        .drawBehind { drawRect(rule, size = Size(size.width, 1.dp.toPx())) }
         .padding(horizontal = 14.dp, vertical = 6.dp)
     if (window == null) {
         Hints(hints, bar)
@@ -83,8 +84,6 @@ fun HintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modifier) {
         WindowActionChips(window)
     }
 }
-
-private val BarFill = Color(0xFF0B0D10)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -112,12 +111,11 @@ private fun KeyCap(button: String) {
         maxLines = 1,
         textAlign = TextAlign.Center,
         color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.clip(KeyCapShape).background(KeyCapFill).widthIn(min = 20.dp).padding(horizontal = 5.dp, vertical = 1.dp)
+        modifier = Modifier.clip(KeyCapShape).background(KeyCapColour).widthIn(min = 20.dp).padding(horizontal = 5.dp, vertical = 1.dp)
     )
 }
 
 private val KeyCapShape = RoundedCornerShape(5.dp)
-private val KeyCapFill = Color(0xEB2E3742)
 
 /**
  * Browsing chrome stays in the layout, so a focused final row is never hidden under the hints. Compact mode keeps the
@@ -130,7 +128,8 @@ private val KeyCapFill = Color(0xEB2E3742)
 fun BrowseHintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modifier, compact: Boolean = false) {
     val barKey = currentCompositeKeyHash
     val boundary = remember(barKey) { "browse:$barKey" }
-    val fade = remember { Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = 0.4f))) }
+    val canvas = CanvasColour
+    val fade = remember(canvas) { Brush.verticalGradient(listOf(Color.Transparent, canvas.copy(alpha = 0.4f))) }
     val bar = modifier.fillMaxWidth().background(fade)
     if (!compact) {
         FlowRow(
@@ -185,7 +184,7 @@ fun BrowseHintBar(vararg hints: Pair<String, String>, modifier: Modifier = Modif
                 modifier = Modifier.focusRequester(opener).heightIn(min = 48.dp)
                     .focusGlow(controlsFocused, ControlsShape, pressed = controlsPressed)
                     .mechaObstacle("$boundary:controls", interactive = true)
-            ) { Text("Controls", style = MaterialTheme.typography.labelLarge, color = Amber, maxLines = 1) }
+            ) { Text("Controls", style = MaterialTheme.typography.labelLarge, color = Accent, maxLines = 1) }
         }
     }
     if (controls) {
@@ -232,7 +231,7 @@ private fun BrowseControls(hints: List<Pair<String, String>>, onDismiss: (Boolea
         SideEffect { controller = keyboard }
         Column(
             Modifier.widthIn(max = 440.dp).fillMaxWidth().heightIn(max = maxHeight)
-                .clip(DialogShape).background(Slate).border(1.dp, Hairline, DialogShape).padding(16.dp)
+                .clip(DialogShape).background(PanelColour).border(1.dp, RuleColour, DialogShape).padding(16.dp)
                 .onPreviewKeyEvent { event ->
                     val direction = when (event.key) {
                         Key.DirectionDown, Key.PageDown -> 1
@@ -268,7 +267,7 @@ private fun BrowseControls(hints: List<Pair<String, String>>, onDismiss: (Boolea
             FocusRow(onClick = {
                 onDismiss(inputMode.inputMode == InputMode.Keyboard)
             }, modifier = Modifier.focusRequester(close).onFocusChanged { focused = it.isFocused }) {
-                Text("Close", color = Amber)
+                Text("Close", color = Accent)
             }
         }
         LaunchedEffect(Unit) {

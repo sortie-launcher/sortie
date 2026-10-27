@@ -77,20 +77,16 @@ val LiftColour = Color(0xFF38BDF8)
 
 private val TileShape = RoundedCornerShape(14.dp)
 
-/** Under a tile's title: the art stays clear in its upper half, then deepens to near-Ink behind the text. */
-private val TileScrim = Brush.verticalGradient(0.3f to Color.Transparent, 0.62f to Ink.copy(alpha = 0.55f), 1f to Ink.copy(alpha = 0.94f))
-
-/** A tile without art: Slate lit faintly from the top left, so a run of them still reads as objects rather than holes. */
+/** A tile without art: PanelColour lit faintly from the top left, so a run of them still reads as objects rather than holes. */
 private val NoArtLight = Brush.linearGradient(listOf(Color(0x14FFFFFF), Color.Transparent))
-private val Monogram = Color(0xFF3B4550)
 private val MonogramAlignment = BiasAlignment(0f, -0.35f)
 
 /**
  * 1:1 tile shared by the home and browse grids. With a [cover] the art is cropped square under a bottom gradient so [title] stays
  * readable; [colour] marks a system or folder tile (colour wash, dot, idle border, cover washed at 45%); [icon] tiles (apps,
- * shortcuts) show the icon centred on Slate, with a label only when the tile has enough room for readable text.
+ * shortcuts) show the icon centred on PanelColour, with a label only when the tile has enough room for readable text.
  * The focus glow uses the cover's palette accent when
- * [paletteGlow] is set (decoded only once the tile is focused, then cached), else [colour], else Amber. [lifted] marks the tile
+ * [paletteGlow] is set (decoded only once the tile is focused, then cached), else [colour], else Accent. [lifted] marks the tile
  * being moved in the home edit mode: [LiftColour] glow and a larger scale. [hack] and a recorded [annotation] draw the list
  * row's badges top left, wrapping onto a second line on narrow tiles and never under the favourite star.
  */
@@ -113,6 +109,10 @@ fun SquareTile(
     annotation: GameAnnotation? = null,
     hack: Boolean = false
 ) {
+    val canvas = CanvasColour
+    val tileScrim = remember(canvas) {
+        Brush.verticalGradient(0.3f to Color.Transparent, 0.62f to canvas.copy(alpha = 0.55f), 1f to canvas.copy(alpha = 0.94f))
+    }
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     var held by remember { mutableStateOf(false) }
@@ -121,7 +121,7 @@ fun SquareTile(
         lifted -> LiftColour
         accent != null -> accent
         colour != null -> colour
-        else -> Amber
+        else -> Accent
     }
     val wash = remember(colour) { colour?.let { Brush.verticalGradient(listOf(it.copy(alpha = 0.3f), it.copy(alpha = 0.14f))) } }
     Box(
@@ -129,7 +129,7 @@ fun SquareTile(
             .focusGlow(focused || lifted, TileShape, glow, if (lifted) 1.12f else 1.06f, colour?.copy(alpha = 0.5f) ?: Color.Transparent, pressed = held)
             .aspectRatio(1f)
             .clip(TileShape)
-            .then(if (wash != null) Modifier.background(wash) else Modifier.background(Slate))
+            .then(if (wash != null) Modifier.background(wash) else Modifier.background(PanelColour))
             .confirmHeld { held = it }
             .keyLongPress(onLongClick, onFavourite)
             .combinedClickable(interactionSource = interaction, indication = PressVeil, onClick = onClick, onLongClick = onLongClick)
@@ -163,14 +163,14 @@ fun SquareTile(
             if (cover != null) {
                 // behind a logo the cover is only a hint of the library; the logo is the name
                 CoverImage(cover, Modifier.fillMaxSize(), ContentScale.Crop, alpha = if (logo != null) 0.2f else if (colour != null) 0.45f else 1f)
-                Box(Modifier.fillMaxSize().background(TileScrim))
+                Box(Modifier.fillMaxSize().background(tileScrim))
             } else if (colour == null) {
                 // no art yet: a quiet lit panel and the initial, set above centre to keep clear of the title
                 Box(Modifier.fillMaxSize().background(NoArtLight))
                 Text(
                     title.take(1),
                     style = MaterialTheme.typography.displaySmall,
-                    color = Monogram,
+                    color = MonogramColour,
                     modifier = Modifier.align(MonogramAlignment)
                 )
             }
@@ -201,13 +201,13 @@ fun SquareTile(
             }
         }
         if (favourite) {
-            // on a disc of Ink, so the star reads over bright cover art as well as on the plain panel
+            // on a disc of CanvasColour, so the star reads over bright cover art as well as on the plain panel
             Box(
                 Modifier.align(
                     Alignment.TopEnd
-                ).padding(6.dp).sizeIn(minWidth = 22.dp, minHeight = 22.dp).clip(CircleShape).background(Ink.copy(alpha = 0.72f)),
+                ).padding(6.dp).sizeIn(minWidth = 22.dp, minHeight = 22.dp).clip(CircleShape).background(CanvasColour.copy(alpha = 0.72f)),
                 contentAlignment = Alignment.Center
-            ) { Text("★", color = Amber, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 4.dp)) }
+            ) { Text("★", color = Accent, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 4.dp)) }
         }
     }
 }
@@ -302,7 +302,7 @@ private fun TileTitle(title: String, style: TextStyle, modifier: Modifier = Modi
 
 private const val MIN_TITLE_SCALE = 0.75f
 
-/** Context sheets: a Slate card a corner step above the tiles, edged in Hairline so it stands off the dimmed screen. */
+/** Context sheets: a PanelColour card a corner step above the tiles, edged in RuleColour so it stands off the dimmed screen. */
 private val SheetShape = RoundedCornerShape(16.dp)
 
 /**
@@ -314,7 +314,7 @@ fun ContextSheet(title: String, actions: List<SheetAction>, onDismiss: () -> Uni
     val first = remember { FocusRequester() }
     var focusedOnce by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onDismiss) {
-        Column(Modifier.width(380.dp).clip(SheetShape).background(Slate).border(1.dp, Hairline, SheetShape).padding(12.dp)) {
+        Column(Modifier.width(380.dp).clip(SheetShape).background(PanelColour).border(1.dp, RuleColour, SheetShape).padding(12.dp)) {
             Text(
                 title,
                 style = MaterialTheme.typography.titleMedium,
@@ -323,7 +323,7 @@ fun ContextSheet(title: String, actions: List<SheetAction>, onDismiss: () -> Uni
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 2.dp, bottom = 10.dp)
             )
-            Box(Modifier.padding(horizontal = 8.dp).padding(bottom = 6.dp).fillMaxWidth().height(1.dp).background(Hairline))
+            Box(Modifier.padding(horizontal = 8.dp).padding(bottom = 6.dp).fillMaxWidth().height(1.dp).background(RuleColour))
             actions.forEachIndexed { i, a ->
                 FocusRow(
                     onClick = {

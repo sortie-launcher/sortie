@@ -34,6 +34,18 @@ data class MechaSpinReceipt(
     val finish: MechaFinish? = null
 )
 
+internal const val MECHA_ARCADE_PRICE = 1
+
+@Serializable
+enum class MechaArcadeGame(val label: String, val price: Int = MECHA_ARCADE_PRICE) {
+    FLAPPY_FLIGHT("Flappy Flight"),
+    SCRAP_CATCH("Scrap Catch"),
+    CIRCUIT_MATCH("Circuit Match")
+}
+
+@Serializable
+data class MechaArcadeTicket(val sequence: Int, val game: MechaArcadeGame?, val seed: Long)
+
 internal data class MechaBuild(val equipped: Map<MechaSlot, String>)
 
 internal const val MECHA_PART_PRICE = 2
@@ -105,7 +117,13 @@ data class MechaState(
     val ownedFinishes: Set<MechaFinish> = setOf(MechaFinish.PLAIN),
     val equippedFinishes: Map<MechaSlot, MechaFinish> = emptyMap(),
     val cabinetSpins: Int = 0,
-    val lastSpin: MechaSpinReceipt? = null
+    val lastSpin: MechaSpinReceipt? = null,
+    val ownedThemes: Set<String> = setOf("default"),
+    val selectedTheme: String = "default",
+    val hangarIntroSeen: Boolean = false,
+    val arcadeRuns: Int = 0,
+    val activeArcade: MechaArcadeTicket? = null,
+    val arcadeBest: Map<MechaArcadeGame, Int> = emptyMap()
 ) {
     /** Minutes of play still needed for the next salvage credit. */
     val minutesToNextCredit: Int get() = MECHA_MINUTES_PER_CREDIT - pendingMinutes

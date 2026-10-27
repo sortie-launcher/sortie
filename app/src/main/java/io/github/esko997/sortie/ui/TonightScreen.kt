@@ -153,8 +153,8 @@ fun TonightScreen(vm: SortieViewModel, onGame: (gameId: String) -> Unit, onArtic
 
     val path = current?.game?.let { it.screenshot ?: it.cover }
     val palette = rememberPalette(path)
-    val accent = palette?.accent ?: Amber
-    val backdrop = animateColorAsState(palette?.backdrop ?: Ink, tween(BACKDROP_BLEND_MS), label = "tonightBackdrop")
+    val accent = palette?.accent ?: Accent
+    val backdrop = animateColorAsState(palette?.backdrop ?: CanvasColour, tween(BACKDROP_BLEND_MS), label = "tonightBackdrop")
     Column(Modifier.fillMaxSize().drawBehind { drawRect(backdrop.value) }) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp), verticalAlignment = Alignment.Bottom) {
             Text("Tonight", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
@@ -346,13 +346,13 @@ private fun TonightPage(
     }
 }
 
-/** The gameplay screenshot, else the cover, letterboxed on Slate; dimmed when the pick cannot be played; the initial when neither exists. */
+/** The gameplay screenshot, else the cover, letterboxed on PanelColour; dimmed when the pick cannot be played; the initial when neither exists. */
 @Composable
 private fun Picture(c: TonightCard, modifier: Modifier) {
     val g = c.game
     val screenshot = g?.screenshot
     val path = screenshot ?: g?.cover
-    Box(modifier.clip(PictureShape).background(Slate).border(1.dp, Hairline, PictureShape), contentAlignment = Alignment.Center) {
+    Box(modifier.clip(PictureShape).background(PanelColour).border(1.dp, RuleColour, PictureShape), contentAlignment = Alignment.Center) {
         if (path != null) {
             CoverImage(
                 path,
@@ -363,7 +363,7 @@ private fun Picture(c: TonightCard, modifier: Modifier) {
                 filterQuality = if (screenshot != null) FilterQuality.None else DrawScope.DefaultFilterQuality
             )
         } else {
-            Text((g?.title ?: c.pick.title).take(1), style = MaterialTheme.typography.displayMedium, color = Color(0xFF4A525C))
+            Text((g?.title ?: c.pick.title).take(1), style = MaterialTheme.typography.displayMedium, color = CoverInitialColour)
         }
     }
 }

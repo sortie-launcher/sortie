@@ -79,21 +79,21 @@ fun displayTitle(g: GameEntity): String = cleanTitle(g.title)
 @Composable
 fun Stars(fit: Int, modifier: Modifier = Modifier) {
     if (fit <= 0) return
-    Text("★".repeat(fit.coerceIn(0, 5)) + "☆".repeat(5 - fit.coerceIn(0, 5)), color = Amber, style = MaterialTheme.typography.labelMedium, modifier = modifier)
+    Text("★".repeat(fit.coerceIn(0, 5)) + "☆".repeat(5 - fit.coerceIn(0, 5)), color = Accent, style = MaterialTheme.typography.labelMedium, modifier = modifier)
 }
 
-/** A row's cover, letterboxed on Slate inside a Hairline frame so dark art keeps its edge on Ink; the initial when there is none. */
+/** A row's cover, letterboxed on PanelColour inside a RuleColour frame so dark art keeps its edge on CanvasColour; the initial when there is none. */
 @Composable
 fun Cover(game: GameEntity, width: Int = 56, height: Int = 72, modifier: Modifier = Modifier) {
     val path = game.cover ?: game.screenshot
     Box(
-        modifier.size(width.dp, height.dp).clip(CoverShape).background(Slate).border(1.dp, Hairline, CoverShape),
+        modifier.size(width.dp, height.dp).clip(CoverShape).background(PanelColour).border(1.dp, RuleColour, CoverShape),
         contentAlignment = Alignment.Center
     ) {
         if (path != null) {
             CoverImage(path, Modifier.size(width.dp, height.dp), contentScale = ContentScale.Fit)
         } else {
-            Text(game.title.take(1), style = MaterialTheme.typography.titleLarge, color = Color(0xFF4A525C))
+            Text(game.title.take(1), style = MaterialTheme.typography.titleLarge, color = CoverInitialColour)
         }
     }
 }
@@ -125,8 +125,9 @@ fun GameRow(
             Cover(game)
             Column(Modifier.padding(start = 12.dp).weight(1f)) {
                 val title = displayTitle(game)
+                val accent = Accent
                 Text(
-                    remember(title, favourite) { if (favourite) starred(title) else AnnotatedString(title) },
+                    remember(title, favourite, accent) { if (favourite) starred(title, accent) else AnnotatedString(title) },
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -159,9 +160,9 @@ fun GameRow(
     }
 }
 
-/** "★ title" with the star in Amber, as the tiles show it. */
-private fun starred(title: String): AnnotatedString = buildAnnotatedString {
-    withStyle(SpanStyle(color = Amber)) { append("★ ") }
+/** "★ title" with the star in Accent, as the tiles show it. */
+private fun starred(title: String, accent: Color): AnnotatedString = buildAnnotatedString {
+    withStyle(SpanStyle(color = accent)) { append("★ ") }
     append(title)
 }
 
@@ -170,7 +171,7 @@ fun Badge(text: String, colour: Color = Color(0xFF334155)) {
     Text(
         text,
         style = MaterialTheme.typography.labelSmall,
-        color = Color(0xFFE6E8EB),
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.padding(end = 6.dp, top = 2.dp).clip(RoundedCornerShape(4.dp)).background(colour).padding(horizontal = 6.dp, vertical = 1.dp)
     )
 }

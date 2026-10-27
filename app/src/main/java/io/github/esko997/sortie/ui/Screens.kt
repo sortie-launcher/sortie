@@ -245,7 +245,7 @@ private fun LaunchLogEntry(e: LaunchManager.LogEntry) {
                 if (e.launched) "✓" else "✗",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = if (e.launched) Amber else MaterialTheme.colorScheme.error,
+                color = if (e.launched) Accent else MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(end = 10.dp)
             )
             Column(Modifier.weight(1f)) {
@@ -293,7 +293,7 @@ fun PermissionScreen() {
                 style = MaterialTheme.typography.bodyMedium
             )
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Slate).padding(horizontal = 14.dp, vertical = 12.dp),
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(PanelColour).padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf("Press Open settings.", "Turn on \"Allow access to manage all files\" for Sortie.", "Go back; Sortie opens your library.")
@@ -303,7 +303,7 @@ fun PermissionScreen() {
                                 "${i + 1}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Amber,
+                                color = Accent,
                                 modifier = Modifier.width(28.dp)
                             )
                             Text(step, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 2.dp))

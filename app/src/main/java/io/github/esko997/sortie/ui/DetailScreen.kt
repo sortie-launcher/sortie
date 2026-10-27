@@ -91,9 +91,9 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
     val context = LocalContext.current
     val graph = (context.applicationContext as SortieApp).graph
     val palette = rememberPalette(game.cover ?: game.screenshot)
-    val accent = palette?.accent ?: Amber
+    val accent = palette?.accent ?: Accent
     // the cover's backdrop arrives a moment after the page: blend into it instead of snapping (read only while drawing)
-    val backdrop = animateColorAsState(palette?.backdrop ?: Ink, tween(BACKDROP_BLEND_MS), label = "detailBackdrop")
+    val backdrop = animateColorAsState(palette?.backdrop ?: CanvasColour, tween(BACKDROP_BLEND_MS), label = "detailBackdrop")
     val launchFocus = remember { FocusRequester() }
     val bookmarkFocus = remember { FocusRequester() }
     val controllerFocus = remember { FocusRequester() }
@@ -180,7 +180,7 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
             else -> 120
         }
         val coverHeight = coverWidth * 13 / 10
-        val coverFrame = Modifier.border(1.dp, Hairline, RoundedCornerShape(6.dp))
+        val coverFrame = Modifier.border(1.dp, RuleColour, RoundedCornerShape(6.dp))
         val systemLabel = snap.systems.firstOrNull { it.id == game.systemId }?.label?.takeIf(String::isNotBlank) ?: game.systemId
         val heading: @Composable () -> Unit = {
             Text(displayTitle(game), style = MaterialTheme.typography.headlineSmall)
@@ -254,8 +254,8 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
                     Modifier
                         .padding(top = 10.dp)
                         .fillMaxWidth()
-                        .background(Slate.copy(alpha = 0.72f), panel)
-                        .border(1.dp, Hairline, panel)
+                        .background(PanelColour.copy(alpha = 0.72f), panel)
+                        .border(1.dp, RuleColour, panel)
                         .padding(4.dp)
                         .onFocusChanged { profilesFocused = it.hasFocus }
                 ) {
@@ -296,7 +296,7 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
                             }
                         }
                     }
-                    Box(Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth().height(1.dp).background(Hairline))
+                    Box(Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth().height(1.dp).background(RuleColour))
                     FocusRow(onClick = { vm.setOverride(game.id, null) }, colour = accent) {
                         Text("Clear override", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -422,7 +422,7 @@ internal fun GamePageButton(
             onClick = onClick,
             modifier = modifier.focusGlow(focused, ButtonDefaults.shape, accent, pressed = pressed),
             enabled = enabled,
-            colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Ink),
+            colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = CanvasColour),
             contentPadding = GamePageButtonPadding,
             interactionSource = interaction,
             content = label

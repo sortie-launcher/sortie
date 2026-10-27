@@ -9,15 +9,17 @@ import androidx.palette.graphics.Palette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Accent and backdrop derived from a cover: the "procedural theme" juice. Cached per path; cheap because the bitmap is downsampled. */
+/** Accent and backdrop derived from a cover, cached per path and shell canvas; the bitmap is downsampled. */
 data class GamePalette(val accent: Color, val backdrop: Color)
 
-private val cache = HashMap<String, GamePalette?>()
+private data class PaletteKey(val path: String, val canvas: Color)
+private val cache = HashMap<PaletteKey, GamePalette?>()
 
-suspend fun paletteFor(path: String?): GamePalette? {
+suspend fun paletteFor(path: String?, canvas: Color): GamePalette? {
     path ?: return null
+    val key = PaletteKey(path, canvas)
     // written from Dispatchers.Default below, so reads take the same lock
-    synchronized(cache) { if (cache.containsKey(path)) return cache[path] }
+    synchronized(cache) { if (cache.containsKey(key)) return cache[key] }
     return withContext(Dispatchers.Default) {
         runCatching {
             // its own 1/8-scale software decode: Coil's covers are hardware bitmaps, whose pixels cannot be read back
@@ -26,17 +28,22 @@ suspend fun paletteFor(path: String?): GamePalette? {
             val p = Palette.from(bmp).clearFilters().generate().also { bmp.recycle() }
             val swatch = p.vibrantSwatch ?: p.lightVibrantSwatch ?: p.dominantSwatch ?: return@runCatching null
             val dark = p.darkMutedSwatch ?: p.darkVibrantSwatch ?: p.mutedSwatch
-            val backdrop = (dark?.let { Color(it.rgb) } ?: Ink).copy(alpha = 1f).blend(Ink, 0.75f)
+            val backdrop = (dark?.let { Color(it.rgb) } ?: canvas).copy(alpha = 1f).blend(canvas, 0.75f)
             GamePalette(
-                accent = Color(swatch.rgb).ensureContrastOn(if (backdrop.luminance() > Ink.luminance()) backdrop else Ink),
+                accent = Color(swatch.rgb).ensureContrastOn(if (backdrop.luminance() > canvas.luminance()) backdrop else canvas),
                 backdrop = backdrop
             )
-        }.getOrNull().also { synchronized(cache) { cache[path] = it } }
+        }.getOrNull().also { synchronized(cache) { cache[key] = it } }
     }
 }
 
 @Composable
-fun rememberPalette(path: String?): GamePalette? = produceState<GamePalette?>(null, path) { value = paletteFor(path) }.value
+fun rememberPalette(path: String?): GamePalette? {
+    val canvas = CanvasColour
+    return androidx.compose.runtime.key(path, canvas) {
+        produceState<GamePalette?>(null, path, canvas) { value = paletteFor(path, canvas) }.value
+    }
+}
 
 private fun Color.blend(other: Color, towardsOther: Float): Color = Color(
     red = red + (other.red - red) * towardsOther,
@@ -44,7 +51,7 @@ private fun Color.blend(other: Color, towardsOther: Float): Color = Color(
     blue = blue + (other.blue - blue) * towardsOther
 )
 
-/** Keep artwork-coloured labels and Ink-on-accent buttons readable, using linear-light WCAG contrast rather than RGB brightness. */
+/** Keep artwork-coloured labels and CanvasColour-on-accent buttons readable, using linear-light WCAG contrast rather than RGB brightness. */
 private fun Color.ensureContrastOn(bg: Color): Color {
     val denominator = bg.luminance() + 0.05f
     if ((luminance() + 0.05f) / denominator >= 4.5f) return this

@@ -142,7 +142,7 @@ private fun WindowChip(label: String, button: String?, onClick: () -> Unit) {
         Modifier
             .focusProperties { canFocus = false }
             .clip(shape)
-            .background(Slate)
+            .background(PanelColour)
             .clickable(interactionSource = null, indication = PressVeil, role = Role.Button, onClick = onClick)
             .padding(start = if (button != null) 4.dp else 10.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -153,11 +153,11 @@ private fun WindowChip(label: String, button: String?, onClick: () -> Unit) {
                 it,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = Ink,
+                color = CanvasColour,
                 maxLines = 1,
-                modifier = Modifier.clip(shape).background(Amber).padding(horizontal = 6.dp)
+                modifier = Modifier.clip(shape).background(Accent).padding(horizontal = 6.dp)
             )
         }
-        Text(label, style = MaterialTheme.typography.labelMedium, color = Amber, maxLines = 1)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = Accent, maxLines = 1)
     }
 }

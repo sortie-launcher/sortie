@@ -52,7 +52,7 @@ abstract class PerfScreenshotTest(private val device: String) {
 
     @OptIn(ExperimentalRoborazziApi::class)
     protected fun capture(name: String, content: @Composable () -> Unit) {
-        captureRoboImage("$device/$name.png", OPTIONS) { SortieTheme(content) }
+        captureRoboImage("$device/$name.png", OPTIONS) { SortieTheme(content = content) }
     }
 
     companion object {
@@ -98,13 +98,13 @@ class ThorTopPerfScreenshotTest : PerfScreenshotTest("thor-top")
 class ThorBottomPerfScreenshotTest : PerfScreenshotTest("thor-bottom") {
     @Test
     fun companionPerf() = capture("perf-companion") {
-        Box(Modifier.fillMaxSize().background(Ink)) { CompanionPerfPage(FIXTURE) }
+        Box(Modifier.fillMaxSize().background(CanvasColour)) { CompanionPerfPage(FIXTURE) }
     }
 
     /** The end of the page: the per-core clocks and the Thor's thermal zones, grouped. */
     @Test
     fun perfDetails() = capture("perf-details") {
-        Box(Modifier.fillMaxSize().background(Ink)) {
+        Box(Modifier.fillMaxSize().background(CanvasColour)) {
             PerfPage(FIXTURE, Modifier.fillMaxSize(), PaddingValues(16.dp), rememberLazyListState(1_000)) {}
         }
     }

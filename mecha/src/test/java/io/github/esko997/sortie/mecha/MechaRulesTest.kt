@@ -44,7 +44,7 @@ class MechaRulesTest {
         assertEquals(12, s.owned.size)
         assertTrue(s.owned.all { it.endsWith("_1") })
         assertTrue(s.owned.all { it.substringBefore('_') in setOf("yard", "survey", "courier") })
-        assertEquals(2, s.version)
+        assertEquals(3, s.version)
         assertEquals(MechaSlot.entries.associateWith { "yard_${it.name.lowercase()}_1" }, s.equipped)
         assertEquals(MECHA_STARTER_CREDITS, s.salvage)
         assertEquals(MECHA_STARTER_ORIGIN, s.origins["courier_legs_1"])
@@ -183,8 +183,8 @@ class MechaRulesTest {
         assertNotNull(mechaStateProblem(s.copy(charge = 0), parts))
         assertNotNull(mechaStateProblem(s.copy(pendingMinutes = MECHA_MINUTES_PER_CREDIT), parts))
         assertNotNull(mechaStateProblem(s.copy(salvage = -1), parts))
-        assertNotEquals(s, s.copy(version = 3))
-        assertNotNull(mechaStateProblem(s.copy(version = 3), parts))
+        assertNotEquals(s, s.copy(version = 4))
+        assertNotNull(mechaStateProblem(s.copy(version = 4), parts))
     }
 
     @Test

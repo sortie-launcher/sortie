@@ -271,7 +271,7 @@ private fun LazyListScope.located(
                 )
                 val summary = tags.joinToString(" · ").replaceFirstChar { it.uppercase() }.ifEmpty { "Detected" }
                 FocusRow(onClick = { onChoose(dir) }) {
-                    Line(dir.path, summary, accent = if (dir == chosen) Amber else Color.Unspecified)
+                    Line(dir.path, summary, accent = if (dir == chosen) Accent else Color.Unspecified)
                 }
             }
         }
@@ -367,7 +367,7 @@ private fun LazyListScope.preview(
         if (!tooBig) {
             row {
                 FocusRow(onClick = onConfirm) {
-                    Line("Import", "Writes Sortie's library files, user.json, the play database and media folders", accent = Amber)
+                    Line("Import", "Writes Sortie's library files, user.json, the play database and media folders", accent = Accent)
                 }
             }
         }

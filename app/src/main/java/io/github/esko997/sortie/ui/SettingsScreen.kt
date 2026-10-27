@@ -342,9 +342,9 @@ private val ValueShape = RoundedCornerShape(50)
 /** One value of a [ChoiceRow]: the chosen one in amber; the mark moves with a short fade when the choice changes. */
 @Composable
 private fun ChoiceValue(label: String, on: Boolean, onPick: () -> Unit) {
-    val fill by animateColorAsState(if (on) Amber.copy(alpha = 0.16f) else Color.Transparent, tween(160), label = "valueFill")
-    val edge by animateColorAsState(if (on) Amber.copy(alpha = 0.7f) else Hairline, tween(160), label = "valueEdge")
-    val ink by animateColorAsState(if (on) Amber else MaterialTheme.colorScheme.onSurfaceVariant, tween(160), label = "valueInk")
+    val fill by animateColorAsState(if (on) Accent.copy(alpha = 0.16f) else Color.Transparent, tween(160), label = "valueFill")
+    val edge by animateColorAsState(if (on) Accent.copy(alpha = 0.7f) else RuleColour, tween(160), label = "valueEdge")
+    val ink by animateColorAsState(if (on) Accent else MaterialTheme.colorScheme.onSurfaceVariant, tween(160), label = "valueInk")
     Text(
         label,
         style = MaterialTheme.typography.labelLarge,
@@ -389,7 +389,7 @@ internal fun InfoBlock(title: String, modifier: Modifier = Modifier, content: @C
  */
 @Composable
 internal fun OutcomeRow(title: String, ok: Boolean, lines: List<String>, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
-    val tone = if (ok) Amber else MaterialTheme.colorScheme.error
+    val tone = if (ok) Accent else MaterialTheme.colorScheme.error
     FocusRow(onClick = onDismiss, modifier = modifier) {
         Row(Modifier.height(IntrinsicSize.Min)) {
             Box(Modifier.width(3.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(tone))
@@ -420,13 +420,19 @@ internal fun OutcomeRow(title: String, ok: Boolean, lines: List<String>, onDismi
 @Composable
 internal fun WorkProgress(step: String, fraction: Float? = null, detail: String? = null) {
     Column(Modifier.fillMaxWidth()) {
-        Text(step, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = Amber, modifier = Modifier.padding(horizontal = 8.dp))
+        Text(
+            step,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = Accent,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
         val bar = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp).clip(ValueShape)
         if (fraction != null) {
             val shown by animateFloatAsState(fraction.coerceIn(0f, 1f), tween(300), label = "workProgress")
-            LinearProgressIndicator(progress = { shown }, modifier = bar, color = Amber, trackColor = Hairline)
+            LinearProgressIndicator(progress = { shown }, modifier = bar, color = Accent, trackColor = RuleColour)
         } else {
-            LinearProgressIndicator(bar, color = Amber, trackColor = Hairline)
+            LinearProgressIndicator(bar, color = Accent, trackColor = RuleColour)
         }
         detail?.let { Note(it) }
     }
@@ -474,6 +480,7 @@ private val GroupRadius = 14.dp
  */
 @Composable
 private fun GroupCell(first: Boolean, last: Boolean, content: @Composable () -> Unit) {
+    val rule = RuleColour
     var lifted by remember { mutableStateOf(false) }
     val top = if (first) GroupRadius else 0.dp
     val bottom = if (last) GroupRadius else 0.dp
@@ -483,14 +490,14 @@ private fun GroupCell(first: Boolean, last: Boolean, content: @Composable () -> 
             .zIndex(if (lifted) 1f else 0f)
             .onFocusChanged { lifted = it.hasFocus }
             .fillMaxWidth()
-            .background(Slate, shape)
+            .background(PanelColour, shape)
             .then(
                 if (first) {
                     Modifier
                 } else {
                     Modifier.drawBehind {
                         val inset = 14.dp.toPx()
-                        drawLine(Hairline, Offset(inset, 0f), Offset(size.width - inset, 0f), strokeWidth = 1.dp.toPx())
+                        drawLine(rule, Offset(inset, 0f), Offset(size.width - inset, 0f), strokeWidth = 1.dp.toPx())
                     }
                 }
             )

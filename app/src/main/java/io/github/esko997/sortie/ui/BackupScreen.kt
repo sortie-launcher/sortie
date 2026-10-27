@@ -168,7 +168,7 @@ private fun LazyListScope.preview(p: BackupState.Preview, playing: String?, prim
         if (playing == null) {
             row {
                 FocusRow(onClick = onConfirm) {
-                    Line("Replace preferences and merge history", "Writes user.json, the companion save and the play database", accent = Amber)
+                    Line("Replace preferences and merge history", "Writes user.json, the companion save and the play database", accent = Accent)
                 }
             }
         }

@@ -10,7 +10,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.shell.SwitcherOverlay
@@ -57,8 +56,12 @@ class SwitcherHost(private val graph: SortieApp.Graph) {
                 }
             }
         ) { displayId, controller ->
-            SortieTheme {
-                Surface(Modifier.fillMaxSize().safeDrawingPadding(), color = Color(0xDD0B0D10), contentColor = MaterialTheme.colorScheme.onSurface) {
+            SortieTheme(palette = rememberSelectedTheme()) {
+                Surface(
+                    Modifier.fillMaxSize().safeDrawingPadding(),
+                    color = BarColour.copy(alpha = 0xDD / 255f),
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ) {
                     val page by pages.state.collectAsState()
                     val state by switcher.state.collectAsState()
                     when {

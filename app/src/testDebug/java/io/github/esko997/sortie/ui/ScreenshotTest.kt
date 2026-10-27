@@ -29,6 +29,7 @@ import io.github.esko997.sortie.testing.SortieActivityRule
 import io.github.esko997.sortie.testing.SortieCardRule
 import io.github.esko997.sortie.testing.THOR_BOTTOM
 import io.github.esko997.sortie.testing.THOR_TOP
+import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -158,6 +159,9 @@ abstract class ScreenshotTest(private val device: String) {
     @Test
     fun hangarWorkshop() {
         awaitHome()
+        val store = (sortie.activity.application as SortieApp).graph.mecha
+        compose.waitUntil(5_000) { store.view.value.state != null && !store.view.value.busy }
+        runBlocking { store.restore(store.view.value.state!!.copy(hangarIntroSeen = true), emptyList()) }
         compose.onNodeWithText("Extras").performClick()
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Hangar").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Hangar").performClick()

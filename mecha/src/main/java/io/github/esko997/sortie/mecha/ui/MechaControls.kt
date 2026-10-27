@@ -34,16 +34,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.mecha.MECHA_FAMILIES
 import io.github.esko997.sortie.mecha.MechaPart
-import io.github.esko997.sortie.ui.Amber
-import io.github.esko997.sortie.ui.Hairline
-import io.github.esko997.sortie.ui.Ink
+import io.github.esko997.sortie.ui.Accent
+import io.github.esko997.sortie.ui.ButtonFaceColour
+import io.github.esko997.sortie.ui.CanvasColour
 import io.github.esko997.sortie.ui.PressVeil
+import io.github.esko997.sortie.ui.RuleColour
 import io.github.esko997.sortie.ui.focusGlow
 import kotlin.math.roundToInt
 
-internal val Muted = Color(0xFF9AA3AD)
-internal val Warning = Color(0xFFF87171)
-private val ButtonFace = Color(0xFF26303A)
+internal val Muted: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+internal val Warning: Color
+    @Composable get() = MaterialTheme.colorScheme.error
+private val ButtonFace: Color
+    @Composable get() = ButtonFaceColour
 
 internal fun familyName(family: String): String = family.replaceFirstChar { it.uppercase() }
 
@@ -66,13 +70,13 @@ internal fun MechaButton(text: String, onClick: () -> Unit, modifier: Modifier =
         maxLines = 1,
         color = when {
             !enabled -> Muted.copy(alpha = 0.55f)
-            primary -> Ink
+            primary -> CanvasColour
             else -> MaterialTheme.colorScheme.onSurface
         },
         modifier = modifier
             .focusGlow(focused, shape)
             .clip(shape)
-            .background(if (primary && enabled) Amber else ButtonFace)
+            .background(if (primary && enabled) Accent else ButtonFace)
             .clickable(interaction, PressVeil, enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp)
     )
@@ -90,7 +94,7 @@ internal fun MechaChip(text: String, selected: Boolean, onClick: () -> Unit, mod
         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
         maxLines = 1,
         color = when {
-            selected -> Amber
+            selected -> Accent
             dim -> Muted
             else -> MaterialTheme.colorScheme.onSurface
         },
@@ -98,7 +102,7 @@ internal fun MechaChip(text: String, selected: Boolean, onClick: () -> Unit, mod
             .focusGlow(focused, shape)
             .clip(shape)
             .background(ButtonFace)
-            .border(if (selected) 2.dp else 1.dp, if (selected) Amber else Hairline, shape)
+            .border(if (selected) 2.dp else 1.dp, if (selected) Accent else RuleColour, shape)
             .semantics { this.selected = selected }
             .clickable(interaction, PressVeil, role = Role.Tab, onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 7.dp)
@@ -109,6 +113,8 @@ internal fun MechaChip(text: String, selected: Boolean, onClick: () -> Unit, mod
 @Composable
 internal fun StatCells(label: String, value: Int, max: Int, modifier: Modifier = Modifier) {
     val filled = if (max <= 0) 0 else ((value.coerceIn(0, max) * 10f) / max).roundToInt()
+    val accent = Accent
+    val rule = RuleColour
     Column(modifier.semantics(mergeDescendants = true) { contentDescription = "$label $value of $max" }) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = Muted)
@@ -124,7 +130,7 @@ internal fun StatCells(label: String, value: Int, max: Int, modifier: Modifier =
                     val gap = 2.dp.toPx()
                     val cell = (size.width - gap * 9) / 10
                     for (i in 0 until 10) {
-                        drawRect(if (i < filled) Amber else Hairline, Offset(i * (cell + gap), 0f), Size(cell, size.height))
+                        drawRect(if (i < filled) accent else rule, Offset(i * (cell + gap), 0f), Size(cell, size.height))
                     }
                 }
         ) {}

@@ -95,11 +95,6 @@ internal fun MechaState.fittingBuild(equipped: Map<MechaSlot, String>, parts: Li
     ) {
         return MechaResult(this, error = "A build needs four owned parts in their correct slots.")
     }
-    val body = byId.getValue(equipped.getValue(MechaSlot.BODY)).family
-    val arms = byId.getValue(equipped.getValue(MechaSlot.ARMS)).family
-    val head = byId.getValue(equipped.getValue(MechaSlot.HEAD)).family
-    val legs = byId.getValue(equipped.getValue(MechaSlot.LEGS)).family
-    if (body != arms || head != legs || body == head) return MechaResult(this, error = "Choose one chassis family and a different trim family.")
     if (this.equipped == equipped) return MechaResult(this)
     return MechaResult(upgraded().copy(equipped = equipped.toMap()), message = "Fitted the build.")
 }

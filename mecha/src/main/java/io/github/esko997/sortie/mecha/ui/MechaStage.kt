@@ -80,8 +80,8 @@ import io.github.esko997.sortie.mecha.MechaSpotKind
 import io.github.esko997.sortie.mecha.MechaStore
 import io.github.esko997.sortie.mecha.MechaTouch
 import io.github.esko997.sortie.mecha.MechaVelocity
-import io.github.esko997.sortie.ui.Amber
-import io.github.esko997.sortie.ui.Slate
+import io.github.esko997.sortie.ui.Accent
+import io.github.esko997.sortie.ui.PanelColour
 import io.github.esko997.sortie.ui.displayLitFlow
 import io.github.esko997.sortie.ui.shownFlow
 import kotlin.math.roundToInt
@@ -563,8 +563,8 @@ private fun BubbleView(bubble: MechaBubble, stage: MechaStage) {
         Modifier
             .offset { IntOffset(r.left - b.left, r.top - b.top) }
             .size(with(density) { r.width.toDp() }, with(density) { r.height.toDp() })
-            .background(Slate, RoundedCornerShape(8.dp))
-            .border(1.dp, Amber.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+            .background(PanelColour, RoundedCornerShape(8.dp))
+            .border(1.dp, Accent.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
             .padding(horizontal = BUBBLE_PAD_H, vertical = BUBBLE_PAD_V)
     ) {
         Text(bubble.text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 3)

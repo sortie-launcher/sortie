@@ -3,6 +3,7 @@ package io.github.esko997.sortie.mecha
 import io.github.esko997.sortie.mecha.MechaRulesTest.Companion.INIT
 import io.github.esko997.sortie.mecha.MechaRulesTest.Companion.parts
 import io.github.esko997.sortie.mecha.MechaRulesTest.Companion.session
+import io.github.esko997.sortie.ui.SortiePalette
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -219,8 +220,8 @@ class MechaStoreTest {
         assertEquals(before.bond + 1, once.bond)
         val petFile = File(dir, "mecha/pet.txt")
         assertEquals(INIT.toString(), petFile.readText())
-        // Pet timing remains outside the companion save; commerce uses format version 2.
-        assertEquals(2, once.version)
+        // Pet timing remains outside the version-three companion save.
+        assertEquals(3, once.version)
         assertFalse(file.readText().contains("pet"))
         val bytes = file.readBytes()
         repeat(5) { s.pet() }
@@ -372,7 +373,8 @@ class MechaStoreTest {
         )
         val encoded = Json { encodeDefaults = true }.encodeToString(MechaState.serializer(), legacy)
         val oldFields = Json.parseToJsonElement(encoded).jsonObject - setOf(
-            "version", "ownedFinishes", "equippedFinishes", "cabinetSpins", "lastSpin"
+            "version", "ownedFinishes", "equippedFinishes", "cabinetSpins", "lastSpin",
+            "ownedThemes", "selectedTheme", "hangarIntroSeen", "arcadeRuns", "activeArcade", "arcadeBest"
         )
         file.parentFile!!.mkdirs()
         file.writeText(JsonObject(oldFields).toString())
@@ -382,7 +384,7 @@ class MechaStoreTest {
         s.settled()
         s.refreshSessions()
         s.idle()
-        assertEquals(legacy.copy(version = 2), s.view.value.state)
+        assertEquals(legacy.copy(version = 3), s.view.value.state)
         assertEquals(s.view.value.state, onDisk())
     }
 
@@ -410,7 +412,7 @@ class MechaStoreTest {
         assertArrayEquals(bytes, file.readBytes())
         s.retryOpen()
         s.idle()
-        assertEquals(legacy.copy(version = 2), s.view.value.state)
+        assertEquals(legacy.copy(version = 3), s.view.value.state)
         assertEquals(s.view.value.state, s.backupSave())
         assertEquals(s.view.value.state, onDisk())
     }
@@ -579,7 +581,7 @@ class MechaStoreTest {
         assertArrayEquals(bytes, file.readBytes())
         assertTrue(tmp.delete())
         s.restore(legacy, emptyList())
-        assertEquals(legacy.copy(version = 2), onDisk())
+        assertEquals(legacy.copy(version = 3), onDisk())
         assertEquals(onDisk(), s.view.value.state)
     }
 
@@ -612,7 +614,7 @@ class MechaStoreTest {
         val legacy = starterMechaState(parts, INIT).copy(version = 1, salvage = 67, pendingMinutes = 4)
         writeState(legacy)
         val s = store()
-        assertEquals(legacy.copy(version = 2, pendingMinutes = 0), s.settled().state)
+        assertEquals(legacy.copy(version = 3, pendingMinutes = 0), s.settled().state)
         table.value = listOf(played)
         s.refreshSessions()
         s.idle()
@@ -659,5 +661,231 @@ class MechaStoreTest {
         assertEquals(before, s.view.value.state)
         assertTrue(draws.bounds.isEmpty())
         assertArrayEquals(bytes, file.readBytes())
+    }
+
+    @Test
+    fun themePurchaseApplyAndIntroductionPersistSeparatelyWithoutDuplicateDebits() = runBlocking {
+        val initial = starterMechaState(parts, INIT).copy(salvage = 20)
+        writeState(initial)
+        val s = store()
+        assertFalse(s.settled().state!!.hangarIntroSeen)
+        s.setTheme(SortiePalette.HARBOR)
+        s.idle()
+        assertEquals(initial, onDisk())
+        s.buyTheme(SortiePalette.HARBOR)
+        s.buyTheme(SortiePalette.HARBOR)
+        s.idle()
+        val bought = onDisk()
+        assertEquals(12, bought.salvage)
+        assertEquals("default", bought.selectedTheme)
+        assertEquals(setOf("default", "harbor"), bought.ownedThemes)
+        s.setTheme(SortiePalette.HARBOR)
+        s.completeIntroduction(hideCompanion = true)
+        s.idle()
+        val applied = onDisk()
+        assertEquals("harbor", applied.selectedTheme)
+        assertFalse(applied.enabled)
+        assertTrue(applied.hangarIntroSeen)
+        assertEquals(12, applied.salvage)
+        assertEquals(applied, store().settled().state)
+        s.completeIntroduction()
+        s.setTheme(SortiePalette.DEFAULT)
+        s.idle()
+        assertFalse(onDisk().enabled)
+        assertEquals("default", onDisk().selectedTheme)
+        assertEquals(12, onDisk().salvage)
+    }
+
+    @Test
+    fun paidArcadeCoinSurvivesRestartAndBindsOnlyOneGameWithoutDuplicateChargesOrRewards() = runBlocking {
+        val s = store(random = Random(42))
+        val initial = s.settled().state!!
+        val game = MechaArcadeGame.FLAPPY_FLIGHT
+        s.insertArcadeCoin(0)
+        s.insertArcadeCoin(0)
+        s.idle()
+        val inserted = onDisk()
+        val coin = inserted.activeArcade!!
+        assertNull(coin.game)
+        assertEquals(1, inserted.arcadeRuns)
+        assertEquals(initial.salvage - 1, inserted.salvage)
+        assertEquals(inserted, s.view.value.state)
+        val restarted = store()
+        assertEquals(inserted, restarted.settled().state)
+        restarted.insertArcadeCoin(1)
+        restarted.finishArcade(coin, 0)
+        restarted.selectArcadeGame(coin.copy(seed = coin.seed + 1), game)
+        restarted.idle()
+        assertEquals(inserted, onDisk())
+        restarted.selectArcadeGame(coin, game)
+        restarted.selectArcadeGame(coin, MechaArcadeGame.SCRAP_CATCH)
+        restarted.idle()
+        val paid = onDisk()
+        val ticket = paid.activeArcade!!
+        assertEquals(inserted.copy(activeArcade = coin.copy(game = game)), paid)
+        assertEquals(paid, store().settled().state)
+        restarted.selectArcadeGame(ticket, MechaArcadeGame.CIRCUIT_MATCH)
+        restarted.abandonArcade(coin)
+        restarted.finishArcade(ticket.copy(seed = ticket.seed + 1), 8)
+        restarted.idle()
+        assertEquals(paid, onDisk())
+        restarted.finishArcade(ticket, 8)
+        restarted.finishArcade(ticket, 90)
+        restarted.idle()
+        val finished = onDisk()
+        assertEquals(paid.copy(activeArcade = null, arcadeBest = mapOf(game to 8)), finished)
+        restarted.insertArcadeCoin(1)
+        restarted.idle()
+        val second = onDisk()
+        restarted.finishArcade(ticket, 90)
+        restarted.abandonArcade(ticket)
+        restarted.selectArcadeGame(coin, game)
+        restarted.idle()
+        assertEquals(second, onDisk())
+        restarted.abandonArcade(second.activeArcade!!)
+        restarted.abandonArcade(second.activeArcade!!)
+        restarted.idle()
+        assertEquals(second.copy(activeArcade = null), onDisk())
+        assertEquals(initial.salvage - 2, onDisk().salvage)
+        assertEquals(initial.owned, onDisk().owned)
+        assertEquals(initial.creditedMinutes, onDisk().creditedMinutes)
+        assertEquals(initial.processedSessions, onDisk().processedSessions)
+    }
+
+    @Test
+    fun failedThemeAndIntroductionSavesLeaveEveryVisibleAndDurableFieldUnchanged() = runBlocking {
+        val initial = starterMechaState(parts, INIT).copy(salvage = 20)
+        writeState(initial)
+        val s = store()
+        s.settled()
+        val tmp = File(file.parentFile, "state.json.tmp")
+        val initialBytes = file.readBytes()
+        assertTrue(tmp.mkdir())
+        s.buyTheme(SortiePalette.PLUM)
+        s.completeIntroduction(hideCompanion = true)
+        s.idle()
+        assertEquals(initial, s.view.value.state)
+        assertNotNull(s.view.value.error)
+        assertFalse(s.view.value.busy)
+        assertArrayEquals(initialBytes, file.readBytes())
+        assertTrue(tmp.delete())
+        s.buyTheme(SortiePalette.PLUM)
+        s.idle()
+        val bought = onDisk()
+        val boughtBytes = file.readBytes()
+        assertTrue(tmp.mkdir())
+        s.setTheme(SortiePalette.PLUM)
+        s.idle()
+        assertEquals(bought, s.view.value.state)
+        assertNotNull(s.view.value.error)
+        assertArrayEquals(boughtBytes, file.readBytes())
+        assertTrue(tmp.delete())
+        s.setTheme(SortiePalette.PLUM)
+        s.completeIntroduction(hideCompanion = true)
+        s.idle()
+        assertEquals(bought.copy(selectedTheme = "plum", hangarIntroSeen = true, enabled = false), onDisk())
+    }
+
+    @Test
+    fun failedCoinSelectionFinishAndAbandonKeepTheirPreviousDurableStateForRetry() = runBlocking {
+        val s = store(random = Random(7))
+        val initial = s.settled().state!!
+        val game = MechaArcadeGame.FLAPPY_FLIGHT
+        val tmp = File(file.parentFile, "state.json.tmp")
+        val initialBytes = file.readBytes()
+        assertTrue(tmp.mkdir())
+        s.insertArcadeCoin(0)
+        s.idle()
+        assertEquals(initial, s.view.value.state)
+        assertNotNull(s.view.value.error)
+        assertArrayEquals(initialBytes, file.readBytes())
+        assertTrue(tmp.delete())
+        s.insertArcadeCoin(0)
+        s.idle()
+        val inserted = onDisk()
+        val coin = inserted.activeArcade!!
+        val coinBytes = file.readBytes()
+        assertTrue(tmp.mkdir())
+        s.selectArcadeGame(coin, game)
+        s.idle()
+        assertEquals(inserted, s.view.value.state)
+        assertNotNull(s.view.value.error)
+        assertArrayEquals(coinBytes, file.readBytes())
+        s.abandonArcade(coin)
+        s.idle()
+        assertEquals(inserted, s.view.value.state)
+        assertArrayEquals(coinBytes, file.readBytes())
+        assertTrue(tmp.delete())
+        s.selectArcadeGame(coin, game)
+        s.idle()
+        val paid = onDisk()
+        val ticket = paid.activeArcade!!
+        val paidBytes = file.readBytes()
+        assertEquals(initial.salvage - 1, paid.salvage)
+        assertTrue(tmp.mkdir())
+        s.finishArcade(ticket, 7)
+        s.idle()
+        assertEquals(paid, s.view.value.state)
+        assertNotNull(s.view.value.error)
+        assertArrayEquals(paidBytes, file.readBytes())
+        s.abandonArcade(ticket)
+        s.idle()
+        assertEquals(paid, s.view.value.state)
+        assertNotNull(s.view.value.error)
+        assertArrayEquals(paidBytes, file.readBytes())
+        assertTrue(tmp.delete())
+        s.finishArcade(ticket, 7)
+        s.idle()
+        assertEquals(paid.copy(activeArcade = null, arcadeBest = mapOf(game to 7)), onDisk())
+        assertEquals(onDisk(), s.view.value.state)
+        assertFalse(s.view.value.busy)
+    }
+
+    @Test
+    fun versionTwoMigrationFailureKeepsCommerceAndBlocksBackupUntilRetry() = runBlocking {
+        val legacy = starterMechaState(parts, INIT).copy(salvage = 73, processedSessions = setOf("old@1"))
+            .cabinetSpun(MechaCabinetTier.ALLOY, parts, 0, 0).state
+            .finishing(MechaSlot.BODY, MechaFinish.ALLOY).state.copy(version = 2)
+        writeState(legacy)
+        val bytes = file.readBytes()
+        val tmp = File(file.parentFile, "state.json.tmp")
+        assertTrue(tmp.mkdir())
+        val s = store()
+        val failed = s.settled()
+        assertNull(failed.state)
+        assertFalse(failed.canStartFresh)
+        assertNotNull(failed.error)
+        s.completeIntroduction(true)
+        s.insertArcadeCoin(0)
+        s.startFresh()
+        s.idle()
+        assertArrayEquals(bytes, file.readBytes())
+        assertTrue(runCatching { s.backupSave() }.isFailure)
+        assertNotNull(s.restoreProblem(legacy))
+        assertTrue(runCatching { s.restore(null, emptyList()) }.isFailure)
+        assertTrue(runCatching { s.restore(legacy, emptyList()) }.isFailure)
+        assertTrue(tmp.delete())
+        s.retryOpen()
+        s.idle()
+        assertEquals(legacy.copy(version = 3), onDisk())
+        assertEquals(onDisk(), s.view.value.state)
+        assertEquals(onDisk(), s.backupSave())
+        assertFalse(onDisk().hangarIntroSeen)
+    }
+
+    @Test
+    fun restoringThemeAndPaidTicketPreservesSelectionAndUnionsSessionDeduplication() = runBlocking {
+        val current = starterMechaState(parts, INIT).copy(processedSessions = setOf("local@1"))
+        writeState(current)
+        val s = store()
+        s.settled()
+        val backup = current.copy(salvage = 20, processedSessions = setOf("backup@2"))
+            .buyingTheme(SortiePalette.LICHEN).state.selectingTheme(SortiePalette.LICHEN).state
+            .introduced(true).state.insertingArcadeCoin(0, 123).state
+        s.restore(backup, emptyList())
+        val expected = backup.copy(processedSessions = setOf("local@1", "backup@2"))
+        assertEquals(expected, onDisk())
+        assertEquals(expected, s.view.value.state)
+        assertEquals(expected, store().settled().state)
     }
 }

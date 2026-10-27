@@ -41,6 +41,7 @@ import io.github.esko997.sortie.ui.Selection
 import io.github.esko997.sortie.ui.SortieNav
 import io.github.esko997.sortie.ui.SortieTheme
 import io.github.esko997.sortie.ui.SortieViewModel
+import io.github.esko997.sortie.ui.rememberSelectedTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -115,7 +116,7 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(lifecycleState, windowFocused, overlayOpen) {
                 if (lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && windowFocused && !overlayOpen) vm.onForeground(taskId)
             }
-            SortieTheme {
+            SortieTheme(palette = rememberSelectedTheme()) {
                 AmbientBackground {
                     Surface(
                         Modifier.fillMaxSize().safeDrawingPadding(),

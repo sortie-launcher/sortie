@@ -85,7 +85,7 @@ fun ControllerBadge(annotation: GameAnnotation, modifier: Modifier = Modifier) {
     Text(
         c.badge,
         style = MaterialTheme.typography.labelSmall,
-        color = Color(0xFFE6E8EB),
+        color = MaterialTheme.colorScheme.onSurface,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier
@@ -119,7 +119,7 @@ fun GamePersonalSummary(annotation: GameAnnotation?, bookmark: GameBookmark?, mo
 @Composable
 private fun BookmarkBlock(text: String) {
     Column(Modifier.semantics(mergeDescendants = true) {}) {
-        Text("Bookmark", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Amber)
+        Text("Bookmark", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Accent)
         Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
     }
 }
@@ -175,13 +175,13 @@ fun BookmarkEditor(
                 else -> "Saving replaces the current bookmark. Cancel keeps it as it is."
             },
             style = MaterialTheme.typography.bodySmall,
-            color = if (tooLong) Color(0xFFF87171) else MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (tooLong) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
         )
         error?.let {
             Text(
                 "Not saved to the card: $it — Save retries; Cancel keeps the saved bookmark.",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFFF87171)
+                color = MaterialTheme.colorScheme.error
             )
         }
         FlowRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -200,7 +200,7 @@ fun BookmarkEditor(
                 },
                 enabled = canSave,
                 modifier = Modifier.focusRequester(saveFocus).focusGlow(saveInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape, accent),
-                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Ink),
+                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = CanvasColour),
                 interactionSource = saveInteraction
             ) { Text(if (saving) "Saving…" else if (draft.isEmpty() && saved.isNotEmpty()) "Remove bookmark" else "Save") }
             OutlinedButton(
@@ -273,7 +273,7 @@ fun ControllerEditor(
             Text(
                 "Not saved to the card: $it — Save retries; Cancel discards this change.",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFFF87171)
+                color = MaterialTheme.colorScheme.error
             )
         }
         FlowRow(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -291,7 +291,7 @@ fun ControllerEditor(
                 },
                 enabled = canSave,
                 modifier = Modifier.focusGlow(saveInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape, accent),
-                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = Ink),
+                colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = CanvasColour),
                 interactionSource = saveInteraction
             ) { Text(if (saving) "Saving…" else "Save") }
             OutlinedButton(
