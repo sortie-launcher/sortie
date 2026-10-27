@@ -10,7 +10,6 @@ import io.github.esko997.sortie.data.gamelist.GamelistParser
 import io.github.esko997.sortie.data.guide.CuratedCatalog
 import io.github.esko997.sortie.data.guide.CuratedGuide
 import io.github.esko997.sortie.data.guide.GuidePrecedence
-import io.github.esko997.sortie.data.magazine.SystemFamilies
 import io.github.esko997.sortie.data.manifest.GuideEntry
 import io.github.esko997.sortie.data.manifest.LibraryRules
 import io.github.esko997.sortie.data.manifest.ManifestStore
@@ -41,6 +40,13 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore, pr
 
     suspend fun run(force: Boolean = false): Report = lock.withLock { withContext(Dispatchers.IO) { runLocked(force) } }
 
+    /** Startup checks only metadata, not ROM folders. A catalog upgrade also refreshes a nonempty cached library. */
+    suspend fun needsMetadataRefresh(): Boolean = withContext(Dispatchers.IO) {
+        val snap = manifests.snapshot.value
+        val expected = metaStamp(snap.guideStamp, curated.catalog.stamp, snap.library)
+        snap.systems.any { dao.meta(it.id)?.guideStamp != expected }
+    }
+
     private suspend fun runLocked(force: Boolean): Report {
         val t0 = System.currentTimeMillis()
         val snap = manifests.snapshot.value
@@ -54,10 +60,9 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore, pr
         var variants = 0
         val problems = mutableListOf<String>()
         val catalog = curated.catalog
-        val families = SystemFamilies(snap.systems)
         for (sys in snap.systems) {
             try {
-                val r = indexSystem(root, sys, snap.guide, snap.guideStamp, catalog, families, snap.library, force)
+                val r = indexSystem(root, sys, snap.guide, snap.guideStamp, catalog, snap.library, force)
                 files += r.files
                 updated += r.updated
                 removed += r.removed
@@ -84,7 +89,6 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore, pr
         guide: Map<String, GuideEntry>,
         guideStamp: String,
         catalog: CuratedCatalog,
-        families: SystemFamilies,
         rules: LibraryRules,
         force: Boolean
     ): SystemResult {
@@ -109,7 +113,7 @@ class Indexer(private val dao: GameDao, private val manifests: ManifestStore, pr
             val bundled = if (external?.auto == false) {
                 null
             } else {
-                catalog.match(sys.id, fd.file.name, title, HackMarks.isHack(fd.file.name, hackRx, external), families)?.variant
+                catalog.matchFile(sys.id, fd.file)
             }
             val g = GuidePrecedence.effective(external, bundled)
             rows += GameEntity(

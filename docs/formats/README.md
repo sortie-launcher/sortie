@@ -16,7 +16,7 @@ the schemas do not promise to preserve unknown keys when rewritten. Start with t
 | `systems.json` | Library setup, import or desktop | system folders, metadata paths and fallback profiles ([systems.md](systems.md)) |
 | `launchers.json` | Library setup, import, remembered chooser choice or desktop | launch profiles ([launchers.md](launchers.md)) |
 | `folders.json` | import or desktop | smart and manual folder definitions ([folders.md](folders.md)) |
-| `guide.json` | desktop (optional) | local editorial fit, hook, flags and tags; the bundled guide fills eligible gaps ([guide.md](guide.md)) |
+| `guide.json` | desktop (optional) | local editorial fit, hook, flags and tags; the bundled UUID catalog fills eligible gaps ([guide.md](guide.md)) |
 | `user.json` | device | bookmarks, favourites, queue, shelves/verdicts, reference-card metadata, clippings, overrides and interface preferences ([user.md](user.md)) |
 | `playlog.jsonl` | device | append-only start/end event mirror, not the authoritative history ([playlog.md](playlog.md)) |
 | `backups/pre-restore-<time>.json`, `backups/pre-cocoon-import-<time>.json` | device | safety copy taken before each restore or Cocoon import; same format as an exported backup ([format](user.md#backup-export-and-restore)) |
@@ -37,7 +37,7 @@ backup. See [backup export and restore](user.md#backup-export-and-restore).
 ## Modified-game marks
 
 The indexer's `hack` flag drives the **hack** mark on game tiles and list rows. Positive evidence is a guide entry (from
-`guide.json` or the [bundled curated guide](guide.md#bundled-curated-guide)) whose `flags` contains `hack`, `translation` or `fan translation` (case-insensitive), the word `hack` in a
+`guide.json` or the [bundled identity catalog](guide.md#bundled-curated-guide)) whose `flags` contains `hack`, `translation` or `fan translation` (case-insensitive), the word `hack` in a
 bracketed filename qualifier, or `systems.json`'s `library.hackRegex`. The configured expression is also tried after
 removing version numbers inside qualifiers, so a rule for `(True Analogs)` covers `(True Analogs v1.03)`.
 

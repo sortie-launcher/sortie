@@ -38,10 +38,10 @@ Library inputs (ROMs and artwork are read-only; setup can edit configuration):
 - `scraped-esde/downloaded_media/<system>/{covers,screenshots,marquees,...}/<stem>.png|jpg`.
 - `sortie/guide.json` : optional taste layer from a desktop guide builder (fit 1-5, hook, flags,
   tags) keyed by system + filename. It takes precedence over the bundled curated guide.
-- APK asset `guide/catalog.json`: bundled AI-assisted editorial hooks, flags and a few control notes (no fit or tags),
-  keyed by portable work/variant IDs and matched conservatively to local files. An `auto: false` card entry wins as a
-  whole; otherwise the bundle fills empty fields. Authored/auto is precedence, not human authorship. See
-  [guide format](formats/guide.md) and `data/guide/CuratedGuide.kt`.
+- APK asset `game-blurbs.json` : the bundled public identity catalog (original hooks, flags and control notes; no fit or
+  taste tags), keyed by immutable release UUIDs, matched by scoped payload fingerprints and exact curated aliases.
+  An `auto: false` card entry wins as a whole, including intentional blanks; otherwise the bundle fills empty fields.
+  Authored/auto is precedence, not human authorship. See [guide format](formats/guide.md) and `data/guide/CuratedGuide.kt`.
 - `sortie/systems.json`, `sortie/launchers.json`, `sortie/folders.json`, `sortie/device.json` :
   see docs/formats.
 - APK assets at `magazines/<issue-id>/` (only in builds made with a magazine content directory; see RELEASE.md) and
