@@ -56,7 +56,7 @@ class SwitcherHost(private val graph: SortieApp.Graph) {
                 }
             }
         ) { displayId, controller ->
-            SortieTheme(palette = rememberSelectedTheme()) {
+            SelectedSortieTheme {
                 Surface(
                     Modifier.fillMaxSize().safeDrawingPadding(),
                     color = BarColour.copy(alpha = 0xDD / 255f),

@@ -2,10 +2,10 @@
 """Authoritative domestic repair / tea-service drawings for the Rivet workshop.
 
 Run: python3 tools/mecha/workshop/domestic.py
-Writes only assets/domestic beside this script. Uses the existing courier mask
-primitives and shared rig: neck32,25; shoulders19/45,29; hips26/38,44; floor61.
+Writes production sheets/masks/catalog and review exports in assets/domestic
+beside this script. Rig: neck32,25; shoulders19/45,29; hips26/38,44; floor61.
 The two silhouettes are Bellhop (enamel pressure-service) and Mend (bench repair).
-Production copies only the catalog and eight part sheets, checked by test_production.py.
+Production exports include the catalog, eight part sheets and eight semantic paint masks.
 """
 from __future__ import annotations
 
@@ -20,12 +20,14 @@ sys.path.insert(0, str(HERE.parent))
 from courier import (Canvas, OUT, SHADOW, STEEL, HI, STEEL_RAMP, rect, rrect,
                      ellipse, circle, capsule, poly, line, mirror, hexc,
                      render_sheet, assemble, leg_state)
+from paint_roles import export_part, legacy_overrides
 
 ROOT = HERE.parents[2]
 ASSETS = HERE / "assets/domestic"
 CREAM = tuple(map(hexc, ("A7997D", "E8DABD", "FFF2D5")))
 SAGE = tuple(map(hexc, ("405A4F", "79947A", "B8CBA2")))
 BRICK = tuple(map(hexc, ("8C443A", "C77457", "F3B281")))
+PAINT_PRIMARY, PAINT_SECONDARY = CREAM, SAGE
 GOLD = hexc("F6C770")
 HOT = hexc("FFF2C0")
 RUBBER = (OUT, SHADOW, STEEL)
@@ -317,10 +319,15 @@ def main():
     catalog = []
     for pid, slot, name, draw in PARTS:
         sheets[pid] = render_sheet(draw)
-        sheets[pid].save(ASSETS / f"{pid}.png", optimize=True)
+        export_part(sheets[pid], ASSETS / f"{pid}.png", PAINT_PRIMARY, PAINT_SECONDARY,
+                    original_material_compat=True, slot=slot, overrides=legacy_overrides(pid))
+        export_part(sheets[pid], ROOT / "mecha/src/main/assets/mecha/domestic" / f"{pid}.png",
+                    PAINT_PRIMARY, PAINT_SECONDARY, original_material_compat=True,
+                    slot=slot, overrides=legacy_overrides(pid))
         catalog.append(dict(id=pid, slot=slot, family="domestic", name=name,
                             asset=f"mecha/domestic/{pid}.png"))
     (ASSETS / "catalog.json").write_text(json.dumps(catalog, indent=2) + "\n")
+    (ROOT / "mecha/src/main/assets/mecha/domestic/catalog.json").write_text(json.dumps(catalog, indent=2) + "\n")
     combos = [("Bellhop / service", full(1)), ("Mend / repair", full(2)),
               ("Domestic x yard", combination("domestic_head_1", "yard_body_1", "domestic_arms_2", "yard_legs_1")),
               ("Survey x domestic", combination("survey_head_2", "domestic_body_2", "survey_arms_1", "domestic_legs_1"))]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "radio_head_1",
+    "slot": "HEAD",
+    "family": "radio",
+    "name": "Whip antenna face",
+    "asset": "mecha/radio/radio_head_1.png"
+  },
+  {
+    "id": "radio_head_2",
+    "slot": "HEAD",
+    "family": "radio",
+    "name": "Studio headphones",
+    "asset": "mecha/radio/radio_head_2.png"
+  },
+  {
+    "id": "radio_body_1",
+    "slot": "BODY",
+    "family": "radio",
+    "name": "Field transmitter",
+    "asset": "mecha/radio/radio_body_1.png"
+  },
+  {
+    "id": "radio_body_2",
+    "slot": "BODY",
+    "family": "radio",
+    "name": "Twin reel tape deck",
+    "asset": "mecha/radio/radio_body_2.png"
+  },
+  {
+    "id": "radio_arms_1",
+    "slot": "ARMS",
+    "family": "radio",
+    "name": "Signal test mittens",
+    "asset": "mecha/radio/radio_arms_1.png"
+  },
+  {
+    "id": "radio_arms_2",
+    "slot": "ARMS",
+    "family": "radio",
+    "name": "Fader fingers",
+    "asset": "mecha/radio/radio_arms_2.png"
+  },
+  {
+    "id": "radio_legs_1",
+    "slot": "LEGS",
+    "family": "radio",
+    "name": "Field gaiters",
+    "asset": "mecha/radio/radio_legs_1.png"
+  },
+  {
+    "id": "radio_legs_2",
+    "slot": "LEGS",
+    "family": "radio",
+    "name": "Quiet studio slippers",
+    "asset": "mecha/radio/radio_legs_2.png"
+  }
+]

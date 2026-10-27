@@ -38,7 +38,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -102,6 +101,7 @@ import io.github.esko997.sortie.mecha.ui.rememberMechaStage
 import io.github.esko997.sortie.shell.ScreenMover
 import io.github.esko997.sortie.shell.TaskSwitcher
 import io.github.esko997.sortie.stats.CompanionView
+import io.github.esko997.sortie.ui.SortieOutlinedButton as OutlinedButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -297,7 +297,7 @@ private fun HeroQueueButton(graph: SortieApp.Graph, id: String) {
         modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
             .mechaSpot("companion:queue", MechaSpotKind.LEDGE, interactive = true)
             .mechaSpot("companion:queue-end", MechaSpotKind.BESIDE_END, interactive = true)
-            .focusGlow(interaction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape),
+            .focusGlow(interaction.collectIsFocusedAsState().value, sortieButtonShape(ButtonDefaults.outlinedShape)),
         interactionSource = interaction,
         colors = ButtonDefaults.outlinedButtonColors(
             containerColor = if (queued) Accent.copy(alpha = 0.18f) else Color.Transparent,

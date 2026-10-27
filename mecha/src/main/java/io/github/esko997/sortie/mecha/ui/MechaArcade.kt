@@ -94,14 +94,15 @@ internal fun MechaArcade(store: MechaStore, view: MechaView, state: MechaState, 
     val session = store.arcadeSession
     val run by session.run.collectAsState()
     val host = remember { Any() }
-    val spriteLoad = rememberSpriteLoad(view.parts, state.equipped, state.equippedFinishes)
+    val spriteLoad = rememberSpriteLoad(view.parts, state.equipped, state.equippedPaints)
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val windowFocused = LocalWindowInfo.current.isWindowFocused
     var visible by remember { mutableStateOf(false) }
     var foreground by remember { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) }
     var confirmingEntry by remember { mutableStateOf(false) }
     var confirmingAbandon by remember { mutableStateOf(false) }
-    var lastBack by remember { mutableIntStateOf(backRequest) }
+    // The parent resets this counter on entry. A rapid A → B can arrive before our first composition.
+    var lastBack by remember { mutableIntStateOf(0) }
     val redraw = remember { mutableIntStateOf(0) }
     var score by remember { mutableIntStateOf(session.score) }
     var seconds by remember { mutableIntStateOf(session.scrap?.secondsLeft ?: 45) }

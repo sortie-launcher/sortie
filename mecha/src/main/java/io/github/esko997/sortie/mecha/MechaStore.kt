@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.res.AssetManager
 import android.graphics.BitmapFactory
 import android.util.Log
+import io.github.esko997.sortie.ui.SortieButtonStyle
+import io.github.esko997.sortie.ui.SortieFolderIcons
 import io.github.esko997.sortie.ui.SortiePalette
 import java.io.File
 import java.io.FileOutputStream
@@ -106,9 +108,17 @@ class MechaStore internal constructor(
 
     internal fun buyPart(partId: String) = change { it.buyingPart(partId, parts) }
 
-    internal fun buyFinish(finish: MechaFinish) = change { it.buyingFinish(finish) }
+    internal fun buyPaint(paint: MechaPaint) = change { it.buyingPaint(paint) }
 
-    internal fun setFinish(slot: MechaSlot, finish: MechaFinish) = change { it.finishing(slot, finish) }
+    internal fun applyPaint(paint: MechaPaint, slot: MechaSlot?) = change { it.applyingPaint(paint, slot) }
+
+    internal fun buyFolderIcons(pack: SortieFolderIcons) = change { it.buyingFolderIcons(pack) }
+
+    internal fun setFolderIcons(pack: SortieFolderIcons) = change { it.selectingFolderIcons(pack) }
+
+    internal fun buyButtonStyle(style: SortieButtonStyle) = change { it.buyingButtonStyle(style) }
+
+    internal fun setButtonStyle(style: SortieButtonStyle) = change { it.selectingButtonStyle(style) }
 
     internal fun buyTheme(palette: SortiePalette) = change { it.buyingTheme(palette) }
 
@@ -136,23 +146,13 @@ class MechaStore internal constructor(
         change { it.fittingBuild(selection, parts) }
     }
 
-    internal fun spin(tier: MechaCabinetTier, expectedSequence: Int) = change { current ->
-        val available = if (tier == MechaCabinetTier.PART) parts.count { it.id !in current.owned } else 0
-        val problem = when {
-            expectedSequence != current.cabinetSpins -> "That cabinet turn has already finished."
-            current.cabinetSpins == Int.MAX_VALUE -> "The cabinet's turn counter is full."
-            current.salvage < tier.stake -> "Not enough salvage credits."
-            tier == MechaCabinetTier.PART && available == 0 -> "Every part is already owned."
-            tier.finish != null && tier.finish in current.ownedFinishes -> "That finish is already owned."
-            else -> null
-        }
+    internal fun spin(stake: MechaSlotStake, expectedSequence: Int) = change { current ->
+        val problem = current.slotEntryProblem(stake, expectedSequence)
         if (problem != null) {
             MechaResult(current, error = problem)
         } else {
-            // Resolve once on the serialized worker; the receipt, unlock and wallet are committed together.
-            val roll = random.nextInt(100)
-            val rewardIndex = if (available > 0) random.nextInt(available) else 0
-            current.cabinetSpun(tier, parts, roll, rewardIndex)
+            // Resolve once on the serialized worker; the receipt and wallet are committed together.
+            current.slotSpun(stake, random.nextInt(100))
         }
     }
 
@@ -344,7 +344,7 @@ class MechaStore internal constructor(
             return
         }
         val loaded = try {
-            json.decodeFromString(MechaState.serializer(), file.readText()).also { s ->
+            decodeMechaState(file.readText()).also { s ->
                 mechaStateProblem(s, parts)?.let { throw IllegalStateException(it) }
             }
         } catch (e: Exception) {

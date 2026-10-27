@@ -1,0 +1,58 @@
+[
+  {
+    "id": "textile_head_1",
+    "slot": "HEAD",
+    "family": "textile",
+    "name": "Loom wound bobbin",
+    "asset": "mecha/textile/textile_head_1.png"
+  },
+  {
+    "id": "textile_head_2",
+    "slot": "HEAD",
+    "family": "textile",
+    "name": "Patch pincushion",
+    "asset": "mecha/textile/textile_head_2.png"
+  },
+  {
+    "id": "textile_body_1",
+    "slot": "BODY",
+    "family": "textile",
+    "name": "Loom warp chassis",
+    "asset": "mecha/textile/textile_body_1.png"
+  },
+  {
+    "id": "textile_body_2",
+    "slot": "BODY",
+    "family": "textile",
+    "name": "Patch stitched jacket",
+    "asset": "mecha/textile/textile_body_2.png"
+  },
+  {
+    "id": "textile_arms_1",
+    "slot": "ARMS",
+    "family": "textile",
+    "name": "Loom shuttle spools",
+    "asset": "mecha/textile/textile_arms_1.png"
+  },
+  {
+    "id": "textile_arms_2",
+    "slot": "ARMS",
+    "family": "textile",
+    "name": "Patch needle and shears",
+    "asset": "mecha/textile/textile_arms_2.png"
+  },
+  {
+    "id": "textile_legs_1",
+    "slot": "LEGS",
+    "family": "textile",
+    "name": "Loom bobbin feet",
+    "asset": "mecha/textile/textile_legs_1.png"
+  },
+  {
+    "id": "textile_legs_2",
+    "slot": "LEGS",
+    "family": "textile",
+    "name": "Patch mended boots",
+    "asset": "mecha/textile/textile_legs_2.png"
+  }
+]

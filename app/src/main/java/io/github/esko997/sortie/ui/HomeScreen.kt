@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -776,6 +777,7 @@ private fun HomeTileView(
                 cover = t.cover,
                 logo = t.logo,
                 lifted = lifted,
+                folder = true,
                 onLongClick = onLongClick,
                 onFavourite = onFavourite
             )
@@ -822,7 +824,15 @@ private fun HomeTileView(
                         onLongClick = onLongClick,
                         colour = colour,
                         onFavourite = onFavourite
-                    ) { FolderLine(t.title, t.subtitle, colour, Modifier.mechaObstacle("line:${t.id}")) }
+                    ) {
+                        FolderLine(
+                            t.title,
+                            t.subtitle,
+                            colour,
+                            Modifier.mechaObstacle("line:${t.id}"),
+                            showPack = t.cover == null && t.logo == null
+                        )
+                    }
                 }
                 is LibraryItem.Game -> GameRow(
                     item.game,
@@ -848,9 +858,13 @@ private fun HomeTileView(
 }
 
 @Composable
-private fun FolderLine(title: String, subtitle: String, colour: Color, modifier: Modifier = Modifier) {
+private fun FolderLine(title: String, subtitle: String, colour: Color, modifier: Modifier = Modifier, showPack: Boolean = true) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        ColourChip(colour)
+        if (showPack && LocalSortieFolderIcons.current != SortieFolderIcons.DEFAULT) {
+            SortieFolderIcon(Modifier.size(40.dp), colour = colour)
+        } else {
+            ColourChip(colour)
+        }
         Column(Modifier.padding(start = 12.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             // a missing BIOS lengthens the line: two lines at most, never a row that grows without end

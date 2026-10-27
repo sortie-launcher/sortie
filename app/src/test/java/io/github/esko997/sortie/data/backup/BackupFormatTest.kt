@@ -8,11 +8,12 @@ import io.github.esko997.sortie.data.manifest.GameBookmark
 import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.data.reference.ReferenceCard
 import io.github.esko997.sortie.data.user.GameProgress
-import io.github.esko997.sortie.mecha.MechaCabinetTier
 import io.github.esko997.sortie.mecha.MechaFinish
+import io.github.esko997.sortie.mecha.MechaLegacyCabinetTier
+import io.github.esko997.sortie.mecha.MechaLegacySpinOutcome
+import io.github.esko997.sortie.mecha.MechaLegacySpinReceipt
+import io.github.esko997.sortie.mecha.MechaPaint
 import io.github.esko997.sortie.mecha.MechaSlot
-import io.github.esko997.sortie.mecha.MechaSpinOutcome
-import io.github.esko997.sortie.mecha.MechaSpinReceipt
 import io.github.esko997.sortie.mecha.MechaState
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -202,14 +203,14 @@ class BackupFormatTest {
 
     private fun withReceipt() = companion.copy(
         version = 2,
-        ownedFinishes = setOf(MechaFinish.PLAIN, MechaFinish.ALLOY),
-        equippedFinishes = mapOf(MechaSlot.HEAD to MechaFinish.ALLOY),
+        ownedPaints = setOf(MechaPaint(), MechaPaint(finish = MechaFinish.ALLOY)),
+        equippedPaints = mapOf(MechaSlot.HEAD to MechaPaint(finish = MechaFinish.ALLOY)),
         cabinetSpins = 1,
-        lastSpin = MechaSpinReceipt(
+        legacyLastSpin = MechaLegacySpinReceipt(
             sequence = 1,
-            tier = MechaCabinetTier.ALLOY,
+            tier = MechaLegacyCabinetTier.ALLOY,
             reels = listOf(2, 2, 2),
-            outcome = MechaSpinOutcome.REWARD,
+            outcome = MechaLegacySpinOutcome.REWARD,
             returnedCredits = 3,
             finish = MechaFinish.ALLOY
         )
@@ -233,7 +234,7 @@ class BackupFormatTest {
                 "ownedThemes", "selectedTheme", "hangarIntroSeen", "arcadeRuns", "activeArcade", "arcadeBest"
             )
         )
-        assertEquals(companion, valid(JsonObject(root + ("mecha" to legacy)).toString()).backup.mecha)
+        assertEquals(companion.copy(version = 1), valid(JsonObject(root + ("mecha" to legacy)).toString()).backup.mecha)
     }
 
     @Test
@@ -242,12 +243,12 @@ class BackupFormatTest {
         val invalid = listOf(
             save.copy(version = 99),
             save.copy(version = 1),
-            save.copy(ownedFinishes = setOf(MechaFinish.PLAIN)),
+            save.copy(ownedPaints = setOf(MechaPaint())),
             save.copy(cabinetSpins = 2),
-            save.copy(lastSpin = save.lastSpin!!.copy(returnedCredits = 10)),
-            save.copy(lastSpin = save.lastSpin!!.copy(reels = listOf(0, 1, 2))),
-            save.copy(lastSpin = save.lastSpin!!.copy(finish = MechaFinish.HOLO)),
-            save.copy(lastSpin = save.lastSpin!!.copy(partId = "yard_head_1"))
+            save.copy(legacyLastSpin = save.legacyLastSpin!!.copy(returnedCredits = 10)),
+            save.copy(legacyLastSpin = save.legacyLastSpin!!.copy(reels = listOf(0, 1, 2))),
+            save.copy(legacyLastSpin = save.legacyLastSpin!!.copy(finish = MechaFinish.HOLO)),
+            save.copy(legacyLastSpin = save.legacyLastSpin!!.copy(partId = "yard_head_1"))
         )
         invalid.forEach { broken ->
             val text = encodeBackup(buildBackup(user, emptyList(), broken, 42, "dmg", "0.0.1"))
@@ -256,5 +257,35 @@ class BackupFormatTest {
         val text = encodeBackup(buildBackup(user, emptyList(), save, 42, "dmg", "0.0.1"))
         assertTrue(parseBackup(text.replace("\"ALLOY\"", "\"UNKNOWN_FINISH\"")) is ParsedBackup.Invalid)
         assertTrue(parseBackup(text.replace("\"REWARD\"", "\"UNKNOWN_OUTCOME\"")) is ParsedBackup.Invalid)
+    }
+
+    @Test
+    fun nestedHistoricalFinishSchemasMigrateWithoutLosingThemesTicketsOrHistory() {
+        for (version in 2..3) {
+            val save = withReceipt().copy(
+                version = version,
+                ownedThemes = if (version == 3) setOf("default", "plum") else setOf("default"),
+                selectedTheme = if (version == 3) "plum" else "default",
+                hangarIntroSeen = version == 3,
+                arcadeRuns = if (version == 3) 1 else 0,
+                activeArcade = if (version == 3) io.github.esko997.sortie.mecha.MechaArcadeTicket(1, null, Long.MIN_VALUE) else null
+            )
+            val root = backupJson.parseToJsonElement(encodeBackup(buildBackup(user, emptyList(), save, 42, "test", "test"))).jsonObject
+            val old = root.getValue("mecha").jsonObject.toMutableMap()
+            old.remove("ownedPaints")
+            old.remove("equippedPaints")
+            old.remove("ownedFolderIcons")
+            old.remove("selectedFolderIcons")
+            old.remove("ownedButtonStyles")
+            old.remove("selectedButtonStyle")
+            old["ownedFinishes"] = backupJson.parseToJsonElement("""["PLAIN","ALLOY"]""")
+            old["equippedFinishes"] = backupJson.parseToJsonElement("""{"HEAD":"ALLOY"}""")
+            old["lastSpin"] = old.remove("legacyLastSpin")!!
+            val historical = JsonObject(root + ("mecha" to JsonObject(old))).toString()
+            assertEquals(save, valid(historical).backup.mecha)
+            val current = save.copy(version = 4)
+            assertEquals(current, valid(encodeBackup(buildBackup(user, emptyList(), current, 42, "test", "test"))).backup.mecha)
+            assertTrue(parseBackup(historical.replace("\"ALLOY\"", "\"UNKNOWN\"")) is ParsedBackup.Invalid)
+        }
     }
 }

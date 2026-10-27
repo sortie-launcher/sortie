@@ -1,0 +1,58 @@
+[
+  {
+    "id": "abyssal_head_1",
+    "slot": "HEAD",
+    "family": "abyssal",
+    "name": "Pressure globe",
+    "asset": "mecha/abyssal/abyssal_head_1.png"
+  },
+  {
+    "id": "abyssal_head_2",
+    "slot": "HEAD",
+    "family": "abyssal",
+    "name": "Angler lure",
+    "asset": "mecha/abyssal/abyssal_head_2.png"
+  },
+  {
+    "id": "abyssal_body_1",
+    "slot": "BODY",
+    "family": "abyssal",
+    "name": "Research gondola",
+    "asset": "mecha/abyssal/abyssal_body_1.png"
+  },
+  {
+    "id": "abyssal_body_2",
+    "slot": "BODY",
+    "family": "abyssal",
+    "name": "Trench ray hull",
+    "asset": "mecha/abyssal/abyssal_body_2.png"
+  },
+  {
+    "id": "abyssal_arms_1",
+    "slot": "ARMS",
+    "family": "abyssal",
+    "name": "Sample baskets",
+    "asset": "mecha/abyssal/abyssal_arms_1.png"
+  },
+  {
+    "id": "abyssal_arms_2",
+    "slot": "ARMS",
+    "family": "abyssal",
+    "name": "Whisker probes",
+    "asset": "mecha/abyssal/abyssal_arms_2.png"
+  },
+  {
+    "id": "abyssal_legs_1",
+    "slot": "LEGS",
+    "family": "abyssal",
+    "name": "Pressure pads",
+    "asset": "mecha/abyssal/abyssal_legs_1.png"
+  },
+  {
+    "id": "abyssal_legs_2",
+    "slot": "LEGS",
+    "family": "abyssal",
+    "name": "Silt fins",
+    "asset": "mecha/abyssal/abyssal_legs_2.png"
+  }
+]

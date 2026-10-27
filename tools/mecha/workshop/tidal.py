@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Authoritative Tidal salvage-diver drawings; rerun with Python + Pillow from anywhere.
 
-Only writes workshop/assets/tidal. Shares the shipped courier raster primitives,
+Writes production and workshop/assets/tidal exports. Shares courier raster primitives,
 neutral outlines and attachment rig, never its authored part silhouettes.
-Production copies only the catalog and eight part sheets, checked by test_production.py.
+Production exports the catalog, eight part sheets and eight semantic paint masks.
 """
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from courier import (  # noqa: E402
     unit, arm_phase, leg_state, render_sheet, assemble, hexc,
     DETAIL, SLEEP, CHEER, WALK_L, WALK_R, PASS_A, PASS_B,
 )
+from paint_roles import export_part, legacy_overrides
 
 DEST = Path(__file__).resolve().parent / "assets/tidal"
 ROOT = MECHA.parents[1]
@@ -29,6 +30,7 @@ BRASS_D, BRASS, BRASS_L = map(hexc, ("786345", "AD9161", "DEC99A"))
 GLASS, GLOW, HOT = map(hexc, ("203B49", "A2D5BB", "E0EBD0"))
 MARINE = (TEAL_D, TEAL, TEAL_L)
 BRONZE = (BRASS_D, BRASS, BRASS_L)
+PAINT_PRIMARY, PAINT_SECONDARY = MARINE, BRONZE
 
 
 def glass(c, x, y, radius, f):
@@ -303,10 +305,15 @@ def main():
     sheets, catalog = {}, []
     for pid, slot, name, draw in PARTS:
         sheets[pid] = render_sheet(draw)
-        sheets[pid].save(DEST / (pid + ".png"))
+        export_part(sheets[pid], DEST / (pid + ".png"), PAINT_PRIMARY, PAINT_SECONDARY,
+                    original_material_compat=True, slot=slot, overrides=legacy_overrides(pid))
+        export_part(sheets[pid], ROOT / "mecha/src/main/assets/mecha/tidal" / f"{pid}.png",
+                    PAINT_PRIMARY, PAINT_SECONDARY, original_material_compat=True,
+                    slot=slot, overrides=legacy_overrides(pid))
         catalog.append(dict(id=pid, slot=slot, family="tidal", name=name,
                             asset=f"mecha/tidal/{pid}.png"))
     (DEST / "catalog.json").write_text(json.dumps(catalog, indent=2) + "\n")
+    (ROOT / "mecha/src/main/assets/mecha/tidal/catalog.json").write_text(json.dumps(catalog, indent=2) + "\n")
     slots = ("HEAD", "BODY", "ARMS", "LEGS")
     combos = [("Tidal %d" % variant, {s: f"tidal_{s.lower()}_{variant}" for s in slots})
               for variant in (1, 2)]

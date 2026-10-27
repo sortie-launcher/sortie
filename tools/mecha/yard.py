@@ -20,6 +20,7 @@ import random
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
+from paint_roles import export_part, legacy_overrides
 
 W = 64
 FRAMES = 8
@@ -46,6 +47,9 @@ GLOW_D = (0x3B, 0x8C, 0x6C)
 GLOW = (0x8F, 0xEE, 0xB8)
 CORE = (0xEF, 0xFF, 0xE6)
 BEACON = [(0x86, 0x2C, 0x1C), (0xDD, 0x5A, 0x2E), (0xFF, 0xA2, 0x62)]
+
+PAINT_PRIMARY = tuple(colour + (255,) for colour in [*OCH, OCH_HI])
+PAINT_SECONDARY = tuple(colour + (255,) for colour in CRM)
 
 LIGHT = (-0.5, -0.66, 0.56)
 _ln = math.sqrt(sum(c * c for c in LIGHT))
@@ -1097,7 +1101,8 @@ def main():
     for pid, slot, name, fn in PARTS:
         sheet = build_sheet(fn)
         check_sheet(pid, sheet)
-        sheet.save(OUT_DIR / f"{pid}.png", optimize=True)
+        export_part(sheet, OUT_DIR / f"{pid}.png", PAINT_PRIMARY, PAINT_SECONDARY,
+                    original_material_compat=True, slot=slot, overrides=legacy_overrides(pid))
         sheets[pid] = sheet
         catalog.append({"id": pid, "slot": slot, "family": "yard", "name": name,
                         "asset": f"mecha/yard/{pid}.png"})

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Authoritative foundry service-bot drawings; run with Python 3 + Pillow.
 
-Writes only workshop/assets/foundry: eight RGBA sheets, catalog, review board
-and animated preview. Reuses the existing courier pixel primitives and rig,
-not its artwork. Production copies only the catalog and eight part sheets;
-test_production.py checks these exports against the drawings and shipped files.
+Writes production sheets/masks/catalog plus workshop/assets/foundry review
+exports. Reuses the existing courier pixel primitives and rig,
+not its artwork. Production exports the catalog, eight part sheets and eight
+semantic paint masks; tools/mecha/test_production.py checks reproducibility.
 """
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from courier import (  # noqa: E402
     rect, rrect, circle, capsule, line, poly, mirror, leg_state,
     render_sheet, assemble,
 )
+from paint_roles import export_part, legacy_overrides
 
 ROOT = Path(__file__).resolve().parents[3]
 DEST = Path(__file__).resolve().parent / "assets/foundry"
@@ -28,6 +29,7 @@ RUST = tuple(map(hexc, ("643B35", "A45A43", "DB9772")))
 COAL = tuple(map(hexc, ("273039", "45525A", "81908D")))
 BRASS = tuple(map(hexc, ("766142", "BA9560", "E1C899")))
 LEATHER = tuple(map(hexc, ("3C3030", "66504A", "9C7863")))
+PAINT_PRIMARY, PAINT_SECONDARY = RUST, BRASS
 EMBER, FIRE, HOT = map(hexc, ("B65331", "FFAA54", "FFE6A0"))
 GLASS = hexc("1C353C")
 LENS = hexc("9DCBB8")
@@ -336,9 +338,14 @@ def main():
     catalog = []
     for pid, slot, name, draw in PARTS:
         sheets[pid] = render_sheet(draw)
-        sheets[pid].save(DEST / f"{pid}.png", optimize=True)
+        export_part(sheets[pid], DEST / f"{pid}.png", PAINT_PRIMARY, PAINT_SECONDARY,
+                    original_material_compat=True, slot=slot, overrides=legacy_overrides(pid))
+        export_part(sheets[pid], ROOT / "mecha/src/main/assets/mecha/foundry" / f"{pid}.png",
+                    PAINT_PRIMARY, PAINT_SECONDARY, original_material_compat=True,
+                    slot=slot, overrides=legacy_overrides(pid))
         catalog.append({"id": pid, "slot": slot, "family": "foundry", "name": name, "asset": f"mecha/foundry/{pid}.png"})
     (DEST / "catalog.json").write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
+    (ROOT / "mecha/src/main/assets/mecha/foundry/catalog.json").write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
     sets = combos()
     for _, combo in sets:
         for pid in combo.values():

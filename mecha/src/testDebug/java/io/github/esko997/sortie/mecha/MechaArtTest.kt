@@ -30,6 +30,70 @@ class MechaArtTest {
     }
 
     @Test
+    fun fiftyCompleteAuthoredSetsIncludeSemanticMasks() {
+        assertEquals(25, MECHA_FAMILIES.size)
+        assertEquals(200, parts.size)
+        assertEquals(200, parts.map { it.id }.toSet().size)
+        val originals = setOf("yard", "survey", "courier", "foundry", "orbital", "tidal", "domestic")
+        for (family in MECHA_FAMILIES) {
+            val familyParts = parts.filter { it.family == family }
+            assertEquals("$family: two complete four-part sets", 8, familyParts.size)
+            for (slot in MechaSlot.entries) {
+                for (variant in 1..2) {
+                    assertTrue("$family: missing $slot set $variant", familyParts.any { it.id == "${family}_${slot.name.lowercase()}_$variant" })
+                }
+            }
+        }
+        for (part in parts) {
+            val sheet = requireNotNull(BitmapFactory.decodeFile(File(assets, part.asset).path))
+            val maskPath = File(assets, part.asset.removeSuffix(".png") + ".paint.png")
+            val mask = requireNotNull(BitmapFactory.decodeFile(maskPath.path, BitmapFactory.Options().apply { inPremultiplied = false }))
+            assertEquals("${part.id}: mask width", 512, mask.width)
+            assertEquals("${part.id}: mask height", 64, mask.height)
+            val bytes = maskPath.readBytes()
+            assertEquals("${part.id}: mask bit depth", 8, bytes[24].toInt())
+            assertEquals("${part.id}: mask RGBA", 6, bytes[25].toInt())
+            for (frame in 0..7) {
+                val roles = IntArray(3)
+                for (y in 0..63) {
+                    for (x in 0..63) {
+                        val source = sheet.getPixel(frame * 64 + x, y)
+                        val semantic = mask.getPixel(frame * 64 + x, y)
+                        val alpha = semantic ushr 24
+                        val role = semantic ushr 16 and 255
+                        val tone = semantic ushr 8 and 255
+                        val eligibility = semantic and 255
+                        assertEquals("${part.id}: mask alpha $frame:$x,$y", source ushr 24, alpha)
+                        assertTrue("${part.id}: invalid role", role in 0..2)
+                        assertTrue("${part.id}: invalid tone", tone in 0..3)
+                        assertTrue("${part.id}: invalid Original eligibility", eligibility in 0..1)
+                        if (alpha == 0) assertEquals("${part.id}: transparent mask RGB", 0, semantic)
+                        if (role == 0) assertEquals("${part.id}: fixed tone", 0, tone)
+                        if (alpha != 0) roles[role]++
+                        if (part.family in originals) {
+                            val rgb = source and 0xffffff
+                            val mechanical = rgb == 0x18232d || rgb == 0x344650 || rgb == 0x768a91 || rgb == 0xa6b5b1 || rgb == 0xd7dfd5
+                            val face = part.slot == MechaSlot.HEAD && x in 18..45 && y in 12..23
+                            val dark = maxOf(source ushr 16 and 255, source ushr 8 and 255, source and 255) < 96
+                            val expected = if (source ushr 24 == 255 && !mechanical && !face && !dark) 1 else 0
+                            assertEquals("${part.id}: Original finish compatibility", expected, eligibility)
+                        } else {
+                            assertEquals("${part.id}: new paint eligibility", if (role == 0) 0 else 1, eligibility)
+                        }
+                    }
+                }
+                assertTrue("${part.id} pose $frame: no painted region", roles[1] + roles[2] > 0)
+                if (part.family !in originals) {
+                    assertTrue("${part.id} pose $frame: missing primary region", roles[1] >= 4)
+                    assertTrue("${part.id} pose $frame: missing secondary region", roles[2] >= 4)
+                }
+            }
+            mask.recycle()
+            sheet.recycle()
+        }
+    }
+
+    @Test
     fun everyPoseKeepsHardPixelsSharedOutlineAndAttachmentZones() {
         for (part in parts) {
             val sheet = requireNotNull(BitmapFactory.decodeFile(File(assets, part.asset).path))

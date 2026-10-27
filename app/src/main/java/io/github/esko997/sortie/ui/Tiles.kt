@@ -107,7 +107,8 @@ fun SquareTile(
     onLongClick: (() -> Unit)? = null,
     onFavourite: (() -> Unit)? = null,
     annotation: GameAnnotation? = null,
-    hack: Boolean = false
+    hack: Boolean = false,
+    folder: Boolean = false
 ) {
     val canvas = CanvasColour
     val tileScrim = remember(canvas) {
@@ -172,6 +173,12 @@ fun SquareTile(
                     style = MaterialTheme.typography.displaySmall,
                     color = MonogramColour,
                     modifier = Modifier.align(MonogramAlignment)
+                )
+            }
+            if (folder && cover == null && logo == null && LocalSortieFolderIcons.current != SortieFolderIcons.DEFAULT) {
+                SortieFolderIcon(
+                    modifier = Modifier.align(MonogramAlignment).fillMaxWidth(0.58f).fillMaxHeight(0.58f),
+                    colour = colour ?: Accent
                 )
             }
             if (logo != null) {

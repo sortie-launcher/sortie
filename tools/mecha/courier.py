@@ -22,6 +22,7 @@ import math
 from pathlib import Path
 
 from PIL import Image, ImageDraw
+from paint_roles import export_part, legacy_overrides
 
 ROOT = Path(__file__).resolve().parents[2]
 ASSETS = ROOT / "mecha/src/main/assets/mecha/courier"
@@ -56,6 +57,9 @@ CORAL_RAMP = (CORAL_D, CORAL, CORAL_L)
 NAVY_RAMP = (NAVY_D, NAVY, NAVY_L)
 RUBBER_RAMP = (OUT, SHADOW, STEEL)
 PAPER_RAMP = (STEEL, HI, HI)
+
+PAINT_PRIMARY = CORAL_RAMP
+PAINT_SECONDARY = NAVY_RAMP
 
 IDLE, DETAIL, WALK_L, PASS_A, WALK_R, PASS_B, SLEEP, CHEER = range(8)
 N4 = ((1, 0), (-1, 0), (0, 1), (0, -1))
@@ -750,6 +754,24 @@ def gif(sheets: dict[str, Image.Image], combos: list[tuple[str, dict[str, str]]]
     frames[0].save(path, save_all=True, append_images=frames[1:], duration=durations, loop=0, disposal=1)
 
 
+def paint_overrides(pid):
+    overrides = legacy_overrides(pid)
+    if pid == "courier_legs_2":
+        # The moving tread lamps use coral shadow when asleep.
+        for frame in range(8):
+            for side in (0, 1):
+                out, lift, _ = leg_state(frame, side)
+                if frame == CHEER:
+                    lift, out = 2, 1 if side == 0 else 0
+                ax, top = 24 - out, 55 - lift
+                fender = rrect(ax - 5, top, ax + 4, top + 2, 1)
+                if side:
+                    fender = mirror(fender)
+                x = min(point[0] for point in fender) + (1 if side == 0 else 8)
+                overrides[(frame * 64 + x, top + 1)] = (0, 0)
+    return overrides
+
+
 def main() -> None:
     ASSETS.mkdir(parents=True, exist_ok=True)
     CACHE.mkdir(parents=True, exist_ok=True)
@@ -758,7 +780,8 @@ def main() -> None:
     for pid, slot, name, draw in PARTS:
         sheet = render_sheet(draw)
         sheets[pid] = sheet
-        sheet.save(ASSETS / f"{pid}.png", optimize=True)
+        export_part(sheet, ASSETS / f"{pid}.png", PAINT_PRIMARY, PAINT_SECONDARY,
+                    original_material_compat=True, slot=slot, overrides=paint_overrides(pid))
         catalog.append({"id": pid, "slot": slot, "family": FAMILY, "name": name, "asset": f"mecha/{FAMILY}/{pid}.png"})
     (ASSETS / "catalog.json").write_text(json.dumps(catalog, indent=2) + "\n")
 

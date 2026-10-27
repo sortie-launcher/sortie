@@ -365,32 +365,41 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   no crash. The bottom panel's rotating hero still redraws on its own timer (not the mech).
 - One named companion, cosmetic Bond/Charge/Condition, tune/charge/rest interactions, motion toggle and hide/show.
   No time-away decay, death, streaks, notifications, network calls or requirement to care before playing.
-- Seven original pixel-art families (yard, survey, courier, foundry, orbital, tidal, domestic), two variants for each
-  head/body/arms/legs slot: 56 authored parts and 38,416 freely equipped loadouts. Eight 64×64 frames per transparent
-  512×64 atlas, shared attachment points, four poses. Grounded sole fill y61, outline y62, y63 clear.
-  Nearest-neighbour integer display scaling; family-local Pillow generators in `tools/mecha/` reproduce the assets
-  (`mecha/src/main/assets/mecha/`) and review boards. The companion is the `:mecha` module (see the code map below).
-- Twelve original starter parts and three starter credits. Direct purchases cost two credits per part and never auto-equip.
-  Alloy (6) and Holo (10) are global reusable finish unlocks, applied per slot; Plain is free. Pixel transforms preserve
-  transparency, outlines, joints and the head's face area. Eight material phases share the existing visible sprite clock;
-  motion off selects phase zero. Decode/transform work runs off-main behind a mutex with a 12 MiB LRU atlas cache.
-- Workshop has one assembly draft, preview and Fit action. Parts, Family sets and Mixes all edit that draft. Mixes enumerate
-  owned two-family sets: matching body/arms chassis family, a different head/legs trim family, independently chosen authored
-  variants. All parts owned permits 672 sets. Fit saves the four real part IDs and preserves finishes; no generated artwork.
-- Slot machine stakes 1/3/5 target an unowned part/Alloy/Holo. Outcomes: 20% reward plus stake returned, 30% stake returned,
-  50% miss. Expected net cost per reward is 2.5× the stake, 25% above direct purchase in every tier. No duplicates or
-  completed-tier spending. A queued atomic transaction saves debit, reward, sequence and receipt together before display;
-  the expected sequence rejects stale repeat submissions. Receipt viewing is read-only and cannot replay a reward.
-  Three original pixel-art reels briefly animate a newly committed receipt; reopening it is static. Motion off skips the flourish.
+- Twenty-five authored pixel-art families, each with two complete head/body/arms/legs sets: 50 sets and 200 base parts.
+  The original seven families retain their base PNG bytes. Every set uses the same attachment points, draw order and
+  eight 64×64 poses in a transparent 512×64 atlas; mixed parts are unrestricted, not procedurally constrained.
+  Nearest-neighbour integer scaling keeps hard pixels. `tools/mecha/generate.py` regenerates the production catalog;
+  `tools/mecha/test_production.py` checks packaging, semantic masks and reproduction from the authoring sources.
+- Each atlas has a sibling `.paint.png` semantic mask with identical dimensions and alpha. Red encodes fixed/primary/secondary,
+  green the four lighting tones, and blue Original-finish eligibility. Explicit author-time pigment assignments and detail
+  exceptions keep eyes, glass, lights, outlines and mechanisms fixed. Old-family Original eligibility preserves the historical
+  coating exactly without runtime colour or face-window guesses.
+- Twelve original starter parts and three starter credits. Direct parts cost two credits. Ten two-tone schemes plus Original
+  each have independent Standard/Alloy/Holo editions: 2/6/10 credits, except free Original Standard. Editions are reusable
+  on any owned part. Coloured Alloy retains pigment with a travelling glint; Holo adds prismatic bands. Original editions
+  retain the prior look. Eight material phases share the visible sprite clock; motion off selects phase zero.
+  Decode/transform work runs off-main behind a mutex with a 12 MiB LRU keyed by asset and paint, never catalog-wide preload.
+- Shop only purchases Parts, Paint and Launcher styles. Workshop applies them: Bot has Assembly/Paint/Care; Launcher has
+  Themes/Folders/Buttons. Assembly Parts and Family sets share one draft and Fit action, with family filtering.
+  Paint supports a selected slot or all four atomically, live selected-only preview and explicit Apply/Cancel.
+  Browsing and cancellation never write; Back cancels a local preview before leaving its page. Rename remains explicit.
+- Slot machine stakes 1/3/5 exchange credits only, independently of inventory. All stakes have 5% jackpot (5× returned),
+  20% win (2×), 20% stake back (1×), and 55% miss (0×): 85% average return. Entry requires enough funds and room for
+  the full jackpot under 50; balances above 46/38/30 respectively cannot take that stake. No payout clipping.
+  A queued atomic transaction saves debit, payout, sequence and receipt before its brief reel animation;
+  stale confirmations cannot spend twice. Reopened receipts are static and cannot replay a payout.
+  Old item-prize receipts remain historical records, not new credit wins. Motion off skips the reel flourish.
 - Arcade uses a shared CRT for Flappy Flight, Scrap Catch and Circuit Match. One credit inserts a durable, initially unbound
   coin; choosing a game binds it without another debit. One coin buys one run, with scores/bests only and no economy or
   companion-stat rewards. Cancellation before purchase is free; abandoning a purchased run does not refund it.
   A process-shared session has one active host. Hiding, changing tabs or losing focus pauses it and clears held input;
   returning requires Resume. Restarting the process restarts the same paid seed free. Completed scores are saved atomically
   with ticket consumption, with retry on write failure. No frame loop runs for a hidden game.
-- Themes offer free local previews. Original is free; Harbor, Plum and Lichen cost eight credits each. Buy unlocks without
-  applying; Apply selects an owned palette across all app hosts. Reader paper and authored artwork retain their own colours.
-  Hiding Rivet does not reset the selected theme. Theme changes do not animate continuously.
+- Launcher customization uses free isolated previews and independent ownership/application. Harbor, Plum and Lichen themes
+  cost eight credits; Drawers, Cartridges, Pixel and Industrial folder packs cost four; Instrument and Arcade buttons cost six.
+  Original remains free. All four hosts observe committed appearance even with Rivet hidden; style changes add no idle loops.
+  Folder artwork takes precedence over pack illustrations. Button treatments preserve hit targets, enabled semantics and focus.
+  Reader paper and artwork-derived accents retain their own colours.
 - First-open Hangar help is three skippable cards covering the optional companion, earning/spending, motion and hiding.
   Skip, completion or Hide saves acknowledgement; Help replays it. Hiding preserves inventory, credits and theme.
   Landscape pages place the preview or CRT beside controls, with a single assembly editor rather than a separate bench.
@@ -402,18 +411,20 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   or re-importing history. This measures recorded session duration, not active input. Charge drain uses accumulated-minute
   boundaries, independent of how Room batches session notifications.
 - State, inventory and credited-session identities are atomically saved together in app-private `files/mecha/state.json`.
-  Versions 1 and 2 migrate to version 3 before publication, preserving parts, equipment, finishes, receipts, balances and
-  session identities; at-cap pending minutes are cleared. Failed writes leave the prior state intact. A failed migration offers nondestructive
-  retry and blocks backup/restore until resolved; unreadable saves require explicit recovery and are preserved before
-  starting fresh. No writes to Cocoon, library manifests, user preferences or play log come from the companion.
+  Versions 1–3 migrate to version 4 before publication, preserving parts, equipment, wallet, themes, paid arcade state and
+  credited-session identities. Global finish entitlements become Original paint editions; equipped Original finishes retain
+  their appearance. Historical item receipts move to a separately typed record. Version-1 at-cap pending minutes are cleared.
+  Failed writes leave the prior state intact; failed migration offers nondestructive retry and blocks backup/restore until resolved.
+  Unreadable saves require explicit recovery and are preserved before starting fresh. The companion never writes Cocoon,
+  library manifests, user preferences or the play log.
 - Limits: a finite authored collection, not arbitrary generated artwork or statistical part affixes; no combat or
   test-course simulation. Preserve app data; do not uninstall to change builds.
 - Backup (format version 2, docs/formats/user.md): export includes the whole save; restore validates it against the parts
   catalog in the preview, writes it before the history is merged and puts it back if a later step fails. The restored save
   keeps every session either side already credited (`restoredOver`); a backup without a save keeps the device's companion
   and marks the merged sessions credited (`creditedElsewhere`). No session earns salvage twice. The nested companion save
-  is now version 3, adding theme ownership/selection, introduction acknowledgement, paid arcade tickets and best scores.
-  Versions 1 and 2 remain readable; older app builds cannot read the new save. Do not downgrade after opening the updated Hangar.
+  is version 4, including paint editions, launcher icon/button ownership and selection, and credit-only slot receipts.
+  Versions 1–3 remain readable; older app builds cannot read the new save. Do not downgrade after opening the updated Hangar.
 - DMG acceptance for `0.1.0-mecha-lab.2` (dock era): rename/care/salvage/equipment, unowned-part preview restrictions,
   four animated poses and hide/show persistence exercised on device; reader Select → Hangar → Gallery → B → B preserves the
   article position and resumes D-pad scrolling.

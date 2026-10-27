@@ -11,8 +11,7 @@ import androidx.activity.compose.setContent
 import io.github.esko997.sortie.shell.TaskSwitcher
 import io.github.esko997.sortie.ui.CompanionScreen
 import io.github.esko997.sortie.ui.DeviceStatsSides
-import io.github.esko997.sortie.ui.SortieTheme
-import io.github.esko997.sortie.ui.rememberSelectedTheme
+import io.github.esko997.sortie.ui.SelectedSortieTheme
 
 /**
  * Sortie's home on the secondary display (SECONDARY_HOME). Android resolves it from the default HOME package, so whenever the
@@ -51,7 +50,7 @@ abstract class CompanionHost : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { SortieTheme(palette = rememberSelectedTheme()) { DeviceStatsSides { CompanionScreen(displayId = myDisplayId()) } } }
+        setContent { SelectedSortieTheme { DeviceStatsSides { CompanionScreen(displayId = myDisplayId()) } } }
     }
 
     override fun onResume() {

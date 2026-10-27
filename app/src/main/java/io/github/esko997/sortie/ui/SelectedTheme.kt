@@ -9,13 +9,34 @@ import io.github.esko997.sortie.SortieApp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
-/** Every window observes the committed theme, even when the companion is hidden or motion is disabled. */
+/** All four hosts observe only committed appearance, independently of companion visibility and motion. */
 @Composable
-internal fun rememberSelectedTheme(): SortiePalette {
+internal fun SelectedSortieTheme(content: @Composable () -> Unit) {
     val store = (LocalContext.current.applicationContext as SortieApp).graph.mecha
     val selection = remember(store) {
-        store.view.map { it.state?.selectedTheme }.distinctUntilChanged()
+        store.view.distinctUntilChanged { before, after ->
+            before.state?.selectedTheme == after.state?.selectedTheme &&
+                before.state?.selectedFolderIcons == after.state?.selectedFolderIcons &&
+                before.state?.selectedButtonStyle == after.state?.selectedButtonStyle
+        }.map { view ->
+            LauncherAppearance(
+                view.state?.selectedTheme,
+                view.state?.selectedFolderIcons,
+                view.state?.selectedButtonStyle
+            )
+        }
     }
-    val id by selection.collectAsState(initial = store.view.value.state?.selectedTheme)
-    return SortiePalette.entries.firstOrNull { it.id == id } ?: SortiePalette.DEFAULT
+    val initial = remember(store) {
+        val state = store.view.value.state
+        LauncherAppearance(state?.selectedTheme, state?.selectedFolderIcons, state?.selectedButtonStyle)
+    }
+    val appearance by selection.collectAsState(initial)
+    SortieTheme(
+        palette = SortiePalette.entries.firstOrNull { it.id == appearance.palette } ?: SortiePalette.DEFAULT,
+        folderIcons = appearance.folders?.let { SortieFolderIcons.fromId(it) } ?: SortieFolderIcons.DEFAULT,
+        buttonStyle = appearance.buttons?.let { SortieButtonStyle.fromId(it) } ?: SortieButtonStyle.DEFAULT,
+        content = content
+    )
 }
+
+private data class LauncherAppearance(val palette: String?, val folders: String?, val buttons: String?)

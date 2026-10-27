@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,9 +21,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.boundsInWindow
@@ -34,11 +39,108 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import io.github.esko997.sortie.mecha.MechaSlotStake
+import io.github.esko997.sortie.mecha.MechaSpinOutcome
 import io.github.esko997.sortie.mecha.MechaSpinReceipt
+import io.github.esko997.sortie.mecha.MechaState
+import io.github.esko997.sortie.mecha.MechaStore
+import io.github.esko997.sortie.mecha.MechaView
+import io.github.esko997.sortie.mecha.slotEntryProblem
 import io.github.esko997.sortie.ui.Accent
 import io.github.esko997.sortie.ui.CanvasColour
 import io.github.esko997.sortie.ui.PanelColour
 import kotlinx.coroutines.delay
+
+/** Wagers award credits only. The saved wallet/receipt drives the reveal, never the animation. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun MechaSlotMachine(store: MechaStore, view: MechaView, state: MechaState) {
+    var stake by rememberSaveable { mutableStateOf(MechaSlotStake.ONE) }
+    var confirming by remember { mutableStateOf(false) }
+    val anchor = remember { FocusRequester() }
+    RestoreShopFocus(confirming, anchor)
+    val problem = state.slotEntryProblem(stake, state.cabinetSpins)
+    ShopColumn {
+        ShopLayout(
+            preview = {
+                SlotMachineFace(state.lastSpin, state.salvage)
+                state.lastSpin?.let { SlotReceipt(it) }
+                state.legacyLastSpin?.let {
+                    Note("Historical item-prize spin #${it.sequence}. This older cabinet receipt is not a credit-slot payout.")
+                    Note(
+                        "Old result: ${it.outcome.name.lowercase()}; returned ${it.returnedCredits} credits." +
+                            (it.partId?.let { id -> " Part: ${view.parts.firstOrNull { part -> part.id == id }?.name ?: id}." } ?: "") +
+                            (it.finish?.let { finish -> " Finish: ${finish.label}." } ?: "")
+                    )
+                }
+            },
+            choices = {
+                Text("Slot machine", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    MechaSlotStake.entries.forEach { option ->
+                        MechaChip(
+                            option.label,
+                            option == stake,
+                            { stake = option },
+                            if (option == stake) Modifier.focusRequester(anchor) else Modifier
+                        )
+                    }
+                }
+                Text("Payouts for ${stake.label}", style = MaterialTheme.typography.titleSmall, color = Accent)
+                MechaSpinOutcome.entries.forEach { outcome ->
+                    val payout = outcome.multiplier * stake.stake
+                    val net = payout - stake.stake
+                    Note("${outcome.percent}% ${outcome.label} · ${outcome.multiplier}× = $payout returned · net ${if (net > 0) "+" else ""}$net")
+                }
+                Note("Same odds at every stake. Returns include your stake; average return is 85% of credits wagered.")
+                MechaButton(
+                    "Spin · ${stake.label}…",
+                    onClick = { confirming = true },
+                    enabled = !view.busy && problem == null,
+                    primary = true
+                )
+                if (view.busy) Note("Saving the current action…") else problem?.let { Note(it) }
+                Note("Each spin is independent. Three reels show one saved outcome; there is no stop button or timing advantage.")
+            }
+        )
+    }
+    if (confirming) {
+        val sequence = remember { state.cabinetSpins }
+        val confirmedStake = remember { stake }
+        PurchaseConfirmation(
+            title = "Spin ${confirmedStake.label}?",
+            detail = "Stake ${confirmedStake.label}. 5% pays ${5 * confirmedStake.stake}, " +
+                "20% pays ${2 * confirmedStake.stake}, 20% returns ${confirmedStake.stake}, 55% pays 0 credits. One spin only.",
+            action = "Spin once",
+            view = view,
+            allowed = state.slotEntryProblem(confirmedStake, sequence) == null,
+            onConfirm = { store.spin(confirmedStake, sequence) },
+            onClose = { confirming = false },
+            result = {
+                state.lastSpin?.takeIf { it.sequence.toLong() == sequence.toLong() + 1 }?.let {
+                    SlotMachineFace(it, state.salvage, flourish = state.motion)
+                    SlotReceipt(it)
+                }
+            }
+        )
+    }
+}
+
+/** Descriptive only: reopening and dismissing a receipt cannot repeat its payout. */
+@Composable
+private fun SlotReceipt(receipt: MechaSpinReceipt) {
+    Column(
+        Modifier.fillMaxWidth().background(CanvasColour, RoundedCornerShape(12.dp)).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text("Saved spin #${receipt.sequence} · ${receipt.outcome.label}", style = MaterialTheme.typography.titleSmall, color = Accent)
+        Note(
+            "Staked ${receipt.stake.stake}; returned ${receipt.returnedCredits}; " +
+                "net ${receipt.returnedCredits - receipt.stake.stake} credits. Balance after spin: ${receipt.balanceAfter}."
+        )
+        Note("Already saved; viewing this receipt grants nothing again.")
+    }
+}
 
 /** Original nine-pixel workshop stamps, in the persisted reel-symbol order. */
 private val reelSymbols = arrayOf(
@@ -144,7 +246,7 @@ internal fun SlotMachineFace(receipt: MechaSpinReceipt?, balance: Int, flourish:
             }
         }
         Text(
-            if (receipt == null) "Choose a tier, then Spin." else "Saved result · spin #${receipt.sequence}",
+            if (receipt == null) "Choose a stake, then Spin." else "Saved result · spin #${receipt.sequence}",
             style = MaterialTheme.typography.bodySmall,
             color = muted
         )

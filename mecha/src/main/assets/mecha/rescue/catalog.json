@@ -1,0 +1,58 @@
+[
+  {
+    "id": "rescue_head_1",
+    "slot": "HEAD",
+    "family": "rescue",
+    "name": "Brigade shield",
+    "asset": "mecha/rescue/rescue_head_1.png"
+  },
+  {
+    "id": "rescue_head_2",
+    "slot": "HEAD",
+    "family": "rescue",
+    "name": "Cliff lamp",
+    "asset": "mecha/rescue/rescue_head_2.png"
+  },
+  {
+    "id": "rescue_body_1",
+    "slot": "BODY",
+    "family": "rescue",
+    "name": "Pump station",
+    "asset": "mecha/rescue/rescue_body_1.png"
+  },
+  {
+    "id": "rescue_body_2",
+    "slot": "BODY",
+    "family": "rescue",
+    "name": "Search harness",
+    "asset": "mecha/rescue/rescue_body_2.png"
+  },
+  {
+    "id": "rescue_arms_1",
+    "slot": "ARMS",
+    "family": "rescue",
+    "name": "Nozzle and axe",
+    "asset": "mecha/rescue/rescue_arms_1.png"
+  },
+  {
+    "id": "rescue_arms_2",
+    "slot": "ARMS",
+    "family": "rescue",
+    "name": "Rope and grapple",
+    "asset": "mecha/rescue/rescue_arms_2.png"
+  },
+  {
+    "id": "rescue_legs_1",
+    "slot": "LEGS",
+    "family": "rescue",
+    "name": "Brigade boots",
+    "asset": "mecha/rescue/rescue_legs_1.png"
+  },
+  {
+    "id": "rescue_legs_2",
+    "slot": "LEGS",
+    "family": "rescue",
+    "name": "Cliff crampons",
+    "asset": "mecha/rescue/rescue_legs_2.png"
+  }
+]

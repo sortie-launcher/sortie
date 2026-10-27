@@ -1,0 +1,58 @@
+[
+  {
+    "id": "rail_head_1",
+    "slot": "HEAD",
+    "family": "rail",
+    "name": "Signal conductor cap",
+    "asset": "mecha/rail/rail_head_1.png"
+  },
+  {
+    "id": "rail_head_2",
+    "slot": "HEAD",
+    "family": "rail",
+    "name": "Trolley signal cab",
+    "asset": "mecha/rail/rail_head_2.png"
+  },
+  {
+    "id": "rail_body_1",
+    "slot": "BODY",
+    "family": "rail",
+    "name": "Pocket watch jacket",
+    "asset": "mecha/rail/rail_body_1.png"
+  },
+  {
+    "id": "rail_body_2",
+    "slot": "BODY",
+    "family": "rail",
+    "name": "Ballast plough",
+    "asset": "mecha/rail/rail_body_2.png"
+  },
+  {
+    "id": "rail_arms_1",
+    "slot": "ARMS",
+    "family": "rail",
+    "name": "Flag and lantern",
+    "asset": "mecha/rail/rail_arms_1.png"
+  },
+  {
+    "id": "rail_arms_2",
+    "slot": "ARMS",
+    "family": "rail",
+    "name": "Tamping forks",
+    "asset": "mecha/rail/rail_arms_2.png"
+  },
+  {
+    "id": "rail_legs_1",
+    "slot": "LEGS",
+    "family": "rail",
+    "name": "Conductor shoes",
+    "asset": "mecha/rail/rail_legs_1.png"
+  },
+  {
+    "id": "rail_legs_2",
+    "slot": "LEGS",
+    "family": "rail",
+    "name": "Flanged bogies",
+    "asset": "mecha/rail/rail_legs_2.png"
+  }
+]

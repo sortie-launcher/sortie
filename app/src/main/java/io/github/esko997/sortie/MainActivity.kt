@@ -37,11 +37,10 @@ import io.github.esko997.sortie.ui.AmbientBackground
 import io.github.esko997.sortie.ui.BookmarkInvitationHost
 import io.github.esko997.sortie.ui.Hotkeys
 import io.github.esko997.sortie.ui.LocalHotkeys
+import io.github.esko997.sortie.ui.SelectedSortieTheme
 import io.github.esko997.sortie.ui.Selection
 import io.github.esko997.sortie.ui.SortieNav
-import io.github.esko997.sortie.ui.SortieTheme
 import io.github.esko997.sortie.ui.SortieViewModel
-import io.github.esko997.sortie.ui.rememberSelectedTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -116,7 +115,7 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(lifecycleState, windowFocused, overlayOpen) {
                 if (lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && windowFocused && !overlayOpen) vm.onForeground(taskId)
             }
-            SortieTheme(palette = rememberSelectedTheme()) {
+            SelectedSortieTheme {
                 AmbientBackground {
                     Surface(
                         Modifier.fillMaxSize().safeDrawingPadding(),

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "orchard_head_1",
+    "slot": "HEAD",
+    "family": "orchard",
+    "name": "Leaf picking hood",
+    "asset": "mecha/orchard/orchard_head_1.png"
+  },
+  {
+    "id": "orchard_head_2",
+    "slot": "HEAD",
+    "family": "orchard",
+    "name": "Pressure bell",
+    "asset": "mecha/orchard/orchard_head_2.png"
+  },
+  {
+    "id": "orchard_body_1",
+    "slot": "BODY",
+    "family": "orchard",
+    "name": "Apple picking crate",
+    "asset": "mecha/orchard/orchard_body_1.png"
+  },
+  {
+    "id": "orchard_body_2",
+    "slot": "BODY",
+    "family": "orchard",
+    "name": "Water barrel",
+    "asset": "mecha/orchard/orchard_body_2.png"
+  },
+  {
+    "id": "orchard_arms_1",
+    "slot": "ARMS",
+    "family": "orchard",
+    "name": "Gentle bypass pruners",
+    "asset": "mecha/orchard/orchard_arms_1.png"
+  },
+  {
+    "id": "orchard_arms_2",
+    "slot": "ARMS",
+    "family": "orchard",
+    "name": "Sprinkler nozzles",
+    "asset": "mecha/orchard/orchard_arms_2.png"
+  },
+  {
+    "id": "orchard_legs_1",
+    "slot": "LEGS",
+    "family": "orchard",
+    "name": "Orchard cleats",
+    "asset": "mecha/orchard/orchard_legs_1.png"
+  },
+  {
+    "id": "orchard_legs_2",
+    "slot": "LEGS",
+    "family": "orchard",
+    "name": "Irrigation wellies",
+    "asset": "mecha/orchard/orchard_legs_2.png"
+  }
+]

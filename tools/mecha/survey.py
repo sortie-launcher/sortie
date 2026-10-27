@@ -17,6 +17,7 @@ import math
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
+from paint_roles import export_part, legacy_overrides
 
 ROOT = Path(__file__).resolve().parents[2]
 ASSETS = ROOT / "mecha/src/main/assets/mecha/survey"
@@ -47,6 +48,9 @@ TEAL = (T0, T1, T2)
 IVORY = (I0, I1, I2)
 GLASS = (G0, G1, G2)
 ORANGE = (A0, A1, A2)
+
+PAINT_PRIMARY = (*TEAL, T3)
+PAINT_SECONDARY = (*IVORY, I3)
 
 IDLE, DETAIL, LCONTACT, PASS1, RCONTACT, PASS2, SLEEP, CELEBRATE = range(8)
 
@@ -750,7 +754,8 @@ def main():
         sheet = render_sheet(fn)
         assert sheet.size == (512, 64) and sheet.mode == "RGBA"
         assert sheet.crop((0, 63, 512, 64)).getbbox() is None, f"{pid} draws on reserved row y63"
-        sheet.save(ASSETS / f"{pid}.png", optimize=True)
+        export_part(sheet, ASSETS / f"{pid}.png", PAINT_PRIMARY, PAINT_SECONDARY,
+                    original_material_compat=True, slot=slot, overrides=legacy_overrides(pid))
         sheets[pid] = sheet
         catalog.append({"id": pid, "slot": slot, "family": FAMILY, "name": name,
                         "asset": f"mecha/{FAMILY}/{pid}.png"})

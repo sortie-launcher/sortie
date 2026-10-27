@@ -1,0 +1,58 @@
+[
+  {
+    "id": "apiary_head_1",
+    "slot": "HEAD",
+    "family": "apiary",
+    "name": "Hive dome",
+    "asset": "mecha/apiary/apiary_head_1.png"
+  },
+  {
+    "id": "apiary_head_2",
+    "slot": "HEAD",
+    "family": "apiary",
+    "name": "Scout veil",
+    "asset": "mecha/apiary/apiary_head_2.png"
+  },
+  {
+    "id": "apiary_body_1",
+    "slot": "BODY",
+    "family": "apiary",
+    "name": "Honey extractor",
+    "asset": "mecha/apiary/apiary_body_1.png"
+  },
+  {
+    "id": "apiary_body_2",
+    "slot": "BODY",
+    "family": "apiary",
+    "name": "Bee field harness",
+    "asset": "mecha/apiary/apiary_body_2.png"
+  },
+  {
+    "id": "apiary_arms_1",
+    "slot": "ARMS",
+    "family": "apiary",
+    "name": "Smoker bellows",
+    "asset": "mecha/apiary/apiary_arms_1.png"
+  },
+  {
+    "id": "apiary_arms_2",
+    "slot": "ARMS",
+    "family": "apiary",
+    "name": "Gentle brush",
+    "asset": "mecha/apiary/apiary_arms_2.png"
+  },
+  {
+    "id": "apiary_legs_1",
+    "slot": "LEGS",
+    "family": "apiary",
+    "name": "Hive keepers",
+    "asset": "mecha/apiary/apiary_legs_1.png"
+  },
+  {
+    "id": "apiary_legs_2",
+    "slot": "LEGS",
+    "family": "apiary",
+    "name": "Meadow gaiters",
+    "asset": "mecha/apiary/apiary_legs_2.png"
+  }
+]

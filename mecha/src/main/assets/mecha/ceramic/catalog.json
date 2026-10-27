@@ -1,0 +1,58 @@
+[
+  {
+    "id": "ceramic_head_1",
+    "slot": "HEAD",
+    "family": "ceramic",
+    "name": "Glaze teapot",
+    "asset": "mecha/ceramic/ceramic_head_1.png"
+  },
+  {
+    "id": "ceramic_head_2",
+    "slot": "HEAD",
+    "family": "ceramic",
+    "name": "Kiln porcelain",
+    "asset": "mecha/ceramic/ceramic_head_2.png"
+  },
+  {
+    "id": "ceramic_body_1",
+    "slot": "BODY",
+    "family": "ceramic",
+    "name": "Glaze flower vessel",
+    "asset": "mecha/ceramic/ceramic_body_1.png"
+  },
+  {
+    "id": "ceramic_body_2",
+    "slot": "BODY",
+    "family": "ceramic",
+    "name": "Kiln firing chamber",
+    "asset": "mecha/ceramic/ceramic_body_2.png"
+  },
+  {
+    "id": "ceramic_arms_1",
+    "slot": "ARMS",
+    "family": "ceramic",
+    "name": "Glaze potter paddles",
+    "asset": "mecha/ceramic/ceramic_arms_1.png"
+  },
+  {
+    "id": "ceramic_arms_2",
+    "slot": "ARMS",
+    "family": "ceramic",
+    "name": "Kiln tile clamps",
+    "asset": "mecha/ceramic/ceramic_arms_2.png"
+  },
+  {
+    "id": "ceramic_legs_1",
+    "slot": "LEGS",
+    "family": "ceramic",
+    "name": "Glaze pedestal cups",
+    "asset": "mecha/ceramic/ceramic_legs_1.png"
+  },
+  {
+    "id": "ceramic_legs_2",
+    "slot": "LEGS",
+    "family": "ceramic",
+    "name": "Kiln porcelain stilts",
+    "asset": "mecha/ceramic/ceramic_legs_2.png"
+  }
+]

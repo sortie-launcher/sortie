@@ -23,11 +23,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -69,6 +67,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import io.github.esko997.sortie.ui.SortieButton as Button
+import io.github.esko997.sortie.ui.SortieOutlinedButton as OutlinedButton
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -390,7 +390,7 @@ fun GlowButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = t
         Button(
             onClick = onClick,
             enabled = enabled,
-            modifier = modifier.focusGlow(focused, ButtonDefaults.shape, colour, pressed = pressed),
+            modifier = modifier.focusGlow(focused, sortieButtonShape(ButtonDefaults.shape), colour, pressed = pressed),
             colors = ButtonDefaults.buttonColors(containerColor = colour, contentColor = CanvasColour),
             interactionSource = interaction
         ) { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -398,7 +398,7 @@ fun GlowButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = t
         OutlinedButton(
             onClick = onClick,
             enabled = enabled,
-            modifier = modifier.focusGlow(focused, ButtonDefaults.outlinedShape, colour, pressed = pressed),
+            modifier = modifier.focusGlow(focused, sortieButtonShape(ButtonDefaults.outlinedShape), colour, pressed = pressed),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = colour),
             interactionSource = interaction
         ) { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) }

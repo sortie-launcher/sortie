@@ -1,38 +1,20 @@
 package io.github.esko997.sortie.mecha
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 
+@Serializable
 enum class MechaSlot { HEAD, BODY, ARMS, LEGS }
 
 internal enum class MechaCare { TUNE, CHARGE, REST }
 
 @Serializable
-enum class MechaFinish(val price: Int, val label: String) {
-    PLAIN(0, "Plain"),
-    ALLOY(6, "Alloy"),
-    HOLO(10, "Holo")
+enum class MechaFinish(val label: String) {
+    PLAIN("Standard"),
+    ALLOY("Alloy"),
+    HOLO("Holo")
 }
-
-@Serializable
-enum class MechaCabinetTier(val stake: Int, val label: String, val finish: MechaFinish?) {
-    PART(1, "Part", null),
-    ALLOY(3, "Alloy", MechaFinish.ALLOY),
-    HOLO(5, "Holo", MechaFinish.HOLO)
-}
-
-@Serializable
-enum class MechaSpinOutcome { REWARD, REFUND, MISS }
-
-@Serializable
-data class MechaSpinReceipt(
-    val sequence: Int,
-    val tier: MechaCabinetTier,
-    val reels: List<Int>,
-    val outcome: MechaSpinOutcome,
-    val returnedCredits: Int,
-    val partId: String? = null,
-    val finish: MechaFinish? = null
-)
 
 internal const val MECHA_ARCADE_PRICE = 1
 
@@ -46,8 +28,6 @@ enum class MechaArcadeGame(val label: String, val price: Int = MECHA_ARCADE_PRIC
 @Serializable
 data class MechaArcadeTicket(val sequence: Int, val game: MechaArcadeGame?, val seed: Long)
 
-internal data class MechaBuild(val equipped: Map<MechaSlot, String>)
-
 internal const val MECHA_PART_PRICE = 2
 
 /** Future play earnings stop here; existing larger balances are preserved. */
@@ -57,7 +37,11 @@ internal const val MECHA_CREDIT_CEILING = 50
 internal const val MECHA_PET_BOND_MS = 5 * 60_000L
 
 /** Authored families in catalog order, each with two variants per slot. */
-internal val MECHA_FAMILIES: List<String> = listOf("yard", "survey", "courier", "foundry", "orbital", "tidal", "domestic")
+internal val MECHA_FAMILIES: List<String> = listOf(
+    "yard", "survey", "courier", "foundry", "orbital", "tidal", "domestic",
+    "rescue", "medical", "ranger", "harvest", "apiary", "orchard", "abyssal", "salvage", "nautical",
+    "observatory", "radio", "satellite", "ceramic", "textile", "clockwork", "quarry", "rail", "demolition"
+)
 
 /** Minutes of completed game play that earn one salvage credit; the remainder carries over. */
 internal const val MECHA_MINUTES_PER_CREDIT = 5
@@ -84,6 +68,9 @@ internal const val MECHA_DEFAULT_NAME = "Mica"
 data class MechaPart(val id: String, val slot: MechaSlot, val family: String, val name: String, val asset: String) {
     /** Each family has two authored variants per slot; only the original families include starter parts. */
     val variant: Int get() = id.substringAfterLast('_').toIntOrNull() ?: 0
+
+    /** Authored material roles, aligned pixel-for-pixel with the base sheet. */
+    val paintAsset: String get() = asset.removeSuffix(".png") + ".paint.png"
 }
 
 /**
@@ -97,7 +84,9 @@ data class MechaPart(val id: String, val slot: MechaSlot, val family: String, va
  */
 @Serializable
 data class MechaState(
-    val version: Int = 1,
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault
+    val version: Int = 4,
     val name: String = MECHA_DEFAULT_NAME,
     val enabled: Boolean = true,
     val motion: Boolean = true,
@@ -114,12 +103,17 @@ data class MechaState(
     val pendingMinutes: Int,
     val salvageRuns: Int,
     val processedSessions: Set<String>,
-    val ownedFinishes: Set<MechaFinish> = setOf(MechaFinish.PLAIN),
-    val equippedFinishes: Map<MechaSlot, MechaFinish> = emptyMap(),
+    val ownedPaints: Set<MechaPaint> = setOf(MechaPaint()),
+    val equippedPaints: Map<MechaSlot, MechaPaint> = emptyMap(),
     val cabinetSpins: Int = 0,
     val lastSpin: MechaSpinReceipt? = null,
+    val legacyLastSpin: MechaLegacySpinReceipt? = null,
     val ownedThemes: Set<String> = setOf("default"),
     val selectedTheme: String = "default",
+    val ownedFolderIcons: Set<String> = setOf("default"),
+    val selectedFolderIcons: String = "default",
+    val ownedButtonStyles: Set<String> = setOf("default"),
+    val selectedButtonStyle: String = "default",
     val hangarIntroSeen: Boolean = false,
     val arcadeRuns: Int = 0,
     val activeArcade: MechaArcadeTicket? = null,

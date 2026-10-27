@@ -121,7 +121,7 @@ private fun IntroductionCard(page: Int, view: MechaView) {
             Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(CanvasColour).padding(12.dp),
             contentAlignment = Alignment.Center
         ) {
-            MechaFigure(view.parts, state.equipped, MechaPose.IDLE, motion = false, target = 112.dp, finishes = state.equippedFinishes)
+            MechaFigure(view.parts, state.equipped, MechaPose.IDLE, motion = false, target = 112.dp, paints = state.equippedPaints)
         }
     }
 }
@@ -140,16 +140,17 @@ private fun IntroductionControls(
     Text(
         when (page) {
             0 ->
-                "Your companion is optional. Mix parts, rename it, or just let it wander. " +
-                    "Charge and condition never run down while you are away. There is no daily upkeep."
+                "Your companion is optional. Mix any owned parts in Workshop → Bot → Assembly, rename it, or just let it wander. " +
+                    "Choose Paint for reusable two-tone editions, or Care for charge and condition. Neither runs down while you are away."
             1 ->
                 "Completed game sessions earn 1 credit per 5 minutes, up to 120 minutes per session. " +
-                    "Earning pauses at 50 credits; extra play is not banked. Spend on parts, finishes, themes or arcade games. " +
-                    "Insert 1 credit, then choose one arcade game for one run. Arcade games never award credits or parts."
+                    "Earning pauses at 50 credits; extra play is not banked. Shop buys parts, paint and launcher styles; Workshop applies them. " +
+                    "Previews are free. Insert 1 credit, then choose one arcade game for one run. Arcade games never award credits or parts."
             else ->
                 "Turn Animate companion off for still poses, or hide the companion altogether. " +
                     "Reopen this Hangar from Home → Extras; Help replays this guide. Your parts and credits stay saved. " +
-                    "Applied themes stay active even when the companion is hidden; reader paper settings remain separate."
+                    "Workshop → Launcher applies owned themes, folder icons and buttons. " +
+                    "These stay active even with the bot hidden; reader paper stays separate."
         },
         style = MaterialTheme.typography.bodyMedium
     )
