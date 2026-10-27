@@ -660,10 +660,9 @@ class HomeControllerTest {
         compose.onNodeWithText("Launcher").performClick()
         val items = listOf(Triple("Themes", "Harbor", "theme"), Triple("Folders", "Drawers", "folder icons"), Triple("Buttons", "Arcade", "button style"))
         items.forEachIndexed { index, (category, label, item) ->
-            compose.onNodeWithText(category).performScrollTo().performClick()
-            compose.waitUntil(5_000) {
-                compose.onAllNodesWithText(label).fetchSemanticsNodes().size >= if (label == "Arcade") 2 else 1
-            }
+            compose.onNodeWithText(category).assertIsDisplayed().performClick()
+            compose.waitForIdle()
+            compose.onAllNodesWithText(label).onLast().assertIsDisplayed()
             // Arcade also names the top-level Hangar tab; select the final match in this page.
             compose.onAllNodesWithText(label).onLast().performScrollTo().performClick()
             val price = listOf(8, 4, 6)[index]
@@ -681,10 +680,9 @@ class HomeControllerTest {
         compose.onNodeWithText("Workshop").performClick()
         compose.onNodeWithText("Launcher").performClick()
         items.forEach { (category, label, item) ->
-            compose.onNodeWithText(category).performScrollTo().performClick()
-            compose.waitUntil(5_000) {
-                compose.onAllNodesWithText(label).fetchSemanticsNodes().size >= if (label == "Arcade") 2 else 1
-            }
+            compose.onNodeWithText(category).assertIsDisplayed().performClick()
+            compose.waitForIdle()
+            compose.onAllNodesWithText(label).onLast().assertIsDisplayed()
             compose.onAllNodesWithText(label).onLast().performScrollTo().performClick()
             compose.onNodeWithText("Cancel").performScrollTo().performClick()
             compose.onNodeWithText("Apply $item").assertIsNotEnabled()

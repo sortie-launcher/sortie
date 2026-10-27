@@ -16,6 +16,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -86,7 +87,7 @@ internal fun MechaLauncher(store: MechaStore, view: MechaView, state: MechaState
         LauncherCategory.FOLDERS -> folders.description
         LauncherCategory.BUTTONS -> buttons.description
     }
-    ShopColumn {
+    Column(Modifier.padding(top = 10.dp)) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             LauncherCategory.entries.forEach { choice ->
                 MechaChip(choice.label, category == choice, {
@@ -95,70 +96,78 @@ internal fun MechaLauncher(store: MechaStore, view: MechaView, state: MechaState
                 }, if (category == choice) Modifier.focusRequester(anchor) else Modifier)
             }
         }
-        ShopLayout(
-            preview = {
-                when (category) {
-                    LauncherCategory.THEMES -> ThemePreview(palette)
-                    LauncherCategory.FOLDERS -> SortieFolderIconPreview(folders)
-                    LauncherCategory.BUTTONS -> SortieButtonStylePreview(buttons)
-                }
-                Text("$label · ${if (previewing) "preview only" else "saved appearance"}", style = MaterialTheme.typography.titleSmall)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    MechaButton(if (purchasing) "Cancel preview" else "Cancel", cancel, enabled = previewing)
-                    if (purchasing) {
-                        MechaButton(if (owned) "Owned" else "Buy ${category.item} · $price credits", {
-                            confirming = true
-                        }, enabled = !view.busy && !owned && state.salvage >= price, primary = !owned)
-                    } else {
-                        MechaButton("Apply ${category.item}", {
-                            if (!store.view.value.busy && owned && previewing) {
-                                when (category) {
-                                    LauncherCategory.THEMES -> store.setTheme(palette)
-                                    LauncherCategory.FOLDERS -> store.setFolderIcons(folders)
-                                    LauncherCategory.BUTTONS -> store.setButtonStyle(buttons)
-                                }
-                                previewing = false
-                                if (input.inputMode == InputMode.Keyboard) anchor.requestFocus()
+        key(category) {
+            ShopColumn {
+                ShopLayout(
+                    preview = {
+                        when (category) {
+                            LauncherCategory.THEMES -> ThemePreview(palette)
+                            LauncherCategory.FOLDERS -> SortieFolderIconPreview(folders)
+                            LauncherCategory.BUTTONS -> SortieButtonStylePreview(buttons)
+                        }
+                        Text("$label · ${if (previewing) "preview only" else "saved appearance"}", style = MaterialTheme.typography.titleSmall)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            MechaButton(if (purchasing) "Cancel preview" else "Cancel", cancel, enabled = previewing)
+                            if (purchasing) {
+                                MechaButton(if (owned) "Owned" else "Buy ${category.item} · $price credits", {
+                                    confirming = true
+                                }, enabled = !view.busy && !owned && state.salvage >= price, primary = !owned)
+                            } else {
+                                MechaButton("Apply ${category.item}", {
+                                    if (!store.view.value.busy && owned && previewing) {
+                                        when (category) {
+                                            LauncherCategory.THEMES -> store.setTheme(palette)
+                                            LauncherCategory.FOLDERS -> store.setFolderIcons(folders)
+                                            LauncherCategory.BUTTONS -> store.setButtonStyle(buttons)
+                                        }
+                                        previewing = false
+                                        if (input.inputMode == InputMode.Keyboard) anchor.requestFocus()
+                                    }
+                                }, enabled = !view.busy && owned && previewing, primary = true)
                             }
-                        }, enabled = !view.busy && owned && previewing, primary = true)
-                    }
-                }
-            },
-            choices = {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    when (category) {
-                        LauncherCategory.THEMES -> SortiePalette.entries.filter { purchasing || it.id in state.ownedThemes }.forEach { choice ->
-                            MechaChip(choice.label, choice == palette, {
-                                palette = choice
-                                previewing = true
-                            })
                         }
-                        LauncherCategory.FOLDERS -> SortieFolderIcons.entries.filter { purchasing || it.id in state.ownedFolderIcons }.forEach { choice ->
-                            MechaChip(choice.label, choice == folders, {
-                                folders = choice
-                                previewing = true
-                            })
+                    },
+                    choices = {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            when (category) {
+                                LauncherCategory.THEMES -> SortiePalette.entries.filter { purchasing || it.id in state.ownedThemes }.forEach { choice ->
+                                    MechaChip(choice.label, choice == palette, {
+                                        palette = choice
+                                        previewing = true
+                                    })
+                                }
+                                LauncherCategory.FOLDERS -> SortieFolderIcons.entries.filter {
+                                    purchasing || it.id in state.ownedFolderIcons
+                                }.forEach { choice ->
+                                    MechaChip(choice.label, choice == folders, {
+                                        folders = choice
+                                        previewing = true
+                                    })
+                                }
+                                LauncherCategory.BUTTONS -> SortieButtonStyle.entries.filter {
+                                    purchasing || it.id in state.ownedButtonStyles
+                                }.forEach { choice ->
+                                    MechaChip(choice.label, choice == buttons, {
+                                        buttons = choice
+                                        previewing = true
+                                    })
+                                }
+                            }
                         }
-                        LauncherCategory.BUTTONS -> SortieButtonStyle.entries.filter { purchasing || it.id in state.ownedButtonStyles }.forEach { choice ->
-                            MechaChip(choice.label, choice == buttons, {
-                                buttons = choice
-                                previewing = true
-                            })
-                        }
-                    }
-                }
-                Text(description, style = MaterialTheme.typography.bodyMedium)
-                Note(
-                    if (purchasing) {
-                        "$price credits once. Buying adds ownership only; apply it in Workshop → Launcher."
-                    } else {
-                        "Owned items only. Preview freely, then Apply or Cancel. Find more in Shop → Launcher."
+                        Text(description, style = MaterialTheme.typography.bodyMedium)
+                        Note(
+                            if (purchasing) {
+                                "$price credits once. Buying adds ownership only; apply it in Workshop → Launcher."
+                            } else {
+                                "Owned items only. Preview freely, then Apply or Cancel. Find more in Shop → Launcher."
+                            }
+                        )
+                        if (purchasing && !owned && state.salvage < price) Note("Need ${price - state.salvage} more credits.")
+                        Note("Saved launcher appearance stays active even when the bot is hidden. Reader paper and custom folder artwork stay independent.")
                     }
                 )
-                if (purchasing && !owned && state.salvage < price) Note("Need ${price - state.salvage} more credits.")
-                Note("Saved launcher appearance stays active even when the bot is hidden. Reader paper and custom folder artwork stay independent.")
             }
-        )
+        }
     }
     if (confirming) {
         PurchaseConfirmation(
