@@ -139,7 +139,7 @@ fun ReferenceEntryButton(count: Int, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
         modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
-        colors = ButtonDefaults.outlinedButtonColors(containerColor = Amber.copy(alpha = 0.12f), contentColor = Amber)
+        colors = ButtonDefaults.outlinedButtonColors(containerColor = Accent.copy(alpha = 0.12f), contentColor = Accent)
     ) {
         Text(if (count == 1) "Reference card" else "Reference cards · $count")
     }
@@ -187,7 +187,7 @@ private fun TouchChip(text: String, enabled: Boolean = true, onClickLabel: Strin
         Modifier
             .height(40.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(Slate.copy(alpha = if (enabled) 0.9f else 0.4f))
+            .background(PanelColour.copy(alpha = if (enabled) 0.9f else 0.4f))
             .clickable(
                 interactionSource = null,
                 indication = PressVeil,
@@ -199,7 +199,7 @@ private fun TouchChip(text: String, enabled: Boolean = true, onClickLabel: Strin
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = if (enabled) Amber else MaterialTheme.colorScheme.onSurfaceVariant, fontSize = if (text.length == 1) 22.sp else 15.sp)
+        Text(text, color = if (enabled) Accent else MaterialTheme.colorScheme.onSurfaceVariant, fontSize = if (text.length == 1) 22.sp else 15.sp)
     }
 }
 
@@ -325,7 +325,7 @@ internal fun MarkdownBlock(b: MdBlock, modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.Bold,
                 modifier = modifier.padding(top = 8.dp, bottom = 8.dp)
             )
-            2 -> Text(b.text, style = MaterialTheme.typography.titleLarge, color = Amber, modifier = modifier.padding(top = 18.dp, bottom = 6.dp))
+            2 -> Text(b.text, style = MaterialTheme.typography.titleLarge, color = Accent, modifier = modifier.padding(top = 18.dp, bottom = 6.dp))
             else -> Text(
                 b.text,
                 style = MaterialTheme.typography.titleMedium,
@@ -335,11 +335,11 @@ internal fun MarkdownBlock(b: MdBlock, modifier: Modifier = Modifier) {
         }
         is MdBlock.Paragraph -> Text(inlineText(b.text), style = body, modifier = modifier.padding(bottom = 12.dp))
         is MdBlock.Bullet -> Row(modifier.padding(start = 4.dp, bottom = 6.dp)) {
-            Text("•", style = body, color = Amber, modifier = Modifier.width(18.dp))
+            Text("•", style = body, color = Accent, modifier = Modifier.width(18.dp))
             Text(inlineText(b.text), style = body)
         }
         is MdBlock.Quote -> Row(modifier.padding(top = 4.dp, bottom = 10.dp).height(IntrinsicSize.Min)) {
-            Box(Modifier.width(3.dp).fillMaxHeight().background(Amber))
+            Box(Modifier.width(3.dp).fillMaxHeight().background(Accent))
             Text(inlineText(b.text), style = body, fontStyle = FontStyle.Italic, modifier = Modifier.padding(start = 12.dp))
         }
         is MdBlock.Image, is MdBlock.Sequence -> Column(modifier) {
@@ -352,7 +352,7 @@ internal fun MarkdownBlock(b: MdBlock, modifier: Modifier = Modifier) {
                 )
             }
         }
-        MdBlock.Rule -> Box(modifier.padding(vertical = 12.dp).fillMaxWidth().height(1.dp).background(Hairline))
+        MdBlock.Rule -> Box(modifier.padding(vertical = 12.dp).fillMaxWidth().height(1.dp).background(RuleColour))
     }
 }
 
@@ -569,7 +569,7 @@ fun ZoomableImage(
                     .align(Alignment.TopEnd)
                     .padding(6.dp)
                     .clip(CircleShape)
-                    .background(Ink.copy(alpha = 0.7f))
+                    .background(CanvasColour.copy(alpha = 0.7f))
                     .padding(horizontal = 8.dp, vertical = 2.dp)
             )
         }
@@ -583,10 +583,10 @@ private const val ZOOM_EASE_MS = 200
 @Composable
 fun ReferenceThumbnail(card: ReferenceCard, sortieDir: File, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(6.dp)
-    Box(modifier.size(72.dp, 56.dp).clip(shape).background(Slate).border(1.dp, Hairline, shape), contentAlignment = Alignment.Center) {
+    Box(modifier.size(72.dp, 56.dp).clip(shape).background(PanelColour).border(1.dp, RuleColour, shape), contentAlignment = Alignment.Center) {
         val file = ReferenceFiles.resolve(sortieDir, card.image)
         if (card.image == null) {
-            Text("¶", color = Amber, fontSize = 24.sp)
+            Text("¶", color = Accent, fontSize = 24.sp)
         } else if (file != null && file.isFile) {
             CoverImage(file.path, Modifier.size(72.dp, 56.dp), ContentScale.Crop)
         } else {

@@ -162,7 +162,7 @@ internal fun FolderBrowser(
                 if (path == null) "Storage" else friendlyPath(volumes, path),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Amber,
+                color = Accent,
                 modifier = Modifier.padding(top = 10.dp)
             )
             if (path != null) Text(path, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -198,7 +198,7 @@ internal fun FolderBrowser(
                                             else -> "This folder can't be used"
                                         },
                                         path?.let { friendlyPath(volumes, it) }.orEmpty(),
-                                        accent = if (readable && !already) Amber else MaterialTheme.colorScheme.onSurfaceVariant
+                                        accent = if (readable && !already) Accent else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }

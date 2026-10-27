@@ -24,13 +24,14 @@ import kotlinx.coroutines.launch
 @Composable
 fun AmbientBackground(content: @Composable () -> Unit) {
     val shown = rememberShown()
-    val top = remember { Animatable(Ink) }
-    val bottom = remember { Animatable(Ink) }
-    LaunchedEffect(shown) {
+    val canvas = CanvasColour
+    val top = remember(canvas) { Animatable(canvas) }
+    val bottom = remember(canvas) { Animatable(canvas) }
+    LaunchedEffect(shown, canvas) {
         combine(shown, Selection.heroPalette) { visible, palette -> visible to palette }
             .collectLatest { (visible, palette) ->
-                val upper = palette?.let { lerp(Ink, it.backdrop, 0.55f) } ?: Ink
-                val lower = palette?.let { lerp(Ink, it.accent, 0.22f) } ?: Ink
+                val upper = palette?.let { lerp(canvas, it.backdrop, 0.55f) } ?: canvas
+                val lower = palette?.let { lerp(canvas, it.accent, 0.22f) } ?: canvas
                 if (visible) {
                     coroutineScope {
                         launch { top.animateTo(upper, tween(420)) }
@@ -44,7 +45,7 @@ fun AmbientBackground(content: @Composable () -> Unit) {
     }
     Box(
         Modifier.fillMaxSize().drawWithCache {
-            val brush = Brush.linearGradient(listOf(top.value, Ink, bottom.value), start = Offset.Zero, end = Offset(size.width, size.height))
+            val brush = Brush.linearGradient(listOf(top.value, canvas, bottom.value), start = Offset.Zero, end = Offset(size.width, size.height))
             onDrawBehind { drawRect(brush) }
         }
     ) { content() }

@@ -233,7 +233,7 @@ private fun ItemListScreen(
                         Text(
                             activeFilters.joinToString(" · "),
                             style = MaterialTheme.typography.labelLarge,
-                            color = Amber,
+                            color = Accent,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)

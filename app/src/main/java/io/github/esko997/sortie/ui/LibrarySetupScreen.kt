@@ -661,7 +661,7 @@ private fun Overview(
                                     Text(
                                         plural(n, "game"),
                                         style = MaterialTheme.typography.labelLarge,
-                                        color = if (n == 0) MaterialTheme.colorScheme.onSurfaceVariant else Amber,
+                                        color = if (n == 0) MaterialTheme.colorScheme.onSurfaceVariant else Accent,
                                         modifier = Modifier.padding(start = 12.dp)
                                     )
                                 }
@@ -720,10 +720,10 @@ private fun emulatorSummary(def: SystemDef, config: LibraryConfiguration, instal
 @Composable
 private fun ResultBlock(r: SetupResult, friendly: (String) -> String, at: (String) -> Modifier, onGame: (String) -> Unit, onDismiss: () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Slate).padding(8.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(PanelColour).padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        Text(r.title, style = MaterialTheme.typography.titleMedium, color = Amber, modifier = Modifier.padding(horizontal = 8.dp))
+        Text(r.title, style = MaterialTheme.typography.titleMedium, color = Accent, modifier = Modifier.padding(horizontal = 8.dp))
         r.report?.let { rep ->
             Note(
                 "Index: ${plural(rep.files, "file")} in ${plural(rep.systems, "system")}, ${rep.updated} new or changed, ${rep.removed} removed " +
@@ -965,7 +965,7 @@ private fun SystemEditor(
                                 "${i + 1}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Amber,
+                                color = Accent,
                                 modifier = Modifier.padding(end = 14.dp)
                             )
                             Column {
@@ -1237,7 +1237,7 @@ private fun ConfirmDialog(title: String, body: String, keep: String, confirm: St
     Dialog(onDismissRequest = onDismiss) {
         // the safe choice holds the focus, so confirming takes a deliberate move down
         Column(
-            Modifier.widthIn(max = 460.dp).clip(RoundedCornerShape(16.dp)).background(Slate).padding(16.dp),
+            Modifier.widthIn(max = 460.dp).clip(RoundedCornerShape(16.dp)).background(PanelColour).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 8.dp))

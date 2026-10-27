@@ -18,6 +18,7 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import io.github.esko997.sortie.SortieApp
+import io.github.esko997.sortie.mecha.MechaArcadeGame
 import io.github.esko997.sortie.mecha.MechaFinish
 import io.github.esko997.sortie.mecha.MechaSlot
 import io.github.esko997.sortie.testing.Controller
@@ -36,6 +37,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -67,6 +69,14 @@ class HomeControllerTest {
     /** Home with the whole library: the index (6 games) and the smart folders, which resolve after it. */
     private fun awaitHome() = compose.waitUntil(10_000) {
         listOf("6 games", "Shooters").all { compose.onAllNodesWithText(it, substring = true).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    private val mecha get() = (sortie.activity.application as SortieApp).graph.mecha
+
+    /** Unrelated Hangar scenarios start with an acknowledged guide, without buying or equipping anything. */
+    private fun seedHangarIntroductionSeen() {
+        compose.waitUntil(5_000) { mecha.view.value.state != null && !mecha.view.value.busy }
+        runBlocking { mecha.restore(mecha.view.value.state!!.copy(hangarIntroSeen = true), emptyList()) }
     }
 
     /** Presses [keys] one by one and returns what has the focus after each. */
@@ -230,10 +240,17 @@ class HomeControllerTest {
     @Test
     fun hangarFromExtrasOpensTheHangarAndBReturnsToExtras() {
         awaitHome()
+        seedHangarIntroductionSeen()
         openExtras()
         assertEquals(listOf("Hangar"), walk(DOWN))
         pad.press(A)
         compose.waitUntil(5_000) { listOf("Workshop", "Gallery").all { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() } }
+        compose.waitUntil(5_000) { pad.focusedLabel() == "Workshop" }
+        assertEquals(listOf("Shop", "Slot machine", "Gallery", "Arcade", "Themes"), walk(RIGHT, RIGHT, RIGHT, RIGHT, RIGHT))
+        pad.press(A)
+        pad.press(B)
+        compose.waitForIdle()
+        compose.waitUntil(5_000) { pad.focusedLabel() == "Workshop" }
         pad.press(B)
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Workshop").fetchSemanticsNodes().isEmpty() }
         compose.mainClock.advanceTimeBy(500) // the button takes the focus back once the Hangar's window is gone
@@ -242,8 +259,196 @@ class HomeControllerTest {
     }
 
     @Test
+    @Config(qualifiers = DMG)
+    fun controllerCanSkipTheFirstGuideWithoutSpendingOrChangingTheCompanion() {
+        awaitHome()
+        compose.waitUntil(5_000) { mecha.view.value.state != null && !mecha.view.value.busy }
+        val before = mecha.view.value.state!!
+        openExtras()
+        assertEquals(listOf("Hangar"), walk(DOWN))
+        pad.press(A)
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Skip").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(5_000) { pad.focusedLabel() == "Skip" }
+        pad.press(A)
+        compose.waitUntil(5_000) {
+            mecha.view.value.state!!.hangarIntroSeen && !mecha.view.value.busy &&
+                compose.onAllNodesWithText("Skip").fetchSemanticsNodes().isEmpty()
+        }
+        assertEquals(before.copy(hangarIntroSeen = true), mecha.view.value.state)
+        assertEquals(before.copy(hangarIntroSeen = true), runBlocking { mecha.backupSave() })
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
+    }
+
+    @Test
+    fun guideAcknowledgementAndHelpReplayPreserveAnAlreadyHiddenCompanion() {
+        awaitHome()
+        compose.waitUntil(5_000) { mecha.view.value.state != null && !mecha.view.value.busy }
+        runBlocking {
+            mecha.restore(
+                mecha.view.value.state!!.copy(
+                    enabled = false,
+                    motion = false,
+                    salvage = 17,
+                    ownedThemes = setOf("default", "harbor"),
+                    selectedTheme = "harbor"
+                ),
+                emptyList()
+            )
+        }
+        val before = mecha.view.value.state!!
+        assertFalse(before.hangarIntroSeen)
+        compose.onAllNodesWithText("Skip").assertCountEquals(0)
+        openExtras()
+        compose.onNodeWithText("Hangar").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Skip").fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
+        compose.onNodeWithText("Next").performScrollTo().performClick()
+        compose.onNodeWithText("Previous").performScrollTo().performClick()
+        assertEquals(before, mecha.view.value.state)
+        compose.onNodeWithText("Next").performScrollTo().performClick()
+        compose.onNodeWithText("Next").performScrollTo().performClick()
+        compose.onNodeWithText("Got it").performScrollTo().performClick()
+        compose.waitUntil(5_000) { mecha.view.value.state!!.hangarIntroSeen && !mecha.view.value.busy }
+        val acknowledged = before.copy(hangarIntroSeen = true)
+        assertEquals(acknowledged, mecha.view.value.state)
+        assertEquals(acknowledged, runBlocking { mecha.backupSave() })
+
+        compose.onNodeWithText("Help").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Skip").fetchSemanticsNodes().isNotEmpty() }
+        assertEquals(acknowledged, mecha.view.value.state)
+        pad.press(B)
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Skip").fetchSemanticsNodes().isEmpty() }
+        assertEquals(acknowledged, runBlocking { mecha.backupSave() })
+        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithText("Extras").performClick()
+        compose.onNodeWithText("Hangar").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Workshop").fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodesWithText("Skip").assertCountEquals(0)
+        assertEquals(acknowledged, mecha.view.value.state)
+    }
+
+    @Test
+    fun guideHidePersistsAcknowledgementWithoutDiscardingCompanionOrTheme() {
+        awaitHome()
+        compose.waitUntil(5_000) { mecha.view.value.state != null && !mecha.view.value.busy }
+        runBlocking {
+            mecha.restore(
+                mecha.view.value.state!!.copy(
+                    salvage = 23,
+                    motion = false,
+                    ownedThemes = setOf("default", "plum"),
+                    selectedTheme = "plum",
+                    ownedFinishes = setOf(MechaFinish.PLAIN, MechaFinish.ALLOY),
+                    equippedFinishes = mapOf(MechaSlot.HEAD to MechaFinish.ALLOY)
+                ),
+                emptyList()
+            )
+        }
+        val before = mecha.view.value.state!!
+        openExtras()
+        compose.onNodeWithText("Hangar").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Skip").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Hide companion").performScrollTo().performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Workshop").fetchSemanticsNodes().isEmpty() && !mecha.view.value.busy }
+        val hidden = before.copy(hangarIntroSeen = true, enabled = false)
+        assertEquals(hidden, mecha.view.value.state)
+        assertEquals(hidden, runBlocking { mecha.backupSave() })
+        compose.onNodeWithText("Extras").performClick()
+        compose.onNodeWithText("Hangar").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Workshop").fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodesWithText("Skip").assertCountEquals(0)
+        assertEquals(hidden, mecha.view.value.state)
+    }
+
+    @Test
+    fun arcadeCoinConfirmationAndGameSelectionKeepOneSavedTicketUntilExplicitAbandonment() {
+        awaitHome()
+        seedHangarIntroductionSeen()
+        openExtras()
+        compose.onNodeWithText("Hangar").performClick()
+        compose.onNodeWithText("Arcade").performScrollTo().performClick()
+        val before = mecha.view.value.state!!
+        compose.onNodeWithText("Insert coin · 1 credit").performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.waitUntil(5_000) {
+            compose.waitForIdle()
+            pad.focusedLabel() == "Cancel"
+        }
+        pad.press(A)
+        compose.onNodeWithText("Insert coin · 1 credit").performScrollTo().assertIsDisplayed()
+        assertEquals(before, mecha.view.value.state)
+        compose.onNodeWithText("Insert coin · 1 credit").performScrollTo().performClick()
+        pad.press(B)
+        compose.onNodeWithText("Insert coin · 1 credit").performScrollTo().assertIsDisplayed()
+        assertEquals(before, mecha.view.value.state)
+
+        compose.onNodeWithText("Insert coin · 1 credit").performScrollTo().performClick()
+        compose.onNodeWithText("Spend 1 credit").performScrollTo().performClick()
+        compose.waitUntil(5_000) { mecha.view.value.state!!.activeArcade != null && !mecha.view.value.busy }
+        val inserted = mecha.view.value.state!!
+        val coin = inserted.activeArcade!!
+        assertNull(coin.game)
+        assertEquals(before.arcadeRuns + 1, coin.sequence)
+        assertEquals(before.copy(salvage = before.salvage - 1, arcadeRuns = coin.sequence, activeArcade = coin), inserted)
+        assertEquals(inserted, runBlocking { mecha.backupSave() })
+        compose.onNodeWithText("Choose your game").performScrollTo().assertIsDisplayed()
+        listOf("Flappy Flight", "Scrap Catch", "Circuit Match").forEach {
+            compose.onNodeWithText(it).performScrollTo().assertIsDisplayed()
+        }
+        compose.onAllNodesWithText("Insert coin · 1 credit").assertCountEquals(0)
+
+        // Leaving before choosing keeps the paid coin, not a free replacement or an automatic game choice.
+        pad.press(B)
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Fit build").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithText("Extras").performClick()
+        compose.onNodeWithText("Hangar").performClick()
+        compose.onNodeWithText("Arcade").performScrollTo().performClick()
+        compose.onNodeWithText("Choose your game").performScrollTo().assertIsDisplayed()
+        assertEquals(inserted, mecha.view.value.state)
+        compose.onNodeWithText("Flappy Flight").performScrollTo().performClick()
+        compose.waitUntil(5_000) { mecha.view.value.state!!.activeArcade?.game == MechaArcadeGame.FLAPPY_FLIGHT && !mecha.view.value.busy }
+        val paid = inserted.copy(activeArcade = coin.copy(game = MechaArcadeGame.FLAPPY_FLIGHT))
+        assertEquals(paid, mecha.view.value.state)
+        assertEquals(paid, runBlocking { mecha.backupSave() })
+        compose.onNodeWithText("Start paid run").performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithText("Choose your game").assertCountEquals(0)
+        compose.onAllNodesWithText("Insert coin · 1 credit").assertCountEquals(0)
+
+        // A paid but not started run has no live clock. Back returns to Workshop, never refunds or charges.
+        pad.press(B)
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Fit build").fetchSemanticsNodes().isNotEmpty() }
+        assertEquals(paid, mecha.view.value.state)
+        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithText("Extras").performClick()
+        compose.onNodeWithText("Hangar").performClick()
+        compose.onNodeWithText("Arcade").performScrollTo().performClick()
+        compose.onNodeWithText("Start paid run").performScrollTo().assertIsDisplayed()
+        assertEquals(paid, mecha.view.value.state)
+        compose.onNodeWithText("Abandon…").performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.waitUntil(5_000) {
+            compose.waitForIdle()
+            pad.focusedLabel() == "Keep run"
+        }
+        pad.press(A)
+        assertEquals(paid, mecha.view.value.state)
+        compose.onNodeWithText("Abandon…").performScrollTo().performClick()
+        pad.press(B)
+        compose.onNodeWithText("Start paid run").performScrollTo().assertIsDisplayed()
+        assertEquals(paid, mecha.view.value.state)
+        compose.onNodeWithText("Abandon…").performScrollTo().performClick()
+        compose.onNodeWithText("Abandon run").performScrollTo().performClick()
+        compose.waitUntil(5_000) { mecha.view.value.state!!.activeArcade == null && !mecha.view.value.busy }
+        assertNull(mecha.view.value.state!!.activeArcade)
+        assertEquals(paid.copy(activeArcade = null), mecha.view.value.state)
+        assertEquals(paid.copy(activeArcade = null), runBlocking { mecha.backupSave() })
+    }
+
+    @Test
     fun companionNameOnlyEditsAfterRenameAndCancelDoesNotSave() {
         awaitHome()
+        seedHangarIntroductionSeen()
         openExtras()
         compose.onNodeWithText("Hangar").performClick()
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Workshop").fetchSemanticsNodes().isNotEmpty() }
@@ -272,13 +477,14 @@ class HomeControllerTest {
     @Config(qualifiers = RP_NOVA)
     fun partPreviewAndCancelledPurchaseAreFreeAndBuyingDoesNotEquip() {
         awaitHome()
+        seedHangarIntroductionSeen()
         openExtras()
         compose.onNodeWithText("Hangar").performClick()
         val store = (sortie.activity.application as SortieApp).graph.mecha
         compose.waitUntil(5_000) { store.view.value.state != null && !store.view.value.busy }
         val before = store.view.value.state!!
         val part = store.view.value.parts.first { it.slot == MechaSlot.HEAD && it.id !in before.owned }
-        compose.onNodeWithText("Shop").performClick()
+        compose.onNodeWithText("Shop").performScrollTo().performClick()
         compose.onNodeWithContentDescription("Preview ${part.name}, 2 credits").performScrollTo().performClick()
         compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
         assertEquals(before, store.view.value.state)
@@ -309,13 +515,14 @@ class HomeControllerTest {
     @Config(qualifiers = DMG)
     fun finishPreviewUnlockAndPerSlotApplicationAreSeparateAndReusable() {
         awaitHome()
+        seedHangarIntroductionSeen()
         openExtras()
         compose.onNodeWithText("Hangar").performClick()
         val store = (sortie.activity.application as SortieApp).graph.mecha
         compose.waitUntil(5_000) { store.view.value.state != null && !store.view.value.busy }
         runBlocking { store.restore(store.view.value.state!!.copy(salvage = 20), emptyList()) }
         val before = store.view.value.state!!
-        compose.onNodeWithText("Shop").performClick()
+        compose.onNodeWithText("Shop").performScrollTo().performClick()
         compose.onNodeWithText("Finishes").performScrollTo().performClick()
         compose.onNodeWithText("Alloy · 6 credits").performScrollTo().performClick()
         assertEquals(before, store.view.value.state)
@@ -344,40 +551,68 @@ class HomeControllerTest {
     }
 
     @Test
-    fun buildBenchPreviewIsFreeAndFitPersistsOnlyOwnedConstrainedParts() {
+    fun workshopMixPreviewIsFreeAndFitPersistsOwnedPartsWithoutChangingFinishes() {
         awaitHome()
+        seedHangarIntroductionSeen()
         openExtras()
         compose.onNodeWithText("Hangar").performClick()
         val store = (sortie.activity.application as SortieApp).graph.mecha
         compose.waitUntil(5_000) { store.view.value.state != null && !store.view.value.busy }
+        runBlocking {
+            store.restore(
+                store.view.value.state!!.copy(
+                    ownedFinishes = setOf(MechaFinish.PLAIN, MechaFinish.ALLOY),
+                    equippedFinishes = mapOf(MechaSlot.HEAD to MechaFinish.ALLOY)
+                ),
+                emptyList()
+            )
+        }
         val before = store.view.value.state!!
-        compose.onNodeWithText("Build bench").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Fit build · free").fetchSemanticsNodes().isNotEmpty() }
+        val manual = store.view.value.parts.first { it.slot == MechaSlot.HEAD && it.id in before.owned && it.id != before.equipped[MechaSlot.HEAD] }
+        compose.onNodeWithText(manual.name).performScrollTo().performClick()
         assertEquals(before, store.view.value.state)
-        compose.onNodeWithText("Fit build · free").performScrollTo().performClick()
+        compose.onNodeWithText("Reset preview").performScrollTo().performClick()
+        compose.onNodeWithText("Fit build").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("Mixes").performScrollTo().performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Mix build").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Mix build").performScrollTo().performClick()
+        compose.onNodeWithText("Next mix").performScrollTo().performClick()
+        compose.onNodeWithText("Previous mix").performScrollTo().performClick()
+        assertEquals(before, store.view.value.state)
+        compose.onNodeWithText("Fit build").performScrollTo().performClick()
         compose.waitUntil(5_000) { store.view.value.state!!.equipped != before.equipped && !store.view.value.busy }
         val fitted = store.view.value.state!!
         val parts = store.view.value.parts.associateBy { it.id }
         assertEquals(before.salvage, fitted.salvage)
         assertEquals(before.owned, fitted.owned)
+        assertEquals(before.equippedFinishes, fitted.equippedFinishes)
         assertTrue(fitted.equipped.values.all { it in before.owned })
         assertEquals(parts[fitted.equipped[MechaSlot.BODY]]!!.family, parts[fitted.equipped[MechaSlot.ARMS]]!!.family)
         assertEquals(parts[fitted.equipped[MechaSlot.HEAD]]!!.family, parts[fitted.equipped[MechaSlot.LEGS]]!!.family)
         assertTrue(parts[fitted.equipped[MechaSlot.BODY]]!!.family != parts[fitted.equipped[MechaSlot.HEAD]]!!.family)
         assertEquals(fitted.equipped, runBlocking { store.backupSave() }!!.equipped)
-        compose.onNodeWithText("Build fitted").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("Fit build").performScrollTo().assertIsNotEnabled()
         compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
+
+        val replacement = store.view.value.parts.first { it.slot == MechaSlot.HEAD && it.id in fitted.owned && it.id != fitted.equipped[MechaSlot.HEAD] }
+        compose.onNodeWithText("Parts").performScrollTo().performClick()
+        compose.onNodeWithText(replacement.name).performScrollTo().performClick()
+        assertEquals(fitted, store.view.value.state)
+        compose.onNodeWithText("Fit build").performScrollTo().performClick()
+        compose.waitUntil(5_000) { store.view.value.state!!.equipped[MechaSlot.HEAD] == replacement.id && !store.view.value.busy }
+        assertEquals(fitted.copy(equipped = fitted.equipped + (MechaSlot.HEAD to replacement.id)), runBlocking { store.backupSave() })
     }
 
     @Test
-    fun cabinetRequiresConfirmationAndReopeningReceiptNeverSpinsAgain() {
+    fun slotMachineRequiresConfirmationAndReopeningReceiptNeverSpinsAgain() {
         awaitHome()
+        seedHangarIntroductionSeen()
         openExtras()
         compose.onNodeWithText("Hangar").performClick()
         val store = (sortie.activity.application as SortieApp).graph.mecha
         compose.waitUntil(5_000) { store.view.value.state != null && !store.view.value.busy }
         val before = store.view.value.state!!
-        compose.onNodeWithText("Cabinet").performClick()
+        compose.onNodeWithText("Slot machine").performScrollTo().performClick()
         compose.onNodeWithText("Spin · 1 credit…").performScrollTo().performClick()
         compose.waitForIdle()
         assertEquals("Cancel", pad.focusedLabel())
@@ -400,7 +635,7 @@ class HomeControllerTest {
         pad.press(A)
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Hangar").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Hangar").performClick()
-        compose.onNodeWithText("Cabinet").performClick()
+        compose.onNodeWithText("Slot machine").performScrollTo().performClick()
         compose.onNodeWithText("Saved spin #${receipt.sequence} · ${receipt.tier.label}").performScrollTo().assertIsDisplayed()
         assertEquals(after, store.view.value.state)
         assertEquals(receipt, runBlocking { store.backupSave() }!!.lastSpin)
@@ -408,8 +643,9 @@ class HomeControllerTest {
     }
 
     @Test
-    fun emptyWalletAndCompletedCollectionCannotSpendThroughShopOrCabinet() {
+    fun emptyWalletAndCompletedCollectionCannotSpendThroughShopOrSlotMachine() {
         awaitHome()
+        seedHangarIntroductionSeen()
         openExtras()
         compose.onNodeWithText("Hangar").performClick()
         val store = (sortie.activity.application as SortieApp).graph.mecha
@@ -417,12 +653,16 @@ class HomeControllerTest {
         runBlocking { store.restore(store.view.value.state!!.copy(salvage = 0), emptyList()) }
         val emptyWallet = store.view.value.state!!
         val part = store.view.value.parts.first { it.slot == MechaSlot.HEAD && it.id !in emptyWallet.owned }
-        compose.onNodeWithText("Shop").performClick()
+        compose.onNodeWithText("Shop").performScrollTo().performClick()
         compose.onNodeWithContentDescription("Preview ${part.name}, 2 credits").performScrollTo().performClick()
         compose.onNodeWithText("Buy part · 2 credits").performScrollTo().assertIsNotEnabled()
-        compose.onNodeWithText("Cabinet").performClick()
+        compose.onNodeWithText("Slot machine").performScrollTo().performClick()
         compose.onNodeWithText("Spin · 1 credit…").performScrollTo().assertIsNotEnabled()
         assertEquals(emptyWallet, store.view.value.state)
+        compose.onNodeWithText("Arcade").performScrollTo().performClick()
+        compose.onNodeWithText("Insert coin · 1 credit").performScrollTo().assertIsNotEnabled()
+        assertEquals(emptyWallet, store.view.value.state)
+        compose.onNodeWithText("Slot machine").performScrollTo().performClick()
 
         runBlocking {
             store.restore(
@@ -441,8 +681,7 @@ class HomeControllerTest {
         compose.onNodeWithText("Tier complete").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithText("Holo · 5 credits").performScrollTo().performClick()
         compose.onNodeWithText("Tier complete").performScrollTo().assertIsNotEnabled()
-        compose.onNodeWithText("70/50 credits").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Shop").performClick()
+        compose.onNodeWithText("Shop").performScrollTo().performClick()
         compose.onNodeWithText("Owned").performScrollTo().assertIsNotEnabled()
         assertEquals(complete, store.view.value.state)
     }

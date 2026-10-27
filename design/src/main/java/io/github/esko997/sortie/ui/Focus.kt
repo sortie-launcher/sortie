@@ -97,7 +97,7 @@ private val PressTween = tween<Float>(PRESS_MS, easing = FastOutSlowInEasing)
 fun Modifier.focusGlow(
     focused: Boolean,
     shape: Shape,
-    colour: Color = Amber,
+    colour: Color = Accent,
     focusedScale: Float = 1.02f,
     idleBorder: Color = Color.Transparent,
     pressed: Boolean = false
@@ -335,10 +335,9 @@ private class PressVeilNode(private val source: InteractionSource) : Modifier.No
 }
 
 /**
- * The surface under a focused [FocusRow]: on Ink it is Slate, as rows always were; on a Slate dialog (context sheets, pickers) it
+ * The surface under a focused [FocusRow]: on CanvasColour it is PanelColour, as rows always were; on a PanelColour dialog (context sheets, pickers) it
  * still lifts the row a step instead of vanishing into the background. A trace of the focus colour warms it.
  */
-private val RowSurface = Color(0x403C485C)
 private const val ROW_TINT = 0.07f
 private val RowShape = RoundedCornerShape(10.dp)
 
@@ -352,7 +351,7 @@ fun FocusRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
-    colour: Color = Amber,
+    colour: Color = Accent,
     onFavourite: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
@@ -364,7 +363,7 @@ fun FocusRow(
             .focusGlow(focused, RowShape, colour, pressed = held)
             .fillMaxWidth()
             .clip(RowShape)
-            .then(if (focused) Modifier.background(RowSurface).background(colour.copy(alpha = ROW_TINT)) else Modifier)
+            .then(if (focused) Modifier.background(FocusSurfaceColour).background(colour.copy(alpha = ROW_TINT)) else Modifier)
             .confirmHeld { held = it }
             .keyLongPress(onLongClick, onFavourite)
             .combinedClickable(
@@ -383,7 +382,7 @@ fun FocusRow(
  * focus and sinks while A is held. The label stays on one line (ellipsized), so a button never grows into a two-line pill.
  */
 @Composable
-fun GlowButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, primary: Boolean = false, colour: Color = Amber, onClick: () -> Unit) {
+fun GlowButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, primary: Boolean = false, colour: Color = Accent, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val pressed by interaction.collectIsPressedAsState()
@@ -392,7 +391,7 @@ fun GlowButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = t
             onClick = onClick,
             enabled = enabled,
             modifier = modifier.focusGlow(focused, ButtonDefaults.shape, colour, pressed = pressed),
-            colors = ButtonDefaults.buttonColors(containerColor = colour, contentColor = Ink),
+            colors = ButtonDefaults.buttonColors(containerColor = colour, contentColor = CanvasColour),
             interactionSource = interaction
         ) { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) }
     } else {

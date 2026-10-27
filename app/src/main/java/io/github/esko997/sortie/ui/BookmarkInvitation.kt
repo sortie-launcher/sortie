@@ -103,15 +103,15 @@ fun BoxScope.BookmarkInvitationHost(vm: SortieViewModel, nav: NavHostController)
         Column(
             Modifier
                 .widthIn(max = 560.dp)
-                .background(Slate.copy(alpha = 0.96f), shape)
-                .border(1.dp, Amber.copy(alpha = 0.6f), shape)
+                .background(PanelColour.copy(alpha = 0.96f), shape)
+                .border(1.dp, Accent.copy(alpha = 0.6f), shape)
                 .onFocusChanged { inside[0] = it.hasFocus }
                 .padding(horizontal = 16.dp, vertical = 12.dp)
                 .semantics { liveRegion = LiveRegionMode.Polite },
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(BOOKMARK_INVITATION, style = MaterialTheme.typography.bodyLarge)
-            title?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = Amber) }
+            title?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = Accent) }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 GlowButton("Leave a note", primary = true, onClick = accept)
                 GlowButton("Not now") {

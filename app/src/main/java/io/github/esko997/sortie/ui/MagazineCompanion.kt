@@ -108,6 +108,9 @@ internal fun PublishMagazineCompanion(
  */
 @Composable
 internal fun MagazineCompanion(panel: MagazineCompanionState, leading: @Composable () -> Unit) {
+    val panelColour = PanelColour
+    val rule = RuleColour
+    val accent = Accent
     val issue = panel.issue
     val article = issue.article(panel.articleId)
     val articleIndex = issue.articles.indexOfFirst { it.id == panel.articleId }
@@ -132,7 +135,7 @@ internal fun MagazineCompanion(panel: MagazineCompanionState, leading: @Composab
         Text(
             issue.title,
             style = MaterialTheme.typography.titleLarge.copy(fontFamily = FontFamily.Serif),
-            color = Amber,
+            color = Accent,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -181,7 +184,7 @@ internal fun MagazineCompanion(panel: MagazineCompanionState, leading: @Composab
                         .semantics { contentDescription = "Previous article" }
                         .padding(horizontal = 6.dp, vertical = 18.dp)
                 ) {
-                    Text("Previous", color = if (previous == null) Spent else Amber, style = MaterialTheme.typography.labelLarge)
+                    Text("Previous", color = if (previous == null) Spent else Accent, style = MaterialTheme.typography.labelLarge)
                 }
                 Box(
                     Modifier.weight(0.68f).heightIn(min = 68.dp)
@@ -202,8 +205,8 @@ internal fun MagazineCompanion(panel: MagazineCompanionState, leading: @Composab
                                 close()
                             }
                             onDrawBehind {
-                                drawPath(page, Slate)
-                                drawPath(corner, if (next == null) Hairline else Amber)
+                                drawPath(page, panelColour)
+                                drawPath(corner, if (next == null) rule else accent)
                             }
                         }
                         .clickable(interactionSource = null, indication = PressVeil, enabled = next != null, role = Role.Button) { next?.let { open(it.id) } }
@@ -213,7 +216,7 @@ internal fun MagazineCompanion(panel: MagazineCompanionState, leading: @Composab
                     Column {
                         Text(
                             if (next == null) "End of issue" else "Next article",
-                            color = if (next == null) Spent else Amber,
+                            color = if (next == null) Spent else Accent,
                             style = MaterialTheme.typography.labelLarge
                         )
                         if (next != null) {
@@ -232,39 +235,41 @@ internal fun MagazineCompanion(panel: MagazineCompanionState, leading: @Composab
 }
 
 /** A finished control: no previous article, the end of the issue. */
-private val Spent = Color(0xFF5C6570)
+private val Spent: Color
+    @Composable get() = DisabledLabelColour
 
-/** One half of the Sections/Articles switch: the active half is lifted onto Slate with an amber edge. */
+/** One half of the Sections/Articles switch: the active half is lifted onto PanelColour with an amber edge. */
 @Composable
 private fun ContentsTab(label: String, active: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     Text(
         label,
-        color = if (active) Amber else Color(0xFF9AA3AD),
+        color = if (active) Accent else MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.labelLarge,
         modifier = modifier
             .clip(shape)
-            .background(if (active) Slate else Color.Transparent)
-            .border(1.dp, if (active) Amber.copy(alpha = 0.45f) else Hairline, shape)
+            .background(if (active) PanelColour else Color.Transparent)
+            .border(1.dp, if (active) Accent.copy(alpha = 0.45f) else RuleColour, shape)
             .clickable(interactionSource = null, indication = PressVeil, role = Role.Tab, onClick = onClick)
             .semantics { selected = active }
             .padding(horizontal = 14.dp, vertical = 12.dp)
     )
 }
 
-/** A section or article; the one being read sits on Slate behind an amber margin rule, like a highlighted passage. */
+/** A section or article; the one being read sits on PanelColour behind an amber margin rule, like a highlighted passage. */
 @Composable
 private fun ContentsLink(title: String, active: Boolean, indent: Int = 0, onClick: () -> Unit) {
+    val accent = Accent
     Text(
         title,
-        color = if (active) Amber else MaterialTheme.colorScheme.onSurface,
+        color = if (active) Accent else MaterialTheme.colorScheme.onSurface,
         style = MaterialTheme.typography.bodyMedium,
         fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
             .clip(RoundedCornerShape(8.dp))
             .then(
                 if (active) {
-                    Modifier.background(Slate).drawBehind { drawRect(Amber, size = Size(3.dp.toPx(), size.height)) }
+                    Modifier.background(PanelColour).drawBehind { drawRect(accent, size = Size(3.dp.toPx(), size.height)) }
                 } else {
                     Modifier
                 }

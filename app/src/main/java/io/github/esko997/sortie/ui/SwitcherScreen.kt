@@ -197,7 +197,7 @@ fun SwitcherScreen(
             if (secondary != null) {
                 ScreenRow("Bottom screen", secondary, row == secondary, state, switcher, requesters[secondary], spot, returning, onFocus, onBlur)
             }
-            Box(Modifier.padding(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 12.dp).fillMaxWidth().height(1.dp).background(Hairline))
+            Box(Modifier.padding(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 12.dp).fillMaxWidth().height(1.dp).background(RuleColour))
             // wraps instead of running off the right edge of a narrow screen
             FlowRow(
                 Modifier.padding(horizontal = 12.dp),
@@ -260,7 +260,7 @@ private fun ScreenRow(
             if (state.ready) "Nothing running on this screen" else "—",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp).border(1.dp, Hairline, CardShape).padding(horizontal = 16.dp, vertical = 14.dp)
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp).border(1.dp, RuleColour, CardShape).padding(horizontal = 16.dp, vertical = 14.dp)
         )
         return
     }
@@ -305,7 +305,7 @@ private fun RowTitle(title: String, active: Boolean, status: String?, urgent: Bo
                     alpha = mark
                     scaleY = 0.3f + 0.7f * mark
                 }
-                .background(Amber, RoundedCornerShape(2.dp))
+                .background(Accent, RoundedCornerShape(2.dp))
         )
         Spacer(Modifier.width(8.dp))
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -313,7 +313,7 @@ private fun RowTitle(title: String, active: Boolean, status: String?, urgent: Bo
             Text(
                 it,
                 style = MaterialTheme.typography.labelLarge,
-                color = if (urgent) Amber else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (urgent) Accent else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 12.dp)
@@ -324,11 +324,8 @@ private fun RowTitle(title: String, active: Boolean, status: String?, urgent: Bo
 
 private val CardShape = RoundedCornerShape(14.dp)
 
-/** Cards are objects on the dark scrim: Slate lit faintly from the top left, as Sortie's app tiles are. */
+/** Cards are objects on the dark scrim: PanelColour lit faintly from the top left, as Sortie's app tiles are. */
 private val CardLight = Brush.linearGradient(listOf(Color(0x14FFFFFF), Color.Transparent))
-
-/** The focused card's surface: a step above Slate, so the lift reads even where the glow is faint. */
-private val CardLifted = Color(0xFF252D37)
 
 /**
  * One running app: its icon and name, [note] when it is not the one in front on this row's screen. The controller focus lifts
@@ -345,7 +342,7 @@ private fun AppCard(entry: TaskSwitcher.Entry, note: String?, onClick: () -> Uni
             .width(150.dp)
             .focusGlow(focused, CardShape, focusedScale = 1.06f, pressed = held)
             .clip(CardShape)
-            .background(if (focused) CardLifted else Slate)
+            .background(if (focused) LiftedPanelColour else PanelColour)
             .background(CardLight)
             .confirmHeld { held = it }
             .clickable(interactionSource = interaction, indication = PressVeil, role = Role.Button, onClick = onClick)
@@ -369,7 +366,7 @@ private fun AppCard(entry: TaskSwitcher.Entry, note: String?, onClick: () -> Uni
                 .focusProperties { canFocus = false }
                 .size(28.dp)
                 .clip(CircleShape)
-                .background(Ink.copy(alpha = 0.55f))
+                .background(CanvasColour.copy(alpha = 0.55f))
                 .clickable(onClickLabel = "Close app", role = Role.Button, onClick = onClose),
             contentAlignment = Alignment.Center
         ) {

@@ -33,11 +33,11 @@ class MechaCommerceTest {
         assertEquals(legacy, decoded)
         assertNull(mechaStateProblem(decoded, parts))
         val upgraded = decoded.upgraded()
-        assertEquals(legacy.copy(version = 2), upgraded)
+        assertEquals(legacy.copy(version = 3), upgraded)
         assertSame(upgraded, upgraded.upgraded())
         assertEquals(12, upgraded.owned.size)
         assertEquals(setOf(MechaFinish.PLAIN), upgraded.ownedFinishes)
-        assertTrue(runCatching { legacy.copy(version = 3).upgraded() }.isFailure)
+        assertTrue(runCatching { legacy.copy(version = 4).upgraded() }.isFailure)
     }
 
     @Test
@@ -215,20 +215,29 @@ class MechaCommerceTest {
     }
 
     @Test
-    fun fittingRejectsIncompleteUnownedWrongSlotAndNonBenchCombinations() {
+    fun fittingValidatesOwnershipAndSlotsWithoutConstrainingFamilies() {
         val initial = starter()
         val good = mechaBuilds(parts, initial.owned).first().equipped
         val invalid = listOf(
             good - MechaSlot.HEAD,
             good + (MechaSlot.HEAD to "foundry_head_1"),
             good + (MechaSlot.HEAD to good.getValue(MechaSlot.BODY)),
-            good + (MechaSlot.HEAD to "missing"),
-            initial.equipped,
-            mapOf(MechaSlot.HEAD to "yard_head_1", MechaSlot.LEGS to "survey_legs_1", MechaSlot.BODY to "courier_body_1", MechaSlot.ARMS to "courier_arms_1")
+            good + (MechaSlot.HEAD to "missing")
         )
         for (build in invalid) {
             assertSame(initial, initial.fittingBuild(build, parts).state)
             assertNotNull(initial.fittingBuild(build, parts).error)
+        }
+        val manual = mapOf(
+            MechaSlot.HEAD to "yard_head_1",
+            MechaSlot.LEGS to "survey_legs_1",
+            MechaSlot.BODY to "courier_body_1",
+            MechaSlot.ARMS to "courier_arms_1"
+        )
+        for (build in listOf(initial.equipped, manual)) {
+            val result = initial.fittingBuild(build, parts)
+            assertNull(result.error)
+            assertEquals(initial.copy(equipped = build), result.state)
         }
         val mutable = good.toMutableMap()
         val fitted = initial.fittingBuild(mutable, parts).state

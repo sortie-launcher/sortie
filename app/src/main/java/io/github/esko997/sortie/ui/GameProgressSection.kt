@@ -83,7 +83,7 @@ fun GameProgressSection(
     graph: SortieApp.Graph,
     gameId: String,
     modifier: Modifier = Modifier,
-    accent: Color = Amber,
+    accent: Color = Accent,
     actions: @Composable FlowRowScope.() -> Unit = {}
 ) {
     val progress by remember(gameId) { graph.user.data.map { it.gameProgress[gameId] }.distinctUntilChanged() }
@@ -135,7 +135,7 @@ private fun ShelfSummary(progress: GameProgress) {
                 shelf.label,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFE6E8EB),
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(shelf.colour()).padding(horizontal = 8.dp, vertical = 2.dp)
             )
             progress.sinceDate?.let {
@@ -192,7 +192,7 @@ private fun ShelfEditor(gameId: String, current: GameProgress?, accent: Color, s
     var focusedOnce by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = { if (!saving) onClose() }, properties = DialogProperties(dismissOnClickOutside = false)) {
         Column(
-            Modifier.widthIn(max = 520.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Slate)
+            Modifier.widthIn(max = 520.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(PanelColour)
                 .verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {

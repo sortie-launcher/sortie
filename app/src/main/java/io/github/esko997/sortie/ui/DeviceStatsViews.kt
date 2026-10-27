@@ -56,7 +56,7 @@ fun DeviceStatsSides(content: @Composable () -> Unit) {
     val graph = (LocalContext.current.applicationContext as SortieApp).graph
     // the Perf companion shows all of it, larger: no strips beside it
     val on = rememberStatsMode(graph).companion && rememberCompanionView(graph) != CompanionView.PERF
-    Row(Modifier.fillMaxSize().background(Ink)) {
+    Row(Modifier.fillMaxSize().background(CanvasColour)) {
         val stats = if (on) liveDeviceStats(graph) else null
         if (on) StatsStrip(stats?.let(StatsText::usageCells).orEmpty(), dividerAtEnd = true)
         Box(Modifier.weight(1f).fillMaxHeight()) { content() }
@@ -140,20 +140,21 @@ fun rememberShown(): Flow<Boolean> {
 /** A thin column of [cells], centred vertically, with a hairline on the side facing the panel. */
 @Composable
 private fun StatsStrip(cells: List<StatCell>, dividerAtEnd: Boolean) {
+    val rule = RuleColour
     Column(
         Modifier
             .fillMaxHeight()
             .width(STRIP_WIDTH)
             .drawBehind {
                 val x = if (dividerAtEnd) size.width - 0.5f else 0.5f
-                drawLine(Hairline, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+                drawLine(rule, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
             },
         verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         for (cell in cells) {
             Column(Modifier.semantics(mergeDescendants = true) {}, horizontalAlignment = Alignment.CenterHorizontally) {
-                StripText(cell.label, 9.sp, Amber.copy(alpha = 0.8f))
+                StripText(cell.label, 9.sp, Accent.copy(alpha = 0.8f))
                 StripText(cell.value, 13.sp, MaterialTheme.colorScheme.onSurface, FontWeight.Medium, figures = true)
                 cell.sub?.let { StripText(it, 9.sp, MaterialTheme.colorScheme.onSurfaceVariant) }
             }

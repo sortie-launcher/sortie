@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.AssetManager
 import android.graphics.BitmapFactory
 import android.util.Log
+import io.github.esko997.sortie.ui.SortiePalette
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -68,6 +69,8 @@ class MechaStore internal constructor(
     private val _view = MutableStateFlow(MechaView())
     val view: StateFlow<MechaView> = _view
 
+    internal val arcadeSession = MechaArcadeSession()
+
     private val jobs = Channel<suspend () -> Unit>(Channel.UNLIMITED)
     private val pendingChanges = AtomicInteger()
 
@@ -106,6 +109,27 @@ class MechaStore internal constructor(
     internal fun buyFinish(finish: MechaFinish) = change { it.buyingFinish(finish) }
 
     internal fun setFinish(slot: MechaSlot, finish: MechaFinish) = change { it.finishing(slot, finish) }
+
+    internal fun buyTheme(palette: SortiePalette) = change { it.buyingTheme(palette) }
+
+    internal fun setTheme(palette: SortiePalette) = change { it.selectingTheme(palette) }
+
+    internal fun completeIntroduction(hideCompanion: Boolean = false) = change { it.introduced(hideCompanion) }
+
+    internal fun insertArcadeCoin(expectedSequence: Int) = change { current ->
+        val problem = current.arcadeEntryProblem(expectedSequence)
+        if (problem != null) {
+            MechaResult(current, error = problem)
+        } else {
+            current.insertingArcadeCoin(expectedSequence, random.nextLong())
+        }
+    }
+
+    internal fun selectArcadeGame(ticket: MechaArcadeTicket, game: MechaArcadeGame) = change { it.selectingArcadeGame(ticket, game) }
+
+    internal fun finishArcade(ticket: MechaArcadeTicket, score: Int) = change { it.finishingArcade(ticket, score) }
+
+    internal fun abandonArcade(ticket: MechaArcadeTicket) = change { it.abandoningArcade(ticket) }
 
     internal fun fitBuild(equipped: Map<MechaSlot, String>) {
         val selection = equipped.toMap()

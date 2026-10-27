@@ -161,7 +161,7 @@ fun CompanionScreen(displayId: Int) {
         launcher = false
         dockSlot = -1
     }
-    Surface(Modifier.fillMaxSize(), color = Ink) {
+    Surface(Modifier.fillMaxSize(), color = CanvasColour) {
         MechaStageHost(stage, quiet = magazine != null || picking || switcher.open) {
             when {
                 switcher.open && !switcher.overlay -> TouchSwitcher(graph.switcher, switcher, displayId)
@@ -300,8 +300,8 @@ private fun HeroQueueButton(graph: SortieApp.Graph, id: String) {
             .focusGlow(interaction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape),
         interactionSource = interaction,
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = if (queued) Amber.copy(alpha = 0.18f) else Color.Transparent,
-            contentColor = Amber
+            containerColor = if (queued) Accent.copy(alpha = 0.18f) else Color.Transparent,
+            contentColor = Accent
         )
     ) {
         Text(if (queued) "Remove from Want to play" else "Want to play")
@@ -449,7 +449,7 @@ private fun Panel(
         if (subtitle.isNotBlank()) {
             Text(
                 subtitle,
-                color = Amber,
+                color = Accent,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -535,7 +535,7 @@ private fun Dock(
                         .focusGlow(focused, CircleShape, pressed = held)
                         .size(56.dp)
                         .clip(CircleShape)
-                        .background(Slate.copy(alpha = if (item == null) 0.35f else 0.8f))
+                        .background(PanelColour.copy(alpha = if (item == null) 0.35f else 0.8f))
                         // always attached: once the hold has emptied the slot, the handler must still swallow the A release
                         .keyLongPress(unpin ?: {})
                         .combinedClickable(
@@ -571,7 +571,7 @@ private fun Dock(
             Modifier.size(CORNER).clip(CircleShape).clickable(interactionSource = null, indication = PressVeil, onClickLabel = "Dock", onClick = onToggle),
             contentAlignment = Alignment.Center
         ) {
-            Box(Modifier.size(if (open) 20.dp else 14.dp).clip(CircleShape).background(if (open) Amber else Slate.copy(alpha = 0.8f)))
+            Box(Modifier.size(if (open) 20.dp else 14.dp).clip(CircleShape).background(if (open) Accent else PanelColour.copy(alpha = 0.8f)))
         }
     }
 }
@@ -602,8 +602,8 @@ private fun Battery(modifier: Modifier) {
     }
     if (level < 0) return
     Row(modifier.height(CORNER), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Box(Modifier.size(22.dp, 11.dp).clip(RoundedCornerShape(2.dp)).background(Slate)) {
-            Box(Modifier.fillMaxHeight().fillMaxWidth(level / 100f).background(if (level <= 15 && !charging) Color(0xFFE05B4B) else Amber))
+        Box(Modifier.size(22.dp, 11.dp).clip(RoundedCornerShape(2.dp)).background(PanelColour)) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(level / 100f).background(if (level <= 15 && !charging) Color(0xFFE05B4B) else Accent))
         }
         Text((if (charging) "⚡" else "") + "$level%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -640,7 +640,7 @@ private fun CornerPlus(modifier: Modifier, onClick: () -> Unit) {
             .focusGlow(interaction.collectIsFocusedAsState().value, CircleShape, pressed = held)
             .size(CORNER)
             .clip(CircleShape)
-            .background(Slate.copy(alpha = 0.6f))
+            .background(PanelColour.copy(alpha = 0.6f))
             .clickable(
                 interactionSource = interaction,
                 indication = PressVeil,
@@ -651,7 +651,7 @@ private fun CornerPlus(modifier: Modifier, onClick: () -> Unit) {
             .semantics { contentDescription = "Open an app here" },
         contentAlignment = Alignment.Center
     ) {
-        Text("+", color = Amber, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clearAndSetSemantics {})
+        Text("+", color = Accent, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clearAndSetSemantics {})
     }
 }
 
@@ -736,10 +736,10 @@ fun TouchSwitcher(switcher: TaskSwitcher, state: TaskSwitcher.State, displayId: 
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
             items(shown, key = { it.task.id }) { e ->
                 val elsewhere = e.task.displayId != displayId
-                // the same tile as the controller switcher's cards on the other screen: Slate under a faint top-left light
+                // the same tile as the controller switcher's cards on the other screen: PanelColour under a faint top-left light
                 val card = RoundedCornerShape(14.dp)
                 Column(
-                    Modifier.width(150.dp).clip(card).background(Slate).background(CardLight).clickable(
+                    Modifier.width(150.dp).clip(card).background(PanelColour).background(CardLight).clickable(
                         interactionSource = null,
                         indication = PressVeil,
                         enabled = !state.busy
@@ -751,7 +751,7 @@ fun TouchSwitcher(switcher: TaskSwitcher, state: TaskSwitcher.State, displayId: 
                     Box(Modifier.fillMaxWidth()) {
                         AndroidView(factory = { ImageView(it) }, modifier = Modifier.size(64.dp).align(Alignment.Center)) { it.setImageDrawable(e.icon) }
                         Box(
-                            Modifier.align(Alignment.TopEnd).padding(4.dp).size(28.dp).clip(CircleShape).background(Ink.copy(alpha = 0.55f))
+                            Modifier.align(Alignment.TopEnd).padding(4.dp).size(28.dp).clip(CircleShape).background(CanvasColour.copy(alpha = 0.55f))
                                 .clickable(interactionSource = null, indication = PressVeil, enabled = !state.busy, onClickLabel = "Close app") {
                                     switcher.closeApp(e)
                                 },

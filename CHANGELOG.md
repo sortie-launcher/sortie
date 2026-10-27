@@ -5,6 +5,16 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
+- Rework the Hangar for landscape screens: preview and controls sit side by side, and Parts, Family sets and Mixes share
+  one Workshop draft and Fit action. Rename Cabinet to **Slot machine**, with three original pixel-art reels and a brief,
+  reduced-motion-aware flourish; its published stakes and odds are unchanged.
+- Add a CRT Arcade with **Flappy Flight**, **Scrap Catch** and **Circuit Match**. Insert one credit, then choose one game.
+  The paid coin survives closing/restarting; choosing or resuming never charges again. Games pause when hidden and award
+  scores/bests only, not credits, parts or companion stats. An unfinished game restarts free after process death.
+- Add free theme previews and separately applied eight-credit Harbor, Plum and Lichen palettes; Original stays free.
+  Applied themes persist with Rivet hidden. A skippable three-card first-open introduction explains earning, spending,
+  reduced motion and hiding; Help reopens it. Companion save version 3 preserves old inventory, finishes and receipts
+  during migration and includes the new purchases, guide acknowledgement and paid arcade tickets in backup/restore.
 - Rivet's production Hangar gains Shop, Build bench and Cabinet. Four new authored families bring the collection to
   56 parts; the free bench proposes compatible owned two-family builds. Parts cost 2 credits; reusable Alloy and Holo
   finishes cost 6 and 10, with animated previews and per-slot application. Direct purchase is always available alongside

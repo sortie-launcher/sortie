@@ -65,7 +65,7 @@ internal fun starterMechaState(parts: List<MechaPart>, now: Long): MechaState {
         starters.first { it.family == MECHA_STARTER_FAMILY && it.slot == slot }.id
     }
     return MechaState(
-        version = 2,
+        version = 3,
         equipped = equipped,
         owned = starters.mapTo(LinkedHashSet()) { it.id },
         salvage = MECHA_STARTER_CREDITS,
@@ -107,19 +107,20 @@ internal fun mechaStateProblem(state: MechaState, parts: List<MechaPart>): Strin
 fun mechaStateProblem(state: MechaState): String? {
     val stats = MECHA_STAT_FLOOR..MECHA_STAT_MAX
     return when {
-        state.version !in 1..2 -> "it is format version ${state.version}, this build reads versions 1 and 2"
+        state.version !in 1..3 -> "it is format version ${state.version}, this build reads versions 1, 2 and 3"
         state.version == 1 && !state.hasLegacyCommerceDefaults() -> "a legacy hangar contains newer commerce fields"
+        state.version < 3 && !state.hasLegacyArcadeDefaults() -> "a legacy hangar contains newer arcade or theme fields"
         mechaNameProblem(state.name) != null -> "its name \"${state.name}\" is invalid"
         MechaSlot.entries.any { state.equipped[it] !in state.owned } -> "its fitted parts aren't complete owned parts"
         state.origins.keys.any { it !in state.owned } -> "it records where unowned parts came from"
         state.salvage < 0 || state.salvageRuns < 0 || state.creditedMinutes < 0 -> "a counter is negative"
         state.pendingMinutes !in 0 until MECHA_MINUTES_PER_CREDIT -> "its pending play minutes (${state.pendingMinutes}) are out of range"
-        state.version == 2 && state.salvage >= MECHA_CREDIT_CEILING && state.pendingMinutes != 0 ->
+        state.version >= 2 && state.salvage >= MECHA_CREDIT_CEILING && state.pendingMinutes != 0 ->
             "it banks pending credit progress at the earning ceiling"
         state.bond !in 0..MECHA_STAT_MAX -> "its bond (${state.bond}) is out of range"
         state.charge !in stats || state.condition !in stats -> "its charge or condition is out of range"
         state.initializedAt <= 0 -> "it has no start time"
-        else -> mechaCommerceProblem(state)
+        else -> mechaCommerceProblem(state) ?: mechaArcadeCommerceProblem(state)
     }
 }
 
@@ -129,7 +130,12 @@ private fun MechaState.hasLegacyCommerceDefaults(): Boolean =
 /** Called after catalog/state validation; upgrading never awards parts or changes historical counters. */
 internal fun MechaState.upgraded(): MechaState {
     require(mechaStateProblem(this) == null) { "Invalid hangar state: ${mechaStateProblem(this)}" }
-    return if (version == 1) copy(version = 2, pendingMinutes = if (salvage >= MECHA_CREDIT_CEILING) 0 else pendingMinutes) else this
+    val commerce = if (version == 1) {
+        copy(version = 2, pendingMinutes = if (salvage >= MECHA_CREDIT_CEILING) 0 else pendingMinutes)
+    } else {
+        this
+    }
+    return if (commerce.version == 2) commerce.copy(version = 3) else commerce
 }
 
 /**
@@ -240,7 +246,7 @@ internal fun MechaState.credited(sessions: List<PlaySession>): MechaResult {
     }
     if (processed.size == processedSessions.size) return MechaResult(this)
     val next = copy(
-        version = 2,
+        version = 3,
         processedSessions = processed,
         pendingMinutes = pending,
         creditedMinutes = creditedMinutes + minutes,

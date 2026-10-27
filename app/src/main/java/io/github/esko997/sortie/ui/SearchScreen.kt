@@ -323,7 +323,7 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
                         Text(
                             active.joinToString(" · ") { it.label },
                             style = MaterialTheme.typography.labelLarge,
-                            color = Amber,
+                            color = Accent,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)
@@ -562,7 +562,7 @@ private fun SearchPicker(
     }
     val firstModifier = Modifier.focusRequester(first).onFocusChanged { if (it.isFocused) focusedOnce = true }
     Dialog(onDismissRequest = onDismiss) {
-        Column(Modifier.widthIn(max = 440.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Slate).padding(12.dp)) {
+        Column(Modifier.widthIn(max = 440.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(PanelColour).padding(12.dp)) {
             Text(
                 if (active > 0) "$title · $active" else title,
                 style = MaterialTheme.typography.titleMedium,
@@ -578,7 +578,7 @@ private fun SearchPicker(
                     val on = o.value in selected
                     FocusRow(onClick = { onToggle(o.value) }, modifier = if (i == 0) firstModifier else Modifier) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(if (on) "☑" else "☐", color = if (on) Amber else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(28.dp))
+                            Text(if (on) "☑" else "☐", color = if (on) Accent else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(28.dp))
                             Text(
                                 if (o.caution) "⚑ ${o.label}" else o.label,
                                 style = MaterialTheme.typography.bodyLarge,
@@ -592,7 +592,7 @@ private fun SearchPicker(
                 }
             }
             // the values above scroll; the rule keeps Done and Clear reading as the dialog's own controls
-            if (!rows.isNullOrEmpty()) Box(Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth().height(1.dp).background(Hairline))
+            if (!rows.isNullOrEmpty()) Box(Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth().height(1.dp).background(RuleColour))
             FocusRow(onClick = onDismiss, modifier = if (rows.isNullOrEmpty()) firstModifier else Modifier) {
                 Text("Done", style = MaterialTheme.typography.bodyLarge)
             }

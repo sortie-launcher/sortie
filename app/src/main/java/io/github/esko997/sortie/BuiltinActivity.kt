@@ -30,6 +30,7 @@ import io.github.esko997.sortie.ui.Hotkeys
 import io.github.esko997.sortie.ui.LocalHotkeys
 import io.github.esko997.sortie.ui.SortieTheme
 import io.github.esko997.sortie.ui.SortieViewModel
+import io.github.esko997.sortie.ui.rememberSelectedTheme
 
 /**
  * Hosts one [BuiltinApp] as an ordinary app task (never HOME): its own singleTask task and affinity, so reopening resumes it
@@ -71,7 +72,7 @@ abstract class BuiltinActivity(private val app: BuiltinApp) : ComponentActivity(
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
         setContent {
-            SortieTheme {
+            SortieTheme(palette = rememberSelectedTheme()) {
                 AmbientBackground {
                     Surface(
                         Modifier.fillMaxSize().safeDrawingPadding(),

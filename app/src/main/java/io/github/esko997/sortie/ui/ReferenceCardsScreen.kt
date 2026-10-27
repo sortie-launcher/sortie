@@ -79,7 +79,8 @@ import kotlinx.coroutines.withContext
 /** Prefix of the editor key for a card that does not exist yet; the rest is the id it will be saved under. */
 private const val NEW_CARD = "new:"
 
-private val ErrorRed = Color(0xFFF87171)
+private val ErrorRed: Color
+    @Composable get() = MaterialTheme.colorScheme.error
 
 /**
  * [gameId]'s reference cards on the main screen: the list (with the guide's controls and the user's mapping notes as separate
@@ -349,13 +350,13 @@ private fun ReadOnlyReference(guideControls: String) {
             .focusGlow(focused, shape)
             .fillMaxWidth()
             .clip(shape)
-            .background(Slate.copy(alpha = 0.6f))
+            .background(PanelColour.copy(alpha = 0.6f))
             .focusable(interactionSource = interaction)
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text("Not cards: shown here for reference only", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("Guide controls", style = MaterialTheme.typography.titleSmall, color = Amber)
+        Text("Guide controls", style = MaterialTheme.typography.titleSmall, color = Accent)
         Text(guideControls, style = MaterialTheme.typography.bodyMedium)
     }
 }
@@ -504,7 +505,7 @@ private fun ReferenceCardEditor(
             )
             if (isImage) {
                 val file = ReferenceFiles.resolve(sortieDir, original?.image)
-                Box(Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(8.dp)).background(Slate), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(8.dp)).background(PanelColour), contentAlignment = Alignment.Center) {
                     if (file != null && file.isFile) CoverImage(file.path, Modifier.fillMaxSize(), ContentScale.Fit) else Text("Image missing")
                 }
                 Label("Notes under the image (Markdown)")

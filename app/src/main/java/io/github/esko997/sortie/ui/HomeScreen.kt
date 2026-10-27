@@ -113,7 +113,8 @@ private val BITS = Regex("^(\\d+)-bit", RegexOption.IGNORE_CASE)
 /** "8-bit" … "128-bit" in ascending order first, then every other generation ("arcade", "handheld", …) in manifest order. */
 private fun generationRank(generation: String): Int = BITS.find(generation)?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE
 
-private val AppsGrey = Color(0xFF9AA3AD)
+private val AppsGrey: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
 
 /**
  * Below this window height (a landscape phone or small handheld) the header keeps its actions on one sideways-scrolling line
@@ -264,7 +265,7 @@ fun HomeScreen(
             "${f.items.size}" + if (f.problems.isNotEmpty()) " · rule problems" else "",
             f.items.size,
             "",
-            colour = Amber,
+            colour = Accent,
             random = { f.items.filterIsInstance<LibraryItem.Game>().filter { !it.game.placeholder }.randomOrNull()?.game }
         ) { onFolder(f.def.id) }
     }
@@ -815,7 +816,7 @@ private fun HomeTileView(
         Box(if (lifted) Modifier.border(3.dp, LiftColour, RoundedCornerShape(10.dp)) else Modifier) {
             when (item) {
                 null -> {
-                    val colour = t.colour ?: Amber
+                    val colour = t.colour ?: Accent
                     FocusRow(
                         onClick = onClick,
                         onLongClick = onLongClick,

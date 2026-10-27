@@ -253,10 +253,10 @@ private fun MetricTile(frame: PerfFrame, metric: PerfMetric, modifier: Modifier)
     val now = metric.read(frame.stats)
     val shape = RoundedCornerShape(10.dp)
     Column(
-        modifier.clip(shape).background(Slate).border(1.dp, Hairline, shape).padding(horizontal = 10.dp, vertical = 8.dp)
+        modifier.clip(shape).background(PanelColour).border(1.dp, RuleColour, shape).padding(horizontal = 10.dp, vertical = 8.dp)
             .semantics(mergeDescendants = true) {}
     ) {
-        Text(metric.label, style = MaterialTheme.typography.labelMedium, color = Amber.copy(alpha = 0.85f), maxLines = 1)
+        Text(metric.label, style = MaterialTheme.typography.labelMedium, color = Accent.copy(alpha = 0.85f), maxLines = 1)
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             // fixed-width digits: a reading that changes every poll keeps its place instead of shuffling sideways
             Text(
@@ -286,10 +286,12 @@ private val Tabular = TextStyle(fontFeatureSettings = "tnum")
 /** The line, broken where a poll had no value, over a faint baseline; the newest point is a dot at the right edge. */
 @Composable
 private fun SparklineView(line: Sparkline, modifier: Modifier) {
+    val canvas = CanvasColour
+    val accent = Accent
     Canvas(modifier) {
         val w = size.width
         val h = size.height
-        drawLine(Ink, Offset(0f, h - 0.5f), Offset(w, h - 0.5f), strokeWidth = 1f)
+        drawLine(canvas, Offset(0f, h - 0.5f), Offset(w, h - 0.5f), strokeWidth = 1f)
         val path = Path()
         var drawing = false
         var last: Offset? = null
@@ -304,8 +306,8 @@ private fun SparklineView(line: Sparkline, modifier: Modifier) {
             drawing = true
             last = p
         }
-        drawPath(path, Amber, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-        last?.let { drawCircle(Amber, radius = 2.5.dp.toPx(), center = it) }
+        drawPath(path, accent, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        last?.let { drawCircle(accent, radius = 2.5.dp.toPx(), center = it) }
     }
 }
 
@@ -323,11 +325,11 @@ private fun SectionLabel(text: String) {
 @Composable
 private fun Chip(label: String, value: String) {
     Row(
-        Modifier.clip(RoundedCornerShape(6.dp)).background(Slate).padding(horizontal = 7.dp, vertical = 3.dp),
+        Modifier.clip(RoundedCornerShape(6.dp)).background(PanelColour).padding(horizontal = 7.dp, vertical = 3.dp),
         horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, fontSize = 11.sp, color = Amber.copy(alpha = 0.8f), maxLines = 1)
+        Text(label, fontSize = 11.sp, color = Accent.copy(alpha = 0.8f), maxLines = 1)
         Text(
             value,
             style = LocalTextStyle.current.merge(Tabular),
@@ -366,12 +368,12 @@ fun PerfChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
             .confirmHeld { held = it }
             .focusGlow(interaction.collectIsFocusedAsState().value, shape, pressed = held)
             .clip(shape)
-            .background(Slate)
+            .background(PanelColour)
             .clickable(interactionSource = interaction, indication = PressVeil, role = Role.Button, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, style = MaterialTheme.typography.labelLarge, color = Amber)
+        Text(text, style = MaterialTheme.typography.labelLarge, color = Accent)
     }
 }
 

@@ -236,7 +236,7 @@ fun LauncherRow(
     FocusRow(onClick = onClick, onLongClick = onLongClick, onFavourite = onFavourite) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (tall) {
-                Box(Modifier.size(56.dp, 72.dp).clip(RoundedCornerShape(6.dp)).background(Slate), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(56.dp, 72.dp).clip(RoundedCornerShape(6.dp)).background(PanelColour), contentAlignment = Alignment.Center) {
                     IconView(icon, 44)
                 }
             } else {

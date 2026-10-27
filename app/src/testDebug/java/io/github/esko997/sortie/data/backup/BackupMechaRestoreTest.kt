@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import android.content.ContextWrapper
 import io.github.esko997.sortie.data.manifest.UserData
+import io.github.esko997.sortie.mecha.MechaArcadeGame
+import io.github.esko997.sortie.mecha.MechaArcadeTicket
 import io.github.esko997.sortie.mecha.MechaCabinetTier
 import io.github.esko997.sortie.mecha.MechaFinish
 import io.github.esko997.sortie.mecha.MechaSlot
@@ -30,7 +32,7 @@ import org.robolectric.annotation.Config
 @Config(application = Application::class, sdk = [33])
 class BackupMechaRestoreTest {
     @Test
-    fun exportedReceiptSurvivesParsingRestoreAndRestartWithoutAnotherReward() = runBlocking {
+    fun exportedCosmeticsAndPaidRoundSurviveRestoreAndRestartWithoutAnotherChargeOrReward() = runBlocking {
         val dir = Files.createTempDirectory("sortie-backup-mecha").toFile()
         val context = object : ContextWrapper(RuntimeEnvironment.getApplication()) {
             override fun getApplicationContext(): Context = this
@@ -43,6 +45,13 @@ class BackupMechaRestoreTest {
             assertNull(initial.error)
             val save = initial.state!!.copy(
                 salvage = 7,
+                enabled = false,
+                ownedThemes = setOf("default", "plum"),
+                selectedTheme = "plum",
+                hangarIntroSeen = true,
+                arcadeRuns = 2,
+                activeArcade = MechaArcadeTicket(2, MechaArcadeGame.FLAPPY_FLIGHT, 812L),
+                arcadeBest = mapOf(MechaArcadeGame.FLAPPY_FLIGHT to 6),
                 ownedFinishes = setOf(MechaFinish.PLAIN, MechaFinish.HOLO),
                 equippedFinishes = mapOf(MechaSlot.BODY to MechaFinish.HOLO),
                 cabinetSpins = 1,
@@ -55,7 +64,7 @@ class BackupMechaRestoreTest {
                     finish = MechaFinish.HOLO
                 )
             )
-            // Seed a resolved, already-paid receipt, then exercise the public export/parse/restore boundary.
+            // Restore a paid round and selected cosmetics alongside the already-resolved slot-machine receipt.
             store.restore(save, emptyList())
             val exported = buildBackup(UserData(), emptyList(), store.backupSave(), 42, "test", "test")
             val parsed = parseBackup(encodeBackup(exported)) as ParsedBackup.Valid

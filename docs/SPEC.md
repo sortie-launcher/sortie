@@ -180,7 +180,7 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   hidden ambient changes snap without animating. Home's clock and the companion's elapsed timer pause while hidden.
 - Game detail groups primary and personal (bookmark, What it needs, reference cards, shelf) actions separately, scales the cover to the available width, and expands
   launch choices beside the actions. Select toggles that panel; closing from its list restores the opener's focus.
-  Artwork-derived accents meet 4.5:1 contrast against both the backdrop and Ink.
+  Artwork-derived accents meet 4.5:1 contrast against both the backdrop and the selected shell canvas.
 - Launcher shortcuts are opt-in: Apps lists only `user.shortcuts` (pinned to Sortie or added with "Add shortcut from…" are
   opted in automatically; "Browse all shortcuts…" toggles the rest). Smart folders see a shortcut only if it is opted in,
   favourited or placed on home.
@@ -374,13 +374,26 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   Alloy (6) and Holo (10) are global reusable finish unlocks, applied per slot; Plain is free. Pixel transforms preserve
   transparency, outlines, joints and the head's face area. Eight material phases share the existing visible sprite clock;
   motion off selects phase zero. Decode/transform work runs off-main behind a mutex with a 12 MiB LRU atlas cache.
-- Build bench enumerates only owned two-family sets: matching body/arms chassis family, a different head/legs trim family,
-  independently chosen authored variants. All parts owned permits 672 distinct sets. Free preview; explicit Fit saves
-  the four real part IDs, preserving finishes. No generated artwork, opaque recipe IDs or new part-affix system.
-- Cabinet stakes 1/3/5 target an unowned part/Alloy/Holo. Outcomes: 20% reward plus stake returned, 30% stake returned,
+- Workshop has one assembly draft, preview and Fit action. Parts, Family sets and Mixes all edit that draft. Mixes enumerate
+  owned two-family sets: matching body/arms chassis family, a different head/legs trim family, independently chosen authored
+  variants. All parts owned permits 672 sets. Fit saves the four real part IDs and preserves finishes; no generated artwork.
+- Slot machine stakes 1/3/5 target an unowned part/Alloy/Holo. Outcomes: 20% reward plus stake returned, 30% stake returned,
   50% miss. Expected net cost per reward is 2.5× the stake, 25% above direct purchase in every tier. No duplicates or
   completed-tier spending. A queued atomic transaction saves debit, reward, sequence and receipt together before display;
   the expected sequence rejects stale repeat submissions. Receipt viewing is read-only and cannot replay a reward.
+  Three original pixel-art reels briefly animate a newly committed receipt; reopening it is static. Motion off skips the flourish.
+- Arcade uses a shared CRT for Flappy Flight, Scrap Catch and Circuit Match. One credit inserts a durable, initially unbound
+  coin; choosing a game binds it without another debit. One coin buys one run, with scores/bests only and no economy or
+  companion-stat rewards. Cancellation before purchase is free; abandoning a purchased run does not refund it.
+  A process-shared session has one active host. Hiding, changing tabs or losing focus pauses it and clears held input;
+  returning requires Resume. Restarting the process restarts the same paid seed free. Completed scores are saved atomically
+  with ticket consumption, with retry on write failure. No frame loop runs for a hidden game.
+- Themes offer free local previews. Original is free; Harbor, Plum and Lichen cost eight credits each. Buy unlocks without
+  applying; Apply selects an owned palette across all app hosts. Reader paper and authored artwork retain their own colours.
+  Hiding Rivet does not reset the selected theme. Theme changes do not animate continuously.
+- First-open Hangar help is three skippable cards covering the optional companion, earning/spending, motion and hiding.
+  Skip, completion or Hide saves acknowledgement; Help replays it. Hiding preserves inventory, credits and theme.
+  Landscape pages place the preview or CRT beside controls, with a single assembly editor rather than a separate bench.
 - Room's completed, non-abandoned game sessions after initialization earn one credit per five accumulated whole minutes,
   capped at 120 counted minutes per session and a 50-credit earning ceiling. Overflow and partial credit are discarded at
   the ceiling, but sessions are still consumed and Bond/Charge statistics advance. Spending below 50 permits only new
@@ -389,8 +402,8 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   or re-importing history. This measures recorded session duration, not active input. Charge drain uses accumulated-minute
   boundaries, independent of how Room batches session notifications.
 - State, inventory and credited-session identities are atomically saved together in app-private `files/mecha/state.json`.
-  Version 1 migrates to version 2 before publication, preserving old parts, equipment, balances and session identities;
-  at-cap pending minutes are cleared. Failed writes leave the prior state intact. A failed migration offers nondestructive
+  Versions 1 and 2 migrate to version 3 before publication, preserving parts, equipment, finishes, receipts, balances and
+  session identities; at-cap pending minutes are cleared. Failed writes leave the prior state intact. A failed migration offers nondestructive
   retry and blocks backup/restore until resolved; unreadable saves require explicit recovery and are preserved before
   starting fresh. No writes to Cocoon, library manifests, user preferences or play log come from the companion.
 - Limits: a finite authored collection, not arbitrary generated artwork or statistical part affixes; no combat or
@@ -399,8 +412,8 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   catalog in the preview, writes it before the history is merged and puts it back if a later step fails. The restored save
   keeps every session either side already credited (`restoredOver`); a backup without a save keeps the device's companion
   and marks the merged sessions credited (`creditedElsewhere`). No session earns salvage twice. The nested companion save
-  is now version 2, adding owned/applied finishes and the last cabinet receipt. Version 1 saves/backups remain readable;
-  older app builds cannot read the new companion save. Do not downgrade after opening the updated Hangar.
+  is now version 3, adding theme ownership/selection, introduction acknowledgement, paid arcade tickets and best scores.
+  Versions 1 and 2 remain readable; older app builds cannot read the new save. Do not downgrade after opening the updated Hangar.
 - DMG acceptance for `0.1.0-mecha-lab.2` (dock era): rename/care/salvage/equipment, unowned-part preview restrictions,
   four animated poses and hide/show persistence exercised on device; reader Select → Hangar → Gallery → B → B preserves the
   article position and resumes D-pad scrolling.

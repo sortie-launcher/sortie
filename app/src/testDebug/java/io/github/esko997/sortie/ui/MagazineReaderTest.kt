@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performTouchInput
 import io.github.esko997.sortie.BuiltinApp
+import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.magazine.ReaderLocation
 import io.github.esko997.sortie.testing.BuiltinActivityRule
 import io.github.esko997.sortie.testing.Controller
@@ -23,6 +24,7 @@ import io.github.esko997.sortie.testing.Controller.Companion.SELECT
 import io.github.esko997.sortie.testing.SortieActivityRule
 import io.github.esko997.sortie.testing.SortieCardRule
 import io.github.esko997.sortie.testing.THOR_TOP
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -199,6 +201,9 @@ class MagazineReaderTest {
     @Test
     fun selectMenuOpensTheHangarAndBReturnsToTheArticle() {
         openArticle()
+        val store = (sortie.activity.application as SortieApp).graph.mecha
+        compose.waitUntil(5_000) { store.view.value.state != null && !store.view.value.busy }
+        runBlocking { store.restore(store.view.value.state!!.copy(hangarIntroSeen = true), emptyList()) }
         scrollTo(3)
         val before = position()
         pad.press(SELECT)

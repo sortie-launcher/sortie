@@ -228,7 +228,10 @@ class BackupFormatTest {
         val backup = buildBackup(user, emptyList(), companion, 42, "dmg", "0.0.1")
         val root = backupJson.parseToJsonElement(encodeBackup(backup)).jsonObject
         val legacy = JsonObject(
-            root.getValue("mecha").jsonObject - setOf("version", "ownedFinishes", "equippedFinishes", "cabinetSpins", "lastSpin")
+            root.getValue("mecha").jsonObject - setOf(
+                "version", "ownedFinishes", "equippedFinishes", "cabinetSpins", "lastSpin",
+                "ownedThemes", "selectedTheme", "hangarIntroSeen", "arcadeRuns", "activeArcade", "arcadeBest"
+            )
         )
         assertEquals(companion, valid(JsonObject(root + ("mecha" to legacy)).toString()).backup.mecha)
     }
