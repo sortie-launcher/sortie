@@ -1,23 +1,20 @@
 package io.github.esko997.sortie.mecha.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,114 +25,169 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalInputModeManager
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import io.github.esko997.sortie.mecha.MechaState
 import io.github.esko997.sortie.mecha.MechaStore
 import io.github.esko997.sortie.mecha.MechaView
 import io.github.esko997.sortie.ui.Accent
 import io.github.esko997.sortie.ui.CanvasColour
 import io.github.esko997.sortie.ui.PanelColour
+import io.github.esko997.sortie.ui.SortieButtonStyle
+import io.github.esko997.sortie.ui.SortieButtonStylePreview
+import io.github.esko997.sortie.ui.SortieFolderIconPreview
+import io.github.esko997.sortie.ui.SortieFolderIcons
 import io.github.esko997.sortie.ui.SortiePalette
 import io.github.esko997.sortie.ui.SortieTheme
 
-/** The nested preview cannot change the theme above it. Buying never selects a scheme. */
+private enum class LauncherCategory(val label: String, val item: String) {
+    THEMES("Themes", "theme"),
+    FOLDERS("Folders", "folder icons"),
+    BUTTONS("Buttons", "button style")
+}
+
+/** A local visual sandbox: ownership is bought in Shop, committed appearance applied in Workshop. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun MechaThemes(store: MechaStore, view: MechaView, state: MechaState) {
-    var palette by rememberSaveable { mutableStateOf(SortiePalette.entries.first { it.id == state.selectedTheme }) }
+internal fun MechaLauncher(store: MechaStore, view: MechaView, state: MechaState, purchasing: Boolean) {
+    var category by rememberSaveable { mutableStateOf(LauncherCategory.THEMES) }
+    var palette by rememberSaveable(state.selectedTheme) { mutableStateOf(SortiePalette.entries.first { it.id == state.selectedTheme }) }
+    var folders by rememberSaveable(state.selectedFolderIcons) { mutableStateOf(SortieFolderIcons.entries.first { it.id == state.selectedFolderIcons }) }
+    var buttons by rememberSaveable(state.selectedButtonStyle) { mutableStateOf(SortieButtonStyle.entries.first { it.id == state.selectedButtonStyle }) }
+    var previewing by rememberSaveable { mutableStateOf(false) }
     var confirming by remember { mutableStateOf(false) }
-    var wasConfirming by remember { mutableStateOf(false) }
     val anchor = remember { FocusRequester() }
     val input = LocalInputModeManager.current
-    val owned = palette.id in state.ownedThemes
-    val applied = palette.id == state.selectedTheme
-    LaunchedEffect(confirming) {
-        if (wasConfirming && !confirming && input.inputMode == InputMode.Keyboard) anchor.requestFocus()
-        wasConfirming = confirming
+    val cancel: () -> Unit = {
+        palette = SortiePalette.entries.first { it.id == state.selectedTheme }
+        folders = SortieFolderIcons.entries.first { it.id == state.selectedFolderIcons }
+        buttons = SortieButtonStyle.entries.first { it.id == state.selectedButtonStyle }
+        previewing = false
+        if (input.inputMode == InputMode.Keyboard) anchor.requestFocus()
     }
-    val choices: @Composable () -> Unit = {
-        Text("Themes", style = MaterialTheme.typography.titleMedium)
-        Text("${state.salvage} credits", style = MaterialTheme.typography.titleSmall, color = Accent)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            SortiePalette.entries.forEach { choice ->
-                MechaChip(
-                    choice.label,
-                    choice == palette,
-                    { palette = choice },
-                    modifier = (if (choice == palette) Modifier.focusRequester(anchor) else Modifier).semantics {
-                        contentDescription = "Preview ${choice.label}, ${if (choice.id in state.ownedThemes) "owned" else "${choice.price} credits"}"
+    HangarPreviewBack(previewing, cancel)
+    RestoreShopFocus(confirming, anchor)
+    val label = when (category) {
+        LauncherCategory.THEMES -> palette.label
+        LauncherCategory.FOLDERS -> folders.label
+        LauncherCategory.BUTTONS -> buttons.label
+    }
+    val price = when (category) {
+        LauncherCategory.THEMES -> palette.price
+        LauncherCategory.FOLDERS -> folders.price
+        LauncherCategory.BUTTONS -> buttons.price
+    }
+    val owned = when (category) {
+        LauncherCategory.THEMES -> palette.id in state.ownedThemes
+        LauncherCategory.FOLDERS -> folders.id in state.ownedFolderIcons
+        LauncherCategory.BUTTONS -> buttons.id in state.ownedButtonStyles
+    }
+    val description = when (category) {
+        LauncherCategory.THEMES -> palette.description
+        LauncherCategory.FOLDERS -> folders.description
+        LauncherCategory.BUTTONS -> buttons.description
+    }
+    ShopColumn {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            LauncherCategory.entries.forEach { choice ->
+                MechaChip(choice.label, category == choice, {
+                    cancel()
+                    category = choice
+                }, if (category == choice) Modifier.focusRequester(anchor) else Modifier)
+            }
+        }
+        ShopLayout(
+            preview = {
+                when (category) {
+                    LauncherCategory.THEMES -> ThemePreview(palette)
+                    LauncherCategory.FOLDERS -> SortieFolderIconPreview(folders)
+                    LauncherCategory.BUTTONS -> SortieButtonStylePreview(buttons)
+                }
+                Text("$label · ${if (previewing) "preview only" else "saved appearance"}", style = MaterialTheme.typography.titleSmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    MechaButton(if (purchasing) "Cancel preview" else "Cancel", cancel, enabled = previewing)
+                    if (purchasing) {
+                        MechaButton(if (owned) "Owned" else "Buy ${category.item} · $price credits", {
+                            confirming = true
+                        }, enabled = !view.busy && !owned && state.salvage >= price, primary = !owned)
+                    } else {
+                        MechaButton("Apply ${category.item}", {
+                            if (!store.view.value.busy && owned && previewing) {
+                                when (category) {
+                                    LauncherCategory.THEMES -> store.setTheme(palette)
+                                    LauncherCategory.FOLDERS -> store.setFolderIcons(folders)
+                                    LauncherCategory.BUTTONS -> store.setButtonStyle(buttons)
+                                }
+                                previewing = false
+                                if (input.inputMode == InputMode.Keyboard) anchor.requestFocus()
+                            }
+                        }, enabled = !view.busy && owned && previewing, primary = true)
+                    }
+                }
+            },
+            choices = {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    when (category) {
+                        LauncherCategory.THEMES -> SortiePalette.entries.filter { purchasing || it.id in state.ownedThemes }.forEach { choice ->
+                            MechaChip(choice.label, choice == palette, {
+                                palette = choice
+                                previewing = true
+                            })
+                        }
+                        LauncherCategory.FOLDERS -> SortieFolderIcons.entries.filter { purchasing || it.id in state.ownedFolderIcons }.forEach { choice ->
+                            MechaChip(choice.label, choice == folders, {
+                                folders = choice
+                                previewing = true
+                            })
+                        }
+                        LauncherCategory.BUTTONS -> SortieButtonStyle.entries.filter { purchasing || it.id in state.ownedButtonStyles }.forEach { choice ->
+                            MechaChip(choice.label, choice == buttons, {
+                                buttons = choice
+                                previewing = true
+                            })
+                        }
+                    }
+                }
+                Text(description, style = MaterialTheme.typography.bodyMedium)
+                Note(
+                    if (purchasing) {
+                        "$price credits once. Buying adds ownership only; apply it in Workshop → Launcher."
+                    } else {
+                        "Owned items only. Preview freely, then Apply or Cancel. Find more in Shop → Launcher."
                     }
                 )
+                if (purchasing && !owned && state.salvage < price) Note("Need ${price - state.salvage} more credits.")
+                Note("Saved launcher appearance stays active even when the bot is hidden. Reader paper and custom folder artwork stay independent.")
             }
-        }
-        Text(palette.description, style = MaterialTheme.typography.bodyMedium)
-        Text(
-            if (palette == SortiePalette.DEFAULT) "The original scheme is always free." else "${palette.price} credits to own. Apply it any time for free.",
-            style = MaterialTheme.typography.bodySmall,
-            color = Muted
-        )
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            MechaButton(
-                if (owned) "Owned" else "Buy · ${palette.price} credits…",
-                onClick = { if (!store.view.value.busy) confirming = true },
-                enabled = !view.busy && !owned && state.salvage >= palette.price
-            )
-            MechaButton(
-                if (applied) "Applied" else "Apply theme",
-                onClick = {
-                    if (!store.view.value.busy) store.setTheme(palette)
-                    if (input.inputMode == InputMode.Keyboard) anchor.requestFocus()
-                },
-                enabled = !view.busy && owned && !applied,
-                primary = owned && !applied
-            )
-        }
-        if (!owned && state.salvage < palette.price) {
-            Text("Need ${palette.price - state.salvage} more credits.", style = MaterialTheme.typography.bodySmall, color = Muted)
-        }
-        Text(
-            "Previewing is free. Buy and Apply are separate. The whole UI shell changes only after Apply is saved, " +
-                "even with the companion hidden. Reader paper settings and artwork-derived accents stay independent.",
-            style = MaterialTheme.typography.bodySmall,
-            color = Muted
         )
     }
-    BoxWithConstraints(Modifier.padding(top = 10.dp).fillMaxWidth()) {
-        if (maxWidth >= 560.dp) {
-            Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                Column(Modifier.weight(0.48f).verticalScroll(rememberScrollState())) { ThemePreview(palette) }
-                Column(Modifier.weight(0.52f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) { choices() }
-            }
-        } else {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ThemePreview(palette)
-                choices()
-            }
-        }
+    if (confirming) {
+        PurchaseConfirmation(
+            "Buy $label?",
+            "$price credits once. Adds this ${category.item} to your collection; does not apply it.",
+            "Buy ${category.item}",
+            view,
+            !owned && state.salvage >= price,
+            {
+                when (category) {
+                    LauncherCategory.THEMES -> store.buyTheme(palette)
+                    LauncherCategory.FOLDERS -> store.buyFolderIcons(folders)
+                    LauncherCategory.BUTTONS -> store.buyButtonStyle(buttons)
+                }
+            },
+            { confirming = false }
+        )
     }
-    if (confirming) ThemePurchaseConfirmation(store, view, palette, onClose = { confirming = false })
 }
 
 @Composable
 private fun ThemePreview(palette: SortiePalette) {
     SortieTheme(palette = palette) {
         Surface(shape = RoundedCornerShape(12.dp), color = CanvasColour, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("${palette.label} · preview only", style = MaterialTheme.typography.labelLarge, color = Accent)
-                Text("Make yourself at home", style = MaterialTheme.typography.titleLarge)
-                Text("Your library, in a different light.", style = MaterialTheme.typography.bodyMedium)
+                Text("Your library", style = MaterialTheme.typography.titleLarge)
                 Surface(shape = RoundedCornerShape(8.dp), color = PanelColour) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Library", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Games · Favourites · Recently played",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text("Games · Favourites · Recently played", style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(12.dp))
                 }
                 Text(
                     "Selected item",
@@ -143,63 +195,7 @@ private fun ThemePreview(palette: SortiePalette) {
                     style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.background(Accent, RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 8.dp)
                 )
-                Text(
-                    "This panel is a free colour preview, not a change to your saved theme.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ThemePurchaseConfirmation(store: MechaStore, view: MechaView, palette: SortiePalette, onClose: () -> Unit) {
-    var submitted by remember { mutableStateOf(false) }
-    val cancel = remember { FocusRequester() }
-    val state = view.state
-    val owned = state != null && palette.id in state.ownedThemes
-    val allowed = !submitted && !view.busy && !owned && state != null && state.salvage >= palette.price
-    Dialog(onDismissRequest = { if (!store.view.value.busy) onClose() }) {
-        Surface(shape = RoundedCornerShape(16.dp), color = PanelColour, modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth()) {
-            Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Buy ${palette.label}?", style = MaterialTheme.typography.titleLarge)
-                Text("${palette.price} credits once. Adds this theme to your collection; does not apply it.", style = MaterialTheme.typography.bodyMedium)
-                Text("Balance: ${state?.salvage ?: 0} credits", style = MaterialTheme.typography.titleSmall, color = Accent)
-                if (submitted) {
-                    Text(
-                        when {
-                            view.busy -> "Saving…"
-                            view.error != null -> view.error.orEmpty()
-                            owned -> "Theme owned. Close this receipt, then choose Apply theme when you want to use it."
-                            else -> "Waiting for the saved purchase…"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (view.error != null) Warning else Muted
-                    )
-                }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MechaButton(
-                        if (submitted) "Close receipt" else "Cancel",
-                        onClick = { if (!store.view.value.busy) onClose() },
-                        enabled = !view.busy,
-                        modifier = Modifier.focusRequester(cancel)
-                    )
-                    MechaButton(
-                        "Buy theme",
-                        onClick = {
-                            if (!submitted && allowed && !store.view.value.busy) {
-                                submitted = true
-                                store.buyTheme(palette)
-                            }
-                        },
-                        enabled = allowed,
-                        primary = true
-                    )
-                }
-            }
-        }
-        LaunchedEffect(view.busy) { if (!view.busy) cancel.requestFocus() }
     }
 }

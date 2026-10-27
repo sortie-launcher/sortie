@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Authoritative orbital-maintenance drawings; run with Python/Pillow, no shipped writes.
+"""Authoritative orbital-maintenance drawings; run with Python/Pillow.
 
 Eight 512x64 RGBA sheets share the courier rig and integer-mask primitives.
-Output: workshop/assets/orbital/{orbital_*.png,catalog.json,board.png,preview.gif}.
+Writes production sheets/masks/catalog and workshop/assets/orbital review exports.
 Frames: idle, detail, left contact, passing, right contact, passing, sleep, cheer.
-Production copies only the catalog and eight part sheets, checked by test_production.py.
+Production exports the catalog, eight part sheets and eight semantic paint masks.
 """
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ from courier import (  # Existing rig and hard-edged drawing vocabulary, not exi
     IDLE, DETAIL, WALK_L, PASS_A, WALK_R, PASS_B, SLEEP, CHEER,
     render_sheet, assemble,
 )
+from paint_roles import export_part, legacy_overrides
 
 ROOT = Path(__file__).resolve().parents[3]
 ASSETS = Path(__file__).resolve().parent / 'assets/orbital'
@@ -29,6 +30,7 @@ CREAM = (hexc('999985'), hexc('DDD8BC'), hexc('FFF0CE'))
 VIOLET = (hexc('45415F'), hexc('77718E'), hexc('ADA4BD'))
 AMBER = (hexc('A85D35'), hexc('E99C4C'), hexc('FFD68C'))
 GLASS = (OUT, SHADOW, STEEL)
+PAINT_PRIMARY, PAINT_SECONDARY = CREAM, VIOLET
 
 
 def head_1(c, f):
@@ -300,10 +302,15 @@ def main():
     sheets, catalog = {}, []
     for pid, slot, name, draw in PARTS:
         sheets[pid] = render_sheet(draw)
-        sheets[pid].save(ASSETS / f'{pid}.png')
+        export_part(sheets[pid], ASSETS / f'{pid}.png', PAINT_PRIMARY, PAINT_SECONDARY,
+                    original_material_compat=True, slot=slot, overrides=legacy_overrides(pid))
+        export_part(sheets[pid], ROOT / 'mecha/src/main/assets/mecha/orbital' / f'{pid}.png',
+                    PAINT_PRIMARY, PAINT_SECONDARY, original_material_compat=True,
+                    slot=slot, overrides=legacy_overrides(pid))
         catalog.append({'id': pid, 'slot': slot, 'family': 'orbital', 'name': name,
                         'asset': f'mecha/orbital/{pid}.png'})
     (ASSETS / 'catalog.json').write_text(json.dumps(catalog, indent=2) + '\n')
+    (ROOT / 'mecha/src/main/assets/mecha/orbital/catalog.json').write_text(json.dumps(catalog, indent=2) + '\n')
     combinations = [('Pressure crew', combo('orbital', 1)), ('Relay crew', combo('orbital', 2))]
     for family, variant, swaps, title in [
         ('yard', 1, {'HEAD': 'orbital_head_1', 'ARMS': 'orbital_arms_2'}, 'Yard / bell + cable'),

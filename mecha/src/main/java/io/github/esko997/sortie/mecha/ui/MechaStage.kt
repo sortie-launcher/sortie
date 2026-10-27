@@ -439,7 +439,7 @@ fun MechaStageHost(stage: MechaStage, modifier: Modifier = Modifier, active: Boo
             MechaPresence.setActive(stage, shown && stage.allowed)
         }
     }
-    val load = rememberSpriteLoad(view.parts, state?.equipped.orEmpty(), state?.equippedFinishes.orEmpty())
+    val load = rememberSpriteLoad(view.parts, state?.equipped.orEmpty(), state?.equippedPaints.orEmpty())
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelLarge
     val density = LocalDensity.current

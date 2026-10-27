@@ -3,12 +3,14 @@ package io.github.esko997.sortie.ui
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -20,6 +22,8 @@ import androidx.compose.ui.test.swipe
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.mecha.MechaArcadeGame
 import io.github.esko997.sortie.mecha.MechaFinish
+import io.github.esko997.sortie.mecha.MechaPaint
+import io.github.esko997.sortie.mecha.MechaPaintScheme
 import io.github.esko997.sortie.mecha.MechaSlot
 import io.github.esko997.sortie.testing.Controller
 import io.github.esko997.sortie.testing.Controller.Companion.A
@@ -244,9 +248,10 @@ class HomeControllerTest {
         openExtras()
         assertEquals(listOf("Hangar"), walk(DOWN))
         pad.press(A)
-        compose.waitUntil(5_000) { listOf("Workshop", "Gallery").all { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() } }
+        compose.waitUntil(5_000) { listOf("Workshop", "Shop").all { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() } }
+        compose.waitForIdle()
         compose.waitUntil(5_000) { pad.focusedLabel() == "Workshop" }
-        assertEquals(listOf("Shop", "Slot machine", "Gallery", "Arcade", "Themes"), walk(RIGHT, RIGHT, RIGHT, RIGHT, RIGHT))
+        assertEquals(listOf("Shop", "Slot machine", "Arcade"), walk(RIGHT, RIGHT, RIGHT))
         pad.press(A)
         pad.press(B)
         compose.waitForIdle()
@@ -338,8 +343,8 @@ class HomeControllerTest {
                     motion = false,
                     ownedThemes = setOf("default", "plum"),
                     selectedTheme = "plum",
-                    ownedFinishes = setOf(MechaFinish.PLAIN, MechaFinish.ALLOY),
-                    equippedFinishes = mapOf(MechaSlot.HEAD to MechaFinish.ALLOY)
+                    ownedPaints = setOf(MechaPaint(), MechaPaint(finish = MechaFinish.ALLOY)),
+                    equippedPaints = mapOf(MechaSlot.HEAD to MechaPaint(finish = MechaFinish.ALLOY))
                 ),
                 emptyList()
             )
@@ -505,102 +510,194 @@ class HomeControllerTest {
         assertEquals(before.equipped, bought.equipped)
         assertEquals(before.owned + part.id, bought.owned)
         compose.onNodeWithText("Close receipt").performClick()
-        compose.onNodeWithText("Owned").performScrollTo().assertIsNotEnabled()
-        compose.onNodeWithText("Equip part").performScrollTo().performClick()
-        compose.waitUntil(5_000) { store.view.value.state!!.equipped[MechaSlot.HEAD] == part.id }
-        assertEquals(bought.salvage, store.view.value.state!!.salvage)
+        compose.onNodeWithText("Part owned").performScrollTo().assertIsNotEnabled()
+        compose.onAllNodesWithText("Equip part").assertCountEquals(0)
+        compose.onNodeWithText("Workshop").performClick()
+        compose.onNodeWithText(part.family.replaceFirstChar { it.uppercase() }).performScrollTo().performClick()
+        compose.onNodeWithText(part.name).performScrollTo().performClick()
+        assertEquals(bought, store.view.value.state)
+        compose.onNodeWithText("Fit build").performScrollTo().performClick()
+        compose.waitUntil(5_000) { store.view.value.state!!.equipped[MechaSlot.HEAD] == part.id && !store.view.value.busy }
+        assertEquals(bought.copy(equipped = bought.equipped + (MechaSlot.HEAD to part.id)), runBlocking { store.backupSave() })
+    }
+
+    @Test
+    fun touchedPurchaseConfirmationReturnsToCancelWhenControllerTakesOver() {
+        awaitHome()
+        seedHangarIntroductionSeen()
+        openExtras()
+        compose.onNodeWithText("Hangar").performClick()
+        val before = mecha.view.value.state!!
+        val part = mecha.view.value.parts.first { it.slot == MechaSlot.HEAD && it.id !in before.owned }
+        compose.onNodeWithText("Shop").performClick()
+        compose.onNodeWithText(part.family.replaceFirstChar { it.uppercase() }).performScrollTo().performClick()
+        compose.onNodeWithContentDescription("Preview ${part.name}, 2 credits").performScrollTo().performClick()
+        compose.onNodeWithText("Buy part · 2 credits").performScrollTo().performTouchInput { click() }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Buy part").fetchSemanticsNodes().isNotEmpty() }
+        pad.press(DOWN)
+        compose.waitForIdle()
+        compose.waitUntil(5_000) { pad.focusedLabel() == "Cancel" }
+        pad.press(A)
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Buy part").fetchSemanticsNodes().isEmpty() }
+        assertEquals(before, mecha.view.value.state)
+        assertEquals(before, runBlocking { mecha.backupSave() })
     }
 
     @Test
     @Config(qualifiers = DMG)
-    fun finishPreviewUnlockAndPerSlotApplicationAreSeparateAndReusable() {
+    fun paintPurchaseNeverAppliesAndWorkshopPreviewCancelAndWholeBotApplyPersist() {
         awaitHome()
         seedHangarIntroductionSeen()
+        runBlocking { mecha.restore(mecha.view.value.state!!.copy(salvage = 20), emptyList()) }
         openExtras()
         compose.onNodeWithText("Hangar").performClick()
-        val store = (sortie.activity.application as SortieApp).graph.mecha
-        compose.waitUntil(5_000) { store.view.value.state != null && !store.view.value.busy }
-        runBlocking { store.restore(store.view.value.state!!.copy(salvage = 20), emptyList()) }
-        val before = store.view.value.state!!
+        val before = mecha.view.value.state!!
+        val paint = MechaPaint(MechaPaintScheme.HAZARD, MechaFinish.ALLOY)
         compose.onNodeWithText("Shop").performScrollTo().performClick()
-        compose.onNodeWithText("Finishes").performScrollTo().performClick()
+        compose.onNodeWithText("Paint").performClick()
+        compose.onNodeWithText("Hazard").performScrollTo().performClick()
         compose.onNodeWithText("Alloy · 6 credits").performScrollTo().performClick()
-        assertEquals(before, store.view.value.state)
-        compose.onNodeWithText("Apply finish").performScrollTo().assertIsNotEnabled()
-        compose.onNodeWithText("Buy finish · 6 credits").performScrollTo().performClick()
-        compose.onNodeWithText("Buy finish").performClick()
-        compose.waitUntil(5_000) { MechaFinish.ALLOY in store.view.value.state!!.ownedFinishes && !store.view.value.busy }
-        assertEquals(14, store.view.value.state!!.salvage)
-        assertEquals(before.equippedFinishes, store.view.value.state!!.equippedFinishes)
+        assertEquals(before, mecha.view.value.state)
+        compose.onAllNodesWithText("Apply paint").assertCountEquals(0)
+        compose.onNodeWithText("Buy paint · 6 credits").performScrollTo().performClick()
+        compose.onNodeWithText("Buy paint").performClick()
+        compose.waitUntil(5_000) { paint in mecha.view.value.state!!.ownedPaints && !mecha.view.value.busy }
+        val bought = mecha.view.value.state!!
+        assertEquals(14, bought.salvage)
+        assertEquals(before.equippedPaints, bought.equippedPaints)
         compose.onNodeWithText("Close receipt").performClick()
-        compose.onNodeWithText("Apply finish").performScrollTo().performClick()
-        compose.waitUntil(5_000) { store.view.value.state!!.equippedFinishes[MechaSlot.HEAD] == MechaFinish.ALLOY && !store.view.value.busy }
+        compose.onNodeWithText("Workshop").performClick()
+        compose.onNodeWithText("Paint").performClick()
+        compose.onAllNodesWithText("Buy paint", substring = true).assertCountEquals(0)
+        compose.onAllNodesWithText("Rescue").assertCountEquals(0)
+        compose.onNodeWithText("Hazard").performScrollTo().performClick()
+        compose.onNodeWithText("Alloy").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performScrollTo().performClick()
+        compose.onNodeWithText("Apply paint").assertIsNotEnabled()
+        assertEquals(bought, mecha.view.value.state)
+        compose.onNodeWithText("Hazard").performScrollTo().performClick()
+        // Native controller injection does not advance Compose's clock. Attach the preview Back handler first.
+        compose.onNodeWithText("Apply paint").assertIsEnabled()
+        pad.press(B)
+        compose.onNodeWithText("Apply paint").performScrollTo().assertIsNotEnabled()
+        assertEquals(bought, mecha.view.value.state)
+        compose.onNodeWithText("Head").performScrollTo().performClick()
+        compose.onNodeWithText("Hazard").performScrollTo().performClick()
+        compose.onNodeWithText("Apply paint").performScrollTo().performClick()
+        compose.waitUntil(5_000) { mecha.view.value.state!!.equippedPaints[MechaSlot.HEAD] == paint && !mecha.view.value.busy }
+        assertEquals(bought.equippedPaints + (MechaSlot.HEAD to paint), mecha.view.value.state!!.equippedPaints)
+        compose.onNodeWithText("Whole bot").performScrollTo().performClick()
+        compose.onNodeWithText("Hazard").performScrollTo().performClick()
+        compose.onNodeWithText("Apply paint").performScrollTo().performClick()
+        compose.waitUntil(5_000) { MechaSlot.entries.all { mecha.view.value.state!!.equippedPaints[it] == paint } && !mecha.view.value.busy }
+        val painted = mecha.view.value.state!!
+        assertEquals(14, painted.salvage)
+        assertEquals(painted, runBlocking { mecha.backupSave() })
         compose.onNodeWithText("Body").performScrollTo().performClick()
-        compose.onNodeWithText("Apply finish").performScrollTo().performClick()
-        compose.waitUntil(5_000) { store.view.value.state!!.equippedFinishes[MechaSlot.BODY] == MechaFinish.ALLOY && !store.view.value.busy }
-        assertEquals(MechaFinish.ALLOY, store.view.value.state!!.equippedFinishes[MechaSlot.HEAD])
-        assertEquals(14, store.view.value.state!!.salvage)
-        compose.onNodeWithText("Plain · free").performScrollTo().performClick()
-        compose.onNodeWithText("Apply finish").performScrollTo().performClick()
-        compose.waitUntil(5_000) {
-            (store.view.value.state!!.equippedFinishes[MechaSlot.BODY] ?: MechaFinish.PLAIN) == MechaFinish.PLAIN && !store.view.value.busy
-        }
-        assertEquals(MechaFinish.ALLOY, store.view.value.state!!.equippedFinishes[MechaSlot.HEAD])
-        assertEquals(14, store.view.value.state!!.salvage)
-        compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
+        compose.onNodeWithText("Original").performScrollTo().performClick()
+        compose.onNodeWithText("Apply paint").performScrollTo().performClick()
+        compose.waitUntil(5_000) { (mecha.view.value.state!!.equippedPaints[MechaSlot.BODY] ?: MechaPaint()) == MechaPaint() && !mecha.view.value.busy }
+        assertEquals(paint, mecha.view.value.state!!.equippedPaints[MechaSlot.HEAD])
+        assertEquals(14, mecha.view.value.state!!.salvage)
     }
 
     @Test
-    fun workshopMixPreviewIsFreeAndFitPersistsOwnedPartsWithoutChangingFinishes() {
+    fun workshopArbitraryManualMixPreviewIsFreeAndFitPreservesPaint() {
         awaitHome()
         seedHangarIntroductionSeen()
-        openExtras()
-        compose.onNodeWithText("Hangar").performClick()
-        val store = (sortie.activity.application as SortieApp).graph.mecha
-        compose.waitUntil(5_000) { store.view.value.state != null && !store.view.value.busy }
+        val catalog = mecha.view.value.parts
+        val picks = MechaSlot.entries.mapIndexed { index, slot ->
+            catalog.first { it.slot == slot && it.family == listOf("yard", "survey", "courier", "foundry")[index] }
+        }
         runBlocking {
-            store.restore(
-                store.view.value.state!!.copy(
-                    ownedFinishes = setOf(MechaFinish.PLAIN, MechaFinish.ALLOY),
-                    equippedFinishes = mapOf(MechaSlot.HEAD to MechaFinish.ALLOY)
+            mecha.restore(
+                mecha.view.value.state!!.copy(
+                    owned = mecha.view.value.state!!.owned + picks.map { it.id },
+                    ownedPaints = setOf(MechaPaint(), MechaPaint(finish = MechaFinish.ALLOY)),
+                    equippedPaints = mapOf(MechaSlot.HEAD to MechaPaint(finish = MechaFinish.ALLOY))
                 ),
                 emptyList()
             )
         }
-        val before = store.view.value.state!!
-        val manual = store.view.value.parts.first { it.slot == MechaSlot.HEAD && it.id in before.owned && it.id != before.equipped[MechaSlot.HEAD] }
-        compose.onNodeWithText(manual.name).performScrollTo().performClick()
-        assertEquals(before, store.view.value.state)
-        compose.onNodeWithText("Reset preview").performScrollTo().performClick()
+        openExtras()
+        compose.onNodeWithText("Hangar").performClick()
+        val before = mecha.view.value.state!!
+        picks.forEach { part ->
+            compose.onNodeWithText(part.slot.name.lowercase().replaceFirstChar { it.uppercase() }).performScrollTo().performClick()
+            compose.onNodeWithText(part.family.replaceFirstChar { it.uppercase() }).performScrollTo().performClick()
+            compose.onNodeWithText(part.name).performScrollTo().performClick()
+        }
+        assertEquals(before, mecha.view.value.state)
+        pad.press(B)
         compose.onNodeWithText("Fit build").performScrollTo().assertIsNotEnabled()
-        compose.onNodeWithText("Mixes").performScrollTo().performClick()
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Mix build").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("Mix build").performScrollTo().performClick()
-        compose.onNodeWithText("Next mix").performScrollTo().performClick()
-        compose.onNodeWithText("Previous mix").performScrollTo().performClick()
-        assertEquals(before, store.view.value.state)
+        assertEquals(before, mecha.view.value.state)
+        picks.forEach { part ->
+            compose.onNodeWithText(part.slot.name.lowercase().replaceFirstChar { it.uppercase() }).performScrollTo().performClick()
+            compose.onNodeWithText(part.family.replaceFirstChar { it.uppercase() }).performScrollTo().performClick()
+            compose.onNodeWithText(part.name).performScrollTo().performClick()
+        }
         compose.onNodeWithText("Fit build").performScrollTo().performClick()
-        compose.waitUntil(5_000) { store.view.value.state!!.equipped != before.equipped && !store.view.value.busy }
-        val fitted = store.view.value.state!!
-        val parts = store.view.value.parts.associateBy { it.id }
-        assertEquals(before.salvage, fitted.salvage)
-        assertEquals(before.owned, fitted.owned)
-        assertEquals(before.equippedFinishes, fitted.equippedFinishes)
-        assertTrue(fitted.equipped.values.all { it in before.owned })
-        assertEquals(parts[fitted.equipped[MechaSlot.BODY]]!!.family, parts[fitted.equipped[MechaSlot.ARMS]]!!.family)
-        assertEquals(parts[fitted.equipped[MechaSlot.HEAD]]!!.family, parts[fitted.equipped[MechaSlot.LEGS]]!!.family)
-        assertTrue(parts[fitted.equipped[MechaSlot.BODY]]!!.family != parts[fitted.equipped[MechaSlot.HEAD]]!!.family)
-        assertEquals(fitted.equipped, runBlocking { store.backupSave() }!!.equipped)
+        val equipped = picks.associate { it.slot to it.id }
+        compose.waitUntil(5_000) { mecha.view.value.state!!.equipped == equipped && !mecha.view.value.busy }
+        assertEquals(before.copy(equipped = equipped), runBlocking { mecha.backupSave() })
         compose.onNodeWithText("Fit build").performScrollTo().assertIsNotEnabled()
-        compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
+    }
 
-        val replacement = store.view.value.parts.first { it.slot == MechaSlot.HEAD && it.id in fitted.owned && it.id != fitted.equipped[MechaSlot.HEAD] }
-        compose.onNodeWithText("Parts").performScrollTo().performClick()
-        compose.onNodeWithText(replacement.name).performScrollTo().performClick()
-        assertEquals(fitted, store.view.value.state)
-        compose.onNodeWithText("Fit build").performScrollTo().performClick()
-        compose.waitUntil(5_000) { store.view.value.state!!.equipped[MechaSlot.HEAD] == replacement.id && !store.view.value.busy }
-        assertEquals(fitted.copy(equipped = fitted.equipped + (MechaSlot.HEAD to replacement.id)), runBlocking { store.backupSave() })
+    @Test
+    @Config(qualifiers = RP_NOVA)
+    fun launcherPurchasesOnlyBecomeActiveAfterWorkshopApplyAndSurviveReopening() {
+        awaitHome()
+        seedHangarIntroductionSeen()
+        runBlocking { mecha.restore(mecha.view.value.state!!.copy(salvage = 50), emptyList()) }
+        openExtras()
+        compose.onNodeWithText("Hangar").performClick()
+        val before = mecha.view.value.state!!
+        compose.onNodeWithText("Shop").performClick()
+        compose.onNodeWithText("Launcher").performClick()
+        val items = listOf(Triple("Themes", "Harbor", "theme"), Triple("Folders", "Drawers", "folder icons"), Triple("Buttons", "Arcade", "button style"))
+        items.forEachIndexed { index, (category, label, item) ->
+            compose.onNodeWithText(category).performScrollTo().performClick()
+            compose.waitUntil(5_000) {
+                compose.onAllNodesWithText(label).fetchSemanticsNodes().size >= if (label == "Arcade") 2 else 1
+            }
+            // Arcade also names the top-level Hangar tab; select the final match in this page.
+            compose.onAllNodesWithText(label).onLast().performScrollTo().performClick()
+            val price = listOf(8, 4, 6)[index]
+            compose.onNodeWithText("Buy $item · $price credits").performScrollTo().performClick()
+            compose.onNodeWithText("Cancel").assertIsDisplayed()
+            compose.onNodeWithText("Buy $item").performClick()
+            compose.waitUntil(5_000) { !mecha.view.value.busy && mecha.view.value.state!!.salvage == 50 - listOf(8, 12, 18)[index] }
+            compose.onNodeWithText("Close receipt").performClick()
+            compose.waitUntil(5_000) { compose.onAllNodesWithText("Close receipt").fetchSemanticsNodes().isEmpty() }
+        }
+        val bought = mecha.view.value.state!!
+        assertEquals(before.selectedTheme, bought.selectedTheme)
+        assertEquals(before.selectedFolderIcons, bought.selectedFolderIcons)
+        assertEquals(before.selectedButtonStyle, bought.selectedButtonStyle)
+        compose.onNodeWithText("Workshop").performClick()
+        compose.onNodeWithText("Launcher").performClick()
+        items.forEach { (category, label, item) ->
+            compose.onNodeWithText(category).performScrollTo().performClick()
+            compose.waitUntil(5_000) {
+                compose.onAllNodesWithText(label).fetchSemanticsNodes().size >= if (label == "Arcade") 2 else 1
+            }
+            compose.onAllNodesWithText(label).onLast().performScrollTo().performClick()
+            compose.onNodeWithText("Cancel").performScrollTo().performClick()
+            compose.onNodeWithText("Apply $item").assertIsNotEnabled()
+            compose.onAllNodesWithText(label).onLast().performScrollTo().performClick()
+            compose.onNodeWithText("Apply $item").performScrollTo().performClick()
+            compose.waitUntil(5_000) { !mecha.view.value.busy }
+        }
+        val applied = mecha.view.value.state!!
+        assertEquals("harbor", applied.selectedTheme)
+        assertEquals("drawers", applied.selectedFolderIcons)
+        assertEquals("arcade", applied.selectedButtonStyle)
+        assertEquals(bought.salvage, applied.salvage)
+        assertEquals(applied, runBlocking { mecha.backupSave() })
+        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithText("Extras").performClick()
+        compose.onNodeWithText("Hangar").performClick()
+        assertEquals(applied, mecha.view.value.state)
     }
 
     @Test
@@ -624,10 +721,13 @@ class HomeControllerTest {
         compose.waitUntil(5_000) { store.view.value.state!!.cabinetSpins == before.cabinetSpins + 1 && !store.view.value.busy }
         val after = store.view.value.state!!
         val receipt = after.lastSpin!!
-        assertEquals(before.salvage - receipt.tier.stake + receipt.returnedCredits, after.salvage)
+        assertEquals(before.salvage - receipt.stake.stake + receipt.returnedCredits, after.salvage)
+        assertEquals(before.owned, after.owned)
+        assertEquals(before.ownedPaints, after.ownedPaints)
         assertEquals(before.equipped, after.equipped)
         compose.onNodeWithText("Spin once").assertIsNotEnabled()
-        compose.onNodeWithText("Close receipt").performClick()
+        // A tall saved receipt must not push its only close action below the display.
+        compose.onNodeWithText("Close receipt").assertIsDisplayed().performClick()
         compose.onNodeWithText("Close").performClick()
         compose.mainClock.advanceTimeBy(500)
         compose.waitForIdle()
@@ -636,14 +736,14 @@ class HomeControllerTest {
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Hangar").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Hangar").performClick()
         compose.onNodeWithText("Slot machine").performScrollTo().performClick()
-        compose.onNodeWithText("Saved spin #${receipt.sequence} · ${receipt.tier.label}").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Saved spin #${receipt.sequence} · ${receipt.outcome.label}").performScrollTo().assertIsDisplayed()
         assertEquals(after, store.view.value.state)
         assertEquals(receipt, runBlocking { store.backupSave() }!!.lastSpin)
         compose.onAllNodes(hasSetTextAction()).assertCountEquals(0)
     }
 
     @Test
-    fun emptyWalletAndCompletedCollectionCannotSpendThroughShopOrSlotMachine() {
+    fun emptyWalletAndCeilingBlockSlotsButCompletedCollectionDoesNot() {
         awaitHome()
         seedHangarIntroductionSeen()
         openExtras()
@@ -669,20 +769,29 @@ class HomeControllerTest {
                 emptyWallet.copy(
                     salvage = 70,
                     pendingMinutes = 0,
-                    owned = store.view.value.parts.map { it.id }.toSet(),
-                    ownedFinishes = MechaFinish.entries.toSet()
+                    owned = store.view.value.parts.map { it.id }.toSet()
                 ),
                 emptyList()
             )
         }
+        val capped = store.view.value.state!!
+        compose.onNodeWithText("Spin · 1 credit…").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("3 credits").performScrollTo().performClick()
+        compose.onNodeWithText("Spin · 3 credits…").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("5 credits").performScrollTo().performClick()
+        compose.onNodeWithText("Spin · 5 credits…").performScrollTo().assertIsNotEnabled()
+        assertEquals(capped, store.view.value.state)
+        runBlocking { store.restore(capped.copy(salvage = 30), emptyList()) }
         val complete = store.view.value.state!!
-        compose.onNodeWithText("Tier complete").performScrollTo().assertIsNotEnabled()
-        compose.onNodeWithText("Alloy · 3 credits").performScrollTo().performClick()
-        compose.onNodeWithText("Tier complete").performScrollTo().assertIsNotEnabled()
-        compose.onNodeWithText("Holo · 5 credits").performScrollTo().performClick()
-        compose.onNodeWithText("Tier complete").performScrollTo().assertIsNotEnabled()
-        compose.onNodeWithText("Shop").performScrollTo().performClick()
-        compose.onNodeWithText("Owned").performScrollTo().assertIsNotEnabled()
-        assertEquals(complete, store.view.value.state)
+        compose.onNodeWithText("5% Jackpot · 5× = 25 returned · net +20").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Spin · 5 credits…").performScrollTo().performClick()
+        compose.onNodeWithText("Spin once").performClick()
+        compose.waitUntil(5_000) { store.view.value.state!!.cabinetSpins == complete.cabinetSpins + 1 && !store.view.value.busy }
+        val after = store.view.value.state!!
+        assertEquals(complete.owned, after.owned)
+        assertEquals(complete.ownedPaints, after.ownedPaints)
+        assertEquals(complete.equipped, after.equipped)
+        assertEquals(5, after.lastSpin!!.stake.stake)
+        assertEquals(complete.salvage - 5 + after.lastSpin!!.returnedCredits, after.salvage)
     }
 }

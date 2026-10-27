@@ -44,11 +44,11 @@ class MechaRulesTest {
         assertEquals(12, s.owned.size)
         assertTrue(s.owned.all { it.endsWith("_1") })
         assertTrue(s.owned.all { it.substringBefore('_') in setOf("yard", "survey", "courier") })
-        assertEquals(3, s.version)
+        assertEquals(4, s.version)
         assertEquals(MechaSlot.entries.associateWith { "yard_${it.name.lowercase()}_1" }, s.equipped)
         assertEquals(MECHA_STARTER_CREDITS, s.salvage)
         assertEquals(MECHA_STARTER_ORIGIN, s.origins["courier_legs_1"])
-        assertEquals(44, s.unownedIn(parts).size)
+        assertEquals(188, s.unownedIn(parts).size)
         assertNull(mechaStateProblem(s, parts))
     }
 
@@ -183,8 +183,8 @@ class MechaRulesTest {
         assertNotNull(mechaStateProblem(s.copy(charge = 0), parts))
         assertNotNull(mechaStateProblem(s.copy(pendingMinutes = MECHA_MINUTES_PER_CREDIT), parts))
         assertNotNull(mechaStateProblem(s.copy(salvage = -1), parts))
-        assertNotEquals(s, s.copy(version = 4))
-        assertNotNull(mechaStateProblem(s.copy(version = 4), parts))
+        assertNotEquals(s, s.copy(version = 5))
+        assertNotNull(mechaStateProblem(s.copy(version = 5), parts))
     }
 
     @Test
@@ -231,5 +231,24 @@ class MechaRulesTest {
         assertEquals(s.salvage, marked.salvage)
         assertSame(marked, marked.credited(merged).state)
         assertSame(marked, marked.creditedElsewhere(merged).state)
+    }
+
+    @Test
+    fun everyCatalogPartRequiresItsDerivedPaintMask() {
+        val checked = mutableListOf<String>()
+        val parsed = parseMechaCatalog("yard", text(rows("yard"))) {
+            checked += it
+            null
+        }
+        assertEquals(16, checked.size)
+        assertEquals(parsed.flatMap { listOf(it.asset, it.paintAsset) }.toSet(), checked.toSet())
+        assertTrue(parsed.all { it.paintAsset == "mecha/yard/${it.id}.paint.png" })
+        val failure = runCatching {
+            parseMechaCatalog("yard", text(rows("yard"))) { if (it.endsWith(".paint.png")) "$it is missing" else null }
+        }.exceptionOrNull()
+        assertNotNull(failure)
+        assertTrue(failure!!.message!!.contains("yard_head_1.paint.png"))
+        assertEquals(25, MECHA_FAMILIES.size)
+        assertEquals(200, parts.size)
     }
 }

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "quarry_head_1",
+    "slot": "HEAD",
+    "family": "quarry",
+    "name": "Stone saw helmet",
+    "asset": "mecha/quarry/quarry_head_1.png"
+  },
+  {
+    "id": "quarry_head_2",
+    "slot": "HEAD",
+    "family": "quarry",
+    "name": "Aggregate cab",
+    "asset": "mecha/quarry/quarry_head_2.png"
+  },
+  {
+    "id": "quarry_body_1",
+    "slot": "BODY",
+    "family": "quarry",
+    "name": "Water feed bib",
+    "asset": "mecha/quarry/quarry_body_1.png"
+  },
+  {
+    "id": "quarry_body_2",
+    "slot": "BODY",
+    "family": "quarry",
+    "name": "Gravel hopper",
+    "asset": "mecha/quarry/quarry_body_2.png"
+  },
+  {
+    "id": "quarry_arms_1",
+    "slot": "ARMS",
+    "family": "quarry",
+    "name": "Stone saw and guide",
+    "asset": "mecha/quarry/quarry_arms_1.png"
+  },
+  {
+    "id": "quarry_arms_2",
+    "slot": "ARMS",
+    "family": "quarry",
+    "name": "Aggregate buckets",
+    "asset": "mecha/quarry/quarry_arms_2.png"
+  },
+  {
+    "id": "quarry_legs_1",
+    "slot": "LEGS",
+    "family": "quarry",
+    "name": "Dust gaiters",
+    "asset": "mecha/quarry/quarry_legs_1.png"
+  },
+  {
+    "id": "quarry_legs_2",
+    "slot": "LEGS",
+    "family": "quarry",
+    "name": "Loader crawlers",
+    "asset": "mecha/quarry/quarry_legs_2.png"
+  }
+]

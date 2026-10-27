@@ -31,11 +31,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconToggleButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -69,6 +67,8 @@ import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.magazine.MagazineFeature
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import io.github.esko997.sortie.ui.SortieButton as Button
+import io.github.esko997.sortie.ui.SortieOutlinedButton as OutlinedButton
 import kotlinx.coroutines.delay
 
 /**
@@ -420,7 +420,7 @@ internal fun GamePageButton(
     if (primary) {
         Button(
             onClick = onClick,
-            modifier = modifier.focusGlow(focused, ButtonDefaults.shape, accent, pressed = pressed),
+            modifier = modifier.focusGlow(focused, sortieButtonShape(ButtonDefaults.shape), accent, pressed = pressed),
             enabled = enabled,
             colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = CanvasColour),
             contentPadding = GamePageButtonPadding,
@@ -434,7 +434,7 @@ internal fun GamePageButton(
         }
         OutlinedButton(
             onClick = onClick,
-            modifier = modifier.focusGlow(focused, ButtonDefaults.outlinedShape, accent, pressed = pressed),
+            modifier = modifier.focusGlow(focused, sortieButtonShape(ButtonDefaults.outlinedShape), accent, pressed = pressed),
             enabled = enabled,
             colors = ButtonDefaults.outlinedButtonColors(
                 containerColor = if (selected) accent.copy(alpha = 0.18f) else Color.Transparent,

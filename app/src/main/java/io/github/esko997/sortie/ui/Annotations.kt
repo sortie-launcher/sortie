@@ -15,12 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,6 +56,8 @@ import io.github.esko997.sortie.data.manifest.BOOKMARK_MAX_CHARS
 import io.github.esko997.sortie.data.manifest.ControllerSupport
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.GameBookmark
+import io.github.esko997.sortie.ui.SortieButton as Button
+import io.github.esko997.sortie.ui.SortieOutlinedButton as OutlinedButton
 import kotlinx.coroutines.launch
 
 /** Input sources of a physical controller: their D-pad leaves a text field instead of moving its caret. */
@@ -199,7 +199,9 @@ fun BookmarkEditor(
                     }
                 },
                 enabled = canSave,
-                modifier = Modifier.focusRequester(saveFocus).focusGlow(saveInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape, accent),
+                modifier = Modifier.focusRequester(
+                    saveFocus
+                ).focusGlow(saveInteraction.collectIsFocusedAsState().value, sortieButtonShape(ButtonDefaults.shape), accent),
                 colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = CanvasColour),
                 interactionSource = saveInteraction
             ) { Text(if (saving) "Saving…" else if (draft.isEmpty() && saved.isNotEmpty()) "Remove bookmark" else "Save") }
@@ -207,7 +209,7 @@ fun BookmarkEditor(
                 onClick = onClose,
                 enabled = !saving,
                 modifier = Modifier.focusRequester(cancelFocus)
-                    .focusGlow(cancelInteraction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape, accent),
+                    .focusGlow(cancelInteraction.collectIsFocusedAsState().value, sortieButtonShape(ButtonDefaults.outlinedShape), accent),
                 interactionSource = cancelInteraction
             ) { Text("Cancel") }
             OutlinedButton(
@@ -216,7 +218,7 @@ fun BookmarkEditor(
                     runCatching { field.requestFocus() }
                 },
                 enabled = !saving && text.isNotEmpty(),
-                modifier = Modifier.focusGlow(clearInteraction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape, accent),
+                modifier = Modifier.focusGlow(clearInteraction.collectIsFocusedAsState().value, sortieButtonShape(ButtonDefaults.outlinedShape), accent),
                 interactionSource = clearInteraction
             ) { Text("Clear") }
         }
@@ -290,14 +292,14 @@ fun ControllerEditor(
                     }
                 },
                 enabled = canSave,
-                modifier = Modifier.focusGlow(saveInteraction.collectIsFocusedAsState().value, ButtonDefaults.shape, accent),
+                modifier = Modifier.focusGlow(saveInteraction.collectIsFocusedAsState().value, sortieButtonShape(ButtonDefaults.shape), accent),
                 colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = CanvasColour),
                 interactionSource = saveInteraction
             ) { Text(if (saving) "Saving…" else "Save") }
             OutlinedButton(
                 onClick = onClose,
                 enabled = !saving,
-                modifier = Modifier.focusGlow(cancelInteraction.collectIsFocusedAsState().value, ButtonDefaults.outlinedShape, accent),
+                modifier = Modifier.focusGlow(cancelInteraction.collectIsFocusedAsState().value, sortieButtonShape(ButtonDefaults.outlinedShape), accent),
                 interactionSource = cancelInteraction
             ) { Text("Cancel") }
         }

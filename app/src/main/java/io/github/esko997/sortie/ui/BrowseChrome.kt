@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,6 +51,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.data.manifest.BrowseChromeMode
+import io.github.esko997.sortie.ui.SortieOutlinedButton as OutlinedButton
 
 /** Auto folds the header in a window narrower or shorter than this, in dp divided by the font scale (larger text, less room). */
 private const val COMPACT_WINDOW_DP = 600
@@ -241,7 +241,7 @@ fun ChromeToggle(open: Boolean, modifier: Modifier = Modifier, onClick: () -> Un
         onClick = onClick,
         modifier = modifier
             .semantics { contentDescription = if (open) HIDE_HEADER else SHOW_HEADER }
-            .focusGlow(focused, ButtonDefaults.outlinedShape, pressed = pressed),
+            .focusGlow(focused, sortieButtonShape(ButtonDefaults.outlinedShape), pressed = pressed),
         contentPadding = PaddingValues(horizontal = 14.dp),
         interactionSource = interaction
     ) { Text(if (open) "▴" else "▾", style = MaterialTheme.typography.titleMedium, maxLines = 1) }

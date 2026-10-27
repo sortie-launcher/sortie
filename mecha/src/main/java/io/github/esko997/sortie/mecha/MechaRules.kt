@@ -47,7 +47,10 @@ internal fun parseMechaCatalog(family: String, text: String, assetProblem: (Stri
             m.groupValues[1] != p.slot.name.lowercase() -> problems += "${p.id} is filed under ${p.slot}"
             p.asset != "mecha/$family/${p.id}.png" -> problems += "${p.id} points at ${p.asset}"
             p.name.isBlank() || p.name != p.name.trim() || p.name.length > PART_NAME_MAX -> problems += "${p.id} needs a short name"
-            else -> assetProblem(p.asset)?.let { problems += it }
+            else -> {
+                assetProblem(p.asset)?.let { problems += it }
+                assetProblem(p.paintAsset)?.let { problems += it }
+            }
         }
     }
     val ids = rows.map { it.id }
@@ -65,7 +68,7 @@ internal fun starterMechaState(parts: List<MechaPart>, now: Long): MechaState {
         starters.first { it.family == MECHA_STARTER_FAMILY && it.slot == slot }.id
     }
     return MechaState(
-        version = 3,
+        version = 4,
         equipped = equipped,
         owned = starters.mapTo(LinkedHashSet()) { it.id },
         salvage = MECHA_STARTER_CREDITS,
@@ -107,9 +110,10 @@ internal fun mechaStateProblem(state: MechaState, parts: List<MechaPart>): Strin
 fun mechaStateProblem(state: MechaState): String? {
     val stats = MECHA_STAT_FLOOR..MECHA_STAT_MAX
     return when {
-        state.version !in 1..3 -> "it is format version ${state.version}, this build reads versions 1, 2 and 3"
+        state.version !in 1..4 -> "it is format version ${state.version}, this build reads versions 1 through 4"
         state.version == 1 && !state.hasLegacyCommerceDefaults() -> "a legacy hangar contains newer commerce fields"
         state.version < 3 && !state.hasLegacyArcadeDefaults() -> "a legacy hangar contains newer arcade or theme fields"
+        state.version < 4 && !state.hasLegacyCustomizationDefaults() -> "a legacy hangar contains newer customization fields"
         mechaNameProblem(state.name) != null -> "its name \"${state.name}\" is invalid"
         MechaSlot.entries.any { state.equipped[it] !in state.owned } -> "its fitted parts aren't complete owned parts"
         state.origins.keys.any { it !in state.owned } -> "it records where unowned parts came from"
@@ -120,22 +124,29 @@ fun mechaStateProblem(state: MechaState): String? {
         state.bond !in 0..MECHA_STAT_MAX -> "its bond (${state.bond}) is out of range"
         state.charge !in stats || state.condition !in stats -> "its charge or condition is out of range"
         state.initializedAt <= 0 -> "it has no start time"
-        else -> mechaCommerceProblem(state) ?: mechaArcadeCommerceProblem(state)
+        else -> mechaCommerceProblem(state) ?: mechaArcadeCommerceProblem(state) ?: mechaLauncherCommerceProblem(state)
     }
 }
 
 private fun MechaState.hasLegacyCommerceDefaults(): Boolean =
-    ownedFinishes == setOf(MechaFinish.PLAIN) && equippedFinishes.isEmpty() && cabinetSpins == 0 && lastSpin == null
+    ownedPaints == setOf(MechaPaint()) && equippedPaints.isEmpty() && cabinetSpins == 0 && lastSpin == null && legacyLastSpin == null
+
+private fun MechaState.hasLegacyCustomizationDefaults(): Boolean =
+    ownedPaints.all { it.scheme == MechaPaintScheme.ORIGINAL } && equippedPaints.values.all { it.scheme == MechaPaintScheme.ORIGINAL } &&
+        ownedFolderIcons == setOf("default") && selectedFolderIcons == "default" &&
+        ownedButtonStyles == setOf("default") && selectedButtonStyle == "default" && lastSpin == null
 
 /** Called after catalog/state validation; upgrading never awards parts or changes historical counters. */
 internal fun MechaState.upgraded(): MechaState {
     require(mechaStateProblem(this) == null) { "Invalid hangar state: ${mechaStateProblem(this)}" }
-    val commerce = if (version == 1) {
-        copy(version = 2, pendingMinutes = if (salvage >= MECHA_CREDIT_CEILING) 0 else pendingMinutes)
-    } else {
+    return if (version == 4) {
         this
+    } else {
+        copy(
+            version = 4,
+            pendingMinutes = if (version == 1 && salvage >= MECHA_CREDIT_CEILING) 0 else pendingMinutes
+        )
     }
-    return if (commerce.version == 2) commerce.copy(version = 3) else commerce
 }
 
 /**
@@ -246,7 +257,7 @@ internal fun MechaState.credited(sessions: List<PlaySession>): MechaResult {
     }
     if (processed.size == processedSessions.size) return MechaResult(this)
     val next = copy(
-        version = 3,
+        version = 4,
         processedSessions = processed,
         pendingMinutes = pending,
         creditedMinutes = creditedMinutes + minutes,

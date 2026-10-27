@@ -102,12 +102,26 @@ class MechaArcadeCommerceTest {
 
     @Test
     fun versionTwoCommerceAndHistorySurviveUpgradeExactly() {
-        val legacy = MechaRulesTest.starter().copy(salvage = 73, processedSessions = setOf("old@1"), salvageRuns = 14)
-            .cabinetSpun(MechaCabinetTier.ALLOY, MechaRulesTest.parts, 0, 0).state
-            .finishing(MechaSlot.HEAD, MechaFinish.ALLOY).state.copy(version = 2)
+        val legacy = MechaRulesTest.starter().copy(
+            version = 2,
+            salvage = 73,
+            processedSessions = setOf("old@1"),
+            salvageRuns = 14,
+            ownedPaints = setOf(MechaPaint(), MechaPaint(finish = MechaFinish.ALLOY)),
+            equippedPaints = mapOf(MechaSlot.HEAD to MechaPaint(finish = MechaFinish.ALLOY)),
+            cabinetSpins = 1,
+            legacyLastSpin = MechaLegacySpinReceipt(
+                1,
+                MechaLegacyCabinetTier.ALLOY,
+                listOf(0, 0, 0),
+                MechaLegacySpinOutcome.REWARD,
+                3,
+                finish = MechaFinish.ALLOY
+            )
+        )
         assertNull(mechaStateProblem(legacy))
         val upgraded = legacy.upgraded()
-        assertEquals(legacy.copy(version = 3), upgraded)
+        assertEquals(legacy.copy(version = 4), upgraded)
         assertSame(upgraded, upgraded.upgraded())
         assertEquals(73, upgraded.salvage)
         assertFalse(upgraded.hangarIntroSeen)

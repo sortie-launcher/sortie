@@ -1,0 +1,58 @@
+[
+  {
+    "id": "satellite_head_1",
+    "slot": "HEAD",
+    "family": "satellite",
+    "name": "Solar sunshade",
+    "asset": "mecha/satellite/satellite_head_1.png"
+  },
+  {
+    "id": "satellite_head_2",
+    "slot": "HEAD",
+    "family": "satellite",
+    "name": "Folded relay hood",
+    "asset": "mecha/satellite/satellite_head_2.png"
+  },
+  {
+    "id": "satellite_body_1",
+    "slot": "BODY",
+    "family": "satellite",
+    "name": "Solar bus wings",
+    "asset": "mecha/satellite/satellite_body_1.png"
+  },
+  {
+    "id": "satellite_body_2",
+    "slot": "BODY",
+    "family": "satellite",
+    "name": "Quilted relay core",
+    "asset": "mecha/satellite/satellite_body_2.png"
+  },
+  {
+    "id": "satellite_arms_1",
+    "slot": "ARMS",
+    "family": "satellite",
+    "name": "Panel connector claws",
+    "asset": "mecha/satellite/satellite_arms_1.png"
+  },
+  {
+    "id": "satellite_arms_2",
+    "slot": "ARMS",
+    "family": "satellite",
+    "name": "Foil relay sleeves",
+    "asset": "mecha/satellite/satellite_arms_2.png"
+  },
+  {
+    "id": "satellite_legs_1",
+    "slot": "LEGS",
+    "family": "satellite",
+    "name": "Solar strut feet",
+    "asset": "mecha/satellite/satellite_legs_1.png"
+  },
+  {
+    "id": "satellite_legs_2",
+    "slot": "LEGS",
+    "family": "satellite",
+    "name": "Folded foil boots",
+    "asset": "mecha/satellite/satellite_legs_2.png"
+  }
+]

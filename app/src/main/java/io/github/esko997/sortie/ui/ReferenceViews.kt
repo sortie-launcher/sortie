@@ -36,7 +36,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -93,6 +92,7 @@ import io.github.esko997.sortie.data.markdown.parseMarkdown
 import io.github.esko997.sortie.data.reference.ReferenceCard
 import io.github.esko997.sortie.data.reference.ReferenceCards
 import io.github.esko997.sortie.data.reference.ReferenceFiles
+import io.github.esko997.sortie.ui.SortieOutlinedButton as OutlinedButton
 import java.io.File
 import kotlin.math.max
 import kotlin.math.min

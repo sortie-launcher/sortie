@@ -193,28 +193,32 @@ only one of him.
   anything over a game. Otherwise he stays on this screen. Animate off skips the flight.
   A quick swipe before picking him up still scrolls whatever is under him.
 - **Extras → Hangar** on Home opens the Hangar with the controller. In an article, **Select → Visit the hangar** also works.
-  **B** returns from a tab to Workshop, then closes the Hangar without losing your place; on Home focus returns to **Extras**.
-  During an arcade run, B pauses first. Wide windows put the preview or game on the left and choices on the right.
+  **B** first cancels a local preview, then returns from a tab to Workshop, then closes the Hangar without losing your place;
+  on Home focus returns to **Extras**. During an arcade run, B pauses first. Wide windows put the preview on the left and choices on the right.
 - The first visit offers three short guide cards. **Next / Previous** browse them; **Skip / Got it** finishes the guide.
   **Hide companion** also finishes it without losing anything. **Help** replays the cards whenever you want.
-- **Workshop → Assembly** is one editor: choose owned **Parts**, a **Family set**, or a two-family build in **Mixes**.
-  All three change the same free preview. **Fit build** saves all four parts together and keeps their finishes;
-  **Reset preview** returns to the fitted build. There is no separate build bench.
+- **Shop buys; Workshop applies.** Purchases never automatically equip a part, repaint the bot or change the launcher.
+- **Workshop → Bot → Assembly** is one editor: choose owned **Parts** or a **Family set**, using the family filter to browse.
+  Mix any owned head, body, arms and legs; there are no family restrictions. **Fit build** saves all four parts together
+  and keeps their paint; **Reset preview** returns to the fitted build.
 - Press **Rename** to edit the name; **Save** commits it and **Cancel** discards the edit. Tapping the displayed name never
   opens the keyboard. **Care** contains tune, charge, rest and companion settings. Charge and condition never run down
   while you are away, and neither can stop you playing or using the companion.
-- You start with twelve parts and three salvage credits. **Shop** previews all 56 parts across seven families; a chosen
-  part costs **2 credits**. Buying adds it to your inventory but does not equip it.
-- **Finishes** in the Shop unlock **Alloy for 6 credits** or **Holo for 10**. Each is a one-time unlock, reusable on every
-  part. Preview the metal glint or translucent prism effect before buying, then **Apply finish** to a chosen slot.
-  **Plain** removes that slot's finish for free. Animate off also keeps finishes still.
-- Workshop's **Mixes** combine body and arms from one owned family with head and legs from another. **Mix build** starts
-  a preview; **Previous mix / Next mix** browse alternatives. Nothing is fitted until you choose **Fit build**.
-- **Slot machine** is an optional three-reel gamble, not the only way to collect. Stake **1 / 3 / 5 credits** for a part / Alloy / Holo:
-  each spin has a **20%** chance of a new reward plus the stake back, **30%** of the stake back alone, and **50%** of losing
-  the stake. There are no duplicates; a completed tier cannot be played. Buying directly costs less on average.
-  A confirmation precedes every spin. The saved receipt shows the one committed result; reopening it never spins again.
-  Reel motion presents that saved result; stopping or timing the animation cannot change the odds.
+- You start with twelve parts and three salvage credits. **Shop → Parts** previews **200 authored parts: 50 complete sets
+  across 25 families**. A chosen part costs **2 credits**. Family and ownership filters help narrow the collection.
+- **Shop → Paint** offers ten two-tone schemes alongside **Original**, which keeps each part's authored colours.
+  Each scheme has independently purchased **Standard (2 credits)**, **Alloy (6)** and **Holo (10)** editions;
+  Original Standard is free. No prerequisite editions or consumable paint: buy once and reuse on any owned part.
+  Alloy keeps the scheme's pigment with a travelling metallic glint; Holo adds a shifting colour sheen.
+- Apply owned editions in **Workshop → Bot → Paint**. Choose a slot or **Whole bot**, preview a scheme and edition,
+  then **Apply paint** or **Cancel**. Applying costs nothing. Original Standard restores authored colours.
+  Animate off keeps finishes still. Existing Alloy/Holo unlocks remain owned Original editions after updating.
+- **Slot machine** is an optional credit-only three-reel gamble. Stake **1 / 3 / 5 credits** with identical odds:
+  **5%** returns five times the stake, **20%** returns twice, **20%** returns the stake, and **55%** returns nothing.
+  Returns include the stake: average return is 85%, so this is a credit sink, not a reliable earning method.
+  A stake is unavailable if a full jackpot would exceed 50 credits; spend some credits first. Payouts are never clipped.
+  Every spin requires confirmation. Its saved receipt cannot pay again; reel timing cannot change the committed result.
+  Historical part/finish rewards remain owned and their old receipt is identified separately.
 - **Arcade** has one shared CRT and three games. **Insert coin** spends **1 credit**, then you choose **one game for one run**.
   Your inserted coin is saved even if you close the Hangar before choosing; selecting or resuming never charges again.
   **Flappy Flight** uses tap or A to flap through gaps. **Scrap Catch** gives you 45 seconds to catch bolts and avoid junk:
@@ -223,21 +227,23 @@ only one of him.
   Games save personal bests but award no credits, parts or companion stats. Leaving the page or covering Sortie pauses
   the run; resume explicitly when ready. After an app restart, the same paid run starts over with the same seed.
   **Abandon** requires confirmation and does not refund the coin. Once a game is chosen, that run cannot switch games.
-- **Themes** offers free, isolated previews. **Original** is always free; **Harbor**, **Plum** and **Lichen** cost **8 credits**
-  each. Buying unlocks a scheme but does not select it: choose **Apply theme** separately, then switch owned schemes for
-  free. The UI colour scheme persists even with the companion hidden. Reader paper settings and artwork-derived accents
-  remain independent.
+- **Shop → Launcher** sells themes, folder icon packs and button styles, with free isolated previews.
+  **Harbor**, **Plum** and **Lichen** themes cost **8 credits** each. **Drawers**, **Cartridges**, **Pixel** and **Industrial**
+  folder packs cost **4 credits** each. **Instrument** and **Arcade** button styles cost **6 credits** each.
+  Original styles remain free. These are reusable purchases, not a separate charge for each folder or button.
+- **Workshop → Launcher** applies owned **Themes / Folders / Buttons**. Preview a choice, then Apply or Cancel;
+  switching owned styles costs nothing. Saved appearance persists even with the companion hidden.
+  Reader paper, artwork-derived accents and custom folder artwork remain independent. Button styles preserve interaction and focus.
 - New completed game sessions earn a credit per five accumulated whole minutes (up to 120 minutes from one session).
   **Earning stops at 50 credits.** Extra play still counts toward your companion's stats, but no credits or partial credit
   are banked while full. Spending below 50 lets new play earn again. Existing balances above 50 are kept, not cut down.
   Earlier play, abandoned sessions, apps and launcher shortcuts do not count. Recorded time is not a measure of active input.
-- **Gallery** compares all seven families and idle, walking, sleeping and cheering animations. Parts labelled **preview**
-  are not unlocked; a preview build can only be worn when you own every part.
-- In **Workshop → Care**, turn **Animate companion** off and he stays put at one spot, or **Hide companion** and he
+- In **Workshop → Bot → Care**, turn **Animate companion** off and he stays put at one spot, or **Hide companion** and he
   goes away entirely. **Show companion** brings him back without losing parts. Arcade gameplay still moves when you
   explicitly play; the animation preference controls optional companion flourishes.
 
-Your companion survives app restarts and in-place updates, and **Backup and restore** carries him too (see there).
+Your companion survives app restarts and in-place updates, and **Backup and restore** carries purchases and appearance too.
+This update migrates the companion save to version 4; older builds cannot read it. Keep app data and do not downgrade.
 
 ## Built-in apps
 

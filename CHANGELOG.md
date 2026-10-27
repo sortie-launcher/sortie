@@ -5,6 +5,17 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
+- Expand Rivet to **50 complete authored sets / 200 parts**, with one shared rig and unrestricted player-chosen assemblies.
+  Every part now has explicit two-tone paint regions that preserve fixed eyes, outlines and mechanical details.
+- Add ten reusable paint schemes with independently purchasable Standard (2), Alloy (6) and Holo (10) editions. Original
+  Standard remains free; existing finish purchases become Original editions without losing their equipped appearance.
+  Coloured metal retains its pigment and travelling glint; Holo has a visible prismatic sheen. Hidden previews stop animating.
+- Separate **Shop purchases** from **Workshop application** for parts, paint and launcher appearance. Workshop has Bot and
+  Launcher sections, family filters, selected-slot/whole-bot paint previews and explicit Apply/Cancel. Remove duplicate Gallery
+  equip controls and precomputed mixes. Add four reusable folder icon packs (4 credits) and two button styles (6 credits).
+- Make the slot machine credit-only: identical odds at 1/3/5-credit stakes, 5% returning 5×, 20% returning 2×, 20% returning
+  the stake, and 55% returning nothing. Require room under 50 for the full jackpot instead of discarding overflow.
+  Companion save version 4 preserves earlier inventory, purchases, arcade tickets and history through disk/backup migration.
 - Rework the Hangar for landscape screens: preview and controls sit side by side, and Parts, Family sets and Mixes share
   one Workshop draft and Fit action. Rename Cabinet to **Slot machine**, with three original pixel-art reels and a brief,
   reduced-motion-aware flourish; its published stakes and odds are unchanged.

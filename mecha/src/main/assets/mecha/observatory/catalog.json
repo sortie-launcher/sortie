@@ -1,0 +1,58 @@
+[
+  {
+    "id": "observatory_head_1",
+    "slot": "HEAD",
+    "family": "observatory",
+    "name": "Curator telescope",
+    "asset": "mecha/observatory/observatory_head_1.png"
+  },
+  {
+    "id": "observatory_head_2",
+    "slot": "HEAD",
+    "family": "observatory",
+    "name": "Armillary crown",
+    "asset": "mecha/observatory/observatory_head_2.png"
+  },
+  {
+    "id": "observatory_body_1",
+    "slot": "BODY",
+    "family": "observatory",
+    "name": "Open star atlas",
+    "asset": "mecha/observatory/observatory_body_1.png"
+  },
+  {
+    "id": "observatory_body_2",
+    "slot": "BODY",
+    "family": "observatory",
+    "name": "Astrolabe computer",
+    "asset": "mecha/observatory/observatory_body_2.png"
+  },
+  {
+    "id": "observatory_arms_1",
+    "slot": "ARMS",
+    "family": "observatory",
+    "name": "Lens care paddles",
+    "asset": "mecha/observatory/observatory_arms_1.png"
+  },
+  {
+    "id": "observatory_arms_2",
+    "slot": "ARMS",
+    "family": "observatory",
+    "name": "Sky calipers",
+    "asset": "mecha/observatory/observatory_arms_2.png"
+  },
+  {
+    "id": "observatory_legs_1",
+    "slot": "LEGS",
+    "family": "observatory",
+    "name": "Quiet gallery shoes",
+    "asset": "mecha/observatory/observatory_legs_1.png"
+  },
+  {
+    "id": "observatory_legs_2",
+    "slot": "LEGS",
+    "family": "observatory",
+    "name": "Leveling jack feet",
+    "asset": "mecha/observatory/observatory_legs_2.png"
+  }
+]

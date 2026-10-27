@@ -1,0 +1,58 @@
+[
+  {
+    "id": "demolition_head_1",
+    "slot": "HEAD",
+    "family": "demolition",
+    "name": "Impact hood",
+    "asset": "mecha/demolition/demolition_head_1.png"
+  },
+  {
+    "id": "demolition_head_2",
+    "slot": "HEAD",
+    "family": "demolition",
+    "name": "Dismantler earmuffs",
+    "asset": "mecha/demolition/demolition_head_2.png"
+  },
+  {
+    "id": "demolition_body_1",
+    "slot": "BODY",
+    "family": "demolition",
+    "name": "Shock cradle",
+    "asset": "mecha/demolition/demolition_body_1.png"
+  },
+  {
+    "id": "demolition_body_2",
+    "slot": "BODY",
+    "family": "demolition",
+    "name": "Sorted tool apron",
+    "asset": "mecha/demolition/demolition_body_2.png"
+  },
+  {
+    "id": "demolition_arms_1",
+    "slot": "ARMS",
+    "family": "demolition",
+    "name": "Hydraulic breaker",
+    "asset": "mecha/demolition/demolition_arms_1.png"
+  },
+  {
+    "id": "demolition_arms_2",
+    "slot": "ARMS",
+    "family": "demolition",
+    "name": "Pry bar and lifting sling",
+    "asset": "mecha/demolition/demolition_arms_2.png"
+  },
+  {
+    "id": "demolition_legs_1",
+    "slot": "LEGS",
+    "family": "demolition",
+    "name": "Stabiliser plates",
+    "asset": "mecha/demolition/demolition_legs_1.png"
+  },
+  {
+    "id": "demolition_legs_2",
+    "slot": "LEGS",
+    "family": "demolition",
+    "name": "Soft step boots",
+    "asset": "mecha/demolition/demolition_legs_2.png"
+  }
+]

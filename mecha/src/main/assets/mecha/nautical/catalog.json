@@ -1,0 +1,58 @@
+[
+  {
+    "id": "nautical_head_1",
+    "slot": "HEAD",
+    "family": "nautical",
+    "name": "Lantern room",
+    "asset": "mecha/nautical/nautical_head_1.png"
+  },
+  {
+    "id": "nautical_head_2",
+    "slot": "HEAD",
+    "family": "nautical",
+    "name": "Tug wheelhouse",
+    "asset": "mecha/nautical/nautical_head_2.png"
+  },
+  {
+    "id": "nautical_body_1",
+    "slot": "BODY",
+    "family": "nautical",
+    "name": "Striped beacon",
+    "asset": "mecha/nautical/nautical_body_1.png"
+  },
+  {
+    "id": "nautical_body_2",
+    "slot": "BODY",
+    "family": "nautical",
+    "name": "Fender hull",
+    "asset": "mecha/nautical/nautical_body_2.png"
+  },
+  {
+    "id": "nautical_arms_1",
+    "slot": "ARMS",
+    "family": "nautical",
+    "name": "Service lanterns",
+    "asset": "mecha/nautical/nautical_arms_1.png"
+  },
+  {
+    "id": "nautical_arms_2",
+    "slot": "ARMS",
+    "family": "nautical",
+    "name": "Bollard forks",
+    "asset": "mecha/nautical/nautical_arms_2.png"
+  },
+  {
+    "id": "nautical_legs_1",
+    "slot": "LEGS",
+    "family": "nautical",
+    "name": "Foundation feet",
+    "asset": "mecha/nautical/nautical_legs_1.png"
+  },
+  {
+    "id": "nautical_legs_2",
+    "slot": "LEGS",
+    "family": "nautical",
+    "name": "Deck boots",
+    "asset": "mecha/nautical/nautical_legs_2.png"
+  }
+]

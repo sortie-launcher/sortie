@@ -85,7 +85,7 @@ class MechaCreditCeilingTest {
             )
             assertNull(mechaStateProblem(legacy, parts))
             val upgraded = legacy.upgraded()
-            assertEquals(legacy.copy(version = 3, pendingMinutes = if (balance >= 50) 0 else 4), upgraded)
+            assertEquals(legacy.copy(version = 4, pendingMinutes = if (balance >= 50) 0 else 4), upgraded)
             assertNull(mechaStateProblem(upgraded, parts))
             if (balance >= 50) assertNotNull(mechaStateProblem(legacy.copy(version = 2), parts))
         }

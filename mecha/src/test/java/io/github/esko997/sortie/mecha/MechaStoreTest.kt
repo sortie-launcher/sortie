@@ -3,6 +3,8 @@ package io.github.esko997.sortie.mecha
 import io.github.esko997.sortie.mecha.MechaRulesTest.Companion.INIT
 import io.github.esko997.sortie.mecha.MechaRulesTest.Companion.parts
 import io.github.esko997.sortie.mecha.MechaRulesTest.Companion.session
+import io.github.esko997.sortie.ui.SortieButtonStyle
+import io.github.esko997.sortie.ui.SortieFolderIcons
 import io.github.esko997.sortie.ui.SortiePalette
 import java.io.File
 import java.io.IOException
@@ -60,7 +62,7 @@ class MechaStoreTest {
         return view.value
     }
 
-    private fun onDisk(): MechaState = Json.decodeFromString(MechaState.serializer(), file.readText())
+    private fun onDisk(): MechaState = decodeMechaState(file.readText())
 
     @Test
     fun firstOpenSavesTheStarterHangarAndLaterOpensReadIt() = runBlocking {
@@ -68,7 +70,7 @@ class MechaStoreTest {
         val state = first.state!!
         assertEquals(state, onDisk())
         assertEquals(INIT, state.initializedAt)
-        assertEquals(56, first.parts.size)
+        assertEquals(200, first.parts.size)
         assertNotNull(first.message)
 
         val again = store(now = INIT + 10_000).settled()
@@ -142,7 +144,7 @@ class MechaStoreTest {
         s.rename("Bolt")
         s.equip("yard_head_1")
         s.care(MechaCare.CHARGE)
-        s.spin(MechaCabinetTier.PART, 0)
+        s.spin(MechaSlotStake.ONE, 0)
         s.setEnabled(false)
         s.refreshSessions()
         s.idle()
@@ -220,8 +222,8 @@ class MechaStoreTest {
         assertEquals(before.bond + 1, once.bond)
         val petFile = File(dir, "mecha/pet.txt")
         assertEquals(INIT.toString(), petFile.readText())
-        // Pet timing remains outside the version-three companion save.
-        assertEquals(3, once.version)
+        // Pet timing remains outside the companion save.
+        assertEquals(4, once.version)
         assertFalse(file.readText().contains("pet"))
         val bytes = file.readBytes()
         repeat(5) { s.pet() }
@@ -373,8 +375,9 @@ class MechaStoreTest {
         )
         val encoded = Json { encodeDefaults = true }.encodeToString(MechaState.serializer(), legacy)
         val oldFields = Json.parseToJsonElement(encoded).jsonObject - setOf(
-            "version", "ownedFinishes", "equippedFinishes", "cabinetSpins", "lastSpin",
-            "ownedThemes", "selectedTheme", "hangarIntroSeen", "arcadeRuns", "activeArcade", "arcadeBest"
+            "version", "ownedPaints", "equippedPaints", "cabinetSpins", "lastSpin", "legacyLastSpin",
+            "ownedThemes", "selectedTheme", "hangarIntroSeen", "arcadeRuns", "activeArcade", "arcadeBest",
+            "ownedFolderIcons", "selectedFolderIcons", "ownedButtonStyles", "selectedButtonStyle"
         )
         file.parentFile!!.mkdirs()
         file.writeText(JsonObject(oldFields).toString())
@@ -384,7 +387,7 @@ class MechaStoreTest {
         s.settled()
         s.refreshSessions()
         s.idle()
-        assertEquals(legacy.copy(version = 3), s.view.value.state)
+        assertEquals(legacy.copy(version = 4), s.view.value.state)
         assertEquals(s.view.value.state, onDisk())
     }
 
@@ -412,7 +415,7 @@ class MechaStoreTest {
         assertArrayEquals(bytes, file.readBytes())
         s.retryOpen()
         s.idle()
-        assertEquals(legacy.copy(version = 3), s.view.value.state)
+        assertEquals(legacy.copy(version = 4), s.view.value.state)
         assertEquals(s.view.value.state, s.backupSave())
         assertEquals(s.view.value.state, onDisk())
     }
@@ -424,8 +427,9 @@ class MechaStoreTest {
         val s = store()
         s.settled()
         repeat(2) { s.buyPart("survey_head_2") }
-        repeat(2) { s.buyFinish(MechaFinish.ALLOY) }
-        s.setFinish(MechaSlot.HEAD, MechaFinish.ALLOY)
+        val paint = MechaPaint(finish = MechaFinish.ALLOY)
+        repeat(2) { s.buyPaint(paint) }
+        s.applyPaint(paint, MechaSlot.HEAD)
         val build = mutableMapOf(
             MechaSlot.HEAD to "survey_head_2",
             MechaSlot.LEGS to "survey_legs_1",
@@ -435,23 +439,23 @@ class MechaStoreTest {
         s.fitBuild(build)
         s.idle()
         val saved = onDisk()
-        assertEquals(20 - MECHA_PART_PRICE - MechaFinish.ALLOY.price, saved.salvage)
+        assertEquals(20 - MECHA_PART_PRICE - paint.price, saved.salvage)
         assertEquals(before.owned + "survey_head_2", saved.owned)
-        assertEquals(setOf(MechaFinish.PLAIN, MechaFinish.ALLOY), saved.ownedFinishes)
-        assertEquals(MechaFinish.ALLOY, saved.equippedFinishes[MechaSlot.HEAD])
+        assertEquals(setOf(MechaPaint(), paint), saved.ownedPaints)
+        assertEquals(paint, saved.equippedPaints[MechaSlot.HEAD])
         assertEquals(build, saved.equipped)
         assertEquals(saved, store().settled().state)
-        s.setFinish(MechaSlot.HEAD, MechaFinish.PLAIN)
+        s.applyPaint(MechaPaint(), MechaSlot.HEAD)
         s.idle()
         assertEquals(saved.salvage, onDisk().salvage)
-        assertEquals(MechaFinish.PLAIN, onDisk().equippedFinishes[MechaSlot.HEAD] ?: MechaFinish.PLAIN)
+        assertEquals(MechaPaint(), onDisk().equippedPaints[MechaSlot.HEAD] ?: MechaPaint())
     }
 
     @Test
     fun queuedSpinsResolveOnceAndStaleClicksNeverSpendOrDrawAgain() = runBlocking {
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
-        val draws = Draws(0, 1)
+        val draws = Draws(0)
         val random = object : Random() {
             override fun nextBits(bitCount: Int): Int = error("Unexpected unbounded random draw")
 
@@ -465,9 +469,9 @@ class MechaStoreTest {
         val before = s.settled().state!!
         val bytes = file.readBytes()
         try {
-            s.spin(MechaCabinetTier.PART, 0)
+            s.spin(MechaSlotStake.ONE, 0)
             assertTrue(entered.await(5, TimeUnit.SECONDS))
-            s.spin(MechaCabinetTier.PART, 0)
+            s.spin(MechaSlotStake.ONE, 0)
             assertTrue(s.view.value.busy)
             assertEquals(before, s.view.value.state)
             assertArrayEquals(bytes, file.readBytes())
@@ -477,11 +481,11 @@ class MechaStoreTest {
         s.idle()
         val saved = onDisk()
         assertFalse(s.view.value.busy)
-        assertEquals(listOf(100, parts.size - before.owned.size), draws.bounds)
+        assertEquals(listOf(100), draws.bounds)
         assertEquals(1, saved.cabinetSpins)
-        assertEquals(before.salvage, saved.salvage)
-        assertEquals(before.owned + before.unownedIn(parts)[1].id, saved.owned)
-        assertEquals(MechaSpinOutcome.REWARD, saved.lastSpin!!.outcome)
+        assertEquals(before.salvage + 4, saved.salvage)
+        assertEquals(before.owned, saved.owned)
+        assertEquals(MechaSpinOutcome.JACKPOT, saved.lastSpin!!.outcome)
         assertEquals(saved, s.view.value.state)
         assertNotNull(s.view.value.error)
         assertEquals(saved, store().settled().state)
@@ -497,8 +501,8 @@ class MechaStoreTest {
         val tmp = File(file.parentFile, "state.json.tmp")
         assertTrue(tmp.mkdir())
         s.buyPart("survey_head_2")
-        s.buyFinish(MechaFinish.ALLOY)
-        s.spin(MechaCabinetTier.HOLO, 0)
+        s.buyPaint(MechaPaint(finish = MechaFinish.ALLOY))
+        s.spin(MechaSlotStake.FIVE, 0)
         s.idle()
         assertEquals(before, s.view.value.state)
         assertEquals(listOf(100), draws.bounds)
@@ -517,9 +521,9 @@ class MechaStoreTest {
         val before = s.settled().state!!
         val bytes = file.readBytes()
         s.buyPart("survey_head_2")
-        s.buyFinish(MechaFinish.ALLOY)
-        s.spin(MechaCabinetTier.ALLOY, 0)
-        s.spin(MechaCabinetTier.PART, 8)
+        s.buyPaint(MechaPaint(finish = MechaFinish.ALLOY))
+        s.spin(MechaSlotStake.THREE, 0)
+        s.spin(MechaSlotStake.ONE, 8)
         s.idle()
         assertEquals(before, s.view.value.state)
         assertTrue(draws.bounds.isEmpty())
@@ -528,10 +532,10 @@ class MechaStoreTest {
 
     @Test
     fun restoringAReceiptAndReloadingCannotGrantItsRewardAgain() = runBlocking {
-        val draws = Draws(0, 0)
+        val draws = Draws(0)
         val s = store(random = draws)
         s.settled()
-        s.spin(MechaCabinetTier.PART, 0)
+        s.spin(MechaSlotStake.ONE, 0)
         s.idle()
         val backup = s.backupSave()!!
         val decoded = Json.decodeFromString(MechaState.serializer(), Json.encodeToString(MechaState.serializer(), backup))
@@ -541,7 +545,7 @@ class MechaStoreTest {
         other.store.restore(decoded, emptyList())
         assertEquals(backup, other.disk())
         assertEquals(backup.lastSpin, other.store.backupSave()!!.lastSpin)
-        other.store.spin(MechaCabinetTier.PART, 0)
+        other.store.spin(MechaSlotStake.ONE, 0)
         other.store.idle()
         assertEquals(backup, other.disk())
         assertEquals(backup, store().settled().state)
@@ -553,7 +557,7 @@ class MechaStoreTest {
         val badStates = listOf(
             good.copy(version = 99),
             good.copy(cabinetSpins = 1),
-            good.copy(version = 1, ownedFinishes = setOf(MechaFinish.PLAIN, MechaFinish.ALLOY))
+            good.copy(version = 1, ownedPaints = setOf(MechaPaint(), MechaPaint(finish = MechaFinish.ALLOY)))
         )
         for (bad in badStates) {
             writeState(bad)
@@ -562,7 +566,7 @@ class MechaStoreTest {
             assertNull(s.settled().state)
             assertNotNull(s.restoreProblem(bad))
             assertTrue(runCatching { s.restore(bad, emptyList()) }.isFailure)
-            s.spin(MechaCabinetTier.PART, 0)
+            s.spin(MechaSlotStake.ONE, 0)
             s.idle()
             assertArrayEquals(bytes, file.readBytes())
         }
@@ -581,23 +585,23 @@ class MechaStoreTest {
         assertArrayEquals(bytes, file.readBytes())
         assertTrue(tmp.delete())
         s.restore(legacy, emptyList())
-        assertEquals(legacy.copy(version = 3), onDisk())
+        assertEquals(legacy.copy(version = 4), onDisk())
         assertEquals(onDisk(), s.view.value.state)
     }
 
     @Test
     fun refundAndMissPersistTheirExactNetCreditReturn() = runBlocking {
-        val draws = Draws(25, 0, 75, 0)
+        val draws = Draws(25, 75)
         val s = store(random = draws)
         val before = s.settled().state!!
-        s.spin(MechaCabinetTier.PART, 0)
+        s.spin(MechaSlotStake.ONE, 0)
         s.idle()
         val refund = onDisk()
         assertEquals(before.salvage, refund.salvage)
         assertEquals(before.owned, refund.owned)
         assertEquals(MechaSpinOutcome.REFUND, refund.lastSpin!!.outcome)
         assertEquals(1, refund.lastSpin!!.returnedCredits)
-        s.spin(MechaCabinetTier.PART, 1)
+        s.spin(MechaSlotStake.ONE, 1)
         s.idle()
         val miss = onDisk()
         assertEquals(before.salvage - 1, miss.salvage)
@@ -614,7 +618,7 @@ class MechaStoreTest {
         val legacy = starterMechaState(parts, INIT).copy(version = 1, salvage = 67, pendingMinutes = 4)
         writeState(legacy)
         val s = store()
-        assertEquals(legacy.copy(version = 3, pendingMinutes = 0), s.settled().state)
+        assertEquals(legacy.copy(version = 4, pendingMinutes = 0), s.settled().state)
         table.value = listOf(played)
         s.refreshSessions()
         s.idle()
@@ -645,18 +649,14 @@ class MechaStoreTest {
     }
 
     @Test
-    fun completedCabinetTiersNeverSpendOrResolveAnotherOutcome() = runBlocking {
-        val before = starterMechaState(parts, INIT).copy(
-            salvage = 20,
-            owned = parts.mapTo(LinkedHashSet()) { it.id },
-            ownedFinishes = MechaFinish.entries.toSet()
-        )
+    fun cappedWalletsNeverSpendOrResolveAnOutcome() = runBlocking {
+        val before = starterMechaState(parts, INIT).copy(salvage = 50)
         writeState(before)
         val bytes = file.readBytes()
         val draws = Draws()
         val s = store(random = draws)
         s.settled()
-        MechaCabinetTier.entries.forEach { s.spin(it, 0) }
+        MechaSlotStake.entries.forEach { s.spin(it, 0) }
         s.idle()
         assertEquals(before, s.view.value.state)
         assertTrue(draws.bounds.isEmpty())
@@ -843,10 +843,24 @@ class MechaStoreTest {
 
     @Test
     fun versionTwoMigrationFailureKeepsCommerceAndBlocksBackupUntilRetry() = runBlocking {
-        val legacy = starterMechaState(parts, INIT).copy(salvage = 73, processedSessions = setOf("old@1"))
-            .cabinetSpun(MechaCabinetTier.ALLOY, parts, 0, 0).state
-            .finishing(MechaSlot.BODY, MechaFinish.ALLOY).state.copy(version = 2)
-        writeState(legacy)
+        val legacy = starterMechaState(parts, INIT).copy(
+            version = 2,
+            salvage = 73,
+            processedSessions = setOf("old@1"),
+            ownedPaints = setOf(MechaPaint(), MechaPaint(finish = MechaFinish.ALLOY)),
+            equippedPaints = mapOf(MechaSlot.BODY to MechaPaint(finish = MechaFinish.ALLOY)),
+            cabinetSpins = 1,
+            legacyLastSpin = MechaLegacySpinReceipt(
+                1,
+                MechaLegacyCabinetTier.ALLOY,
+                listOf(0, 0, 0),
+                MechaLegacySpinOutcome.REWARD,
+                3,
+                finish = MechaFinish.ALLOY
+            )
+        )
+        file.parentFile!!.mkdirs()
+        file.writeText(legacyMechaText(legacy))
         val bytes = file.readBytes()
         val tmp = File(file.parentFile, "state.json.tmp")
         assertTrue(tmp.mkdir())
@@ -867,7 +881,7 @@ class MechaStoreTest {
         assertTrue(tmp.delete())
         s.retryOpen()
         s.idle()
-        assertEquals(legacy.copy(version = 3), onDisk())
+        assertEquals(legacy.copy(version = 4), onDisk())
         assertEquals(onDisk(), s.view.value.state)
         assertEquals(onDisk(), s.backupSave())
         assertFalse(onDisk().hangarIntroSeen)
@@ -887,5 +901,157 @@ class MechaStoreTest {
         assertEquals(expected, onDisk())
         assertEquals(expected, s.view.value.state)
         assertEquals(expected, store().settled().state)
+    }
+
+    @Test
+    fun paintAndLauncherPurchasesAndWholeBotApplyPersistAtomically() = runBlocking {
+        val initial = starterMechaState(parts, INIT).copy(salvage = 30)
+        writeState(initial)
+        val s = store()
+        s.settled()
+        val paint = MechaPaint(MechaPaintScheme.PLUM, MechaFinish.HOLO)
+        s.applyPaint(paint, null)
+        s.setFolderIcons(SortieFolderIcons.DRAWERS)
+        s.setButtonStyle(SortieButtonStyle.ARCADE)
+        s.idle()
+        assertEquals(initial, onDisk())
+        repeat(2) {
+            s.buyPaint(paint)
+            s.buyFolderIcons(SortieFolderIcons.DRAWERS)
+            s.buyButtonStyle(SortieButtonStyle.ARCADE)
+        }
+        s.idle()
+        val bought = onDisk()
+        assertEquals(10, bought.salvage)
+        assertTrue(bought.equippedPaints.isEmpty())
+        assertEquals("default", bought.selectedFolderIcons)
+        assertEquals("default", bought.selectedButtonStyle)
+        val bytes = file.readBytes()
+        val tmp = File(file.parentFile, "state.json.tmp")
+        assertTrue(tmp.mkdir())
+        s.applyPaint(paint, null)
+        s.setFolderIcons(SortieFolderIcons.DRAWERS)
+        s.setButtonStyle(SortieButtonStyle.ARCADE)
+        s.idle()
+        assertEquals(bought, s.view.value.state)
+        assertArrayEquals(bytes, file.readBytes())
+        assertTrue(tmp.delete())
+        s.applyPaint(paint, null)
+        s.setFolderIcons(SortieFolderIcons.DRAWERS)
+        s.setButtonStyle(SortieButtonStyle.ARCADE)
+        s.idle()
+        val applied = onDisk()
+        assertEquals(
+            bought.copy(
+                equippedPaints = MechaSlot.entries.associateWith { paint },
+                selectedFolderIcons = "drawers",
+                selectedButtonStyle = "arcade"
+            ),
+            applied
+        )
+        assertEquals(applied, store().settled().state)
+        assertEquals(applied, s.backupSave())
+    }
+
+    @Test
+    fun allSaveVersionsLoadUpgradeBackupAndRestoreWithoutLosingDurableState() = runBlocking {
+        for (version in 1..4) {
+            val initial = starterMechaState(parts, INIT).copy(
+                version = version, salvage = 31, motion = false, enabled = false, sleeping = true,
+                creditedMinutes = 19, pendingMinutes = 4, salvageRuns = 9, processedSessions = setOf("old@1")
+            )
+            val commerce = if (version < 2) {
+                initial
+            } else {
+                initial.copy(
+                    ownedPaints = setOf(MechaPaint(), MechaPaint(finish = MechaFinish.HOLO)),
+                    equippedPaints = mapOf(MechaSlot.LEGS to MechaPaint(finish = MechaFinish.HOLO)),
+                    cabinetSpins = 3,
+                    legacyLastSpin = MechaLegacySpinReceipt(
+                        3,
+                        MechaLegacyCabinetTier.HOLO,
+                        listOf(2, 2, 2),
+                        MechaLegacySpinOutcome.REWARD,
+                        5,
+                        finish = MechaFinish.HOLO
+                    )
+                )
+            }
+            val arcade = if (version < 3) {
+                commerce
+            } else {
+                commerce.copy(
+                    ownedThemes = setOf("default", "plum"),
+                    selectedTheme = "plum",
+                    hangarIntroSeen = true,
+                    arcadeRuns = 2,
+                    activeArcade = MechaArcadeTicket(2, null, Long.MIN_VALUE),
+                    arcadeBest = mapOf(MechaArcadeGame.FLAPPY_FLIGHT to 19)
+                )
+            }
+            val original = if (version < 4) {
+                arcade
+            } else {
+                arcade.copy(
+                    ownedPaints = arcade.ownedPaints + MechaPaint(MechaPaintScheme.MOSS, MechaFinish.ALLOY),
+                    equippedPaints = arcade.equippedPaints + (MechaSlot.HEAD to MechaPaint(MechaPaintScheme.MOSS, MechaFinish.ALLOY)),
+                    ownedFolderIcons = setOf("default", "pixel"),
+                    selectedFolderIcons = "pixel",
+                    ownedButtonStyles = setOf("default", "instrument"),
+                    selectedButtonStyle = "instrument"
+                )
+            }
+            file.parentFile!!.mkdirs()
+            if (version < 4) file.writeText(legacyMechaText(original)) else writeState(original)
+            val s = store()
+            val expected = original.copy(version = 4)
+            assertEquals(expected, s.settled().state)
+            assertEquals(expected, onDisk())
+            assertEquals(expected, s.backupSave())
+            s.restore(s.backupSave(), emptyList())
+            assertEquals(expected, onDisk())
+            assertEquals(expected, store().settled().state)
+        }
+    }
+
+    @Test
+    fun malformedHistoricalFinishAndReceiptBytesRemainUntouched() = runBlocking {
+        val historical = starterMechaState(parts, INIT).copy(
+            version = 3,
+            ownedPaints = setOf(MechaPaint(), MechaPaint(finish = MechaFinish.ALLOY)),
+            equippedPaints = mapOf(MechaSlot.HEAD to MechaPaint(finish = MechaFinish.ALLOY))
+        )
+        val text = legacyMechaText(historical)
+        val malformed = listOf(
+            text.replace("\"ALLOY\"", "\"UNKNOWN\""),
+            text.replace("\"ownedFinishes\":[\"PLAIN\",\"ALLOY\"]", "\"ownedFinishes\":[\"PLAIN\"]")
+        )
+        for (broken in malformed) {
+            file.parentFile!!.mkdirs()
+            file.writeText(broken)
+            val bytes = file.readBytes()
+            val s = store()
+            assertNull(s.settled().state)
+            s.buyPaint(MechaPaint(MechaPaintScheme.MOSS))
+            s.idle()
+            assertArrayEquals(bytes, file.readBytes())
+        }
+    }
+
+    @Test
+    fun failedLauncherAndPaintPurchasesNeverChargeOrGrantOwnership() = runBlocking {
+        val initial = starterMechaState(parts, INIT).copy(salvage = 30)
+        writeState(initial)
+        val s = store()
+        s.settled()
+        val bytes = file.readBytes()
+        assertTrue(File(file.parentFile, "state.json.tmp").mkdir())
+        s.buyPaint(MechaPaint(MechaPaintScheme.CANDY, MechaFinish.HOLO))
+        s.buyFolderIcons(SortieFolderIcons.CARTRIDGES)
+        s.buyButtonStyle(SortieButtonStyle.INSTRUMENT)
+        s.idle()
+        assertEquals(initial, s.view.value.state)
+        assertArrayEquals(bytes, file.readBytes())
+        assertNotNull(s.view.value.error)
     }
 }

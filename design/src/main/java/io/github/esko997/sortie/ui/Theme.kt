@@ -84,8 +84,8 @@ private val SortieType = Typography().run {
 private fun TextStyle.tight(weight: FontWeight, tracking: TextUnit) = copy(fontWeight = weight, letterSpacing = tracking)
 
 /**
- * One family of corners: fields 6, chips and rows 10 ([FocusRow]), cards and tiles 14, sheets 16, dialogs 20. Buttons keep
- * Material's pill, which sets actions apart from the things they act on.
+ * One family of corners: fields 6, chips and rows 10 ([FocusRow]), cards and tiles 14, sheets 16, dialogs 20.
+ * Original buttons keep Material's pill; purchased button treatments change their shell, not their layout or targets.
  */
 private val SortieShapes = Shapes(
     extraSmall = RoundedCornerShape(6.dp),
@@ -96,8 +96,17 @@ private val SortieShapes = Shapes(
 )
 
 @Composable
-fun SortieTheme(palette: SortiePalette = SortiePalette.DEFAULT, content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalPalette provides palette) {
+fun SortieTheme(
+    palette: SortiePalette = SortiePalette.DEFAULT,
+    folderIcons: SortieFolderIcons = SortieFolderIcons.DEFAULT,
+    buttonStyle: SortieButtonStyle = SortieButtonStyle.DEFAULT,
+    content: @Composable () -> Unit
+) {
+    CompositionLocalProvider(
+        LocalPalette provides palette,
+        LocalSortieFolderIcons provides folderIcons,
+        LocalSortieButtonStyle provides buttonStyle
+    ) {
         MaterialTheme(colorScheme = palette.colours, typography = SortieType, shapes = SortieShapes, content = content)
     }
 }

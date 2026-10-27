@@ -7,6 +7,7 @@ import io.github.esko997.sortie.data.user.LegacyNotes
 import io.github.esko997.sortie.data.user.LegacyUserMigration
 import io.github.esko997.sortie.mecha.MechaState
 import io.github.esko997.sortie.mecha.mechaStateProblem
+import io.github.esko997.sortie.mecha.migrateMechaSave
 import io.github.esko997.sortie.stats.CompanionView
 import io.github.esko997.sortie.stats.perfInterval
 import io.github.esko997.sortie.stats.statsInterval
@@ -126,7 +127,10 @@ fun parseBackup(text: String): ParsedBackup {
     // an older Sortie's journal and notes would otherwise be dropped silently as unknown keys
     val migrated = LegacyUserMigration.migrate(userSection)
     val backup = try {
-        backupJson.decodeFromJsonElement(BackupFile.serializer(), JsonObject(root + ("user" to migrated.user)))
+        val sections = root.toMutableMap()
+        sections["user"] = migrated.user
+        root["mecha"]?.takeUnless { it == kotlinx.serialization.json.JsonNull }?.let { sections["mecha"] = migrateMechaSave(it) }
+        backupJson.decodeFromJsonElement(BackupFile.serializer(), JsonObject(sections))
     } catch (e: SerializationException) {
         return ParsedBackup.Invalid("The backup is damaged: ${e.message?.lineSequence()?.firstOrNull() ?: "unreadable field"}.")
     } catch (e: IllegalArgumentException) {

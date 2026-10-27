@@ -1,0 +1,58 @@
+[
+  {
+    "id": "clockwork_head_1",
+    "slot": "HEAD",
+    "family": "clockwork",
+    "name": "Pendulum arched hood",
+    "asset": "mecha/clockwork/clockwork_head_1.png"
+  },
+  {
+    "id": "clockwork_head_2",
+    "slot": "HEAD",
+    "family": "clockwork",
+    "name": "Windup toothed crown",
+    "asset": "mecha/clockwork/clockwork_head_2.png"
+  },
+  {
+    "id": "clockwork_body_1",
+    "slot": "BODY",
+    "family": "clockwork",
+    "name": "Pendulum keeper case",
+    "asset": "mecha/clockwork/clockwork_body_1.png"
+  },
+  {
+    "id": "clockwork_body_2",
+    "slot": "BODY",
+    "family": "clockwork",
+    "name": "Windup escapement",
+    "asset": "mecha/clockwork/clockwork_body_2.png"
+  },
+  {
+    "id": "clockwork_arms_1",
+    "slot": "ARMS",
+    "family": "clockwork",
+    "name": "Pendulum brass fingers",
+    "asset": "mecha/clockwork/clockwork_arms_1.png"
+  },
+  {
+    "id": "clockwork_arms_2",
+    "slot": "ARMS",
+    "family": "clockwork",
+    "name": "Windup ratchet pincers",
+    "asset": "mecha/clockwork/clockwork_arms_2.png"
+  },
+  {
+    "id": "clockwork_legs_1",
+    "slot": "LEGS",
+    "family": "clockwork",
+    "name": "Pendulum case feet",
+    "asset": "mecha/clockwork/clockwork_legs_1.png"
+  },
+  {
+    "id": "clockwork_legs_2",
+    "slot": "LEGS",
+    "family": "clockwork",
+    "name": "Windup lever ankles",
+    "asset": "mecha/clockwork/clockwork_legs_2.png"
+  }
+]

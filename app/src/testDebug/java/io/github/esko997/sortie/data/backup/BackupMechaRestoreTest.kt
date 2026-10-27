@@ -6,9 +6,11 @@ import android.content.ContextWrapper
 import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.mecha.MechaArcadeGame
 import io.github.esko997.sortie.mecha.MechaArcadeTicket
-import io.github.esko997.sortie.mecha.MechaCabinetTier
 import io.github.esko997.sortie.mecha.MechaFinish
+import io.github.esko997.sortie.mecha.MechaPaint
+import io.github.esko997.sortie.mecha.MechaPaintScheme
 import io.github.esko997.sortie.mecha.MechaSlot
+import io.github.esko997.sortie.mecha.MechaSlotStake
 import io.github.esko997.sortie.mecha.MechaSpinOutcome
 import io.github.esko997.sortie.mecha.MechaSpinReceipt
 import io.github.esko997.sortie.mecha.MechaState
@@ -52,16 +54,20 @@ class BackupMechaRestoreTest {
                 arcadeRuns = 2,
                 activeArcade = MechaArcadeTicket(2, MechaArcadeGame.FLAPPY_FLIGHT, 812L),
                 arcadeBest = mapOf(MechaArcadeGame.FLAPPY_FLIGHT to 6),
-                ownedFinishes = setOf(MechaFinish.PLAIN, MechaFinish.HOLO),
-                equippedFinishes = mapOf(MechaSlot.BODY to MechaFinish.HOLO),
+                ownedPaints = setOf(MechaPaint(), MechaPaint(MechaPaintScheme.PLUM, MechaFinish.HOLO)),
+                equippedPaints = mapOf(MechaSlot.BODY to MechaPaint(MechaPaintScheme.PLUM, MechaFinish.HOLO)),
+                ownedFolderIcons = setOf("default", "drawers"),
+                selectedFolderIcons = "drawers",
+                ownedButtonStyles = setOf("default", "arcade"),
+                selectedButtonStyle = "arcade",
                 cabinetSpins = 1,
                 lastSpin = MechaSpinReceipt(
                     sequence = 1,
-                    tier = MechaCabinetTier.HOLO,
-                    reels = listOf(1, 1, 1),
-                    outcome = MechaSpinOutcome.REWARD,
+                    stake = MechaSlotStake.FIVE,
+                    reels = MechaSpinOutcome.REFUND.reels,
+                    outcome = MechaSpinOutcome.REFUND,
                     returnedCredits = 5,
-                    finish = MechaFinish.HOLO
+                    balanceAfter = 7
                 )
             )
             // Restore a paid round and selected cosmetics alongside the already-resolved slot-machine receipt.

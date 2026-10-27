@@ -1,0 +1,58 @@
+[
+  {
+    "id": "harvest_head_1",
+    "slot": "HEAD",
+    "family": "harvest",
+    "name": "Combine cab",
+    "asset": "mecha/harvest/harvest_head_1.png"
+  },
+  {
+    "id": "harvest_head_2",
+    "slot": "HEAD",
+    "family": "harvest",
+    "name": "Seed funnel",
+    "asset": "mecha/harvest/harvest_head_2.png"
+  },
+  {
+    "id": "harvest_body_1",
+    "slot": "BODY",
+    "family": "harvest",
+    "name": "Thresher drum",
+    "asset": "mecha/harvest/harvest_body_1.png"
+  },
+  {
+    "id": "harvest_body_2",
+    "slot": "BODY",
+    "family": "harvest",
+    "name": "Planter hopper",
+    "asset": "mecha/harvest/harvest_body_2.png"
+  },
+  {
+    "id": "harvest_arms_1",
+    "slot": "ARMS",
+    "family": "harvest",
+    "name": "Harvest rakes",
+    "asset": "mecha/harvest/harvest_arms_1.png"
+  },
+  {
+    "id": "harvest_arms_2",
+    "slot": "ARMS",
+    "family": "harvest",
+    "name": "Seed dibbers",
+    "asset": "mecha/harvest/harvest_arms_2.png"
+  },
+  {
+    "id": "harvest_legs_1",
+    "slot": "LEGS",
+    "family": "harvest",
+    "name": "Field cleats",
+    "asset": "mecha/harvest/harvest_legs_1.png"
+  },
+  {
+    "id": "harvest_legs_2",
+    "slot": "LEGS",
+    "family": "harvest",
+    "name": "Furrow walkers",
+    "asset": "mecha/harvest/harvest_legs_2.png"
+  }
+]

@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -40,12 +41,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.repeatOnLifecycle
 import io.github.esko997.sortie.mecha.MechaFinish
+import io.github.esko997.sortie.mecha.MechaPaint
+import io.github.esko997.sortie.mecha.MechaPaintScheme
 import io.github.esko997.sortie.mecha.MechaPart
 import io.github.esko997.sortie.mecha.MechaSlot
+import io.github.esko997.sortie.ui.displayLitFlow
+import io.github.esko997.sortie.ui.shownFlow
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
@@ -105,34 +108,60 @@ internal val MechaPose.stillFrame: Int get() = LOOPS.getValue(this).still
 internal class MechaSheet(val image: ImageBitmap, val phases: Int)
 
 /**
- * A process-wide 12 MiB LRU, not a catalog × finishes × phases matrix. The mutex serializes off-main work, bounding
+ * A process-wide 12 MiB LRU, not a catalog × paints × phases matrix. The mutex serializes off-main work, bounding
  * transient raster memory and avoiding duplicate decoding. Evicted images are not recycled while visible sprites own
- * them; no completed Deferred retains an evicted image. Plain sheets keep their original pixels and dimensions.
+ * them; no completed Deferred retains an evicted image. Original Standard keeps the original bitmap and dimensions.
  */
-private object MechaSheets {
-    private data class Key(val path: String, val slot: MechaSlot, val finish: MechaFinish)
+internal object MechaSheets {
+    private data class Key(val path: String, val paint: MechaPaint)
 
     private val ready = object : LruCache<Key, MechaSheet>(12 * 1024 * 1024) {
         override fun sizeOf(key: Key, value: MechaSheet): Int = value.image.width * value.image.height * 4
     }
     private val decoding = Mutex()
 
-    fun peek(path: String, slot: MechaSlot, finish: MechaFinish): MechaSheet? = ready.get(Key(path, slot, finish))
+    fun peek(path: String, paint: MechaPaint): MechaSheet? = ready.get(Key(path, paint))
 
-    suspend fun get(assets: AssetManager, path: String, slot: MechaSlot, finish: MechaFinish): MechaSheet {
-        val key = Key(path, slot, finish)
+    suspend fun get(assets: AssetManager, part: MechaPart, paint: MechaPaint): MechaSheet {
+        val key = Key(part.asset, paint)
         ready.get(key)?.let { return it }
         return withContext(Dispatchers.Default) {
             decoding.withLock {
-                ready.get(key) ?: decode(assets, path, slot, finish).also { ready.put(key, it) }
+                ready.get(key) ?: decode(assets, part, paint).also { ready.put(key, it) }
             }
         }
     }
 
-    private fun decode(assets: AssetManager, path: String, slot: MechaSlot, finish: MechaFinish): MechaSheet {
+    private fun decode(assets: AssetManager, part: MechaPart, paint: MechaPaint): MechaSheet {
+        val bitmap = decodeBitmap(assets, part.asset)
+        if (paint.scheme == MechaPaintScheme.ORIGINAL && paint.finish == MechaFinish.PLAIN) {
+            bitmap.prepareToDraw()
+            return MechaSheet(bitmap.asImageBitmap(), 1)
+        }
+        val phases = if (paint.finish == MechaFinish.PLAIN) 1 else MECHA_MATERIAL_PHASES
+        val material = try {
+            val source = IntArray(bitmap.width * bitmap.height)
+            bitmap.getPixels(source, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+            val mask = decodeBitmap(assets, part.paintAsset, premultiplied = false)
+            val roles = try {
+                IntArray(source.size).also { mask.getPixels(it, 0, mask.width, 0, 0, mask.width, mask.height) }
+            } finally {
+                mask.recycle()
+            }
+            val pixels = mechaMaterialPixels(source, roles, bitmap.width, bitmap.height, paint)
+            Bitmap.createBitmap(pixels, bitmap.width, bitmap.height * phases, Bitmap.Config.ARGB_8888)
+        } finally {
+            bitmap.recycle()
+        }
+        material.prepareToDraw()
+        return MechaSheet(material.asImageBitmap(), phases)
+    }
+
+    private fun decodeBitmap(assets: AssetManager, path: String, premultiplied: Boolean = true): Bitmap {
         val options = BitmapFactory.Options().apply {
             inScaled = false
             inPreferredConfig = Bitmap.Config.ARGB_8888
+            inPremultiplied = premultiplied
         }
         val bitmap = assets.open(path).use { BitmapFactory.decodeStream(it, null, options) }
             ?: throw IllegalStateException("$path is not a readable PNG")
@@ -141,20 +170,7 @@ private object MechaSheets {
             bitmap.recycle()
             error("$path is $dimensions, expected ${MECHA_FRAME * SHEET_FRAMES}x$MECHA_FRAME")
         }
-        if (finish == MechaFinish.PLAIN) {
-            bitmap.prepareToDraw()
-            return MechaSheet(bitmap.asImageBitmap(), 1)
-        }
-        val material = try {
-            val source = IntArray(bitmap.width * bitmap.height)
-            bitmap.getPixels(source, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-            val pixels = mechaMaterialPixels(source, bitmap.width, bitmap.height, slot, finish)
-            Bitmap.createBitmap(pixels, bitmap.width, bitmap.height * MECHA_MATERIAL_PHASES, Bitmap.Config.ARGB_8888)
-        } finally {
-            bitmap.recycle()
-        }
-        material.prepareToDraw()
-        return MechaSheet(material.asImageBitmap(), MECHA_MATERIAL_PHASES)
+        return bitmap
     }
 }
 
@@ -173,20 +189,20 @@ private fun rememberLayers(parts: List<MechaPart>, equipped: Map<MechaSlot, Stri
 
 /** The equipped parts' sheets from [MechaSheets]: ready at once when already decoded, else after an off-main decode. */
 @Composable
-internal fun rememberSpriteLoad(parts: List<MechaPart>, equipped: Map<MechaSlot, String>, finishes: Map<MechaSlot, MechaFinish> = emptyMap()): SpriteLoad =
-    spriteLoad(rememberLayers(parts, equipped), finishes)
+internal fun rememberSpriteLoad(parts: List<MechaPart>, equipped: Map<MechaSlot, String>, paints: Map<MechaSlot, MechaPaint> = emptyMap()): SpriteLoad =
+    spriteLoad(rememberLayers(parts, equipped), paints)
 
 @Composable
-private fun spriteLoad(layers: List<Pair<MechaSlot, MechaPart?>>, finishes: Map<MechaSlot, MechaFinish>): SpriteLoad {
+private fun spriteLoad(layers: List<Pair<MechaSlot, MechaPart?>>, paints: Map<MechaSlot, MechaPaint>): SpriteLoad {
     val context = LocalContext.current
-    val initial = remember(layers, finishes) { initialSpriteLoad(layers, finishes) }
-    val load by produceState(initial, layers, finishes) {
+    val initial = remember(layers, paints) { initialSpriteLoad(layers, paints) }
+    val load by produceState(initial, layers, paints) {
         val missing = layers.firstOrNull { it.second == null }
         value = if (missing != null) {
             SpriteLoad.Failed("No ${missing.first.label().lowercase()} part")
         } else {
             try {
-                SpriteLoad.Ready(layers.map { (slot, part) -> MechaSheets.get(context.assets, part!!.asset, slot, finishes[slot] ?: MechaFinish.PLAIN) })
+                SpriteLoad.Ready(layers.map { (slot, part) -> MechaSheets.get(context.assets, part!!, paints[slot] ?: ORIGINAL_PAINT) })
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -280,7 +296,7 @@ internal class MechaGlyph(rows: List<String>) {
  * the bounds with nearest-neighbour sampling, centred on whole device pixels, so every sprite pixel stays a crisp square.
  *
  * Animation: one frame counter, read only while drawing, so a tick redraws this sprite without recomposing anything. The ticker
- * runs only while [motion] is on, the sprite is composed and its lifecycle is RESUMED. Sheets come from [MechaSheets].
+ * runs only with [motion], visible ready sheets, a RESUMED lifecycle and a lit display. Sheets come from [MechaSheets].
  * A missing equipped part or an unreadable sheet says so in text instead of drawing an empty box.
  */
 @Composable
@@ -290,21 +306,23 @@ internal fun MechaSprite(
     pose: MechaPose,
     motion: Boolean,
     modifier: Modifier = Modifier,
-    finishes: Map<MechaSlot, MechaFinish> = emptyMap()
+    paints: Map<MechaSlot, MechaPaint> = emptyMap()
 ) {
     val layers = rememberLayers(parts, equipped)
     val description = remember(layers) {
         "Mech with " + layers.reversed().joinToString(", ") { (slot, part) -> part?.name ?: "no ${slot.label().lowercase()}" }
     }
-    val load = spriteLoad(layers, finishes)
+    val load = spriteLoad(layers, paints)
     val loop = LOOPS.getValue(pose)
     val tick = remember { mutableIntStateOf(0) }
     var visible by remember { mutableStateOf(false) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(pose, motion, lifecycle, visible) {
+    val androidView = LocalView.current
+    val ready = load is SpriteLoad.Ready
+    LaunchedEffect(pose, motion, lifecycle, androidView, visible, ready) {
         tick.intValue = 0
-        if (!motion || !visible) return@LaunchedEffect
-        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+        if (!motion || !visible || !ready) return@LaunchedEffect
+        whileShown(shownFlow(lifecycle, displayLitFlow(androidView))) {
             while (true) {
                 delay(loop.stepMs)
                 // Keep a full material cycle even for poses whose authored loop has only two steps.
@@ -345,9 +363,11 @@ internal fun MechaSprite(
     }
 }
 
-private fun initialSpriteLoad(layers: List<Pair<MechaSlot, MechaPart?>>, finishes: Map<MechaSlot, MechaFinish>): SpriteLoad {
+private val ORIGINAL_PAINT = MechaPaint()
+
+private fun initialSpriteLoad(layers: List<Pair<MechaSlot, MechaPart?>>, paints: Map<MechaSlot, MechaPaint>): SpriteLoad {
     val cached = layers.map { (slot, part) ->
-        part?.let { MechaSheets.peek(it.asset, slot, finishes[slot] ?: MechaFinish.PLAIN) } ?: return SpriteLoad.Loading
+        part?.let { MechaSheets.peek(it.asset, paints[slot] ?: ORIGINAL_PAINT) } ?: return SpriteLoad.Loading
     }
     return SpriteLoad.Ready(cached)
 }
@@ -388,9 +408,9 @@ internal fun MechaFigure(
     motion: Boolean,
     target: Dp,
     modifier: Modifier = Modifier,
-    finishes: Map<MechaSlot, MechaFinish> = emptyMap()
+    paints: Map<MechaSlot, MechaPaint> = emptyMap()
 ) {
-    MechaSprite(parts, equipped, pose, motion, modifier.size(mechaSize(target)), finishes)
+    MechaSprite(parts, equipped, pose, motion, modifier.size(mechaSize(target)), paints)
 }
 
 internal fun MechaSlot.label(): String = when (this) {

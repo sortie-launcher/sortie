@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,11 +26,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -43,7 +45,6 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -56,31 +57,24 @@ import androidx.compose.ui.window.DialogProperties
 import io.github.esko997.sortie.mecha.MECHA_FAMILIES
 import io.github.esko997.sortie.mecha.MECHA_NAME_MAX
 import io.github.esko997.sortie.mecha.MECHA_STAT_MAX
-import io.github.esko997.sortie.mecha.MechaBuild
 import io.github.esko997.sortie.mecha.MechaCare
-import io.github.esko997.sortie.mecha.MechaPart
 import io.github.esko997.sortie.mecha.MechaSlot
 import io.github.esko997.sortie.mecha.MechaState
 import io.github.esko997.sortie.mecha.MechaStore
 import io.github.esko997.sortie.mecha.MechaView
-import io.github.esko997.sortie.mecha.mechaBuilds
 import io.github.esko997.sortie.mecha.mechaNameProblem
 import io.github.esko997.sortie.mecha.owns
 import io.github.esko997.sortie.ui.Accent
 import io.github.esko997.sortie.ui.CanvasColour
 import io.github.esko997.sortie.ui.FocusRow
 import io.github.esko997.sortie.ui.PanelColour
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
 private enum class HangarTab(val label: String) {
     WORKSHOP("Workshop"),
     SHOP("Shop"),
     SLOT_MACHINE("Slot machine"),
-    GALLERY("Gallery"),
-    ARCADE("Arcade"),
-    THEMES("Themes")
+    ARCADE("Arcade")
 }
 
 /** How long a reaction (new part, care, rename) shows in the bay. */
@@ -104,12 +98,7 @@ private fun rememberCheer(state: MechaState): Boolean {
     return cheering
 }
 
-/**
- * The companion's hangar, over whatever screen opened it (that screen stays composed underneath, so a reader keeps its page).
- * Workshop is the real, saved hangar: every change goes through [MechaStore]. Gallery previews all the art and never changes
- * what is owned or worn, except through the same equip call when every previewed part is already owned.
- * B returns from any preview or shop to the Workshop, then closes the Hangar.
- */
+/** Shop buys; Workshop applies. Back discards local previews before navigating or closing. */
 @Composable
 fun Hangar(store: MechaStore, onClose: () -> Unit) {
     val view by store.view.collectAsState()
@@ -117,6 +106,7 @@ fun Hangar(store: MechaStore, onClose: () -> Unit) {
     var introductionOpen by rememberSaveable { mutableStateOf(false) }
     var arcadeBackRequest by remember { mutableStateOf(0) }
     var workshopFocusRequest by remember { mutableStateOf(0) }
+    val previewBack = remember { HangarPreviewBackStack() }
     val returnToWorkshop: () -> Unit = {
         tab = HangarTab.WORKSHOP
         // A followed immediately by B can coalesce to the already-composed tab. Focus restoration
@@ -128,87 +118,83 @@ fun Hangar(store: MechaStore, onClose: () -> Unit) {
         if (view.state?.hangarIntroSeen == false) introductionOpen = true
     }
     LaunchedEffect(Unit) { store.refreshSessions() }
-    Dialog(
-        onDismissRequest = {
-            when {
-                tab == HangarTab.ARCADE -> arcadeBackRequest++
-                tab != HangarTab.WORKSHOP -> returnToWorkshop()
-                else -> onClose()
-            }
-        },
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = PanelColour,
-            modifier = Modifier.widthIn(max = 880.dp).fillMaxWidth(0.96f).fillMaxHeight(0.94f)
+    CompositionLocalProvider(LocalHangarPreviewBack provides previewBack) {
+        Dialog(
+            onDismissRequest = {
+                when {
+                    previewBack.cancel() -> Unit
+                    tab == HangarTab.ARCADE -> arcadeBackRequest++
+                    tab != HangarTab.WORKSHOP -> returnToWorkshop()
+                    else -> onClose()
+                }
+            },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
-            // Focus targets stay attached while their page is not selected.
-            val tabFocus = remember { HangarTab.entries.associateWith { FocusRequester() } }
-            val closeFocus = remember { FocusRequester() }
-            val first = if (view.state == null) closeFocus else tabFocus.getValue(tab)
-            var focusedAny by remember { mutableStateOf(false) }
-            val inputMode = LocalInputModeManager.current
-            LaunchedEffect(first, introductionOpen) {
-                if (introductionOpen) return@LaunchedEffect
-                // A controller connected after a touch opening still needs a landing point.
-                repeat(25) {
-                    if (focusedAny) return@LaunchedEffect
-                    if (inputMode.inputMode == InputMode.Keyboard) first.requestFocus()
-                    delay(40)
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = PanelColour,
+                modifier = Modifier.widthIn(max = 880.dp).fillMaxWidth(0.96f).fillMaxHeight(0.94f)
+            ) {
+                // Focus targets stay attached while their page is not selected.
+                val tabFocus = remember { HangarTab.entries.associateWith { FocusRequester() } }
+                val closeFocus = remember { FocusRequester() }
+                val first = if (view.state == null) closeFocus else tabFocus.getValue(tab)
+                var focusedAny by remember { mutableStateOf(false) }
+                val inputMode = LocalInputModeManager.current
+                LaunchedEffect(inputMode.inputMode) {
+                    // Do not steal the first directional move from an already-focused tab.
+                    if (!introductionOpen && !focusedAny && inputMode.inputMode == InputMode.Keyboard) first.requestFocus()
                 }
-            }
-            Column(Modifier.padding(14.dp).onFocusChanged { if (it.hasFocus) focusedAny = true }) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Hangar", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    if (view.state != null) MechaButton("Help", onClick = { introductionOpen = true })
-                    MechaButton("Close", onClick = onClose, modifier = Modifier.focusRequester(closeFocus))
-                }
-                if (view.state != null) {
-                    // One scrollable row preserves the play area on short landscape displays.
-                    // Focused tabs are brought into view by the scroll container.
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.padding(top = 8.dp).fillMaxWidth().horizontalScroll(rememberScrollState())
-                    ) {
-                        HangarTab.entries.forEach { item ->
-                            MechaChip(
-                                item.label,
-                                tab == item,
-                                { tab = item },
-                                Modifier.focusRequester(tabFocus.getValue(item))
+                Column(Modifier.padding(14.dp).onFocusChanged { if (it.hasFocus) focusedAny = true }) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Hangar", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        if (view.state != null) MechaButton("Help", onClick = { introductionOpen = true })
+                        MechaButton("Close", onClick = onClose, modifier = Modifier.focusRequester(closeFocus))
+                    }
+                    if (view.state != null) {
+                        // One scrollable row preserves the play area on short landscape displays.
+                        // Focused tabs are brought into view by the scroll container.
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(top = 8.dp).fillMaxWidth().horizontalScroll(rememberScrollState())
+                        ) {
+                            HangarTab.entries.forEach { item ->
+                                MechaChip(
+                                    item.label,
+                                    tab == item,
+                                    { tab = item },
+                                    Modifier.focusRequester(tabFocus.getValue(item)).onFocusChanged { if (it.hasFocus) focusedAny = true }
+                                )
+                            }
+                        }
+                    }
+                    LaunchedEffect(tab, introductionOpen, view.state != null, workshopFocusRequest) {
+                        if (!introductionOpen && inputMode.inputMode == InputMode.Keyboard) first.requestFocus()
+                    }
+                    Outcome(view, showMessage = tab != HangarTab.ARCADE)
+                    val state = view.state
+                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                        when {
+                            state == null && view.error != null -> Damaged(store, view)
+                            state == null -> Text(
+                                "Opening the hangar…",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Muted,
+                                modifier = Modifier.padding(top = 12.dp)
                             )
+                            tab == HangarTab.WORKSHOP -> Workshop(store, view, state, onHide = onClose)
+                            tab == HangarTab.SHOP -> MechaShop(store, view, state)
+                            tab == HangarTab.SLOT_MACHINE -> MechaSlotMachine(store, view, state)
+                            tab == HangarTab.ARCADE -> MechaArcade(store, view, state, arcadeBackRequest, onBack = returnToWorkshop)
                         }
                     }
                 }
-                LaunchedEffect(tab, introductionOpen, view.state != null, workshopFocusRequest) {
-                    if (!introductionOpen && inputMode.inputMode == InputMode.Keyboard) first.requestFocus()
-                }
-                Outcome(view, showMessage = tab != HangarTab.ARCADE)
-                val state = view.state
-                Box(Modifier.weight(1f).fillMaxWidth()) {
-                    when {
-                        state == null && view.error != null -> Damaged(store, view)
-                        state == null -> Text(
-                            "Opening the hangar…",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Muted,
-                            modifier = Modifier.padding(top = 12.dp)
-                        )
-                        tab == HangarTab.WORKSHOP -> Workshop(store, view, state, onHide = onClose)
-                        tab == HangarTab.SHOP -> MechaShop(store, view, state)
-                        tab == HangarTab.SLOT_MACHINE -> MechaSlotMachine(store, view, state)
-                        tab == HangarTab.GALLERY -> Gallery(store, view, state)
-                        tab == HangarTab.ARCADE -> MechaArcade(store, view, state, arcadeBackRequest, onBack = returnToWorkshop)
-                        tab == HangarTab.THEMES -> MechaThemes(store, view, state)
-                    }
-                }
             }
-        }
-        if (introductionOpen && view.state != null) {
-            MechaIntroduction(store, view) { hidden ->
-                introductionOpen = false
-                if (hidden) onClose()
+            if (introductionOpen && view.state != null) {
+                MechaIntroduction(store, view) { hidden ->
+                    introductionOpen = false
+                    if (hidden) onClose()
+                }
             }
         }
     }
@@ -254,54 +240,96 @@ private fun Damaged(store: MechaStore, view: MechaView) {
     }
 }
 
+private enum class WorkshopArea(val label: String) { BOT("Bot"), LAUNCHER("Launcher") }
+private enum class BotArea(val label: String) { ASSEMBLY("Assembly"), PAINT("Paint"), CARE("Care") }
+
 @Composable
 private fun Workshop(store: MechaStore, view: MechaView, state: MechaState, onHide: () -> Unit) {
-    var care by rememberSaveable { mutableStateOf(false) }
+    var area by rememberSaveable { mutableStateOf(WorkshopArea.BOT) }
+    var bot by rememberSaveable { mutableStateOf(BotArea.ASSEMBLY) }
     var draft by rememberSaveable(state.equipped, stateSaver = buildSaver) { mutableStateOf(state.equipped) }
     val assemblyFocus = remember { FocusRequester() }
     val input = LocalInputModeManager.current
-    val fit: @Composable () -> Unit = {
-        AssemblyActions(
-            busy = view.busy,
-            changed = draft != state.equipped,
-            onFit = {
-                if (!store.view.value.busy) store.fitBuild(draft)
-                if (input.inputMode == InputMode.Keyboard) assemblyFocus.requestFocus()
-            },
-            onReset = { draft = state.equipped }
-        )
+    val resetDraft: () -> Unit = {
+        draft = state.equipped
+        if (input.inputMode == InputMode.Keyboard) assemblyFocus.requestFocus()
     }
-    val controls: @Composable () -> Unit = {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            MechaChip("Assembly", !care, { care = false }, Modifier.focusRequester(assemblyFocus))
-            MechaChip("Care", care, { care = true })
-        }
-        if (care) {
-            Care(store, state)
-            Settings(store, view, state, onHide)
-        } else {
-            Assembly(view, state, draft, onDraft = { draft = it })
-        }
-    }
-    BoxWithConstraints(Modifier.padding(top = 10.dp).fillMaxWidth()) {
-        if (maxWidth >= 480.dp) {
-            val previewWidth = (maxWidth - 16.dp) * 0.42f
-            val controlsHeight = if (previewWidth < 240.dp) 240.dp else 180.dp
-            val figureSize = minOf(176.dp, (maxHeight - controlsHeight).coerceAtLeast(64.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column(Modifier.weight(0.42f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Bay(store, view, state, draft, compact = false, target = figureSize)
-                    Text(if (draft == state.equipped) "Saved build" else "Preview · not fitted", style = MaterialTheme.typography.bodySmall, color = Muted)
-                    fit()
-                }
-                Column(Modifier.weight(0.58f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) { controls() }
+    HangarPreviewBack(area == WorkshopArea.BOT && bot == BotArea.ASSEMBLY && draft != state.equipped, resetDraft)
+    Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            WorkshopArea.entries.forEach { choice ->
+                MechaChip(choice.label, area == choice, {
+                    draft = state.equipped
+                    area = choice
+                })
             }
+            if (area == WorkshopArea.BOT) {
+                Box(Modifier.padding(horizontal = 4.dp).width(1.dp).height(24.dp).background(Muted))
+                BotArea.entries.forEach { choice ->
+                    MechaChip(
+                        choice.label,
+                        bot == choice,
+                        {
+                            draft = state.equipped
+                            bot = choice
+                        },
+                        if (choice == BotArea.ASSEMBLY) Modifier.focusRequester(assemblyFocus) else Modifier
+                    )
+                }
+            }
+        }
+        if (area == WorkshopArea.LAUNCHER) {
+            MechaLauncher(store, view, state, purchasing = false)
         } else {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Bay(store, view, state, draft, compact = true, target = 112.dp)
-                Text(if (draft == state.equipped) "Saved build" else "Preview · not fitted", style = MaterialTheme.typography.bodySmall, color = Muted)
-                fit()
-                controls()
+            if (bot == BotArea.PAINT) {
+                MechaPaintPicker(store, view, state, purchasing = false)
+            } else {
+                val preview: @Composable (Boolean) -> Unit = { compact ->
+                    Bay(store, view, state, draft, compact = compact, target = 112.dp)
+                    if (bot == BotArea.ASSEMBLY) {
+                        Text(if (draft == state.equipped) "Saved build" else "Preview · not fitted", style = MaterialTheme.typography.bodySmall, color = Muted)
+                        AssemblyActions(
+                            view.busy,
+                            draft != state.equipped,
+                            onFit = {
+                                if (!store.view.value.busy) store.fitBuild(draft)
+                                if (input.inputMode == InputMode.Keyboard) assemblyFocus.requestFocus()
+                            },
+                            onReset = resetDraft
+                        )
+                    }
+                }
+                val controls: @Composable () -> Unit = {
+                    if (bot == BotArea.CARE) {
+                        Care(store, state)
+                        Settings(store, view, state, onHide)
+                    } else {
+                        Assembly(view, state, draft, onDraft = { draft = it })
+                    }
+                }
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    if (maxWidth >= 480.dp) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Column(
+                                Modifier.weight(0.42f).verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) { preview(false) }
+                            Column(
+                                Modifier.weight(0.58f).verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) { controls() }
+                        }
+                    } else {
+                        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            preview(true)
+                            controls()
+                        }
+                    }
+                }
             }
         }
     }
@@ -322,12 +350,12 @@ private fun Bay(store: MechaStore, view: MechaView, state: MechaState, draft: Ma
     val floor = Modifier.clip(RoundedCornerShape(12.dp)).background(CanvasColour).padding(10.dp)
     if (compact) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(floor) { MechaFigure(view.parts, draft, pose, state.motion && state.enabled, target = target, finishes = state.equippedFinishes) }
+            Box(floor) { MechaFigure(view.parts, draft, pose, state.motion && state.enabled, target = target, paints = state.equippedPaints) }
             Box(Modifier.weight(1f)) { Rename(store, state) }
         }
     } else {
         Box(Modifier.fillMaxWidth().then(floor), contentAlignment = Alignment.Center) {
-            MechaFigure(view.parts, draft, pose, state.motion && state.enabled, target = target, finishes = state.equippedFinishes)
+            MechaFigure(view.parts, draft, pose, state.motion && state.enabled, target = target, paints = state.equippedPaints)
         }
         Rename(store, state)
     }
@@ -348,6 +376,10 @@ private fun Rename(store: MechaStore, state: MechaState) {
         focus.clearFocus()
         editing = false
         if (inputMode.inputMode == InputMode.Keyboard) action.requestFocus()
+    }
+    HangarPreviewBack(editing) {
+        draft = state.name
+        finish()
     }
     val save = {
         if (problem == null) {
@@ -479,8 +511,7 @@ private fun AssemblyActions(busy: Boolean, changed: Boolean, onFit: () -> Unit, 
 
 private enum class AssemblySource(val label: String) {
     PARTS("Parts"),
-    FAMILIES("Family sets"),
-    MIXES("Mixes")
+    FAMILIES("Family sets")
 }
 
 /** All choice modes feed the same draft shown at left; none of them equips anything. */
@@ -493,7 +524,6 @@ private fun Assembly(view: MechaView, state: MechaState, draft: Map<MechaSlot, S
     when (source) {
         AssemblySource.PARTS -> AssemblyParts(view, state, draft, onDraft)
         AssemblySource.FAMILIES -> FamilySets(view, state, draft, onDraft)
-        AssemblySource.MIXES -> AssemblyMixes(view, state, onDraft)
     }
 }
 
@@ -501,8 +531,12 @@ private fun Assembly(view: MechaView, state: MechaState, draft: Map<MechaSlot, S
 @Composable
 private fun AssemblyParts(view: MechaView, state: MechaState, draft: Map<MechaSlot, String>, onDraft: (Map<MechaSlot, String>) -> Unit) {
     var slot by rememberSaveable { mutableStateOf(MechaSlot.HEAD) }
-    var partPage by rememberSaveable(slot) { mutableStateOf(0) }
-    val choices = remember(view.parts, state.owned, slot) { view.parts.filter { it.slot == slot && state.owns(it.id) }.sortedWith(partOrder) }
+    var family by rememberSaveable { mutableStateOf<String?>(null) }
+    var partPage by rememberSaveable(slot, family) { mutableStateOf(0) }
+    val choices = remember(view.parts, state.owned, slot, family) {
+        view.parts.filter { it.slot == slot && state.owns(it.id) && (family == null || it.family == family) }.sortedWith(partOrder)
+    }
+    FamilyFilter(family) { family = it }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         MechaSlot.entries.forEach { s -> MechaChip(s.label(), s == slot, { slot = s }) }
     }
@@ -550,183 +584,25 @@ private fun AssemblyParts(view: MechaView, state: MechaState, draft: Map<MechaSl
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun AssemblyMixes(view: MechaView, state: MechaState, onDraft: (Map<MechaSlot, String>) -> Unit) {
-    var mixIndex by rememberSaveable { mutableStateOf(-1) }
-    val builds by produceState<List<MechaBuild>?>(null, view.parts, state.owned) {
-        value = withContext(Dispatchers.Default) { mechaBuilds(view.parts, state.owned) }
-    }
-    Text(
-        "Body + arms from one family; head + legs from another. Preview freely, then Fit build. Finishes stay on.",
-        style = MaterialTheme.typography.bodySmall,
-        color = Muted
-    )
-    val mixes = builds
-    when {
-        mixes == null -> Text("Finding owned mixed builds…", style = MaterialTheme.typography.bodySmall, color = Muted)
-        mixes.isEmpty() -> Text(
-            "Own more parts from two families to mix builds. The Shop has the complete collection.",
-            style = MaterialTheme.typography.bodySmall,
-            color = Muted
-        )
-        else -> {
-            val index = mixIndex.coerceIn(0, mixes.lastIndex)
-            val selectMix: (Int) -> Unit = { next ->
-                mixIndex = next
-                onDraft(mixes[next].equipped)
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                MechaButton("Mix build", onClick = { selectMix(0) })
-                if (mixIndex >= 0) {
-                    MechaButton("Previous mix", onClick = { selectMix(if (index == 0) mixes.lastIndex else index - 1) })
-                    MechaButton("Next mix", onClick = { selectMix(if (index == mixes.lastIndex) 0 else index + 1) })
-                }
-            }
-            if (mixIndex >= 0) Text("Mix ${index + 1} of ${mixes.size} · preview only", style = MaterialTheme.typography.bodySmall, color = Muted)
-        }
-    }
-}
-
-/** Owned family sets are another shortcut into the same unsaved assembly draft. */
+/** Exactly the authored variants, never precomputed mixed combinations. Manual parts remain unrestricted. */
 @Composable
 private fun FamilySets(view: MechaView, state: MechaState, draft: Map<MechaSlot, String>, onPick: (Map<MechaSlot, String>) -> Unit) {
-    Text("Family sets · preview", style = MaterialTheme.typography.titleSmall)
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        MECHA_FAMILIES.forEach { family ->
-            val set = remember(view.parts, state.owned, family) { ownedSet(view.parts, state, family) }
-            MechaChip(
-                familyName(family),
-                set != null && set == draft,
-                { if (set != null) onPick(set) },
-                modifier = Modifier.semantics {
-                    contentDescription = "${familyName(family)}, " +
-                        if (set != null) "preview owned set" else "not all slots owned"
-                },
-                dim = set == null
-            )
-        }
-    }
-}
-
-/** For every slot, the family's owned part (variant 1 first), or null when a slot has none owned. */
-private fun ownedSet(parts: List<MechaPart>, state: MechaState, family: String): Map<MechaSlot, String>? {
-    val set = HashMap<MechaSlot, String>()
-    for (slot in MechaSlot.entries) {
-        val part = parts.filter { it.family == family && it.slot == slot && state.owns(it.id) }.minByOrNull { it.variant } ?: return null
-        set[slot] = part.id
-    }
-    return set
-}
-
-/**
- * Every part in the catalogue, owned or not, for comparing art and animation. Nothing here unlocks anything: unfound parts
- * are labelled as previews and a build can be worn only when every part of it is owned.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun Gallery(store: MechaStore, view: MechaView, state: MechaState) {
-    var build by rememberSaveable(stateSaver = buildSaver) { mutableStateOf(state.equipped) }
-    var pose by rememberSaveable { mutableStateOf(MechaPose.IDLE) }
-    var families by rememberSaveable { mutableStateOf(false) }
-    var slot by rememberSaveable { mutableStateOf(MechaSlot.HEAD) }
-    val missing = remember(build, state.owned, view.parts) {
-        MechaSlot.entries.mapNotNull { s -> build[s]?.takeIf { !state.owns(it) }?.let { id -> view.parts.firstOrNull { it.id == id } } }
-    }
-    val preview: @Composable () -> Unit = {
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(CanvasColour).padding(10.dp), contentAlignment = Alignment.Center) {
-            MechaFigure(view.parts, build, pose, state.motion && state.enabled, target = 176.dp, finishes = state.equippedFinishes)
-        }
-        Text(
-            if (missing.isEmpty()) "Every part of this build is in your hangar." else "Preview only. Not found yet: " + missing.joinToString(", ") { it.name },
-            style = MaterialTheme.typography.bodySmall,
-            color = if (missing.isEmpty()) Muted else Accent
-        )
-    }
-    val controls: @Composable () -> Unit = {
-        Text("Preview every part and pose for free. Find missing parts in the Shop or Slot machine.", style = MaterialTheme.typography.bodySmall, color = Muted)
-        MechaButton(
-            if (build == state.equipped) "Wearing" else "Wear this build",
-            onClick = { if (!store.view.value.busy) store.fitBuild(build) },
-            enabled = !view.busy && missing.isEmpty() && build != state.equipped
-        )
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            MechaPose.entries.forEach { p -> MechaChip(p.label(), p == pose, { pose = p }) }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            MechaChip("Parts", !families, { families = false })
-            MechaChip("Families", families, { families = true })
-        }
-        if (families) {
-            FamilyGrid(view, state, pose, onPick = { build = it })
-        } else {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                MechaSlot.entries.forEach { s -> MechaChip(s.label(), s == slot, { slot = s }) }
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                view.parts.filter { it.slot == slot }.sortedWith(partOrder).forEach { part ->
-                    val owned = state.owns(part.id)
-                    MechaChip(
-                        if (owned) part.name else "${part.name} (preview)",
-                        build[slot] == part.id,
-                        { build = build + (slot to part.id) },
-                        Modifier.semantics { contentDescription = "${part.name}, ${familyName(part.family)}, ${if (owned) "owned" else "not found yet"}" },
-                        dim = !owned
-                    )
-                }
-            }
-        }
-    }
-    BoxWithConstraints(Modifier.padding(top = 10.dp).fillMaxWidth()) {
-        if (maxWidth >= 560.dp) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column(Modifier.weight(0.42f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) { preview() }
-                Column(Modifier.weight(0.58f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) { controls() }
-            }
-        } else {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                preview()
-                controls()
-            }
-        }
-    }
-}
-
-/** One family's two authored builds at a time; picking one only changes the gallery preview. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun FamilyGrid(view: MechaView, state: MechaState, pose: MechaPose, onPick: (Map<MechaSlot, String>) -> Unit) {
     var family by rememberSaveable { mutableStateOf(MECHA_FAMILIES.first()) }
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        MECHA_FAMILIES.forEach { name -> MechaChip(familyName(name), name == family, { family = name }) }
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        MECHA_FAMILIES.forEach { choice -> MechaChip(familyName(choice), family == choice, { family = choice }) }
     }
+    Note("Choose an owned family set, or mix any owned parts in Parts. Only Fit build saves the preview.")
     for (variant in 1..2) {
         val pieces = remember(view.parts, family, variant) { view.parts.filter { it.family == family && it.variant == variant } }
         val set = remember(pieces) { pieces.associate { it.slot to it.id } }
-        if (set.size == MechaSlot.entries.size) {
-            val have = set.values.count { state.owns(it) }
-            FocusRow(onClick = { onPick(set) }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    MechaFigure(view.parts, set, pose, state.motion && state.enabled, target = 64.dp, finishes = state.equippedFinishes)
-                    Column(Modifier.padding(start = 8.dp)) {
-                        Text("${familyName(family)} $variant", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            if (have == set.size) "All owned" else "Preview, $have of ${set.size} owned",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (have == set.size) Accent else Muted
-                        )
-                    }
-                }
-            }
-        }
+        val owned = set.size == MechaSlot.entries.size && set.values.all { state.owns(it) }
+        MechaChip(
+            "${familyName(family)} $variant · ${if (owned) "owned" else "in Shop"}",
+            set == draft,
+            { if (owned) onPick(set) },
+            dim = !owned
+        )
     }
-}
-
-private fun MechaPose.label(): String = when (this) {
-    MechaPose.IDLE -> "Idle"
-    MechaPose.WALK -> "Walk"
-    MechaPose.SLEEP -> "Sleep"
-    MechaPose.CELEBRATE -> "Cheer"
 }
 
 private val buildSaver = Saver<Map<MechaSlot, String>, ArrayList<String>>(

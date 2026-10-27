@@ -94,7 +94,7 @@ internal fun MechaArcade(store: MechaStore, view: MechaView, state: MechaState, 
     val session = store.arcadeSession
     val run by session.run.collectAsState()
     val host = remember { Any() }
-    val spriteLoad = rememberSpriteLoad(view.parts, state.equipped, state.equippedFinishes)
+    val spriteLoad = rememberSpriteLoad(view.parts, state.equipped, state.equippedPaints)
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val windowFocused = LocalWindowInfo.current.isWindowFocused
     var visible by remember { mutableStateOf(false) }

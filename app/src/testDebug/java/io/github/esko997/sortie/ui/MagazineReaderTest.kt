@@ -211,7 +211,7 @@ class MagazineReaderTest {
         repeat(6) { if (pad.focusedLabel()?.startsWith("Visit the hangar") != true) pad.press(DOWN) }
         assertTrue("focus on the menu's hangar entry: ${pad.focusedLabel()}", pad.focusedLabel()!!.startsWith("Visit the hangar"))
         pad.press(A)
-        compose.waitUntil(5_000) { shown("Workshop") && shown("Gallery") }
+        compose.waitUntil(5_000) { shown("Workshop") && shown("Shop") }
         assertTrue("the reader menu closed behind the Hangar", !shown("Reader tools"))
         pad.press(B)
         compose.waitUntil(5_000) { !shown("Workshop") }

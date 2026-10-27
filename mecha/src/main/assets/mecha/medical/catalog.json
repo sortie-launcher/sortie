@@ -1,0 +1,58 @@
+[
+  {
+    "id": "medical_head_1",
+    "slot": "HEAD",
+    "family": "medical",
+    "name": "Diagnostic display",
+    "asset": "mecha/medical/medical_head_1.png"
+  },
+  {
+    "id": "medical_head_2",
+    "slot": "HEAD",
+    "family": "medical",
+    "name": "Field medic cap",
+    "asset": "mecha/medical/medical_head_2.png"
+  },
+  {
+    "id": "medical_body_1",
+    "slot": "BODY",
+    "family": "medical",
+    "name": "Clinical cart",
+    "asset": "mecha/medical/medical_body_1.png"
+  },
+  {
+    "id": "medical_body_2",
+    "slot": "BODY",
+    "family": "medical",
+    "name": "Triage pack",
+    "asset": "mecha/medical/medical_body_2.png"
+  },
+  {
+    "id": "medical_arms_1",
+    "slot": "ARMS",
+    "family": "medical",
+    "name": "Probe and clamp",
+    "asset": "mecha/medical/medical_arms_1.png"
+  },
+  {
+    "id": "medical_arms_2",
+    "slot": "ARMS",
+    "family": "medical",
+    "name": "Brace and supply case",
+    "asset": "mecha/medical/medical_arms_2.png"
+  },
+  {
+    "id": "medical_legs_1",
+    "slot": "LEGS",
+    "family": "medical",
+    "name": "Swivel casters",
+    "asset": "mecha/medical/medical_legs_1.png"
+  },
+  {
+    "id": "medical_legs_2",
+    "slot": "LEGS",
+    "family": "medical",
+    "name": "Field gaiters",
+    "asset": "mecha/medical/medical_legs_2.png"
+  }
+]
