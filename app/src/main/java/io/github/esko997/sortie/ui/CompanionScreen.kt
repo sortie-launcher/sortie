@@ -1,11 +1,6 @@
 package io.github.esko997.sortie.ui
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.net.Uri
-import android.os.BatteryManager
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -22,7 +17,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,7 +35,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -100,10 +93,12 @@ import io.github.esko997.sortie.mecha.ui.mechaSpot
 import io.github.esko997.sortie.mecha.ui.rememberMechaStage
 import io.github.esko997.sortie.shell.ScreenMover
 import io.github.esko997.sortie.shell.TaskSwitcher
+import io.github.esko997.sortie.stats.CompanionPanel
 import io.github.esko997.sortie.stats.CompanionView
 import io.github.esko997.sortie.ui.SortieOutlinedButton as OutlinedButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -181,14 +176,16 @@ fun CompanionScreen(displayId: Int) {
                 else -> Box(Modifier.fillMaxSize()) {
                     // Exactly one of these is composed: the hero ticker only runs while nothing is being played. Browsing another
                     // game with the navigation visible takes the panel without ending the session; once the navigation is gone (the
-                    // game is in front again) or nothing else is selected, Now playing returns.
+                    // game is in front again) or nothing else is selected, the session's panel returns ([companionPanel]).
                     val s = session
-                    val browsingOther = navigationVisible && selected != null && selected?.id != s?.gameId
-                    when {
-                        // Perf mode (Settings → Companion screen shows): live device stats in place of the game panel
-                        rememberCompanionView(graph) == CompanionView.PERF -> CompanionPerf()
-                        s != null && !browsingOther -> NowPlaying(graph, s)
-                        else -> HeroPanel(graph)
+                    val autoNowPlaying by AutoCompanionChoice.nowPlaying.collectAsState()
+                    val panel = companionPanel(rememberCompanionView(graph), s, selected?.id, navigationVisible, autoNowPlaying)
+                    when (panel) {
+                        // Perf (Settings → Companion screen shows), or Auto while a game is played: live device stats in place of the game panel
+                        CompanionPanel.PERF, CompanionPanel.AUTO_PERF -> CompanionPerf()
+                        CompanionPanel.NOW_PLAYING, CompanionPanel.AUTO_NOW_PLAYING ->
+                            if (s != null) NowPlaying(graph, s, clearChip = panel == CompanionPanel.AUTO_NOW_PLAYING)
+                        CompanionPanel.HERO -> HeroPanel(graph)
                     }
                     // the companion's way in and out of this screen: the screen edges just above the bottom inset
                     Spacer(
@@ -196,6 +193,17 @@ fun CompanionScreen(displayId: Int) {
                             .mechaSpot("companion:edge-start", MechaSpotKind.EDGE_START)
                             .mechaSpot("companion:edge-end", MechaSpotKind.EDGE_END)
                     )
+                    // Auto's flip for this session, between Perf and Now playing (which hosts the reference cards): a touch chip
+                    // between the dock and '+', since the controller stays with the game; the next session opens on Perf again
+                    if (s != null && (panel == CompanionPanel.AUTO_PERF || panel == CompanionPanel.AUTO_NOW_PLAYING)) {
+                        val toNowPlaying = panel == CompanionPanel.AUTO_PERF
+                        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp).mechaObstacle("companion:auto", interactive = true)) {
+                            TouchChip(
+                                if (toNowPlaying) "Now playing" else "Perf",
+                                onClickLabel = if (toNowPlaying) "Show Now playing" else "Show Perf"
+                            ) { AutoCompanionChoice.nowPlaying.value = if (toNowPlaying) s.startedAt else null }
+                        }
+                    }
                     CornerPlus(Modifier.align(Alignment.BottomEnd).padding(16.dp).mechaSpot("companion:plus", MechaSpotKind.BESIDE_START, interactive = true)) {
                         launcher = true
                     }
@@ -209,9 +217,10 @@ fun CompanionScreen(displayId: Int) {
                     ) { dockSlot = it }
                     // one element per corner, all on the same 44 dp inset: battery · bell / dock · '+'
                     // he may poke the battery from beside it, or stand under it and lift it (decorative, never a control)
-                    Battery(
+                    BatteryGauge(
                         Modifier.align(Alignment.TopStart).padding(16.dp)
                             .mechaSpot("companion:battery", MechaSpotKind.BESIDE_END, props = setOf(MechaProp.POKE, MechaProp.LIFT))
+                            .height(CORNER)
                     )
                     Bell(graph, Modifier.align(Alignment.TopEnd).padding(16.dp).mechaSpot("companion:bell", MechaSpotKind.BESIDE_START, interactive = true))
                     // his home base: right under the bell, beside the picture (Panel keeps the picture clear of it)
@@ -224,6 +233,39 @@ fun CompanionScreen(displayId: Int) {
             }
         }
     }
+}
+
+/**
+ * Auto's choice for the open session (Settings → Companion screen shows): the start of the session whose companion was flipped
+ * to Now playing, else null. Process-wide like [ReferenceSelection], so the switcher, a picker, the magazine panel or a recreated
+ * companion give it back unchanged; another session (another start) opens on Perf again.
+ */
+object AutoCompanionChoice {
+    val nowPlaying = MutableStateFlow<Long?>(null)
+}
+
+/**
+ * [CompanionView.panel] for this moment: the open [session] owns the panel unless the navigation is visible on another game
+ * ([selectedId]); [nowPlayingSession] is [AutoCompanionChoice.nowPlaying].
+ */
+fun companionPanel(view: CompanionView, session: SessionEntity?, selectedId: String?, navigationVisible: Boolean, nowPlayingSession: Long?): CompanionPanel {
+    val browsingOther = navigationVisible && selectedId != null && selectedId != session?.gameId
+    return view.panel(
+        playing = session != null && !browsingOther,
+        game = session != null && LibraryItem.isGameId(session.gameId),
+        nowPlayingChosen = session != null && session.startedAt == nowPlayingSession
+    )
+}
+
+/** The companion's main panel ([companionPanel]), live. */
+@Composable
+fun rememberCompanionPanel(graph: SortieApp.Graph): CompanionPanel {
+    val view = rememberCompanionView(graph)
+    val session by graph.playLog.current.collectAsState()
+    val selected by Selection.current.collectAsState()
+    val navigationVisible by Selection.navigationVisible.collectAsState()
+    val nowPlaying by AutoCompanionChoice.nowPlaying.collectAsState()
+    return companionPanel(view, session, selected?.id, navigationVisible, nowPlaying)
 }
 
 /**
@@ -325,10 +367,11 @@ private fun openOnOtherScreen(g: GameEntity): () -> Unit = { Selection.openRoute
 /**
  * The open session: a game's art and hook, or an app's/shortcut's icon and label, with the minutes played so far. A game with
  * reference cards offers them here; the open card replaces the panel until closed and is kept per game while it runs
- * ([ReferenceSelection]), so the switcher, launcher or browsing on the other screen hand it back unchanged.
+ * ([ReferenceSelection]), so the switcher, launcher or browsing on the other screen hand it back unchanged. [clearChip] keeps
+ * the panel above Auto's chip at the bottom centre (an open card already stops above the bottom row).
  */
 @Composable
-private fun NowPlaying(graph: SortieApp.Graph, session: SessionEntity) {
+private fun NowPlaying(graph: SortieApp.Graph, session: SessionEntity, clearChip: Boolean) {
     val id = session.gameId
     val status = "Playing · ${playingMinutes(session.startedAt)} min"
     if (LibraryItem.isGameId(id)) {
@@ -349,6 +392,7 @@ private fun NowPlaying(graph: SortieApp.Graph, session: SessionEntity) {
             return
         }
         Panel(
+            clearChip = clearChip,
             title = g?.let(::displayTitle) ?: id.substringAfterLast('/'),
             subtitle = g?.hook.orEmpty(),
             metadata = g?.let { gameLine(graph, it) },
@@ -400,7 +444,7 @@ private fun playingMinutes(startedAt: Long): Long {
 
 /**
  * Art area on top, then an optional status line, the title, a subtitle and an optional scrollable [detail] block (which takes
- * the lower half from the art); text keeps clear of the corner buttons.
+ * the lower half from the art); text keeps clear of the corner buttons, and with [clearChip] of the bottom row altogether.
  */
 @Composable
 private fun Panel(
@@ -410,6 +454,7 @@ private fun Panel(
     status: String? = null,
     detail: String? = null,
     notes: Personal? = null,
+    clearChip: Boolean = false,
     action: @Composable () -> Unit = {},
     onTap: (() -> Unit)? = null,
     art: @Composable () -> Unit
@@ -417,7 +462,11 @@ private fun Panel(
     val tap = if (onTap != null) Modifier.clickable(interactionSource = null, indication = PressVeil, onClick = onTap) else Modifier
     val hasNotes = notes != null && !notes.isEmpty()
     val lower = detail != null || hasNotes
-    Column(Modifier.fillMaxSize().then(tap).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    val bottom = if (clearChip) 68.dp else 16.dp
+    Column(
+        Modifier.fillMaxSize().then(tap).padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = bottom),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         // the picture keeps clear of the companion's home base at the top end (none while he is hidden)
         val baseInset = mechaBaseSize().width
         Box(Modifier.weight(if (lower) 0.5f else 1f).fillMaxWidth().padding(horizontal = baseInset), contentAlignment = Alignment.Center) { art() }
@@ -577,38 +626,10 @@ private fun Dock(
 }
 
 /**
- * Battery and a bell, top-right of the idle panel. Battery comes from the sticky ACTION_BATTERY_CHANGED broadcast (no polling;
- * the receiver only lives while the panel is composed). The bell opens the system notification shade on this display over
- * Shizuku (`cmd statusbar expand-notifications`): Sortie does not read notifications itself — that needs a
+ * A bell, top-right of the idle panel (the [BatteryGauge] sits top-left). It opens the system notification shade on this
+ * display over Shizuku (`cmd statusbar expand-notifications`): Sortie does not read notifications itself — that needs a
  * NotificationListenerService, a permanent bound service, which is what kept Cocoon alive in the background.
  */
-@Composable
-private fun Battery(modifier: Modifier) {
-    val context = LocalContext.current
-    var level by remember { mutableStateOf(-1) }
-    var charging by remember { mutableStateOf(false) }
-    DisposableEffect(Unit) {
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(c: Context, intent: Intent) {
-                val l = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
-                level = if (l < 0) -1 else l * 100 / scale.coerceAtLeast(1)
-                val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-                charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-            }
-        }
-        context.registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        onDispose { context.unregisterReceiver(receiver) }
-    }
-    if (level < 0) return
-    Row(modifier.height(CORNER), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Box(Modifier.size(22.dp, 11.dp).clip(RoundedCornerShape(2.dp)).background(PanelColour)) {
-            Box(Modifier.fillMaxHeight().fillMaxWidth(level / 100f).background(if (level <= 15 && !charging) Color(0xFFE05B4B) else Accent))
-        }
-        Text((if (charging) "⚡" else "") + "$level%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
 @Composable
 private fun Bell(graph: SortieApp.Graph, modifier: Modifier) {
     val shizuku by graph.screenMover.status.collectAsState()

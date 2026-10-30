@@ -213,4 +213,22 @@ class RadialKeyboardModelTest {
         assertEquals(0, backspaceLength("\uD83D")) // cursor may be inside a pair
         assertEquals(1, backspaceLength("\uD83Da")) // stray high surrogate before a normal char
     }
+
+    @Test
+    fun dpadCursorStepsByCodePointAndCollapsesSelectionsToTheirSide() {
+        val text = "a\uD83D\uDE00b" // a, a two-unit emoji, b
+        assertEquals(1, cursorTarget(text, 3, 3, CursorMove.LEFT)) // over the whole pair
+        assertEquals(3, cursorTarget(text, 1, 1, CursorMove.RIGHT))
+        assertEquals(1, cursorTarget(text, 2, 2, CursorMove.LEFT)) // from inside a pair, out of it
+        assertEquals(3, cursorTarget(text, 2, 2, CursorMove.RIGHT))
+        assertEquals(0, cursorTarget(text, 0, 0, CursorMove.LEFT)) // edges stay put
+        assertEquals(4, cursorTarget(text, 4, 4, CursorMove.RIGHT))
+        assertEquals(1, cursorTarget(text, 3, 1, CursorMove.LEFT)) // selection in either order collapses to that side
+        assertEquals(3, cursorTarget(text, 3, 1, CursorMove.RIGHT))
+        assertEquals(0, cursorTarget(text, 1, 3, CursorMove.START))
+        assertEquals(4, cursorTarget(text, 1, 3, CursorMove.END))
+        assertEquals(-1, cursorTarget(text, -1, -1, CursorMove.LEFT)) // unknown selection: the service sends a key instead
+        assertEquals(-1, cursorTarget(text, 2, 9, CursorMove.RIGHT))
+        assertEquals(4, cursorTarget(text, -1, -1, CursorMove.END))
+    }
 }

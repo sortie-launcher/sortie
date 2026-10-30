@@ -1,5 +1,10 @@
 package io.github.esko997.sortie.ui
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.view.KeyEvent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -18,10 +23,12 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -32,6 +39,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,6 +54,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -89,12 +98,7 @@ fun OverlayPerf(controller: Boolean, onApps: () -> Unit) {
 @Composable
 fun OverlayPerfPage(frame: PerfFrame?, controller: Boolean, onApps: () -> Unit) {
     val list = rememberLazyListState()
-    val title: @Composable () -> Unit = {
-        Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Performance", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-            PerfChip("Apps", onApps)
-        }
-    }
+    val title: @Composable () -> Unit = { PerfTitle { PerfChip("Apps", onApps) } }
     if (!controller) {
         PerfPage(frame, Modifier.fillMaxSize(), PaddingValues(16.dp), list, title)
         return
@@ -113,10 +117,53 @@ fun PerformanceApp() {
     ControllerPerfPage(
         livePerfFrame(graph),
         rememberLazyListState(),
-        { Text("Performance", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp)) },
+        { PerfTitle() },
         "↑↓" to "scroll",
         "B" to "close"
     )
+}
+
+/** "Performance" with the battery charge beside it, and [end] (if any) at the far end of the row. */
+@Composable
+private fun PerfTitle(end: @Composable () -> Unit = {}) {
+    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("Performance", style = MaterialTheme.typography.titleLarge)
+        BatteryGauge(Modifier.padding(start = 12.dp))
+        Spacer(Modifier.weight(1f))
+        end()
+    }
+}
+
+/**
+ * Battery charge as a small gauge and a percentage, with "⚡" while charging: the Performance titles and the companion's
+ * idle panel. It comes from the sticky ACTION_BATTERY_CHANGED broadcast (no polling; the receiver only lives while this is
+ * composed). Nothing is shown until a level is known.
+ */
+@Composable
+fun BatteryGauge(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var level by remember { mutableStateOf(-1) }
+    var charging by remember { mutableStateOf(false) }
+    DisposableEffect(Unit) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, intent: Intent) {
+                val l = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
+                level = if (l < 0) -1 else l * 100 / scale.coerceAtLeast(1)
+                val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+            }
+        }
+        context.registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+    if (level < 0) return
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(Modifier.size(22.dp, 11.dp).clip(RoundedCornerShape(2.dp)).background(PanelColour)) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(level / 100f).background(if (level <= 15 && !charging) Color(0xFFE05B4B) else Accent))
+        }
+        Text((if (charging) "⚡" else "") + "$level%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 /** [PerfPage] holding the controller focus, scrolled by the D-pad, over a hint bar of [hints]. */

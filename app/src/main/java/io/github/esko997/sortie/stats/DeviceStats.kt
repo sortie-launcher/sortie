@@ -30,16 +30,44 @@ data class CoreClock(val core: Int, val khz: Long)
 /** One thermal zone's reading, by the zone's `type` (`cpuss-0`, `xo-therm`, …). */
 data class ThermalZone(val type: String, val celsius: Int)
 
-/** What the companion screen shows (`user.companionView`, dual-screen devices): its usual panel or the Perf view. */
+/**
+ * What the companion screen shows (`user.companionView`, dual-screen devices): its usual panel, the Perf view, or Auto: the
+ * Perf view while a game started from Sortie is being played, else the usual panel.
+ */
 enum class CompanionView(val id: String, val label: String) {
     COMPANION("companion", "Companion"),
+    AUTO("auto", "Auto"),
     PERF("perf", "Perf");
 
     fun next(): CompanionView = entries[(ordinal + 1) % entries.size]
 
+    /**
+     * The companion's main panel for this moment. [playing]: a session is open and the panel is its own (browsing another
+     * game on the other screen takes the panel back); [game]: that session is a game's, not an app's or a shortcut's;
+     * [nowPlayingChosen]: Auto's chip picked Now playing for this very session. Perf always shows Perf, Companion never does.
+     */
+    fun panel(playing: Boolean, game: Boolean, nowPlayingChosen: Boolean): CompanionPanel = when {
+        this == PERF -> CompanionPanel.PERF
+        !playing -> CompanionPanel.HERO
+        this == AUTO && game -> if (nowPlayingChosen) CompanionPanel.AUTO_NOW_PLAYING else CompanionPanel.AUTO_PERF
+        else -> CompanionPanel.NOW_PLAYING
+    }
+
     companion object {
         fun of(id: String): CompanionView = entries.firstOrNull { it.id == id } ?: COMPANION
     }
+}
+
+/**
+ * The companion's main panel ([CompanionView.panel]): the selected game or a rotating hero, the open session, or the Perf
+ * view. The two Auto panels carry a chip that flips between them for the rest of the session.
+ */
+enum class CompanionPanel(val perf: Boolean) {
+    HERO(false),
+    NOW_PLAYING(false),
+    PERF(true),
+    AUTO_PERF(true),
+    AUTO_NOW_PLAYING(false)
 }
 
 /** Where device stats are shown (`user.deviceStats`). Off by default: the strips narrow the companion panel. */

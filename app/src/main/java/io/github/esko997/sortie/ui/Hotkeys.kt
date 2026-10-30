@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Controller grammar (docs/SPEC.md): A select · B back · X swap screens · Y favourite · Start search · Select context menu ·
+ * Controller grammar (docs/SPEC.md): A select · B back · X swap screens · Y favourite (game page) / search (Home; system and
+ * folder lists search only there) · Start search · Select context menu ·
  * L1/R1 previous/next folder · R2 Want to play · L2 leave a note (only while the post-session bookmark invitation shows). A and B
  * are handled by the framework (focus click / back); the rest arrive here as events that the current screen interprets. Keeping
  * it an event bus avoids every screen owning a key handler. R2 on a game tile or row never gets here: the focused tile consumes

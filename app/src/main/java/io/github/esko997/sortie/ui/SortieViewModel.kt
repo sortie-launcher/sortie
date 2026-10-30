@@ -15,6 +15,7 @@ import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.db.LibrarySearch
 import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.db.SearchFilters
+import io.github.esko997.sortie.data.db.SearchScope
 import io.github.esko997.sortie.data.db.byIds
 import io.github.esko997.sortie.data.db.toRoom
 import io.github.esko997.sortie.data.folders.FolderView
@@ -43,9 +44,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -376,19 +379,29 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
         }
 
     /**
-     * Search results for [filters]: the first [limit] matches plus the count of all of them, from one WHERE clause. user.json
-     * changes re-query only while the favourites or Want to play filter is on, and only when that set changes.
+     * Search results for [filters] within [scope]: the first [limit] matches plus the count of all of them, from one WHERE
+     * clause. user.json changes re-query only while the favourites or Want to play filter is on, and only when that set
+     * changes. A folder scope is the folder's evaluated games (its own rules, not re-implemented here) and re-queries when they
+     * change; it waits for the folders' first evaluation, which always holds the built-in folders, instead of finding nothing.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun search(filters: SearchFilters, limit: Int): Flow<SearchPage> =
-        user.map { u -> (if (filters.favourites) u.favourites else emptySet()) to (if (filters.wantToPlay) u.wantToPlay else emptySet()) }
-            .distinctUntilChanged()
-            .flatMapLatest { (favs, queue) ->
+    fun search(filters: SearchFilters, scope: SearchScope?, limit: Int): Flow<SearchPage> {
+        val folderGames: Flow<Set<String>> = if (scope is SearchScope.Folder) {
+            folders.filter { it.isNotEmpty() }.map { all ->
+                all.firstOrNull { it.def.id == scope.id }?.items.orEmpty().filterIsInstance<LibraryItem.Game>().mapTo(HashSet()) { it.game.id }
+            }
+        } else {
+            flowOf(emptySet())
+        }
+        val sets = user.map { u -> (if (filters.favourites) u.favourites else emptySet()) to (if (filters.wantToPlay) u.wantToPlay else emptySet()) }
+        return combine(sets.distinctUntilChanged(), folderGames.distinctUntilChanged()) { (favs, queue), members -> Triple(favs, queue, members) }
+            .flatMapLatest { (favs, queue, members) ->
                 combine(
-                    dao.searchPage(LibrarySearch.page(filters, favs, queue, limit).toRoom()),
-                    dao.searchCount(LibrarySearch.count(filters, favs, queue).toRoom())
+                    dao.searchPage(LibrarySearch.page(filters, scope, favs, queue, members, limit).toRoom()),
+                    dao.searchCount(LibrarySearch.count(filters, scope, favs, queue, members).toRoom())
                 ) { games, total -> SearchPage(games, total) }
             }
+    }
 
     /** Values Search's pickers offer, with game counts; collected only while a picker is open. */
     fun searchFacets(onDeviceOnly: Boolean): Flow<SearchFacets> {
@@ -409,9 +422,10 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     fun profilesFor(game: GameEntity): List<Pair<LaunchProfile, Boolean>> = graph.launcher.profilesFor(game).map { it to graph.launcher.isInstalled(it) }
 
-    fun launch(game: GameEntity, only: LaunchProfile? = null) = viewModelScope.launch {
+    /** [on]: a display the player picked ("Play on the other screen") instead of the profile's (see [io.github.esko997.sortie.launch.LaunchManager.launch]). */
+    fun launch(game: GameEntity, only: LaunchProfile? = null, on: Int? = null) = viewModelScope.launch {
         dismissExitNotice()
-        graph.launcher.launch(game, only, origin())
+        graph.launcher.launch(game, only, origin(), on)
     }
 
     /** `adb shell am start -n <pkg>/.MainActivity --es launch "<folder>/<file>" [--es profile <id>]` for reproducible tests. */

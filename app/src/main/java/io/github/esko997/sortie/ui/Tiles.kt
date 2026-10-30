@@ -2,6 +2,7 @@ package io.github.esko997.sortie.ui
 
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.view.Display
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -55,8 +56,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -68,6 +71,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.window.Dialog
+import io.github.esko997.sortie.BuiltinApps
+import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.UserData
 import kotlinx.coroutines.delay
@@ -377,3 +382,13 @@ fun toggleWantToPlay(vm: SortieViewModel, id: String, context: Context) {
 /** "Want to play" / "Remove from Want to play" for game [id] in a [ContextSheet]. */
 fun wantToPlayAction(vm: SortieViewModel, id: String, queued: Boolean, context: Context): SheetAction =
     SheetAction(if (queued) "Remove from Want to play" else "Want to play") { toggleWantToPlay(vm, id, context) }
+
+/**
+ * "Play on the other screen" for [game] in a [ContextSheet]: starts it on the screen this window is not on, whatever its
+ * emulator's screen setting says. Null with one screen.
+ */
+@Composable
+fun playOnOtherScreenAction(vm: SortieViewModel, game: GameEntity): SheetAction? {
+    val other = BuiltinApps.otherDisplay(LocalContext.current, LocalView.current.display?.displayId ?: Display.DEFAULT_DISPLAY) ?: return null
+    return SheetAction("Play on the other screen") { vm.launch(game, on = other) }
+}

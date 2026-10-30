@@ -181,8 +181,9 @@ fun ReferenceCompanion(
     }
 }
 
+/** A rounded chip for the companion's touch controls (nothing there requests focus; the host hands the controller back on a tap). */
 @Composable
-private fun TouchChip(text: String, enabled: Boolean = true, onClickLabel: String? = null, onClick: () -> Unit) {
+fun TouchChip(text: String, enabled: Boolean = true, onClickLabel: String? = null, onClick: () -> Unit) {
     Box(
         Modifier
             .height(40.dp)

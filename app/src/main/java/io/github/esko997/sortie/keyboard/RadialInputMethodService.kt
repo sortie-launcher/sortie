@@ -13,17 +13,19 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputMethodManager
 
 /**
  * Sortie's optional radial keyboard: an ordinary Android IME the user enables in system settings. Left stick picks a group,
  * right stick a character or diagonal editing action; A/R1 commits it. X deletes, Y spaces, B hides (on release, or still
- * held after the long-press delay), Start runs the field's action, L2 holds shift and R2 holds symbols. Touch works through
- * [RadialKeyboardView].
+ * held after the long-press delay), Start runs the field's action, L2 holds shift and R2 holds symbols. D-pad Left/Right
+ * move the cursor one character (repeating while held; a selection collapses to that side), Up jumps to the start of the
+ * text and Down to the end. Touch works through [RadialKeyboardView].
  *
  * Self-contained on purpose: it runs in its own process and never touches the launcher graph, storage or Shizuku. It keeps no
- * record of what is typed; the only text it ever reads is the one or two characters before the cursor when an editor cannot
- * delete by code point.
+ * record of what is typed; it reads the editor's text only for the edit at hand: the text and selection for a D-pad cursor
+ * move, and the one or two characters before the cursor when an editor cannot delete by code point.
  */
 class RadialInputMethodService : InputMethodService() {
     private val model = RadialKeyboardModel()
@@ -58,11 +60,15 @@ class RadialInputMethodService : InputMethodService() {
             when (repeatKey) {
                 KeyEvent.KEYCODE_BUTTON_X -> backspace()
                 KeyEvent.KEYCODE_BUTTON_Y -> space()
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> moveCursor(repeatKey)
                 else -> return
             }
             handler.postDelayed(this, ViewConfiguration.getKeyRepeatDelay().toLong())
         }
     }
+
+    /** D-pad direction a hat-axis D-pad currently holds, as a DPAD key code, or 0; tracked only while the keyboard shows. */
+    private var hatKey = 0
 
     /** A held B hides the keyboard once its long-press timeout passes, while the button is still down; a short B hides on release. */
     private var hideOnBPending = false
@@ -154,7 +160,8 @@ class RadialInputMethodService : InputMethodService() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (!isControllerKey(keyCode)) return super.onKeyDown(keyCode, event)
-        // Repeats follow their first down: ours are swallowed (A/R1 type once, X/Y repeat on our own clock), the app's pass on.
+        // Repeats follow their first down: ours are swallowed (A/R1 type once, X/Y and D-pad Left/Right repeat on our own
+        // clock), the app's pass on.
         if (event.repeatCount > 0) return owned[keyCode] || super.onKeyDown(keyCode, event)
         // A fresh press is ours only while the keyboard shows; this also clears ownership left by an up that went elsewhere.
         owned[keyCode] = isInputViewShown
@@ -182,6 +189,8 @@ class RadialInputMethodService : InputMethodService() {
                 handler.removeCallbacks(holdHide)
                 handler.postDelayed(holdHide, ViewConfiguration.getLongPressTimeout().toLong())
             }
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN ->
+                pressCursorKey(keyCode)
         }
         return true
     }
@@ -190,7 +199,8 @@ class RadialInputMethodService : InputMethodService() {
         if (!isControllerKey(keyCode) || !owned[keyCode]) return super.onKeyUp(keyCode, event)
         owned[keyCode] = false
         when (keyCode) {
-            KeyEvent.KEYCODE_BUTTON_X, KeyEvent.KEYCODE_BUTTON_Y -> if (repeatKey == keyCode) stopRepeat()
+            KeyEvent.KEYCODE_BUTTON_X, KeyEvent.KEYCODE_BUTTON_Y, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT ->
+                if (repeatKey == keyCode) stopRepeat()
             KeyEvent.KEYCODE_BUTTON_L2 -> {
                 shiftKey = false
                 applyHolds()
@@ -210,7 +220,10 @@ class RadialInputMethodService : InputMethodService() {
         return true
     }
 
-    /** Own joystick motion while visible: selection and layer changes must never navigate the app behind the keyboard. */
+    /**
+     * Own joystick motion while visible: selection and layer changes must never navigate the app behind the keyboard. A
+     * hat-axis D-pad moves the cursor like D-pad keys.
+     */
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
         if (!isInputViewShown || event.actionMasked != MotionEvent.ACTION_MOVE || !event.isFromSource(InputDevice.SOURCE_JOYSTICK)) {
             return super.onGenericMotionEvent(event)
@@ -221,6 +234,12 @@ class RadialInputMethodService : InputMethodService() {
         shiftAxis = triggerHeld(event, leftTriggers, leftTriggerCount, shiftAxis)
         symbolsAxis = triggerHeld(event, rightTriggers, rightTriggerCount, symbolsAxis)
         if (applyHolds(refresh = false)) changed = true
+        val hat = hatDirection(event.getAxisValue(MotionEvent.AXIS_HAT_X), event.getAxisValue(MotionEvent.AXIS_HAT_Y))
+        if (hat != hatKey) {
+            if (repeatKey == hatKey) stopRepeat()
+            hatKey = hat
+            if (hat != 0) pressCursorKey(hat)
+        }
         if (changed) view?.refresh()
         return true
     }
@@ -289,6 +308,46 @@ class RadialInputMethodService : InputMethodService() {
         if (!switchToNextInputMethod(false)) getSystemService(InputMethodManager::class.java)?.showInputMethodPicker()
     }
 
+    /** D-pad Left/Right step and keep repeating while held; Up/Down jump once. */
+    private fun pressCursorKey(keyCode: Int) {
+        moveCursor(keyCode)
+        if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) startRepeat(keyCode)
+    }
+
+    /**
+     * Moves the cursor by setting the selection, so the app never sees an arrow key that could move focus out of the field at
+     * its edge. Editors that expose no text or selection get the matching key press instead: arrows for Left/Right, Home/End
+     * for Up/Down.
+     */
+    private fun moveCursor(keyCode: Int) {
+        val ic = currentInputConnection ?: return
+        val move = when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> CursorMove.LEFT
+            KeyEvent.KEYCODE_DPAD_RIGHT -> CursorMove.RIGHT
+            KeyEvent.KEYCODE_DPAD_UP -> CursorMove.START
+            else -> CursorMove.END
+        }
+        val info = currentInputEditorInfo
+        val extracted = if (info == null || info.inputType == InputType.TYPE_NULL) null else ic.getExtractedText(ExtractedTextRequest(), 0)
+        val text = extracted?.text
+        if (extracted != null && text != null) {
+            val target = cursorTarget(text, extracted.selectionStart, extracted.selectionEnd, move)
+            if (target >= 0) {
+                val at = extracted.startOffset + target
+                ic.setSelection(at, at)
+                return
+            }
+        }
+        sendDownUpKeyEvents(
+            when (move) {
+                CursorMove.LEFT -> KeyEvent.KEYCODE_DPAD_LEFT
+                CursorMove.RIGHT -> KeyEvent.KEYCODE_DPAD_RIGHT
+                CursorMove.START -> KeyEvent.KEYCODE_MOVE_HOME
+                CursorMove.END -> KeyEvent.KEYCODE_MOVE_END
+            }
+        )
+    }
+
     private fun startRepeat(keyCode: Int) {
         handler.removeCallbacks(repeater)
         repeatKey = keyCode
@@ -310,6 +369,7 @@ class RadialInputMethodService : InputMethodService() {
         shiftAxis = false
         symbolsKey = false
         symbolsAxis = false
+        hatKey = 0
         applyHolds()
     }
 
@@ -362,22 +422,33 @@ class RadialInputMethodService : InputMethodService() {
 
     private fun isControllerKey(keyCode: Int): Boolean = when (keyCode) {
         KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BUTTON_X, KeyEvent.KEYCODE_BUTTON_Y,
-        KeyEvent.KEYCODE_BUTTON_R1, KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.KEYCODE_BUTTON_R2, KeyEvent.KEYCODE_BUTTON_START
+        KeyEvent.KEYCODE_BUTTON_R1, KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.KEYCODE_BUTTON_R2, KeyEvent.KEYCODE_BUTTON_START,
+        KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN
         -> true
         else -> false
     }
 
     private companion object {
-        const val OWNED_KEYS = 128 // every handled KEYCODE_BUTTON_* is below this
+        const val OWNED_KEYS = 128 // every handled key code is below this
         const val NO_DEVICE = Int.MIN_VALUE
         const val NO_AXIS = -1
         const val MAX_TRIGGER_AXES = 3
+        const val HAT_PRESSED = 0.5f
         val LEFT_TRIGGER_AXES = intArrayOf(MotionEvent.AXIS_LTRIGGER, MotionEvent.AXIS_BRAKE, MotionEvent.AXIS_Z)
         val RIGHT_TRIGGER_AXES = intArrayOf(MotionEvent.AXIS_RTRIGGER, MotionEvent.AXIS_GAS, MotionEvent.AXIS_RZ)
 
         fun isNumeric(info: EditorInfo): Boolean = when (info.inputType and InputType.TYPE_MASK_CLASS) {
             InputType.TYPE_CLASS_NUMBER, InputType.TYPE_CLASS_PHONE, InputType.TYPE_CLASS_DATETIME -> true
             else -> false
+        }
+
+        /** The DPAD key code a hat-axis D-pad holds, horizontal first on a diagonal, or 0 when centred. */
+        fun hatDirection(x: Float, y: Float): Int = when {
+            x <= -HAT_PRESSED -> KeyEvent.KEYCODE_DPAD_LEFT
+            x >= HAT_PRESSED -> KeyEvent.KEYCODE_DPAD_RIGHT
+            y <= -HAT_PRESSED -> KeyEvent.KEYCODE_DPAD_UP
+            y >= HAT_PRESSED -> KeyEvent.KEYCODE_DPAD_DOWN
+            else -> 0
         }
 
         fun isMultiLine(info: EditorInfo): Boolean = info.inputType and InputType.TYPE_MASK_CLASS == InputType.TYPE_CLASS_TEXT &&

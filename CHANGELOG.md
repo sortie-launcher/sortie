@@ -5,6 +5,14 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
+- Radial keyboard: the D-pad moves the text cursor (Left/Right by character, hold to repeat; Up/Down to the start/end).
+- Search remembers its text and filters until Sortie restarts (never saved to disk), and a **Clear** button empties the box.
+- **Y** on a system or folder searches only inside it, shown as a removable **In: …** chip; Home's search stays library-wide.
+- Hold A on a game → **Play on the other screen** on dual-screen devices, overriding the emulator profile's screen choice.
+- Performance pages show the battery charge and ⚡ while charging next to the title.
+- Companion screen gains **Auto**: Perf while a game started from Sortie runs, with a touch chip to flip to Now playing and
+  its reference cards for that session.
+- Magazines open on the newest unstarted issue when it is newer than the one last read.
 - Expand Rivet to **50 complete authored sets / 200 parts**, with one shared rig and unrestricted player-chosen assemblies.
   Every part now has explicit two-tone paint regions that preserve fixed eyes, outlines and mechanical details.
 - Add ten reusable paint schemes with independently purchasable Standard (2), Alloy (6) and Holo (10) editions. Original

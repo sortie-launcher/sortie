@@ -39,13 +39,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -69,13 +66,16 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.SearchFilters
+import io.github.esko997.sortie.data.db.SearchScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -85,7 +85,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** Results loaded per step; scrolling near the end of the loaded ones loads the next step (the count is always complete). */
-private const val SEARCH_PAGE = 200
+internal const val SEARCH_PAGE = 200
 
 /** Load more once the last visible result is this close to the end of the loaded ones. */
 private const val LOAD_AHEAD = 40
@@ -94,30 +94,6 @@ private const val LOAD_AHEAD = 40
 private const val TYPING_SETTLE_MS = 200L
 
 private enum class Picker { SYSTEM, TAGS, GENRE, MORE }
-
-/** Text and filters come back with Back from a game and across the X screen swap (saved with the destination). */
-private val FiltersSaver: Saver<SearchFilters, Any> = listSaver(
-    save = {
-        listOf(
-            it.text, ArrayList(it.systems), ArrayList(it.tags), ArrayList(it.genres),
-            it.favourites, it.wantToPlay, it.unplayed, it.fourStars, it.onDeviceOnly
-        )
-    },
-    restore = {
-        @Suppress("UNCHECKED_CAST")
-        SearchFilters(
-            text = it[0] as String,
-            systems = (it[1] as List<String>).toSet(),
-            tags = (it[2] as List<String>).toSet(),
-            genres = (it[3] as List<String>).toSet(),
-            favourites = it[4] as Boolean,
-            wantToPlay = it[5] as Boolean,
-            unplayed = it[6] as Boolean,
-            fourStars = it[7] as Boolean,
-            onDeviceOnly = it[8] as Boolean
-        )
-    }
-)
 
 /** One removable chip under the filter buttons: its label and the filters without it. */
 private class ActiveFilter(val label: String, val remove: (SearchFilters) -> SearchFilters)
@@ -165,17 +141,23 @@ private fun SearchFilters.moreCount(): Int = listOf(favourites, wantToPlay, unpl
 /**
  * Text search plus System, Tags, Genre and More filters over the games table. Text may be empty: any filter alone lists its
  * matches. Values within a filter match either; the filters all have to match. The count is of every match; results load in
- * steps as the grid nears the end. Opening Search focuses the search box with the keyboard up. D-pad Down from the box closes
- * the keyboard and goes to the results (Up from them reaches the filters); without results it goes to the filters. A picker is
- * a dialog: A toggles a value, B closes it. While browsing results the filter buttons fold to one line naming the active
- * filters ([BrowseChrome]); the search box never folds.
+ * steps as the grid nears the end. Opened from a system or folder list, Search looks only there: an "In:" chip names the
+ * scope, and removing it searches the whole library. Text, filters and scope stay for the rest of the process
+ * ([SearchSession]); Clear beside the box empties the text (D-pad Right at the end of the text reaches it). Opening Search
+ * focuses the search box with the keyboard up. D-pad Down from the box closes the keyboard and goes to the results (Up from
+ * them reaches the filters); without results it goes to the filters. A picker is a dialog: A toggles a value, B closes it.
+ * While browsing results the filter buttons fold to one line naming the scope and the active filters ([BrowseChrome]); the
+ * search box never folds.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
-    var filters by rememberSaveable(stateSaver = FiltersSaver) { mutableStateOf(SearchFilters()) }
-    var input by rememberSaveable { mutableStateOf("") }
-    var limit by rememberSaveable { mutableIntStateOf(SEARCH_PAGE) }
+    // kept for the process, not with this destination: leaving Search and opening it again finds the same question
+    var filters by SearchSession::filters
+    var limit by SearchSession::limit
+    val within = SearchSession.scope
+    // the caret starts after kept text, so typing carries on from it
+    var input by remember { mutableStateOf(TextFieldValue(filters.text, TextRange(filters.text.length))) }
     var picker by rememberSaveable { mutableStateOf<Picker?>(null) }
     val gridState = rememberLazyGridState()
     val scope = rememberCoroutineScope()
@@ -188,18 +170,25 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
             toTop = true
         }
     }
-    LaunchedEffect(input) {
-        if (input == filters.text) return@LaunchedEffect
-        delay(TYPING_SETTLE_MS)
-        update(filters.copy(text = input))
+    val widen = {
+        SearchSession.scope = null
+        limit = SEARCH_PAGE
+        toTop = true
     }
-    // each page carries the filters it answers, so a page still showing for the previous filters is recognisable
-    val result by remember(filters, limit) {
-        val asked = filters
-        (if (asked.hasCriteria) vm.search(asked, limit) else flowOf(SearchPage(emptyList(), 0))).map { asked to it }
+    LaunchedEffect(input.text) {
+        if (input.text == filters.text) return@LaunchedEffect
+        delay(TYPING_SETTLE_MS)
+        update(filters.copy(text = input.text))
+    }
+    // leaving before the typing settled keeps the text as typed
+    DisposableEffect(Unit) { onDispose { update(filters.copy(text = input.text)) } }
+    // each page carries the question it answers, so a page still showing for the previous one is recognisable
+    val result by remember(filters, within, limit) {
+        val asked = filters to within
+        (if (filters.hasCriteria) vm.search(filters, within, limit) else flowOf(SearchPage(emptyList(), 0))).map { asked to it }
     }.collectAsState(null)
     val page = result?.second
-    val fresh = result?.first == filters
+    val fresh = result?.first == (filters to within)
     val games = page?.games.orEmpty()
     LaunchedEffect(result) {
         // scrolled only once the new games are in: the grid would otherwise follow a kept key to the middle of the new list
@@ -214,6 +203,12 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
     val manifests by vm.manifests.collectAsState()
     val systemLabels = remember(manifests) { manifests.systems.associate { it.id to it.label } }
     val systemLabel: (String) -> String = { systemLabels[it] ?: it }
+    val withinFolder by remember(within) { (within as? SearchScope.Folder)?.let { vm.folder(it.id) } ?: flowOf(null) }.collectAsState(null)
+    val withinLabel = when (within) {
+        is SearchScope.System -> systemLabel(within.id)
+        is SearchScope.Folder -> withinFolder?.def?.label ?: within.id
+        null -> null
+    }?.let { "In: $it" }
     var sheet by remember { mutableStateOf<LibraryItem?>(null) }
     val grid = user.browseLayout == "grid"
     BrowseLayoutHotkey(vm, grid)
@@ -224,7 +219,7 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
     RememberGridPosition(memory, gridState, remember(games) { games.map { it.id } })
     LaunchedEffect(gridState) {
         snapshotFlow { (gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1) to result }.collect { (last, r) ->
-            val p = r?.takeIf { it.first == filters }?.second ?: return@collect
+            val p = r?.takeIf { it.first == (filters to SearchSession.scope) }?.second ?: return@collect
             if (p.games.size >= limit && p.total > p.games.size && last >= p.games.size - LOAD_AHEAD) limit = p.games.size + SEARCH_PAGE
         }
     }
@@ -237,6 +232,7 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
         runCatching { target.requestFocus() }.isSuccess
     }
     val clearChip = remember { FocusRequester() }
+    val clearButton = remember { FocusRequester() }
     val systemChip = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     val field = remember { FocusRequester() }
@@ -277,7 +273,7 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
         }
     }
     val clearText = {
-        input = ""
+        input = TextFieldValue("")
         update(filters.copy(text = ""))
     }
     // a removed chip took the controller focus with it: hand it to a control that is still there once the row has recomposed
@@ -288,24 +284,46 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
         }
     }
     Column(Modifier.fillMaxSize().padding(12.dp)) {
-        OutlinedTextField(
-            input,
-            { input = it },
-            // Down must leave the editor instead of being consumed as caret movement. With results it skips the filter
-            // controls so a new chip never stands between the text and the games.
-            modifier = Modifier.fillMaxWidth().focusRequester(field).onFocusChanged { fieldFocused = it.hasFocus }.onPreviewKeyEvent { e ->
-                if (e.key != Key.DirectionDown || !isPhysicalPad(e)) return@onPreviewKeyEvent false
-                if (e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) leaveField()
-                true
-            },
-            singleLine = true,
-            placeholder = { Text("title, tag, genre, developer, description…", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = {
-                keyboard?.hide()
-                update(filters.copy(text = input))
-            })
-        )
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                input,
+                { input = it },
+                // Down must leave the editor instead of being consumed as caret movement. With results it skips the filter
+                // controls so a new chip never stands between the text and the games. Right past the end reaches Clear.
+                modifier = Modifier.weight(1f).focusRequester(field).onFocusChanged { fieldFocused = it.hasFocus }.onPreviewKeyEvent { e ->
+                    if (!isPhysicalPad(e)) return@onPreviewKeyEvent false
+                    when (e.key) {
+                        Key.DirectionDown -> {
+                            if (e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) leaveField()
+                            true
+                        }
+                        Key.DirectionRight -> {
+                            val atEnd = input.text.isNotEmpty() && input.selection.collapsed && input.selection.end == input.text.length
+                            atEnd && e.type == KeyEventType.KeyDown && runCatching { clearButton.requestFocus() }.isSuccess
+                        }
+                        else -> false
+                    }
+                },
+                singleLine = true,
+                placeholder = { Text("title, tag, genre, developer, description…", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = {
+                    keyboard?.hide()
+                    update(filters.copy(text = input.text))
+                })
+            )
+            if (input.text.isNotEmpty()) {
+                // the button goes away with the text: the box takes the focus back, keyboard up, to type the next search
+                GlowButton("✕ Clear", Modifier.focusRequester(clearButton)) {
+                    clearText()
+                    scope.launch {
+                        withFrameNanos { }
+                        runCatching { field.requestFocus() }
+                        keyboard?.show()
+                    }
+                }
+            }
+        }
         val total = page?.total?.takeIf { fresh }
         val countText = when (total) {
             null -> "…"
@@ -315,13 +333,13 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
         // the filter controls fold while browsing results; the box above never does
         Column(Modifier.fillMaxWidth().foldingHeader()) {
             if (!chrome.expanded) {
-                // folded: the count and every active filter by name, so what narrows the results stays in view
+                // folded: the count, the scope and every active filter by name, so what narrows the results stays in view
                 FoldedHeader(chrome, Modifier.padding(top = 4.dp), inset = 0.dp) {
                     Text(countText, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                    val active = activeFilters(filters, systemLabel)
+                    val active = listOfNotNull(withinLabel) + activeFilters(filters, systemLabel).map { it.label }
                     if (active.isNotEmpty()) {
                         Text(
-                            active.joinToString(" · ") { it.label },
+                            active.joinToString(" · "),
                             style = MaterialTheme.typography.labelLarge,
                             color = Accent,
                             maxLines = 1,
@@ -357,25 +375,42 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
                 }
                 HideHeaderButton(chrome)
             }
-            if (filters.hasFilters) {
+            if (filters.hasFilters || withinLabel != null) {
                 // one sideways-scrolling line however many are active, so the results keep their height on a narrow screen
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 2.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val clearInteraction = remember { MutableInteractionSource() }
-                    AssistChip(
-                        onClick = {
-                            update(filters.clearedFilters())
-                            refocus(systemChip)
-                        },
-                        label = { Text("Clear filters", maxLines = 1) },
-                        modifier = Modifier
-                            .focusRequester(clearChip)
-                            .focusGlow(clearInteraction.collectIsFocusedAsState().value, AssistChipDefaults.shape),
-                        interactionSource = clearInteraction
-                    )
+                    // the scope leads and is not a filter: Clear filters keeps it, its own ✕ searches the whole library
+                    if (withinLabel != null) {
+                        val withinInteraction = remember { MutableInteractionSource() }
+                        InputChip(
+                            selected = true,
+                            onClick = {
+                                widen()
+                                refocus(if (filters.hasFilters) clearChip else systemChip)
+                            },
+                            label = { Text(withinLabel, maxLines = 1) },
+                            trailingIcon = { Text("✕") },
+                            modifier = Modifier.focusGlow(withinInteraction.collectIsFocusedAsState().value, InputChipDefaults.shape),
+                            interactionSource = withinInteraction
+                        )
+                    }
+                    if (filters.hasFilters) {
+                        val clearInteraction = remember { MutableInteractionSource() }
+                        AssistChip(
+                            onClick = {
+                                update(filters.clearedFilters())
+                                refocus(systemChip)
+                            },
+                            label = { Text("Clear filters", maxLines = 1) },
+                            modifier = Modifier
+                                .focusRequester(clearChip)
+                                .focusGlow(clearInteraction.collectIsFocusedAsState().value, AssistChipDefaults.shape),
+                            interactionSource = clearInteraction
+                        )
+                    }
                     activeFilters(filters, systemLabel).forEach { chip ->
                         val interaction = remember(chip.label) { MutableInteractionSource() }
                         InputChip(
@@ -404,6 +439,7 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
                 )
                 fresh && games.isEmpty() -> NoResults(
                     filters,
+                    scoped = within != null,
                     // the pressed button goes away with the empty state; the System button stays
                     onClearFilters = {
                         update(filters.clearedFilters())
@@ -415,6 +451,10 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
                     },
                     onClearText = {
                         clearText()
+                        refocus(systemChip)
+                    },
+                    onWiden = {
+                        widen()
                         refocus(systemChip)
                     }
                 )
@@ -513,10 +553,17 @@ private fun LayoutCoordinates.fullyShown(): Boolean {
 private fun PickerChip(label: String, picked: Int, modifier: Modifier = Modifier, onClick: () -> Unit) =
     GlowChip(if (picked > 0) "$label · $picked" else label, picked > 0, modifier, trailing = "▾", onClick = onClick)
 
-/** Nothing matches: say why and offer the ways out that apply. */
+/** Nothing matches: say why and offer the ways out that apply; [scoped] Search can look in the whole library instead. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun NoResults(filters: SearchFilters, onClearFilters: () -> Unit, onIncludeAll: () -> Unit, onClearText: () -> Unit) {
+private fun NoResults(
+    filters: SearchFilters,
+    scoped: Boolean,
+    onClearFilters: () -> Unit,
+    onIncludeAll: () -> Unit,
+    onClearText: () -> Unit,
+    onWiden: () -> Unit
+) {
     Column(Modifier.padding(top = 16.dp, start = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("No games match.", style = MaterialTheme.typography.titleMedium)
         if (filters.hasFilters) {
@@ -527,6 +574,7 @@ private fun NoResults(filters: SearchFilters, onClearFilters: () -> Unit, onIncl
             )
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (scoped) GlowButton("Search the whole library", onClick = onWiden)
             if (filters.hasFilters) GlowButton("Clear filters", onClick = onClearFilters)
             if (filters.onDeviceOnly) GlowButton("Include games not on device", onClick = onIncludeAll)
             if (filters.query.isNotEmpty()) GlowButton("Clear text", onClick = onClearText)

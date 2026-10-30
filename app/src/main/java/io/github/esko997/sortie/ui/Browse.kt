@@ -24,10 +24,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.data.apps.LibraryItem
@@ -48,17 +51,19 @@ fun BrowseLayoutHotkey(vm: SortieViewModel, grid: Boolean) {
 }
 
 /**
- * Hold-A / long-press sheet for a game, app or shortcut: Favourite · Add to (Remove from) home, plus Want to play for games and,
- * for shortcuts, whether the Apps screen lists them (`user.shortcuts`).
+ * Hold-A / long-press sheet for a game, app or shortcut: Favourite · Add to (Remove from) home, plus Want to play and, with two
+ * screens, Play on the other screen for games, and for shortcuts whether the Apps screen lists them (`user.shortcuts`).
  */
 @Composable
 fun ItemSheet(item: LibraryItem, vm: SortieViewModel, onDismiss: () -> Unit) {
     val user by vm.user.collectAsState()
     val context = LocalContext.current
+    val otherScreen = (item as? LibraryItem.Game)?.let { playOnOtherScreenAction(vm, it.game) }
     val actions = buildList {
         add(SheetAction(if (item.id in user.favourites) "Remove from favourites" else "Favourite") { vm.toggleFavourite(item.id) })
         add(homeAction(vm, item.id, item.id in user.layout, context))
         if (item is LibraryItem.Game) add(wantToPlayAction(vm, item.id, item.id in user.wantToPlay, context))
+        otherScreen?.let { add(it) }
         if (item is LibraryItem.Shortcut) {
             val shown = item.id in user.shortcuts
             add(SheetAction(if (shown) "Hide from Apps" else "Show in Apps") { vm.showShortcut(item.id, !shown) })
@@ -144,7 +149,10 @@ fun ItemCell(
     }
 }
 
-/** A system's games; [chrome] is the header of a screen this list is part of (Home's By Console), which then folds both. */
+/**
+ * A system's games; [chrome] is the header of a screen this list is part of (Home's By Console), which then folds both.
+ * [onSearch] (Y) opens Search limited to this system; null leaves Y to the screen around it.
+ */
 @Composable
 fun GameListScreen(
     title: String,
@@ -152,22 +160,49 @@ fun GameListScreen(
     vm: SortieViewModel,
     onGame: (String) -> Unit,
     subtitle: String? = null,
-    chrome: BrowseChrome? = null
+    chrome: BrowseChrome? = null,
+    onSearch: (() -> Unit)? = null
 ) {
     val items = remember(games) { games.map { LibraryItem.Game(it) } }
-    ItemListScreen(title, items, vm, onGame, subtitle, chrome)
+    ItemListScreen(title, items, vm, onGame, subtitle, chrome, onSearch)
 }
 
-/** A smart folder: games open their detail screen, apps and shortcuts launch directly; hold A for favourite / add to home, R2 Want to play. */
+/**
+ * A smart folder: games open their detail screen, apps and shortcuts launch directly; hold A for favourite / add to home, R2
+ * Want to play, Y Search limited to the folder's games ([onSearch]).
+ */
 @Composable
-fun FolderScreen(view: FolderView, vm: SortieViewModel, onGame: (String) -> Unit) {
-    ItemListScreen(view.def.label, view.items, vm, onGame, view.problems.takeIf { it.isNotEmpty() }?.joinToString("; "))
+fun FolderScreen(view: FolderView, vm: SortieViewModel, onGame: (String) -> Unit, onSearch: () -> Unit) {
+    ItemListScreen(view.def.label, view.items, vm, onGame, view.problems.takeIf { it.isNotEmpty() }?.joinToString("; "), onSearch = onSearch)
+}
+
+/**
+ * Y on a system or folder list: [onSearch] opens Search limited to it (Home's Y searches the whole library). Pressed on the
+ * controller, Search opens in keyboard (D-pad) mode, as from Home.
+ */
+@Composable
+private fun SearchHereHotkey(onSearch: () -> Unit) {
+    val current by rememberUpdatedState(onSearch)
+    val hotkeys = LocalHotkeys.current
+    val inputModes = LocalInputModeManager.current
+    DisposableEffect(hotkeys) {
+        hotkeys.handle(setOf(Hotkeys.Key.FAVOURITE))
+        onDispose { hotkeys.release(setOf(Hotkeys.Key.FAVOURITE)) }
+    }
+    LaunchedEffect(hotkeys) {
+        hotkeys.events.collect {
+            if (it != Hotkeys.Key.FAVOURITE) return@collect
+            @OptIn(ExperimentalComposeUiApi::class)
+            inputModes.requestInputMode(InputMode.Keyboard)
+            current()
+        }
+    }
 }
 
 /**
  * A system's or folder's games, apps and shortcuts with Pick one and the filter chips above them. The header folds while
  * browsing (see [BrowseChrome]) to one line with the count and the filters that are on; a problem [subtitle] stays shown
- * either way. A [parent] header (Home's) folds this one with it, and its strip has the chevron.
+ * either way. A [parent] header (Home's) folds this one with it, and its strip has the chevron. [onSearch] is Y's scoped Search.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -177,7 +212,8 @@ private fun ItemListScreen(
     vm: SortieViewModel,
     onGame: (String) -> Unit,
     subtitle: String?,
-    parent: BrowseChrome? = null
+    parent: BrowseChrome? = null,
+    onSearch: (() -> Unit)? = null
 ) {
     val stats by vm.playStats.collectAsState()
     val saves by vm.saveStems.collectAsState()
@@ -193,6 +229,7 @@ private fun ItemListScreen(
     var sheet by remember { mutableStateOf<LibraryItem?>(null) }
     val grid = user.browseLayout == "grid"
     BrowseLayoutHotkey(vm, grid)
+    onSearch?.let { SearchHereHotkey(it) }
     val shown = remember(items, minFit, onDeviceOnly, notesOnly, startedOnly, saves, user.bookmarks) {
         items.filter { item ->
             when (item) {
@@ -316,12 +353,15 @@ private fun ItemListScreen(
             }
         }
         BrowseHintBar(
-            "A" to "open",
-            "hold A" to "favourite / add to home",
-            "R2" to "want to play",
-            "Select" to if (grid) "list view" else "grid view",
-            "L1/R1" to "systems",
-            "B" to "back",
+            *listOfNotNull(
+                "A" to "open",
+                "hold A" to "favourite / add to home",
+                ("Y" to "search here").takeIf { onSearch != null },
+                "R2" to "want to play",
+                "Select" to if (grid) "list view" else "grid view",
+                "L1/R1" to "systems",
+                "B" to "back"
+            ).toTypedArray(),
             compact = chrome.foldable
         )
     }

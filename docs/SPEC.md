@@ -448,9 +448,11 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 Scraping, cloud sync, RetroAchievements UI, themes marketplace, video previews, any network use.
 
 ## Controller grammar
-A select/launch · hold A context sheet (Favourite · Add to / Remove from home on games, apps and shortcuts; Add to home on
+A select/launch · hold A context sheet (Favourite · Add to / Remove from home on games, apps and shortcuts, plus Play on the
+other screen for games on two screens; Add to home on
 Home's systems and folders; Move · Remove on Custom home tiles) · B back · X swap screen roles · Y favourite toggle (detail) /
-search (on Home) / other screen (switcher) · Start search (not available while Sortie is the home app: Android intercepts it) ·
+search (whole library on Home; scoped to the list on system and folder screens) / other screen (switcher) · Start search
+(scoped like Y; not available while Sortie is the home app: Android intercepts it) ·
 Select launch-profile sheet (detail) / list↔grid (Home, system and folder lists, search, Apps) / close app (switcher) · L1/R1
 previous/next system (lists) / sort (Home) / console (By Console) / Perf page (overlay switcher) · R2 Want to play toggle
 (games, detail) · L2 leave a note (while the post-session bookmark invitation shows) / browse the picture sequence in view
