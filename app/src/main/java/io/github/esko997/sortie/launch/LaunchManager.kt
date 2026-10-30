@@ -115,6 +115,7 @@ class LaunchManager(
         val candidates = only?.let { listOf(it) } ?: profileOrder(game.id, game.systemId, userData, systemProfiles, snap.profiles)
         var started: LaunchProfile? = null
         var startedDisplay: Int? = null
+        var startedRule: String? = null
         // Nothing to try: the file is gone or the system has no profile. Recorded as an attempt so Diagnostics shows it.
         val blocked = when {
             definitelyMissing(file) -> Attempt("file", "", "file not found: ${file.path}", Reason.FILE_MISSING)
@@ -134,9 +135,11 @@ class LaunchManager(
                 val uri = runCatching { FileProvider.getUriForFile(context, "${context.packageName}.files", file) }.getOrNull()
                 val titleId = sidecarTitleId(file)
                 val (options, displayId, displayNote) = displayOptions(profile.display, from, on)
+                // the play log keeps the screen rule the game went by: a picked screen stands for "top" or "bottom"
+                val rule = if (on != null && displayId == on) (if (on == Display.DEFAULT_DISPLAY) "top" else "bottom") else profile.display
                 val intent = if (profile.generic) {
                     val origin = chooserOrigin(game.id, game.systemId, userData, systemProfiles, snap.profiles, profile, explicit = only != null)
-                    openWith(file, uri, game.id, profile, displayId, origin, scoped = from != null)
+                    openWith(file, uri, game.id, profile, rule, displayId, origin, scoped = from != null)
                 } else {
                     IntentBuilder.build(profile, IntentBuilder.vars(file, game.systemId, uri, titleId))
                 }
@@ -147,6 +150,7 @@ class LaunchManager(
                 attempts += Attempt(profile.id, command, outcome + (displayNote?.let { " ($it)" } ?: ""))
                 started = profile
                 startedDisplay = displayId
+                startedRule = rule
                 break
             } catch (e: CancellationException) {
                 throw e
@@ -171,7 +175,7 @@ class LaunchManager(
             val switch = if (pkg == null) ContentSwitch.NONE else contentSwitch(libretroContent[pkg], content)
             if (pkg != null && content != null) libretroContent[pkg] = content
             lastStarted = Started(game.id, pkg, switch)
-            runCatching { playLog.start(game.id, it.id, it.display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
+            runCatching { playLog.start(game.id, it.id, startedRule ?: it.display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
             if (from == null) afterLaunch?.invoke(startedDisplay) // last: the activity may finish itself here
         }
         return started != null
@@ -360,10 +364,19 @@ class LaunchManager(
         null
     }
 
-    private fun openWith(file: File, uri: Uri?, gameId: String, profile: LaunchProfile, displayId: Int?, origin: List<String>?, scoped: Boolean): Intent {
+    private fun openWith(
+        file: File,
+        uri: Uri?,
+        gameId: String,
+        profile: LaunchProfile,
+        rule: String,
+        displayId: Int?,
+        origin: List<String>?,
+        scoped: Boolean
+    ): Intent {
         val target = uri ?: Uri.fromFile(file)
         val view = Intent(Intent.ACTION_VIEW).setDataAndType(target, "*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        return Intent.createChooser(view, file.name, ChooserLaunchReceiver.sender(context, gameId, profile, displayId, origin, scoped))
+        return Intent.createChooser(view, file.name, ChooserLaunchReceiver.sender(context, gameId, profile, rule, displayId, origin, scoped))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 

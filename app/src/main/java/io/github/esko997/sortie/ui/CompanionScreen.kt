@@ -181,8 +181,10 @@ fun CompanionScreen(displayId: Int) {
                     val autoNowPlaying by AutoCompanionChoice.nowPlaying.collectAsState()
                     val panel = companionPanel(rememberCompanionView(graph), s, selected?.id, navigationVisible, autoNowPlaying)
                     when (panel) {
-                        // Perf (Settings → Companion screen shows), or Auto while a game is played: live device stats in place of the game panel
-                        CompanionPanel.PERF, CompanionPanel.AUTO_PERF -> CompanionPerf()
+                        // Perf (Settings → Companion screen shows), or Auto while a game is played: live device stats in place of the
+                        // game panel. Auto's chip sits over the bottom row, so its list ends above the chip instead of scrolling under it.
+                        CompanionPanel.PERF -> CompanionPerf()
+                        CompanionPanel.AUTO_PERF -> Box(Modifier.fillMaxSize().padding(bottom = AUTO_CHIP_CLEARANCE)) { CompanionPerf() }
                         CompanionPanel.NOW_PLAYING, CompanionPanel.AUTO_NOW_PLAYING ->
                             if (s != null) NowPlaying(graph, s, clearChip = panel == CompanionPanel.AUTO_NOW_PLAYING)
                         CompanionPanel.HERO -> HeroPanel(graph)
@@ -234,6 +236,9 @@ fun CompanionScreen(displayId: Int) {
         }
     }
 }
+
+/** Room Auto's chip takes at the bottom centre (18 dp inset + its 40 dp height + a gap): panels stop above it. */
+private val AUTO_CHIP_CLEARANCE = 68.dp
 
 /**
  * Auto's choice for the open session (Settings → Companion screen shows): the start of the session whose companion was flipped
@@ -462,7 +467,7 @@ private fun Panel(
     val tap = if (onTap != null) Modifier.clickable(interactionSource = null, indication = PressVeil, onClick = onTap) else Modifier
     val hasNotes = notes != null && !notes.isEmpty()
     val lower = detail != null || hasNotes
-    val bottom = if (clearChip) 68.dp else 16.dp
+    val bottom = if (clearChip) AUTO_CHIP_CLEARANCE else 16.dp
     Column(
         Modifier.fillMaxSize().then(tap).padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = bottom),
         horizontalAlignment = Alignment.CenterHorizontally
