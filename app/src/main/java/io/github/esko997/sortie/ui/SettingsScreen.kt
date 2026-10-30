@@ -211,7 +211,8 @@ fun SettingsScreen(
                             "Companion screen shows",
                             CompanionView.entries.map { it.label },
                             view.ordinal,
-                            detail = "Perf: live device stats with history",
+                            detail = "Perf: live device stats with history. Auto: Perf while a game started from Sortie runs, with a " +
+                                "chip to flip to Now playing and its reference cards for that session",
                             onCycle = { vm.setCompanionView(view.next()) }
                         ) { vm.setCompanionView(CompanionView.entries[it]) }
                     }

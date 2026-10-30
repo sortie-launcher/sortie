@@ -191,3 +191,23 @@ internal fun backspaceLength(before: CharSequence?): Int {
         else -> 1
     }
 }
+
+/** Where a D-pad press sends the cursor: one character left or right, or the start or end of the text. */
+internal enum class CursorMove { LEFT, RIGHT, START, END }
+
+/**
+ * Cursor position after [move] in [text] whose selection runs between [selStart] and [selEnd], in either order. Left and right
+ * step one code point, never into a surrogate pair, and stay put at the edge; a non-empty selection collapses to that side
+ * instead. Returns -1 for a left or right move when the selection is unknown or outside [text].
+ */
+internal fun cursorTarget(text: CharSequence, selStart: Int, selEnd: Int, move: CursorMove): Int {
+    val lo = minOf(selStart, selEnd)
+    val hi = maxOf(selStart, selEnd)
+    val known = lo >= 0 && hi <= text.length
+    return when (move) {
+        CursorMove.START -> 0
+        CursorMove.END -> text.length
+        CursorMove.LEFT -> if (!known) -1 else if (lo != hi || lo == 0) lo else Character.offsetByCodePoints(text, lo, -1)
+        CursorMove.RIGHT -> if (!known) -1 else if (lo != hi || hi == text.length) hi else Character.offsetByCodePoints(text, hi, 1)
+    }
+}

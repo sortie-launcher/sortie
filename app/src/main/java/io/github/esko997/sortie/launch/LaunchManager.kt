@@ -102,9 +102,11 @@ class LaunchManager(
      * Starts [game] with its first profile that starts ([only]: just that one). [from] is the display of the window that asked
      * when that is not Sortie's navigation (a built-in app such as Magazines): it stands in for the navigation's display in the
      * "same" display rule and for a failure message, and [afterLaunch] is not called, because the navigation launched nothing
-     * and must stay where it is. The play session opens either way: a game did start.
+     * and must stay where it is. The play session opens either way: a game did start. [on] is a display the player picked for
+     * this launch ("Play on the other screen"): it replaces every profile's display rule, the Open with… chooser's too. Only the
+     * start is placed there; an emulator that moves itself afterwards is left alone.
      */
-    suspend fun launch(game: GameEntity, only: LaunchProfile? = null, from: Int? = null): Boolean {
+    suspend fun launch(game: GameEntity, only: LaunchProfile? = null, from: Int? = null, on: Int? = null): Boolean {
         val file = File(game.path)
         val attempts = mutableListOf<Attempt>()
         val snap = manifests.snapshot.value
@@ -113,6 +115,7 @@ class LaunchManager(
         val candidates = only?.let { listOf(it) } ?: profileOrder(game.id, game.systemId, userData, systemProfiles, snap.profiles)
         var started: LaunchProfile? = null
         var startedDisplay: Int? = null
+        var startedRule: String? = null
         // Nothing to try: the file is gone or the system has no profile. Recorded as an attempt so Diagnostics shows it.
         val blocked = when {
             definitelyMissing(file) -> Attempt("file", "", "file not found: ${file.path}", Reason.FILE_MISSING)
@@ -131,10 +134,12 @@ class LaunchManager(
             try {
                 val uri = runCatching { FileProvider.getUriForFile(context, "${context.packageName}.files", file) }.getOrNull()
                 val titleId = sidecarTitleId(file)
-                val (options, displayId, displayNote) = displayOptions(profile.display, from)
+                val (options, displayId, displayNote) = displayOptions(profile.display, from, on)
+                // the play log keeps the screen rule the game went by: a picked screen stands for "top" or "bottom"
+                val rule = if (on != null && displayId == on) (if (on == Display.DEFAULT_DISPLAY) "top" else "bottom") else profile.display
                 val intent = if (profile.generic) {
                     val origin = chooserOrigin(game.id, game.systemId, userData, systemProfiles, snap.profiles, profile, explicit = only != null)
-                    openWith(file, uri, game.id, profile, displayId, origin, scoped = from != null)
+                    openWith(file, uri, game.id, profile, rule, displayId, origin, scoped = from != null)
                 } else {
                     IntentBuilder.build(profile, IntentBuilder.vars(file, game.systemId, uri, titleId))
                 }
@@ -145,6 +150,7 @@ class LaunchManager(
                 attempts += Attempt(profile.id, command, outcome + (displayNote?.let { " ($it)" } ?: ""))
                 started = profile
                 startedDisplay = displayId
+                startedRule = rule
                 break
             } catch (e: CancellationException) {
                 throw e
@@ -169,7 +175,7 @@ class LaunchManager(
             val switch = if (pkg == null) ContentSwitch.NONE else contentSwitch(libretroContent[pkg], content)
             if (pkg != null && content != null) libretroContent[pkg] = content
             lastStarted = Started(game.id, pkg, switch)
-            runCatching { playLog.start(game.id, it.id, it.display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
+            runCatching { playLog.start(game.id, it.id, startedRule ?: it.display) }.onFailure { e -> Log.w("SortieLaunch", "play log", e) }
             if (from == null) afterLaunch?.invoke(startedDisplay) // last: the activity may finish itself here
         }
         return started != null
@@ -358,10 +364,19 @@ class LaunchManager(
         null
     }
 
-    private fun openWith(file: File, uri: Uri?, gameId: String, profile: LaunchProfile, displayId: Int?, origin: List<String>?, scoped: Boolean): Intent {
+    private fun openWith(
+        file: File,
+        uri: Uri?,
+        gameId: String,
+        profile: LaunchProfile,
+        rule: String,
+        displayId: Int?,
+        origin: List<String>?,
+        scoped: Boolean
+    ): Intent {
         val target = uri ?: Uri.fromFile(file)
         val view = Intent(Intent.ACTION_VIEW).setDataAndType(target, "*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        return Intent.createChooser(view, file.name, ChooserLaunchReceiver.sender(context, gameId, profile, displayId, origin, scoped))
+        return Intent.createChooser(view, file.name, ChooserLaunchReceiver.sender(context, gameId, profile, rule, displayId, origin, scoped))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
@@ -371,22 +386,23 @@ class LaunchManager(
     }
 
     /**
-     * The display an emulator is sent to. "same" always resolves to an explicit id: without one Android reuses the emulator's
-     * existing task wherever it is (after a switcher move, on the other screen) instead of the screen the user is looking at.
-     * For navigation launches on a dual-screen device configured with navigation on the bottom, "same" means the top screen.
-     * A built-in's explicit [from] instead means that window's screen; explicit top/bottom profiles still take precedence.
+     * The display an emulator is sent to (see [launchDisplay]), with a note for the launch log when the profile's rule was not
+     * what decided it. A picked display ([on]) that has gone away since it was offered is ignored: the profile decides.
      */
-    private fun displayOptions(display: String, from: Int? = null): Triple<ActivityOptions?, Int?, String?> {
+    private fun displayOptions(display: String, from: Int? = null, on: Int? = null): Triple<ActivityOptions?, Int?, String?> {
         val dm = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
         val screens = manifests.snapshot.value.device.screens
         val secondary = dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).getOrNull(screens.presentationIndex)
+        val picked = on?.takeIf { dm.getDisplay(it) != null }
         val current = from ?: currentDisplayId?.invoke() ?: Display.DEFAULT_DISPLAY
-        val id = when (display) {
-            "top" -> Display.DEFAULT_DISPLAY
-            "bottom" -> secondary?.displayId ?: return Triple(null, null, "no secondary display, launched on the current one")
-            else -> if (from == null && secondary != null && screens.navigation == "bottom") Display.DEFAULT_DISPLAY else current
+        val note = when {
+            picked != null -> "other screen as asked, instead of the profile's \"$display\""
+            on != null -> "asked-for display $on is gone, used the profile's \"$display\""
+            else -> null
         }
-        return Triple(ActivityOptions.makeBasic().setLaunchDisplayId(id), id, null)
+        val id = launchDisplay(display, picked, current, secondary?.displayId, screens.navigation == "bottom", scoped = from != null)
+            ?: return Triple(null, null, listOfNotNull(note, "no secondary display, launched on the current one").joinToString("; "))
+        return Triple(ActivityOptions.makeBasic().setLaunchDisplayId(id), id, note)
     }
 
     companion object {

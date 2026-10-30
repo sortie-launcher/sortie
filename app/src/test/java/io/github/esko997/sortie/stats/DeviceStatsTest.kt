@@ -113,6 +113,7 @@ class DeviceStatsTest {
         assertEquals(CPU_WARMUP_MS, nextPollDelayMs(10, cpuPending = true, perfSeconds = 2))
         assertEquals(listOf(2, 1), listOf(1, 2).map(::nextPerfInterval))
         assertEquals(CompanionView.PERF, CompanionView.of("perf"))
+        assertEquals(CompanionView.AUTO, CompanionView.of("auto"))
         assertEquals(CompanionView.COMPANION, CompanionView.of("bogus"))
         assertEquals(CompanionView.COMPANION, CompanionView.PERF.next())
     }

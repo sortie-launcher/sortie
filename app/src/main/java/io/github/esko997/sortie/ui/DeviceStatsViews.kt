@@ -54,8 +54,8 @@ import kotlinx.coroutines.flow.map
 @Composable
 fun DeviceStatsSides(content: @Composable () -> Unit) {
     val graph = (LocalContext.current.applicationContext as SortieApp).graph
-    // the Perf companion shows all of it, larger: no strips beside it
-    val on = rememberStatsMode(graph).companion && rememberCompanionView(graph) != CompanionView.PERF
+    // the Perf companion (Perf, or Auto while a game is played) shows all of it, larger: no strips beside it
+    val on = rememberStatsMode(graph).companion && !rememberCompanionPanel(graph).perf
     Row(Modifier.fillMaxSize().background(CanvasColour)) {
         val stats = if (on) liveDeviceStats(graph) else null
         if (on) StatsStrip(stats?.let(StatsText::usageCells).orEmpty(), dividerAtEnd = true)

@@ -82,13 +82,16 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 ## Controls
 
 - **A** open · **B** back · **X** swap which screen has the controller (dual-screen devices)
-- **Hold A** on a game, app, shortcut, system or folder tile: its context sheet (the choices depend on the item)
+- **Hold A** on a game, app, shortcut, system or folder tile: its context sheet (the choices depend on the item). With two
+  screens, a game's sheet also offers **Play on the other screen**: with navigation on top the game opens on the bottom
+  screen and navigation stays put; with navigation on the bottom it starts on the top screen like a normal launch. An
+  emulator that moves itself afterwards is left alone
 - **Hold R1** on a game, app or shortcut: favourite. On a system or folder tile: jump to a random game in it
 - **L1 / R1** (tap): previous / next system in lists; on Home: previous / next sort; in "By Console": previous / next console;
   in the switcher overlay: the Perf page and back
 - **R2** on a game (in any list, grid or on Home) or on a game's page: add to / remove from *Want to play*, a queue separate
   from favourites. The *Want to play* folder is always on **Home → Custom**; launching a game keeps it queued
-- **Y** on Home: search. On a game's page: favourite
+- **Y** on Home: search the whole library. On a system or folder screen: search only there. On a game's page: favourite
 - **L2**: while the after-playing bookmark card shows, leave a note. In a magazine article: browse the picture sequence in view
 - **Select**: list ↔ grid; on a game's page: **Launch with…** (choosing an emulator saves that game's preference and launches it)
 - **Home key**: the switcher when Sortie is the default Home app and Shizuku is ready; otherwise Android's usual Home action
@@ -158,7 +161,12 @@ Search accepts a title, tag, genre, developer or description fragment. Text is o
 - Opening Search focuses the text box and opens the keyboard; returning from a game keeps your browsing focus instead.
 - **D-pad Down** from the search box focuses results and closes the keyboard, including after you close it yourself.
   With no results it goes to the filter buttons. **Up** from results reaches those buttons.
-- Open a game and return with **B**: your text, filters and browsing position remain.
+- Open a game and return with **B**: your text, filters and browsing position remain. Leaving Search and coming back later
+  also keeps your text and filters until Sortie restarts; nothing is saved to your settings file.
+- **Clear**, next to the box, empties the text (D-pad Right at the end of the text reaches it).
+- **Y** on a system or folder screen opens Search limited to it, shown as an **In: …** chip. Pick tags, genres or type to
+  narrow that folder; remove the chip, or choose **Search the whole library** when nothing matches, to widen it. Search from
+  Home always covers the whole library.
 
 In multiline bookmark, verdict and reference-card editors, controller Up/Down moves between fields and controls rather than moving
 the text caret. Down from the last field goes to **Save** when there are changes; Cancel and Clear remain deliberate choices.
@@ -259,8 +267,9 @@ know which screen you chose.
   article, contents and shelf. An article opened from a game page's **Featured in** returns to that game page with B.
 - The switcher lists **Magazines** and **Performance** separately, so each can be brought forward, moved or closed.
   Opening a built-in needs no Shizuku; the switcher's task-management features still do.
-- Performance uses the same live readings as the switcher's Perf page and the optional companion Perf mode.
-  Its polling pauses when the window is hidden or its display is asleep. It does not add an always-on overlay.
+- Performance uses the same live readings as the switcher's Perf page and the optional companion Perf mode, with the battery
+  charge (⚡ while charging) beside its title. Its polling pauses when the window is hidden or its display is asleep. It does
+  not add an always-on overlay.
 
 ## Offline magazines
 
@@ -294,6 +303,8 @@ Pictures in issues belong to their rights holders and are credited in each issue
 - **Featured in** on a game page opens the articles that discuss it. **B** returns to the game page.
 - **Continue reading** and per-article positions survive leaving the reader and restarting Sortie. **X / Other screen**
   keeps the open page while moving just the reader. Reading memory is app-private, not included in the current preference/history backup.
+- Opening the magazines puts you on the newest issue you haven't started if it is newer than the one you last read;
+  otherwise the shelf returns to where you left it. **Continue reading** stays on the shelf.
 - On two-screen devices, if the other screen is showing Sortie's companion, it becomes a reading companion while an issue
   is visible. Opening the reader never replaces another app on that screen. **Sections** jumps to a heading in the current
   article and highlights your place; **Articles** opens another article in that issue. **Previous** and the folded
@@ -477,7 +488,9 @@ The curated blurb is a two-line preview here, with an ellipsis when it runs long
 - **Perf mode** (Settings → Device stats → *Companion screen shows* → *Perf*): the panel shows the Perf page (see the
   switcher below) instead of the game, live while you play on the other screen. Battery, bell, dock and **+** stay in their
   corners; swipe to see the details. The switcher, the app list from **+** and a magazine's contents still take the panel
-  while they are open.
+  while they are open. **Auto** shows the Perf page only while a game you started from Sortie is running, and the usual
+  panel otherwise; apps and shortcuts keep Now playing. During that game, tap the **Now playing** chip at the bottom for
+  the game and its reference cards, and **Perf** to go back. The next game starts on Perf again.
 
 Touching the companion hands the controller back to the other screen a moment later.
 
@@ -530,7 +543,8 @@ and **Controls** lists every command.
 overlay, both, or nowhere (*Off*, the default); **A** cycles. **Device stats refresh** reads them every 2, 5 (the
 default) or 10 seconds, only while they are on a screen that is on: hidden, paused or asleep, Sortie reads nothing.
 **Perf view refresh** (1 or 2 seconds, default 2) is the pace while a Perf page is shown, and on two-screen handhelds
-**Companion screen shows** switches the other screen between its usual panel and the Perf page. CPU and GPU load,
+**Companion screen shows** switches the other screen between its usual panel, **Auto** (Perf while a Sortie-launched game
+runs) and the Perf page. CPU and GPU load,
 clocks, temperatures and the fan need Shizuku (Sortie reads them as the shell user, read-only); without it only RAM and
 the battery temperature show. Readings a device does not offer are left out: the AYANEO Pocket DMG, for one, has no fan
 reading.
@@ -565,6 +579,8 @@ fullscreen text box. Android controls placement and may move a covered text fiel
 - **A / R1**: enter the selected character or perform the selected action. Selection stays when you release the stick.
 - **L2**: hold for capitals. **R2**: hold for numbers/punctuation. Hold both for more symbols.
 - **X**: delete; hold to repeat. **Y**: space; hold to repeat.
+- **D-pad Left / Right**: move the cursor one character; hold to repeat. With text selected, the cursor goes to that side.
+  **D-pad Up / Down**: jump to the start / end of the text. With the keyboard hidden, the D-pad navigates as usual.
 - **Start**: the field's action (Search, Go, Done, Next, etc.), or a newline in a multiline field.
 - **B / Hide**: dismiss the keyboard. Tap B, or hold it to close the keyboard while the button is still down; this does not
   go back a page.

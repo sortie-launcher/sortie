@@ -78,12 +78,25 @@ class LibrarySearchTest {
         st.executeQuery().use { rs -> while (rs.next()) read(rs) }
     }
 
-    private fun ids(f: SearchFilters, favourites: Set<String> = emptySet(), queue: Set<String> = emptySet(), limit: Int = 200): List<String> =
-        mutableListOf<String>().also { out -> select(LibrarySearch.page(f, favourites, queue, limit)) { out += it.getString("id") } }
+    private fun ids(
+        f: SearchFilters,
+        favourites: Set<String> = emptySet(),
+        queue: Set<String> = emptySet(),
+        limit: Int = 200,
+        scope: SearchScope? = null,
+        folderGames: Set<String> = emptySet()
+    ): List<String> =
+        mutableListOf<String>().also { out -> select(LibrarySearch.page(f, scope, favourites, queue, folderGames, limit)) { out += it.getString("id") } }
 
-    private fun count(f: SearchFilters, favourites: Set<String> = emptySet(), queue: Set<String> = emptySet()): Int {
+    private fun count(
+        f: SearchFilters,
+        favourites: Set<String> = emptySet(),
+        queue: Set<String> = emptySet(),
+        scope: SearchScope? = null,
+        folderGames: Set<String> = emptySet()
+    ): Int {
         var n = -1
-        select(LibrarySearch.count(f, favourites, queue)) { n = it.getInt(1) }
+        select(LibrarySearch.count(f, scope, favourites, queue, folderGames)) { n = it.getInt(1) }
         return n
     }
 
@@ -231,6 +244,40 @@ class LibrarySearchTest {
         val f = SearchFilters(text = "core", systems = setOf("ps2"), unplayed = true, onDeviceOnly = false)
         assertEquals(SearchFilters(text = "core"), f.clearedFilters())
         assertFalse(f.clearedFilters().hasFilters)
+    }
+
+    @Test
+    fun systemScopeKeepsOneSystemAndCombinesWithTheFilters() {
+        game("ps2/Armored Core 3.iso", tags = "mech")
+        game("ps2/Katamari Damacy.iso", tags = "puzzle")
+        game("psx/Front Mission 3.bin", tags = "mech")
+        val ps2 = SearchScope.System("ps2")
+        assertEquals(listOf("ps2/Armored Core 3.iso"), ids(SearchFilters(tags = setOf("mech")), scope = ps2))
+        assertEquals(1, count(SearchFilters(tags = setOf("mech")), scope = ps2))
+        // a picked System filter still has to match too: another system within this scope finds nothing
+        assertEquals(0, count(SearchFilters(systems = setOf("psx")), scope = ps2))
+        // removing the scope widens to the whole library
+        assertEquals(2, count(SearchFilters(tags = setOf("mech"))))
+    }
+
+    @Test
+    fun folderScopeKeepsExactlyTheFoldersGamesAndAnEmptyFolderMatchesNothing() {
+        game("ps2/Core.iso", tags = "mech")
+        game("ps2/Armored Core.iso", tags = "mech")
+        game("psx/Front Mission 3.bin", tags = "mech")
+        val folder = SearchScope.Folder("mechs")
+        val members = setOf("ps2/Armored Core.iso", "psx/Front Mission 3.bin", "app:com.example")
+        // exact ids: "Core" matches the text but is not in the folder
+        assertEquals(listOf("ps2/Armored Core.iso"), ids(SearchFilters(text = "core"), scope = folder, folderGames = members))
+        assertEquals(2, count(SearchFilters(tags = setOf("mech")), scope = folder, folderGames = members))
+        // with the Favourites toggle on as well: in both sets
+        assertEquals(
+            listOf("psx/Front Mission 3.bin"),
+            ids(SearchFilters(favourites = true), favourites = setOf("ps2/Core.iso", "psx/Front Mission 3.bin"), scope = folder, folderGames = members)
+        )
+        assertEquals(0, count(SearchFilters(tags = setOf("mech")), scope = folder))
+        // the folder's ids count only with a folder scope
+        assertEquals(3, count(SearchFilters(tags = setOf("mech")), folderGames = members))
     }
 
     @Test

@@ -79,3 +79,13 @@ class MagazineReadingStore(private val prefs: SharedPreferences) {
         }
     }
 }
+
+/**
+ * The issue the shelf opens on when the magazines are opened afresh: the newest issue above [lastRead] (the issue of the
+ * article last opened, see [MagazineReadingStore.resume]) in which no article has been [started]. Null when there is none,
+ * when nothing has been read yet or when the last-read issue has left the shelf: the shelf then keeps its remembered focus.
+ */
+fun newerUnreadIssue(newestFirst: List<MagazineIssue>, lastRead: String?, started: (issue: String, article: String) -> Boolean): MagazineIssue? {
+    val above = newestFirst.indexOfFirst { it.id == lastRead }.coerceAtLeast(0)
+    return newestFirst.take(above).firstOrNull { i -> i.articles.none { started(i.id, it.id) } }
+}

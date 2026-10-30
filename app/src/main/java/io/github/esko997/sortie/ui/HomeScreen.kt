@@ -699,6 +699,7 @@ fun HomeScreen(
     sheet?.let { t ->
         val game = t.item as? LibraryItem.Game
         val queue = game?.let { wantToPlayAction(vm, it.id, it.id in user.wantToPlay, context) }
+        val otherScreen = game?.let { playOnOtherScreenAction(vm, it.game) }
         val actions = if (custom) {
             listOfNotNull(
                 SheetAction("Move") {
@@ -706,10 +707,11 @@ fun HomeScreen(
                     lifted = t.id
                 },
                 SheetAction("Remove from home") { vm.removeFromLayout(t.id) }.takeUnless { HomeIds.isAutomatic(t.id) },
-                queue
+                queue,
+                otherScreen
             )
         } else {
-            listOfNotNull(homeAction(vm, t.id, t.id in user.layout, context), queue)
+            listOfNotNull(homeAction(vm, t.id, t.id in user.layout, context), queue, otherScreen)
         }
         ContextSheet(t.title, actions) { sheet = null }
     }

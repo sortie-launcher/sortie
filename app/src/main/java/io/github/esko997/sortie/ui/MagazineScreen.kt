@@ -135,6 +135,7 @@ import io.github.esko997.sortie.data.magazine.articleClipping
 import io.github.esko997.sortie.data.magazine.clipText
 import io.github.esko997.sortie.data.magazine.highlightClipping
 import io.github.esko997.sortie.data.magazine.highlightsIn
+import io.github.esko997.sortie.data.magazine.newerUnreadIssue
 import io.github.esko997.sortie.data.magazine.readerOutline
 import io.github.esko997.sortie.data.magazine.removeClipping
 import io.github.esko997.sortie.data.magazine.saveClipping
@@ -199,8 +200,9 @@ data class ReaderRequest(val location: ReaderLocation, val handsBack: Boolean, v
  * B climbs one level at a time (article → contents → shelf) and only the shelf hands B to the window, which closes; an
  * article [request]ed with [ReaderRequest.handsBack] hands B back straight away. The open issue/article and the article's
  * scroll position are saved state (recreation, a move to the other screen); [MagazineReadingStore] keeps reading positions
- * and focus for when the magazines are closed and opened again. [onGame] opens Sortie's page for a local game an article's
- * references resolve to; a reference never claims a game is on the device unless a readable file matched it.
+ * and focus for when the magazines are closed and opened again, except that a newer issue nobody has started yet takes the
+ * shelf's focus then. [onGame] opens Sortie's page for a local game an article's references resolve to; a reference never
+ * claims a game is on the device unless a readable file matched it.
  *
  * The scrapbook (Select on the shelf or in the reader) holds the user's highlights and clipped articles from user.json
  * ([MagazineClipping]); B closes it back to where it was opened, and opening a clipping goes to its article and passage.
@@ -233,6 +235,8 @@ fun MagazineScreen(graph: SortieApp.Graph, onGame: (String) -> Unit, request: Re
     var availableOnly by rememberSaveable { mutableStateOf(false) }
     var contentsReturn by rememberSaveable { mutableStateOf<String?>(null) }
     var contentsReturnArticle by rememberSaveable { mutableStateOf<String?>(null) }
+    // the magazines opened on the shelf, which has not been shown yet: it may open on a newer unread issue (see ShelfView)
+    var freshShelf by rememberSaveable { mutableStateOf(issueId == null) }
     fun go(to: ReaderLocation) {
         issueId = to.issue
         articleId = to.article
@@ -248,6 +252,8 @@ fun MagazineScreen(graph: SortieApp.Graph, onGame: (String) -> Unit, request: Re
     }
     // left the article level: a later article is opened from inside and B climbs again
     LaunchedEffect(articleId) { if (articleId == null) external = false }
+    // once an issue has been shown, B back to the shelf finds it as it was left
+    LaunchedEffect(issueId) { if (issueId != null) freshShelf = false }
     val handsBack = external && articleId != null
     BackHandler(enabled = issueId != null && !handsBack) { ReaderLocation(issueId, articleId).back()?.let { go(it) } }
     // registered after the level handler, so it wins while the scrapbook is open: B returns to where it was opened
@@ -348,7 +354,15 @@ fun MagazineScreen(graph: SortieApp.Graph, onGame: (String) -> Unit, request: Re
                     onGame = onGame
                 )
             }
-            else -> ShelfView(data.shelf, data.store, clippings.size, onOpen = ::go, onScrapbook = { scrapbook = true })
+            else -> ShelfView(
+                data.shelf,
+                data.store,
+                clippings.size,
+                fresh = freshShelf,
+                onEntered = { freshShelf = false },
+                onOpen = ::go,
+                onScrapbook = { scrapbook = true }
+            )
         }
     }
 }
@@ -480,10 +494,27 @@ private fun Entry(focus: ListFocus, key: String, index: Int, onClick: (() -> Uni
 
 // ---------------------------------------------------------------- shelf
 
+/**
+ * [fresh]: the magazines were just opened on the shelf (not recreation, the screen swap, or B back from an issue or the
+ * scrapbook); a newer issue than the one last read, with no article started yet, then takes the focus instead of the
+ * remembered entry. [onEntered] runs once the shelf has been shown.
+ */
 @Composable
-private fun ShelfView(shelf: MagazineShelf, store: MagazineReadingStore, clipCount: Int, onOpen: (ReaderLocation) -> Unit, onScrapbook: () -> Unit) {
+private fun ShelfView(
+    shelf: MagazineShelf,
+    store: MagazineReadingStore,
+    clipCount: Int,
+    fresh: Boolean,
+    onEntered: () -> Unit,
+    onOpen: (ReaderLocation) -> Unit,
+    onScrapbook: () -> Unit
+) {
     val focus = rememberListFocus { store.shelfFocus = it }
-    val target = remember(store) { store.shelfFocus }
+    val target = remember(shelf, store) {
+        val newer = if (fresh) newerUnreadIssue(shelf.issues.map { it.issue }, store.resume()?.issue, store::started) else null
+        newer?.let { "issue:${it.id}" } ?: store.shelfFocus
+    }
+    LaunchedEffect(Unit) { onEntered() }
     // the article last opened, offered while it is still unfinished and still on the card
     val resume = remember(shelf, store) {
         store.resume()?.takeIf { r -> shelf.issue(r.issue)?.issue?.article(r.article) != null && !store.finished(r.issue!!, r.article!!) }

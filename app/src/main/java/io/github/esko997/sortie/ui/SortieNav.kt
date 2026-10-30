@@ -31,6 +31,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import io.github.esko997.sortie.BuiltinApp
 import io.github.esko997.sortie.SortieApp
+import io.github.esko997.sortie.data.db.SearchScope
 import io.github.esko997.sortie.data.magazine.ReaderLocation
 import io.github.esko997.sortie.mecha.ui.MechaStageHost
 import io.github.esko997.sortie.mecha.ui.rememberMechaStage
@@ -40,7 +41,7 @@ import kotlinx.coroutines.launch
 
 /**
  * [nav] is owned by MainActivity, which reads its back stack when X hands the whole saved state (back stack, each screen's
- * filters, search text and grid position) to the instance on the other screen.
+ * filters and grid position) to the instance on the other screen. Search's text, filters and scope live in [SearchSession].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
@@ -66,6 +67,11 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
             Selection.openRoute.resetReplayCache()
         }
     }
+    // Search opened from a system or folder list looks only there; from anywhere else, in the whole library. Text and filters stay.
+    val openSearch: (SearchScope?) -> Unit = { from ->
+        SearchSession.open(from)
+        nav.navigate("search") { launchSingleTop = true }
+    }
     DisposableEffect(hotkeys) {
         val keys = setOf(Hotkeys.Key.SEARCH, Hotkeys.Key.PREV_FOLDER, Hotkeys.Key.NEXT_FOLDER)
         hotkeys.handle(keys)
@@ -75,7 +81,16 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
         hotkeys.events.collect { key ->
             val route = nav.currentBackStackEntry?.destination?.route ?: ""
             when (key) {
-                Hotkeys.Key.SEARCH -> if (route != "search" && route != "library") nav.navigate("search") { launchSingleTop = true }
+                Hotkeys.Key.SEARCH -> if (route != "search" && route != "library") {
+                    val id = nav.currentBackStackEntry?.arguments?.getString("id")
+                    openSearch(
+                        when (route) {
+                            "system/{id}" -> id?.let { SearchScope.System(it) }
+                            "folder/{id}" -> id?.let { SearchScope.Folder(it) }
+                            else -> null
+                        }
+                    )
+                }
                 Hotkeys.Key.PREV_FOLDER, Hotkeys.Key.NEXT_FOLDER -> if (route == "home") {
                     // on Home L1/R1 page the sort modes, or the consoles while "By Console" is the sort
                     val delta = if (key == Hotkeys.Key.NEXT_FOLDER) 1 else -1
@@ -130,7 +145,7 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
                     onSystem = { nav.navigate("system/${enc(it)}") },
                     onFolder = { nav.navigate("folder/$it") },
                     onGame = { nav.navigate("game/${enc(it)}") },
-                    onSearch = { nav.navigate("search") },
+                    onSearch = { openSearch(null) },
                     onSettings = { nav.navigate("settings") },
                     onApps = { nav.navigate("apps") },
                     onMagazines = { openApp(BuiltinApp.MAGAZINES) },
@@ -150,12 +165,25 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
             composable("system/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
                 val id = entry.arguments?.getString("id") ?: return@composable
                 val games by remember(id) { vm.gamesOf(id) }.collectAsState(emptyList())
-                GameListScreen(systems.firstOrNull { it.def.id == id }?.def?.label ?: id, games, vm, onGame = { nav.navigate("game/${enc(it)}") })
+                GameListScreen(
+                    systems.firstOrNull { it.def.id == id }?.def?.label ?: id,
+                    games,
+                    vm,
+                    onGame = { nav.navigate("game/${enc(it)}") },
+                    onSearch = { openSearch(SearchScope.System(id)) }
+                )
             }
             composable("folder/{id}") { entry ->
                 val id = entry.arguments?.getString("id") ?: return@composable
                 val view by remember(id) { vm.folder(id) }.collectAsState(null)
-                view?.let { f -> FolderScreen(view = f, vm = vm, onGame = { nav.navigate("game/${enc(it)}") }) }
+                view?.let { f ->
+                    FolderScreen(
+                        view = f,
+                        vm = vm,
+                        onGame = { nav.navigate("game/${enc(it)}") },
+                        onSearch = { openSearch(SearchScope.Folder(id)) }
+                    )
+                }
             }
             composable("game/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
                 val id = entry.arguments?.getString("id") ?: return@composable

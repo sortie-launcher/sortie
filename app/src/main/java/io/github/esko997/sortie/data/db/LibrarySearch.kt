@@ -34,6 +34,19 @@ data class SearchFilters(
     fun clearedFilters(): SearchFilters = SearchFilters(text = text)
 }
 
+/**
+ * Where Search looks, set by the screen it was opened from instead of picked in Search: one system's games ([System]) or the
+ * games a folder resolves to ([Folder]: custom, rule-based and built-in folders alike). Not a filter: clearing the filters
+ * keeps it, and the whole library is searched once it is removed.
+ */
+sealed interface SearchScope {
+    val id: String
+
+    data class System(override val id: String) : SearchScope
+
+    data class Folder(override val id: String) : SearchScope
+}
+
 /** One SQL statement with its positional `?` arguments (String or Int). */
 data class SqlQuery(val sql: String, val args: List<Any>)
 
@@ -50,9 +63,11 @@ data class LabelCombo(val tags: String, val flags: String, val n: Int)
 data class LabelFacet(val value: String, val n: Int, val caution: Boolean)
 
 /**
- * Builds the Search statements. Every filter is part of the WHERE clause, so [page]'s LIMIT and [count] see exactly the same
- * matches: a limit never hides a game that a later page would not show. Favourites and Want to play live in user.json, not
- * the table; their ids travel as one delimited argument (`instr`), so a long queue never hits SQLite's variable limit.
+ * Builds the Search statements. Every filter and the scope are part of the WHERE clause, so [page]'s LIMIT and [count] see
+ * exactly the same matches: a limit never hides a game that a later page would not show. Favourites, Want to play and a
+ * folder's games are id sets resolved outside the table (user.json, the folder's rules); each travels as one delimited
+ * argument (`instr`), so a long queue or folder never hits SQLite's variable limit. [folderGames] counts only with a
+ * [SearchScope.Folder] scope, like [favourites] and [wantToPlay] only with their toggles.
  */
 object LibrarySearch {
     /** Separates ids in the membership argument; it cannot occur in a file name. */
@@ -61,8 +76,8 @@ object LibrarySearch {
     // `desc` is also an SQL keyword
     private val TEXT_FIELDS = listOf("title", "genre", "developer", "`desc`", "tags", "flags")
 
-    fun page(f: SearchFilters, favourites: Set<String>, wantToPlay: Set<String>, limit: Int): SqlQuery {
-        val where = where(f, favourites, wantToPlay)
+    fun page(f: SearchFilters, scope: SearchScope?, favourites: Set<String>, wantToPlay: Set<String>, folderGames: Set<String>, limit: Int): SqlQuery {
+        val where = where(f, scope, favourites, wantToPlay, folderGames)
         val order = mutableListOf<Any>()
         // with text, title matches lead: a tag or description mention is a weaker hit than the name itself
         val rank = if (f.query.isEmpty()) {
@@ -77,14 +92,22 @@ object LibrarySearch {
         )
     }
 
-    fun count(f: SearchFilters, favourites: Set<String>, wantToPlay: Set<String>): SqlQuery {
-        val where = where(f, favourites, wantToPlay)
+    fun count(f: SearchFilters, scope: SearchScope?, favourites: Set<String>, wantToPlay: Set<String>, folderGames: Set<String>): SqlQuery {
+        val where = where(f, scope, favourites, wantToPlay, folderGames)
         return SqlQuery("SELECT COUNT(*) FROM games WHERE ${where.sql}", where.args)
     }
 
-    private fun where(f: SearchFilters, favourites: Set<String>, wantToPlay: Set<String>): SqlQuery {
+    private fun where(f: SearchFilters, scope: SearchScope?, favourites: Set<String>, wantToPlay: Set<String>, folderGames: Set<String>): SqlQuery {
         val clauses = mutableListOf("variantOf IS NULL")
         val args = mutableListOf<Any>()
+        when (scope) {
+            is SearchScope.System -> {
+                clauses += "systemId = ?"
+                args += scope.id
+            }
+            is SearchScope.Folder -> member(folderGames, clauses, args)
+            null -> Unit
+        }
         if (f.onDeviceOnly) clauses += "placeholder = 0"
         if (f.query.isNotEmpty()) {
             val pattern = like(f.query)

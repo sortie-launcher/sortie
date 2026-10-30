@@ -52,15 +52,24 @@ class ChooserLaunchReceiver : BroadcastReceiver() {
 
         /**
          * [origin] is the launch order that reached [profile] as a system fallback ([chooserOrigin]); only then may the pick
-         * be remembered for the system. Null for a one-off, per-game or deliberate Open with…. [scoped]: asked from a built-in
-         * app's window rather than Sortie's navigation (see [LaunchManager.launch]).
+         * be remembered for the system. Null for a one-off, per-game or deliberate Open with…. [rule] is the screen rule the
+         * play log records (the profile's, or the picked screen's). [scoped]: asked from a built-in app's window rather than
+         * Sortie's navigation (see [LaunchManager.launch]).
          */
-        internal fun sender(context: Context, game: String, profile: LaunchProfile, target: Int?, origin: List<String>?, scoped: Boolean): IntentSender {
+        internal fun sender(
+            context: Context,
+            game: String,
+            profile: LaunchProfile,
+            rule: String,
+            target: Int?,
+            origin: List<String>?,
+            scoped: Boolean
+        ): IntentSender {
             val callback = Intent(context, ChooserLaunchReceiver::class.java)
                 .setAction(ACTION)
                 .putExtra(GAME, game)
                 .putExtra(PROFILE, profile.id)
-                .putExtra(DISPLAY, profile.display)
+                .putExtra(DISPLAY, rule)
                 .putExtra(TARGET, target ?: -1)
                 .putExtra(SCOPED, scoped)
             origin?.let { callback.putExtra(ORIGIN, it.toTypedArray()) }
