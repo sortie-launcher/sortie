@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.manifest.BrowseChromeMode
+import io.github.esko997.sortie.launch.resolve
 import io.github.esko997.sortie.stats.CompanionView
 import io.github.esko997.sortie.stats.DeviceStatsMode
 import io.github.esko997.sortie.stats.PERF_INTERVALS
@@ -250,8 +251,8 @@ fun SettingsScreen(
             settingsGroup(null) {
                 systems.forEach { s ->
                     row(key = "launcher:${s.def.id}") {
-                        val chosen = user.systemProfiles[s.def.id]?.let { snap.profiles[it] }
-                        val default = s.def.profiles.firstOrNull()?.let { snap.profiles[it] }
+                        val chosen = user.systemProfiles[s.def.id]?.let { snap.profiles.resolve(it) }
+                        val default = s.def.profiles.firstOrNull()?.let { snap.profiles.resolve(it) }
                         FocusRow(onClick = { picking = s.def.id }) {
                             Line(s.def.label, chosen?.label ?: default?.let { "${it.label} (manifest default)" } ?: "No profiles")
                         }

@@ -40,6 +40,7 @@ import io.github.esko997.sortie.data.user.UserStore
 import io.github.esko997.sortie.data.user.screenInUse
 import io.github.esko997.sortie.launch.LaunchManager
 import io.github.esko997.sortie.launch.SessionEndWatch
+import io.github.esko997.sortie.launch.resolve
 import io.github.esko997.sortie.mecha.MechaStore
 import io.github.esko997.sortie.mecha.PlaySession
 import io.github.esko997.sortie.shell.ScreenMover
@@ -160,7 +161,7 @@ class SortieApp :
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
             scope.launch {
                 playLog.current.filterNotNull().distinctUntilChanged { a, b -> a.gameId == b.gameId && a.startedAt == b.startedAt }.collect { s ->
-                    val pkg = s.profileId?.let { manifests.snapshot.value.profiles[it]?.`package` }?.takeIf { it.isNotBlank() }
+                    val pkg = s.profileId?.let { manifests.snapshot.value.profiles.resolve(it)?.`package` }?.takeIf { it.isNotBlank() }
                     if (!LibraryItem.isGameId(s.gameId) || pkg == null) {
                         sessionEnds.stop()
                         return@collect

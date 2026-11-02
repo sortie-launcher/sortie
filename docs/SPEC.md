@@ -71,7 +71,9 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Search across games with optional text; OR within systems/tags/genres, AND between dimensions. Tags include game-page flags.
   More filters: favourites, Want to play, never launched, fit ≥ 4, on-device-only (default). Filter before paging; show full count.
 - Detail view: hero art, description, hook, tags, play time, last played, launch button, overrides.
-- Launch through profiles with ordered fallbacks; per-game override; "open with" fallback.
+- Launch through profiles with ordered fallbacks; per-game override; "open with" fallback. Launch with… also offers any
+  RetroArch core (`ui/CorePicker.kt`, list in `data/setup/RetroArchCores.kt`): `ra-`/`ra64-`/`ra32-<core>` ids resolve
+  without a launchers.json entry (`launch/ProfileOrder.kt` `resolve`), and hold A on an entry sets the system default.
 - Favourites folder holding games and apps alike.
 - Play log and "Continue" row. Play time is active time (`data/user/PlayLog.kt`): an open session runs only while the
   screen is on and unlocked (SCREEN_ON without the keyguard locked, or USER_PRESENT), no navigation instance is the top

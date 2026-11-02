@@ -39,10 +39,12 @@ import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.LaunchProfile
 import io.github.esko997.sortie.data.manifest.SystemDef
 import io.github.esko997.sortie.data.manifest.UserData
+import io.github.esko997.sortie.data.setup.LibraryPresets
 import io.github.esko997.sortie.data.tonight.TonightCard
 import io.github.esko997.sortie.data.tonight.TonightDay
 import io.github.esko997.sortie.launch.IntentBuilder
 import io.github.esko997.sortie.launch.SessionReturn
+import io.github.esko997.sortie.launch.resolve
 import io.github.esko997.sortie.launch.sessionReturn
 import io.github.esko997.sortie.mecha.ui.MechaPresence
 import io.github.esko997.sortie.stats.CompanionView
@@ -194,7 +196,7 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     fun profilesForSystem(systemId: String): List<Pair<LaunchProfile, Boolean>> {
         val snap = manifests.value
         val system = snap.systems.firstOrNull { it.id == systemId } ?: return emptyList()
-        return system.profiles.mapNotNull { snap.profiles[it] }.map { it to graph.launcher.isInstalled(it) }
+        return system.profiles.mapNotNull { snap.profiles.resolve(it) }.map { it to graph.launcher.isInstalled(it) }
     }
 
     val apps: StateFlow<List<AppEntry>> = graph.apps.apps
@@ -521,6 +523,9 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     fun profilesFor(game: GameEntity): List<Pair<LaunchProfile, Boolean>> = graph.launcher.profilesFor(game).map { it to graph.launcher.isInstalled(it) }
 
+    /** The official RetroArch builds installed here: each gets a "Choose … core…" entry in Launch with…. */
+    fun retroArchBuilds(): List<LibraryPresets.RetroArchBuild> = LibraryPresets.retroArchBuilds.filter { graph.launcher.isInstalled(it.pkg) }
+
     /** [on]: a display the player picked ("Play on the other screen") instead of the profile's (see [io.github.esko997.sortie.launch.LaunchManager.launch]). */
     fun launch(game: GameEntity, only: LaunchProfile? = null, on: Int? = null) = viewModelScope.launch {
         dismissExitNotice()
@@ -537,7 +542,7 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
             )
             return@launch
         }
-        val only = profileId?.let { manifests.value.profiles[it] }
+        val only = profileId?.let { manifests.value.profiles.resolve(it) }
         graph.launcher.launch(game, only)
     }
 
@@ -611,7 +616,7 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
             val pkg = when {
                 session.gameId.startsWith(LibraryItem.APP_PREFIX) -> session.gameId.removePrefix(LibraryItem.APP_PREFIX)
                 session.gameId.startsWith(LibraryItem.SHORTCUT_PREFIX) -> session.gameId.removePrefix(LibraryItem.SHORTCUT_PREFIX).substringBefore('/')
-                else -> session.profileId?.let { manifests.value.profiles[it]?.`package` }
+                else -> session.profileId?.let { manifests.value.profiles.resolve(it)?.`package` }
             }
             // an unreadable task list is "unknown", never "gone"
             val running = if (pkg != null && tasks != null) graph.screenMover.switchableOf(tasks).any { it.pkg == pkg } else null
