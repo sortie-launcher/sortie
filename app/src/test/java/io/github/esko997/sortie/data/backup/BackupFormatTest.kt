@@ -3,6 +3,7 @@ package io.github.esko997.sortie.data.backup
 import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.magazine.MagazineClipping
 import io.github.esko997.sortie.data.manifest.ControllerSupport
+import io.github.esko997.sortie.data.manifest.FolderDef
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.GameBookmark
 import io.github.esko997.sortie.data.manifest.UserData
@@ -29,7 +30,12 @@ class BackupFormatTest {
         wantToPlay = setOf("ps2/Armored Core 3 (USA).chd", "gba/Not On This Card.gba"),
         homeSort = "custom",
         browseChrome = "compact",
-        layout = listOf("system:snes", "folder:want-to-play", "ps2/Armored Core 3 (USA).chd"),
+        layout = listOf("system:snes", "folder:lists", "ps2/Armored Core 3 (USA).chd"),
+        // in-app folders, one inside the other, holding a built-in folder, a system and a game
+        folders = listOf(
+            FolderDef("lists", "Lists", include = listOf("folder:want-to-play", "folder:mechs")),
+            FolderDef("mechs", "Mechs", include = listOf("system:ps2", "ps2/Armored Core 3 (USA).chd"))
+        ),
         dock = listOf("app:org.ppsspp.ppsspp", "", "", "", ""),
         gameAnnotations = mapOf("ps2/Armored Core 3 (USA).chd" to GameAnnotation(ControllerSupport.GAMEPAD)),
         bookmarks = mapOf("ps2/Armored Core 3 (USA).chd" to GameBookmark("Mission 12, garage", 1_700_000_000_000)),
@@ -159,6 +165,16 @@ class BackupFormatTest {
         assertEquals(listOf("x"), u.layout)
         assertEquals("auto", u.browseChrome)
         assertNull(valid(text).backup.openSessionExcluded)
+        // a backup from before in-app folders restores none, so Custom home shows every folder and system again
+        assertEquals(emptyList<FolderDef>(), u.folders)
+    }
+
+    /** Hand-edited in-app folders are cleaned on restore: a repeated id keeps the first, a blank name falls back to the id. */
+    @Test
+    fun restoredInAppFoldersAreCleaned() {
+        val text = """{"format": "sortie-backup", "version": 2, "createdAt": 1, "sessions": [],""" +
+            """ "user": {"folders": [{"id": "a", "label": " ", "include": ["folder:b", "folder:b"]}, {"id": "a"}, {"id": ""}]}}"""
+        assertEquals(listOf(FolderDef("a", "a", include = listOf("folder:b"))), valid(text).backup.user.folders)
     }
 
     private val companion = MechaState(

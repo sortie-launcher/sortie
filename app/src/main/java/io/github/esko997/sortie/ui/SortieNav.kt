@@ -181,6 +181,8 @@ fun SortieNav(vm: SortieViewModel, nav: NavHostController) {
                         view = f,
                         vm = vm,
                         onGame = { nav.navigate("game/${enc(it)}") },
+                        onFolder = { nav.navigate("folder/$it") },
+                        onSystem = { nav.navigate("system/${enc(it)}") },
                         onSearch = { openSearch(SearchScope.Folder(id)) }
                     )
                 }

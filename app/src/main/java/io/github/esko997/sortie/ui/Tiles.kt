@@ -34,8 +34,10 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -319,7 +321,7 @@ private val SheetShape = RoundedCornerShape(16.dp)
 
 /**
  * Small controller-first context menu (hold A / long press): a dialog with one row per action plus Cancel; the first action takes
- * focus, A picks, B or a tap outside cancels. The dialog closes before the action runs.
+ * focus, A picks, B or a tap outside cancels. The dialog closes before the action runs. A list taller than the window scrolls.
  */
 @Composable
 fun ContextSheet(title: String, actions: List<SheetAction>, onDismiss: () -> Unit) {
@@ -336,17 +338,19 @@ fun ContextSheet(title: String, actions: List<SheetAction>, onDismiss: () -> Uni
                 modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 2.dp, bottom = 10.dp)
             )
             Box(Modifier.padding(horizontal = 8.dp).padding(bottom = 6.dp).fillMaxWidth().height(1.dp).background(RuleColour))
-            actions.forEachIndexed { i, a ->
-                FocusRow(
-                    onClick = {
-                        onDismiss()
-                        a.run()
-                    },
-                    modifier = if (i == 0) Modifier.focusRequester(first).onFocusChanged { if (it.isFocused) focusedOnce = true } else Modifier
-                ) { Text(a.label, style = MaterialTheme.typography.bodyLarge) }
-            }
-            FocusRow(onClick = onDismiss, modifier = if (actions.isEmpty()) Modifier.focusRequester(first) else Modifier) {
-                Text("Cancel", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                actions.forEachIndexed { i, a ->
+                    FocusRow(
+                        onClick = {
+                            onDismiss()
+                            a.run()
+                        },
+                        modifier = if (i == 0) Modifier.focusRequester(first).onFocusChanged { if (it.isFocused) focusedOnce = true } else Modifier
+                    ) { Text(a.label, style = MaterialTheme.typography.bodyLarge) }
+                }
+                FocusRow(onClick = onDismiss, modifier = if (actions.isEmpty()) Modifier.focusRequester(first) else Modifier) {
+                    Text("Cancel", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
             HintBar("A" to "choose", "B" to "cancel", modifier = Modifier.padding(top = 8.dp).clip(RoundedCornerShape(10.dp)))
         }

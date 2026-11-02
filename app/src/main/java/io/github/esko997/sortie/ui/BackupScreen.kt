@@ -179,6 +179,7 @@ private fun summary(u: UserData): String = listOf(
     plural(u.favourites.size, "favourite"),
     plural(u.wantToPlay.size, "Want to play game"),
     plural(u.layout.size, "custom home tile"),
+    plural(u.folders.size, "in-app folder"),
     plural(u.dock.count { it.isNotBlank() }, "dock slot"),
     plural(u.bookmarks.size, "bookmark"),
     plural(u.gameAnnotations.size, "controller requirement"),

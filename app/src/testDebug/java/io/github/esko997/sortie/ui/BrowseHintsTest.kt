@@ -37,7 +37,7 @@ class BrowseHintsTest {
     fun compactHintsKeepSecondaryCommandsAccessibleAndReturnFocusAfterDismissal() {
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Shooters", substring = true).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Controls").performTouchInput { click() }
-        compose.onNodeWithText("move / remove").assertIsDisplayed()
+        compose.onNodeWithText("move / folder").assertIsDisplayed()
         compose.onNodeWithText("random").assertIsDisplayed()
         compose.onNodeWithText("systems").assertIsDisplayed()
         compose.mainClock.advanceTimeBy(1_000)

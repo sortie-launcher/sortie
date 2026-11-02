@@ -83,4 +83,15 @@ class FavouritesFolderTest {
         assertEquals(1, views.favourites().problems.size)
         assertEquals(listOf(ac3.id), views.single { it.def.id == "all" }.items.map { it.id })
     }
+
+    /**
+     * A shortcut filed in an in-app folder stays a member though it is no longer opted in to Apps, favourited or on home (moved
+     * off Home, or hidden from Apps afterwards); one only some other folder's rule could pick still needs choosing first.
+     */
+    @Test
+    fun shortcutListedInAnInAppFolderStaysACandidate() {
+        val user = UserData(folders = listOf(FolderDef("games", include = listOf(bloodyRoar.id))))
+        val items = folderCandidates(emptyList(), emptyList(), listOf(bloodyRoar, citra), user)
+        assertEquals(listOf(bloodyRoar.id), items.map { it.id })
+    }
 }

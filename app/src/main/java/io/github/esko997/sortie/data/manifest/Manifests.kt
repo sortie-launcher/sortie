@@ -73,6 +73,10 @@ data class LaunchProfile(
 @Serializable
 data class FoldersManifest(val folders: List<FolderDef> = emptyList())
 
+/**
+ * One folder, from `folders.json` or made on the device ([UserData.folders]); docs/formats/folders.md. Besides game, app and
+ * shortcut ids, [include] may hold pointers to other folders ([FOLDER_POINTER]) and systems ([SYSTEM_POINTER]), shown inside it.
+ */
 @Serializable
 data class FolderDef(
     val id: String,
@@ -83,7 +87,15 @@ data class FolderDef(
     val apps: Boolean = false,
     val sort: String = "title:asc",
     val limit: Int = 0
-)
+) {
+    companion object {
+        /** `folder:<id>`: a folder inside another folder, and a folder tile on the custom home. */
+        const val FOLDER_POINTER = "folder:"
+
+        /** `system:<id>`: a system inside a folder, and a system tile on the custom home. */
+        const val SYSTEM_POINTER = "system:"
+    }
+}
 
 @Serializable
 data class GuideFile(val built: String = "", val games: Map<String, GuideEntry> = emptyMap())
@@ -195,6 +207,12 @@ data class UserData(
      * (Continue first, the others appended); moving a tile saves the whole order. The generated sorts hold systems only.
      */
     val layout: List<String> = emptyList(),
+    /**
+     * Folders made on the device (Custom home's Move to folder…, Add to folder…), in creation order; the same schema as
+     * `folders.json`. Here rather than on the card's folders.json so they are in backups and a desktop deploy cannot replace
+     * them. An id that a `folders.json` entry also uses belongs to this folder (that entry is ignored).
+     */
+    val folders: List<FolderDef> = emptyList(),
     /** Shortcuts the user opted in to (ids `shortcut:<pkg>/<id>`); every other launcher shortcut stays out of the lists. */
     val shortcuts: Set<String> = emptySet(),
     /** Per-system default launch profile chosen on the device (system id → profile id); overrides the manifest's first choice. */

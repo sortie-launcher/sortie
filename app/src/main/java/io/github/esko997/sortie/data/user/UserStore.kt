@@ -324,6 +324,9 @@ class UserStore(
 
     fun setLayout(ids: List<String>) = update { it.copy(layout = ids.distinct()) }
 
+    /** Applies one in-app folder edit (the pure functions in data/folders/InAppFolders.kt), like any other ordinary edit. */
+    fun editFolders(f: (UserData) -> UserData) = update(f)
+
     fun setSystemProfile(systemId: String, profileId: String?) =
         update { it.copy(systemProfiles = if (profileId == null) it.systemProfiles - systemId else it.systemProfiles + (systemId to profileId)) }
 

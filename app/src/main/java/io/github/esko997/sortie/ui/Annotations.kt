@@ -317,7 +317,8 @@ private fun FieldLabel(text: String) {
  * where those moves land: [FocusRequester.Default] searches spatially, [FocusRequester.Cancel] keeps the focus here. Callers
  * whose field sits above Save/Cancel name Save explicitly, because a spatial search from a wide field picks whichever button
  * is nearest its centre, often Cancel. The caret starts after existing text (so typing appends) and goes there again whenever
- * the caller replaces [value]; the user's own caret moves and IME composition are kept while the text is theirs.
+ * the caller replaces [value]; the user's own caret moves and IME composition are kept while the text is theirs. [singleLine]
+ * makes it a one-line field (a name).
  */
 @Composable
 internal fun NoteField(
@@ -327,7 +328,8 @@ internal fun NoteField(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     up: FocusRequester = FocusRequester.Default,
-    down: FocusRequester = FocusRequester.Default
+    down: FocusRequester = FocusRequester.Default,
+    singleLine: Boolean = false
 ) {
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -341,8 +343,9 @@ internal fun NoteField(
         },
         enabled = enabled,
         placeholder = { Text(placeholder) },
-        minLines = 2,
-        maxLines = 6,
+        singleLine = singleLine,
+        minLines = if (singleLine) 1 else 2,
+        maxLines = if (singleLine) 1 else 6,
         modifier = modifier.fillMaxWidth().padFocusExits(up, down).onPreviewKeyEvent { e ->
             when {
                 !isPhysicalPad(e) -> false

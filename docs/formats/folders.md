@@ -60,6 +60,31 @@ with Favourites enabled. This removes a redundant rule, not anyone's favourites.
 labels and unknown fields prevent automatic removal; those conflicts remain reported for deliberate correction.
 A Cocoon user folder merely named "Favourites" keeps its separate `cocoon-<id>` identity.
 
+## Folders and systems inside a folder
+
+`include` also takes the tile ids Custom Home uses for folders and systems: `folder:<id>` (any folder from this file, an
+in-app folder or a built-in one) and `system:<id>` (a system from [systems.json](systems.md)). These are live pointers, not
+copies: Favourites inside a "My lists" folder is still Favourites. The folder screen shows the folders and systems first, in
+`include` order, then the folder's games, apps and shortcuts; `rule`, `sort` and `limit` apply to the latter only, and a rule
+never matches a folder or system.
+
+```json
+{ "id": "my-lists", "label": "My lists", "include": [ "folder:favourites", "folder:want-to-play", "folder:mechs", "system:ps2" ] }
+```
+
+A folder or system that a folder shows is no longer its own tile on Custom Home's top level; it is reached through that
+folder (and from every folder that points to it). Other sorts list systems as before. Pointers to unknown folders or systems
+are skipped and kept. Folders nest at most four deep (a top-level folder is level 1). Hand-edited cycles and deeper chains do
+not hang or crash: pointers are followed depth-first, starting from folders nothing points to, a pointer back to a folder
+already on the path or past the fourth level is not followed and is reported on that folder, and a folder with no followed
+pointer to it stays on Custom Home.
+
+Folders made on the device (Custom Home's **Move to folder…** and **New folder…**, **Add to folder…** on a game) are stored in
+`folders` in [user.json](user.md) with this same schema, not here, so they are in backups and `deploy.sh` cannot replace
+them. Sortie edits only those; entries in this file can be moved into an in-app folder (as a pointer) but are never changed
+by the app. If an in-app folder and an entry here share an `id`, the in-app folder wins and the entry here is ignored; an
+in-app folder with a reserved id is ignored.
+
 ## Recently played tags (`recentTags`)
 
 `{ "recentTags": { "minShared": 1, "window": 3 } }` matches a game whose guide `tags` share at least

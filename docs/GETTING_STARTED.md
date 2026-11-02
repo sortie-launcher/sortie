@@ -393,8 +393,9 @@ Sortie never downloads artwork, but it reads what these leave behind:
 | Switch which screen has the controller (two screens) | **X** | — (touch works directly on either screen) |
 
 Home has five sorts. **Alphabetical**, **Game count** and **Generation** show your systems. **Custom** holds **Continue**,
-**Apps**, built-in shelves such as **Favourites** and **Want to play**, plus anything you *Add to home*. **By Console** shows
-one console's games at a time. The header starts with the amber Split-S mark, then has **Apps**, **Search**, **Extras**
+**Apps**, built-in shelves such as **Favourites** and **Want to play**, plus anything you *Add to home*; hold A on a tile →
+**Move to folder…** tidies it into a folder you make on the device (folders can hold systems and other folders too).
+**By Console** shows one console's games at a time. The header starts with the amber Split-S mark, then has **Apps**, **Search**, **Extras**
 and **Settings**. **Extras** holds **Tonight** (up to five suggestions from your own library, chosen once a day),
 **Hangar** and **Magazines**. **Settings** holds **Library and emulators** and the **Sortie manual**, which covers every
 screen in detail.
@@ -483,7 +484,8 @@ prepared files rather than in-app wizards.
 **Systems and smart folders are different things.** A *system* is set up in Library setup: one kind of game, its folders
 and its emulators. Every game belongs to exactly one system. A *smart folder* is a shelf defined by rules (tags, fit, play
 time, how long since you played…) in a prepared `folders.json`; a game can appear in many. **Favourites**, **Want to play**,
-**Finished** and **Shelved** are built-in shelves you fill yourself, no files needed.
+**Finished** and **Shelved** are built-in shelves you fill yourself, no files needed, and so are the folders you make on
+**Custom** with **Move to folder…** or **Add to folder…**.
 
 **Editorial fit versus your verdict.** *Fit* stars, hooks and cautions are editorial guidance: Sortie's built-in AI-assisted
 guide supplies hooks, badges and some control notes, but no fit stars; an optional `guide.json` can supply all of them.
