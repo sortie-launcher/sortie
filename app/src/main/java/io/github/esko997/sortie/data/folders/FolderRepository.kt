@@ -47,9 +47,13 @@ data class FolderView(
     /** Every folder but the built-in ones: a `folders.json` folder moves into user.json on its first edit (see SortieViewModel). */
     val editable: Boolean get() = inApp || def.id !in BUILT_IN_FOLDER_IDS
 
-    /** The tile's art: the chosen [FolderDef.cover] game's cover while it is a member, else the first game's in folder order with one. */
+    /**
+     * The tile's art: the chosen [FolderDef.cover] game's cover while it is a member, else the first game's in folder order with
+     * one. Hidden shows none: a hidden game's art on Home would undo hiding it.
+     */
     val coverArt: String?
         get() {
+            if (def.id == HIDDEN_FOLDER_ID) return null
             val games = items.filterIsInstance<LibraryItem.Game>()
             return games.firstOrNull { it.id == def.cover }?.game?.cover ?: games.firstNotNullOfOrNull { it.game.cover }
         }
