@@ -529,6 +529,37 @@ class LibrarySetupStoreTest {
         assertEquals(bareBefore, bytes(bare))
     }
 
+    /**
+     * Adopting folders on their first edit removes just those entries from folders.json, the only file written: other entries
+     * and unknown keys stay, an id no longer there is a no-op, and an unreadable folders.json is refused untouched.
+     */
+    @Test
+    fun adoptedFoldersAreRemovedByIdOnly() = runBlocking {
+        val dir = desktopCard()
+        val tools = """{"id": "tools", "label": "Tools", "include": ["app:org.ppsspp.ppsspp"], "sort": "added:desc"}"""
+        val folders = foldersFile(dir, tools, shmups)
+        val s = store(dir)
+        val before = bytes(dir)
+        val removed = s.removeFolders(s.load(), setOf("tools", "gone"))
+        assertEquals(listOf("shmups"), ids(folders))
+        assertEquals(entry(folders, "folders", "shmups"), Json.parseToJsonElement(shmups))
+        assertEquals("2", obj(folders)["version"].toString())
+        assertEquals(before - "folders.json", bytes(dir) - "folders.json")
+
+        val after = bytes(dir)
+        s.removeFolders(removed, setOf("tools"))
+        assertEquals(after, bytes(dir))
+
+        foldersFile(dir, shmups, """{"label": "No id"}""")
+        val broken = bytes(dir)
+        try {
+            s.removeFolders(s.load(), setOf("shmups"))
+            fail("rewrote an unreadable folders.json")
+        } catch (e: IOException) {
+        }
+        assertEquals(broken, bytes(dir))
+    }
+
     @Test
     fun aConcurrentDesktopEditIsDetected() = runBlocking {
         val dir = desktopCard()

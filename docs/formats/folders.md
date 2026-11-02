@@ -27,7 +27,9 @@ Smart and manual folders. A folder is a query over the index plus optional manua
 
 `id` is required; `label` defaults to it. Without `rule`, a folder contains only its `include` list. An empty rule object
 matches every eligible candidate. `exclude` wins over both the rule and `include`; neither can bring back hidden or
-unavailable entries. `limit` defaults to `0` (unlimited); a positive value caps the sorted result.
+unavailable entries. `limit` defaults to `0` (unlimited); a positive value caps the sorted result. `cover` (optional, a game
+id) picks the folder tile's artwork while that game is a member; otherwise the tile shows the first member, in the folder's
+order, that has a cover.
 
 Predicates:
 
@@ -48,11 +50,14 @@ Sort keys: `fit`, `title`, `year`, `lastPlayed`, `playMinutes`, `added`, `system
 `:desc`, comma-separated. `random` shuffles the members each time the folder is re-evaluated (library, play
 data, favourites or manifests changed); next to other keys it is the final tiebreaker (`fit:desc,random`).
 
-The ids `favourites`, `want-to-play`, `finished` and `shelved` are reserved for Sortie's built-in personal shelves. They use
-`favourites`, `wantToPlay` and `gameProgress` in [user.json](user.md), not rules from this file. A `folders.json` entry with a
-reserved id is ignored and reported on the built-in folder. These folders always appear on Custom Home, are title-sorted and
-omit hidden entries. Favourites holds favourited games, installed apps and shortcuts; the other three hold games only. Ids
-temporarily absent from the game index (or apps not installed) are retained in the user's data and return when available.
+The ids `favourites`, `want-to-play`, `finished`, `shelved`, `hidden` and `recently-added` are reserved for Sortie's built-in
+folders. The first four use `favourites`, `wantToPlay` and `gameProgress` in [user.json](user.md), not rules from this file;
+`hidden` lists everything in `user.hidden`, and `recently-added` the games added in the last 14 days, newest first. A
+`folders.json` entry with a reserved id is ignored and reported. Favourites, Want to play, Finished and Shelved always appear
+on Custom Home; Hidden and Recently added only while they hold something. Entries in `user.hidden` are left out of every
+folder except Hidden. Favourites holds favourited games, installed apps and shortcuts; the others hold games only, apart
+from Hidden, which also lists hidden apps and shortcuts. Ids temporarily absent from the game index (or apps not installed)
+are retained in the user's data and return when available.
 
 Cocoon import can remove the obsolete default definition `{ "id": "favourites", "label": "Favourites",
 "rule": { "favourite": true }, "apps": true, "sort": "title:asc" }` after showing the cleanup in its preview and only
@@ -80,10 +85,12 @@ already on the path or past the fourth level is not followed and is reported on 
 pointer to it stays on Custom Home.
 
 Folders made on the device (Custom Home's **Move to folder…** and **New folder…**, **Add to folder…** on a game) are stored in
-`folders` in [user.json](user.md) with this same schema, not here, so they are in backups and `deploy.sh` cannot replace
-them. Sortie edits only those; entries in this file can be moved into an in-app folder (as a pointer) but are never changed
-by the app. If an in-app folder and an entry here share an `id`, the in-app folder wins and the entry here is ignored; an
-in-app folder with a reserved id is ignored.
+`folders` in [user.json](user.md) with this same schema, so they are in backups and `deploy.sh` cannot replace them. An entry
+from this file becomes such a folder the first time it is edited on the device (renamed, sorted, given a cover, deleted,
+filed into or out of, or when a folder it shows is deleted): its definition, with the same `id` and every field above, moves
+into user.json and is removed from this file; keys this page does not list (such as a note) are not carried over. A later
+copy of an older file can bring the entry back here; if an in-app folder and an entry here share an `id`, the in-app folder
+wins and the entry here is ignored. An in-app folder with a reserved id is ignored.
 
 ## Recently played tags (`recentTags`)
 

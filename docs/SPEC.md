@@ -96,8 +96,11 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Rules in `folders.json`: regex over name/path/system; predicates over genre, players, year,
   tags, fit, play time, last played, favourite, flags; AND/OR/NOT; manual include/exclude lists.
 - Live counts; "Pick one" (random) scoped to any folder.
-- Built-in folders: Favourites, Want to play, Finished and Shelved. Other smart folders come from `folders.json`;
-  Unplayed 4+, Recently added, Short sessions and Two-player are possible configurations, not shipped defaults.
+- Built-in folders: Favourites, Want to play, Finished, Shelved, Recently added (games added in the last 14 days, newest
+  first) and Hidden (`user.hidden`; hidden entries are left out of every other folder). Recently added and Hidden appear on
+  Custom only when non-empty. Other smart folders come from `folders.json`; Unplayed 4+, Short sessions and Two-player are
+  possible configurations, not shipped defaults. A `folders.json` folder is adopted into user.json on its first on-device
+  edit (rename, Sort by…, cover, delete, filing into it) and removed from `folders.json`.
 - Nested, in-app folders: `include` also takes `folder:<id>` and `system:<id>` pointers (live references, not copies) in
   `folders.json` and in `user.folders`, the folders made on the device (same schema; in backups; never written to the card's
   `folders.json`). `nestFolders` resolves them once per folder evaluation: depth-first from unpointed folders, cycles and
@@ -475,7 +478,8 @@ previous/next system (lists) / sort (Home) / console (By Console) / Perf page (o
 (games, detail) · L2 leave a note (while the post-session bookmark invitation shows) / browse the picture sequence in view
 (magazine article) · hold R1 favourite (games, apps, shortcuts) / random game (system and folder tiles) · Home (physical) app
 switcher when Shizuku is available, including while reading. Moving a Custom home tile: D-pad one slot per press, A drop,
-B cancel. Long press = hold A for touch. Compact hint bars keep the main buttons and list the rest under Controls.
+B cancel. D-pad Left/Right in list view (system and folder lists, search) jump to the previous/next starting letter while the
+list is in title order. Long press = hold A for touch. Compact hint bars keep the main buttons and list the rest under Controls.
 
 ## Implementation notes for contributors
 

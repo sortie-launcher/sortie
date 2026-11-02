@@ -25,12 +25,15 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * A folder evaluated against the current library, installed apps, launcher shortcuts, play data and favourites. [items] are its
  * games, apps and shortcuts; [children] the `folder:<id>` and `system:<id>` pointers it shows ahead of them, in include order,
  * and [parents] the folders that show it, with [level] its depth (1 on Home's top level); see [nestFolders].
- * [inApp] marks a folder made on the device (user.json `folders`): the only kind Sortie renames, deletes or files things into.
+ * [inApp] marks a folder made on the device (user.json `folders`); [editable] ones are what Sortie renames, deletes or files
+ * things into.
  */
 data class FolderView(
     val def: FolderDef,
@@ -40,12 +43,22 @@ data class FolderView(
     val children: List<String> = emptyList(),
     val parents: List<String> = emptyList(),
     val level: Int = 1
-)
+) {
+    /** Every folder but the built-in ones: a `folders.json` folder moves into user.json on its first edit (see SortieViewModel). */
+    val editable: Boolean get() = inApp || def.id !in BUILT_IN_FOLDER_IDS
+
+    /** The tile's art: the chosen [FolderDef.cover] game's cover while it is a member, else the first game's in folder order with one. */
+    val coverArt: String?
+        get() {
+            val games = items.filterIsInstance<LibraryItem.Game>()
+            return games.firstOrNull { it.id == def.cover }?.game?.cover ?: games.firstNotNullOfOrNull { it.game.cover }
+        }
+}
 
 /**
- * Evaluates every folder in `folders.json` and user.json's in-app folders, plus the built-in Favourites, Want to play, Finished
- * and Shelved folders, and nests them ([nestFolders]) whenever the library, apps, shortcuts, play stats, favourites, the queue,
- * the shelves, the in-app folders or the manifests change.
+ * Evaluates every folder in `folders.json` and user.json's in-app folders, plus the built-in Favourites, Want to play, Finished,
+ * Shelved, Recently added and Hidden folders, and nests them ([nestFolders]) whenever the library, apps, shortcuts, play stats,
+ * favourites, the queue, the shelves, the hidden ids, the in-app folders or the manifests change.
  * The full-table read runs inside a transaction so the indexer cannot change rows under the cursor (that race crashed the
  * process once with "Couldn't read row N from CursorWindow"), inputs are debounced while an index pass is writing, and any
  * failure degrades to the previous result instead of propagating.
@@ -71,7 +84,7 @@ class FolderRepository(
             val items = folderCandidates(games, appList, shortcutList, u)
             val byId = items.associateBy { it.id }
             val subjects = items.map { subjectOf(it, stats[it.id], it.id in u.favourites, now) }
-            val views = evaluateFolders(snap.folders, u.wantToPlay, u.gameProgress, subjects, byId, u.folders)
+            val views = evaluateFolders(snap.folders, u.wantToPlay, u.gameProgress, subjects, byId, u.folders, u.hidden)
             nestFolders(views, snap.systems.mapTo(HashSet()) { it.id })
         }.catch { e ->
             Log.w(TAG, "folder evaluation failed", e)
@@ -97,7 +110,8 @@ class FolderRepository(
 
 /**
  * Every launchable a folder may hold: indexed games, installed apps and only the shortcuts the user chose — opted in to Apps,
- * favourited, placed on home or listed in an in-app folder (not every app's manifest action) — minus [user]'s hidden ids.
+ * favourited, placed on home or listed in an in-app folder (not every app's manifest action). Hidden ones are left in for the
+ * Hidden folder; [evaluateFolders] keeps them out of every other folder.
  */
 internal fun folderCandidates(games: List<GameEntity>, apps: List<AppEntry>, shortcuts: List<ShortcutEntry>, user: UserData): List<LibraryItem> {
     val filed = user.folders.flatMapTo(HashSet()) { it.include }
@@ -106,7 +120,7 @@ internal fun folderCandidates(games: List<GameEntity>, apps: List<AppEntry>, sho
         apps.mapTo(this) { LibraryItem.App(it) }
         shortcuts.filter { it.id in user.shortcuts || it.id in user.favourites || it.id in user.layout || it.id in filed }
             .mapTo(this) { LibraryItem.Shortcut(it) }
-    }.filter { it.id !in user.hidden }
+    }
 }
 
 internal fun subjectOf(item: LibraryItem, stat: PlayStat?, favourite: Boolean, now: Long): Subject {
@@ -140,6 +154,11 @@ internal fun subjectOf(item: LibraryItem, stat: PlayStat?, favourite: Boolean, n
 
 private const val FAVOURITES_LABEL = "Favourites"
 private const val WANT_TO_PLAY_LABEL = "Want to play"
+private const val RECENTLY_ADDED_LABEL = "Recently added"
+private const val HIDDEN_LABEL = "Hidden"
+
+/** Recently added's rule: games indexed (first seen) less than 14 days ago. */
+private val RECENTLY_ADDED_RULE = JsonObject(mapOf("daysSinceAdded" to JsonObject(mapOf("lt" to JsonPrimitive(14)))))
 
 /** A built-in folder's definition; [gamesOnly] drops apps and shortcuts from its members (the personal game shelves). */
 private class BuiltInFolder(val def: FolderDef, val gamesOnly: Boolean)
@@ -147,8 +166,10 @@ private class BuiltInFolder(val def: FolderDef, val gamesOnly: Boolean)
 /**
  * The manifest folders, then the in-app folders ([inApp], user.json), then the built-in folders: Favourites (every favourited
  * game, app and shortcut in [subjects]), Want to play ([wantToPlay]), Finished and Shelved (games whose [progress] names that
- * shelf; these three list games only). Each lists its members found in [subjects] (already limited to indexed games, installed
- * apps and chosen shortcuts, none hidden), in title order, through the same [RuleEngine] include path as any folder. They are
+ * shelf; these three list games only), Recently added (games added in the last 14 days, newest first) and Hidden (the
+ * [hidden] games, apps and shortcuts). [subjects] are already limited to indexed games, installed apps and chosen shortcuts;
+ * the hidden ones are members of Hidden only. Each built-in lists its members in title order unless said otherwise, through
+ * the same [RuleEngine] include/rule path as any folder. They are
  * always present — empty when nothing resolves — so their home tiles keep working after the last removal; unresolved ids are
  * skipped here and stay in user.json. So that `folder:<id>` names one folder only, a `folders.json` entry claiming a reserved
  * id is dropped (reported on that built-in folder); an in-app folder with a reserved id is dropped, one sharing a
@@ -160,25 +181,31 @@ internal fun evaluateFolders(
     progress: Map<String, GameProgress>,
     subjects: List<Subject>,
     byId: Map<String, LibraryItem>,
-    inApp: List<FolderDef> = emptyList()
+    inApp: List<FolderDef> = emptyList(),
+    hidden: Set<String> = emptySet()
 ): List<FolderView> {
-    val favourites = subjects.filter { it.favourite }.map { it.id }
+    val shown = subjects.filter { it.id !in hidden }
+    val favourites = shown.filter { it.favourite }.map { it.id }
     val builtIn = listOf(
         BuiltInFolder(FolderDef(FAVOURITES_FOLDER_ID, FAVOURITES_LABEL, include = favourites, sort = "title:asc"), gamesOnly = false),
         BuiltInFolder(FolderDef(WANT_TO_PLAY_FOLDER_ID, WANT_TO_PLAY_LABEL, include = wantToPlay.toList(), sort = "title:asc"), gamesOnly = true)
     ) + Shelf.entries.map {
         BuiltInFolder(FolderDef(it.folderId, it.label, include = progress.idsOn(it).toList(), sort = "title:asc"), gamesOnly = true)
-    }
+    } + listOf(
+        BuiltInFolder(FolderDef(RECENTLY_ADDED_FOLDER_ID, RECENTLY_ADDED_LABEL, rule = RECENTLY_ADDED_RULE, sort = "added:desc,title:asc"), gamesOnly = true),
+        BuiltInFolder(FolderDef(HIDDEN_FOLDER_ID, HIDDEN_LABEL, include = hidden.toList(), sort = "title:asc"), gamesOnly = false)
+    )
     val (reserved, manifest) = defs.partition { it.id in BUILT_IN_FOLDER_IDS }
     val own = inApp.filter { it.id !in BUILT_IN_FOLDER_IDS }.distinctBy { it.id }
     val ownIds = own.mapTo(HashSet()) { it.id }
     val views = manifest.filter { it.id !in ownIds }.map { it to false } + own.map { it to true }
     return views.map { (def, isInApp) ->
-        val result = RuleEngine.evaluate(def, subjects)
+        val result = RuleEngine.evaluate(def, shown)
         FolderView(def, result.subjects.mapNotNull { byId[it.id] }, result.problems, inApp = isInApp)
     } + builtIn.map { folder ->
         val def = folder.def
-        val members = RuleEngine.evaluate(def, subjects).subjects.filter { !folder.gamesOnly || it.kind == Subject.Kind.GAME }
+        val pool = if (def.id == HIDDEN_FOLDER_ID) subjects else shown
+        val members = RuleEngine.evaluate(def, pool).subjects.filter { !folder.gamesOnly || it.kind == Subject.Kind.GAME }
         val problems = if (reserved.none { it.id == def.id }) {
             emptyList()
         } else {

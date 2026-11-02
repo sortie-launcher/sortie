@@ -20,18 +20,25 @@ import io.github.esko997.sortie.data.db.byIds
 import io.github.esko997.sortie.data.db.toRoom
 import io.github.esko997.sortie.data.folders.BUILT_IN_FOLDER_IDS
 import io.github.esko997.sortie.data.folders.FolderView
+import io.github.esko997.sortie.data.folders.gamesWithin
 import io.github.esko997.sortie.data.folders.newFolderId
+import io.github.esko997.sortie.data.folders.ownedSubfolders
 import io.github.esko997.sortie.data.folders.withAddedToFolder
+import io.github.esko997.sortie.data.folders.withAdopted
+import io.github.esko997.sortie.data.folders.withFolderCover
 import io.github.esko997.sortie.data.folders.withFolderRenamed
+import io.github.esko997.sortie.data.folders.withFolderSort
 import io.github.esko997.sortie.data.folders.withMoved
 import io.github.esko997.sortie.data.folders.withNewFolder
 import io.github.esko997.sortie.data.folders.withRemovedFromFolder
+import io.github.esko997.sortie.data.folders.withoutAdopted
 import io.github.esko997.sortie.data.folders.withoutFolder
 import io.github.esko997.sortie.data.index.Indexer
 import io.github.esko997.sortie.data.manifest.BrowseChromeMode
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.LaunchProfile
 import io.github.esko997.sortie.data.manifest.SystemDef
+import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.data.tonight.TonightCard
 import io.github.esko997.sortie.data.tonight.TonightDay
 import io.github.esko997.sortie.launch.IntentBuilder
@@ -45,6 +52,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -339,37 +347,81 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     private fun homeOrder(): List<String> = HomeIds.custom(user.value.layout, folders.value.map { HomeIds.FOLDER + it.def.id })
 
     /**
-     * Makes an in-app folder named [label] in [into] (an in-app folder id, or null for Home) just before tile [beside], and
-     * moves tile [moving] from [into] into it when given. Returns the new folder's id, unique among every folder id.
+     * Applies folder edit [f] (the pure functions in data/folders/InAppFolders.kt), then runs [ok]. A `folders.json` folder among
+     * [ids] is adopted first: its definition (same id, every field) moves into user.json, fsynced before anything else so a
+     * crash leaves at worst both copies (the in-app one wins), and then out of folders.json. When folders.json cannot be written
+     * (unreadable, changed, storage gone) the adoption is undone: nothing changes and a toast says why. A later desktop deploy
+     * may bring the original back, which the in-app folder then keeps overriding.
      */
-    fun createFolder(label: String, into: String?, beside: String?, moving: String? = null): String {
+    private fun editFolders(ids: List<String?>, ok: () -> Unit, f: (UserData) -> UserData) {
+        val own = user.value.folders.mapTo(HashSet()) { it.id }
+        val adopt = manifests.value.folders.filter { it.id in ids && it.id !in own && it.id !in BUILT_IN_FOLDER_IDS }.distinctBy { it.id }
+        if (adopt.isEmpty()) {
+            graph.user.editFolders(f)
+            ok()
+            return
+        }
+        viewModelScope.launch {
+            val failure = withContext(NonCancellable) {
+                userWrite {
+                    graph.user.commit { it.withAdopted(adopt) }
+                    try {
+                        graph.librarySetup.removeFolders(graph.librarySetup.load(), adopt.mapTo(HashSet()) { it.id })
+                    } catch (e: Exception) {
+                        runCatching { graph.user.commit { it.withoutAdopted(adopt) } }
+                        throw e
+                    }
+                }
+            }
+            if (failure != null) {
+                graph.launcher.notify("Folder not changed: $failure")
+            } else {
+                graph.user.editFolders(f)
+                ok()
+            }
+        }
+    }
+
+    /**
+     * Makes an in-app folder named [label] in [into] (a folder id, or null for Home) just before tile [beside], and moves tile
+     * [moving] from [into] into it when given. Returns the new folder's id, unique among every folder id.
+     */
+    fun createFolder(label: String, into: String?, beside: String?, moving: String? = null, ok: () -> Unit = {}): String {
         val taken = BUILT_IN_FOLDER_IDS + manifests.value.folders.map { it.id } + user.value.folders.map { it.id }
         val id = newFolderId(label, taken)
         val home = homeOrder()
-        graph.user.editFolders { u ->
+        editFolders(listOf(into), ok) { u ->
             val created = u.withNewFolder(id, label, into, beside, home)
             if (moving == null) created else created.withMoved(moving, into, id, created.layout)
         }
         return id
     }
 
-    /** Moves tile [tileId] from [from] into [to] (each an in-app folder, or null for Home). */
-    fun moveTile(tileId: String, from: String?, to: String?) {
+    /** Moves tile [tileId] from [from] into [to] (each a folder id, or null for Home). */
+    fun moveTile(tileId: String, from: String?, to: String?, ok: () -> Unit = {}) {
         val home = homeOrder()
-        graph.user.editFolders { it.withMoved(tileId, from, to, home) }
+        editFolders(listOf(from, to), ok) { it.withMoved(tileId, from, to, home) }
     }
 
-    fun addToFolder(tileId: String, to: String) = graph.user.editFolders { it.withAddedToFolder(tileId, to) }
+    fun addToFolder(tileId: String, to: String, ok: () -> Unit = {}) = editFolders(listOf(to), ok) { it.withAddedToFolder(tileId, to) }
 
-    fun removeFromFolder(tileId: String, from: String) = graph.user.editFolders { it.withRemovedFromFolder(tileId, from) }
+    fun removeFromFolder(tileId: String, from: String, ok: () -> Unit = {}) = editFolders(listOf(from), ok) { it.withRemovedFromFolder(tileId, from) }
 
-    fun renameFolder(id: String, label: String) = graph.user.editFolders { it.withFolderRenamed(id, label) }
+    fun renameFolder(id: String, label: String) = editFolders(listOf(id), {}) { it.withFolderRenamed(id, label) }
 
-    /** Deletes in-app folder [id], with [withFolders] also the subfolders only it shows (see withoutFolder). */
-    fun deleteFolder(id: String, withFolders: Boolean = false) {
+    fun sortFolder(id: String, sort: String) = editFolders(listOf(id), {}) { it.withFolderSort(id, sort) }
+
+    /** Folder [id]'s tile shows game [game]'s cover (null: the first game's with one again). */
+    fun setFolderCover(id: String, game: String?, ok: () -> Unit = {}) = editFolders(listOf(id), ok) { it.withFolderCover(id, game) }
+
+    /** Deletes folder [id], with [withFolders] also the subfolders only it shows (see withoutFolder), and gives its place to what it showed. */
+    fun deleteFolder(id: String, withFolders: Boolean = false, ok: () -> Unit = {}) {
         val views = folders.value
         val home = homeOrder()
-        graph.user.editFolders { it.withoutFolder(id, views, home, withFolders) }
+        // what changes: it, the folders showing it (they take its folders and systems) and the subfolders going with it
+        val parents = views.firstOrNull { it.def.id == id }?.parents.orEmpty()
+        val changed = listOf(id) + parents + views.ownedSubfolders(id).takeIf { withFolders }.orEmpty()
+        editFolders(changed, ok) { it.withoutFolder(id, views, home, withFolders) }
     }
 
     fun hide(id: String, hidden: Boolean) = graph.user.hide(id, hidden)
@@ -429,15 +481,14 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     /**
      * Search results for [filters] within [scope]: the first [limit] matches plus the count of all of them, from one WHERE
      * clause. user.json changes re-query only while the favourites or Want to play filter is on, and only when that set
-     * changes. A folder scope is the folder's evaluated games (its own rules, not re-implemented here) and re-queries when they
-     * change; it waits for the folders' first evaluation, which always holds the built-in folders, instead of finding nothing.
+     * changes. A folder scope is the evaluated games of the folder and of the folders inside it (their own rules, not
+     * re-implemented here) and re-queries when they change; it waits for the folders' first evaluation, which always holds the
+     * built-in folders, instead of finding nothing.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun search(filters: SearchFilters, scope: SearchScope?, limit: Int): Flow<SearchPage> {
         val folderGames: Flow<Set<String>> = if (scope is SearchScope.Folder) {
-            folders.filter { it.isNotEmpty() }.map { all ->
-                all.firstOrNull { it.def.id == scope.id }?.items.orEmpty().filterIsInstance<LibraryItem.Game>().mapTo(HashSet()) { it.game.id }
-            }
+            folders.filter { it.isNotEmpty() }.map { all -> all.gamesWithin(scope.id) }
         } else {
             flowOf(emptySet())
         }

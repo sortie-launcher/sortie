@@ -37,7 +37,7 @@ class FavouritesFolderTest {
     private fun folders(user: UserData, defs: List<FolderDef> = emptyList()): List<FolderView> {
         val items = folderCandidates(listOf(trapt, godHand, ac3, katamari), listOf(firefox, chrome), listOf(bloodyRoar, citra), user)
         val subjects = items.map { subjectOf(it, null, it.id in user.favourites, 0) }
-        return evaluateFolders(defs, user.wantToPlay, user.gameProgress, subjects, items.associateBy { it.id })
+        return evaluateFolders(defs, user.wantToPlay, user.gameProgress, subjects, items.associateBy { it.id }, hidden = user.hidden)
     }
 
     private fun List<FolderView>.favourites() = single { it.def.id == FAVOURITES_FOLDER_ID }

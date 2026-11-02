@@ -35,17 +35,6 @@
     ]
    },
    "sort": "random"
-  },
-  {
-   "id": "recent",
-   "label": "Recently added",
-   "rule": {
-    "daysSinceAdded": {
-     "lte": 30
-    }
-   },
-   "sort": "added:desc",
-   "limit": 200
   }
  ]
 }

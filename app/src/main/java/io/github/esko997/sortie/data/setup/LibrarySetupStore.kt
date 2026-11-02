@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.data.setup
 
+import io.github.esko997.sortie.data.folders.BUILT_IN_FOLDER_IDS
 import io.github.esko997.sortie.data.manifest.DeviceManifest
 import io.github.esko997.sortie.data.manifest.FAVOURITES_FOLDER_ID
 import io.github.esko997.sortie.data.manifest.FolderDef
@@ -10,9 +11,6 @@ import io.github.esko997.sortie.data.manifest.LaunchersManifest
 import io.github.esko997.sortie.data.manifest.ManifestStore
 import io.github.esko997.sortie.data.manifest.SystemDef
 import io.github.esko997.sortie.data.manifest.SystemsManifest
-import io.github.esko997.sortie.data.manifest.WANT_TO_PLAY_FOLDER_ID
-import io.github.esko997.sortie.data.user.FINISHED_FOLDER_ID
-import io.github.esko997.sortie.data.user.SHELVED_FOLDER_ID
 import java.io.File
 import java.io.IOException
 import java.util.Locale
@@ -289,7 +287,7 @@ class LibrarySetupStore internal constructor(
         val existing = state.folders.value?.folders.orEmpty().associateBy { it.id }
         val passedIds = HashSet<String>()
         for (f in folders) {
-            require(f.id !in RESERVED_FOLDER_IDS) { "Folder id \"${f.id}\" is reserved for a built-in folder." }
+            require(f.id !in BUILT_IN_FOLDER_IDS) { "Folder id \"${f.id}\" is reserved for a built-in folder." }
             if (f.id !in existing) require(NEW_ID.matches(f.id)) { "Folder id \"${f.id}\" must use lower-case letters, digits, '.', '_' or '-'." }
             require(passedIds.add(f.id)) { "Folder ${f.id} is listed twice." }
             require(f.label.isNotBlank()) { "Folder ${f.id} has no name." }
@@ -309,15 +307,24 @@ class LibrarySetupStore internal constructor(
      * touched. Only folders.json is ever written: missing manifests of a partial configuration are not added, and nothing to
      * remove changes no file. Refused, without writing, when folders.json cannot be read or there is no library configuration.
      */
-    suspend fun removeLegacyFavourites(expected: LibraryConfiguration): LibraryConfiguration = mutate(expected, complete = false) { state, work ->
-        if (!state.exists) throw IOException("There are no library settings in ${directory.path} to tidy.")
-        if (state.raw[FOLDERS] != null && state.folders.obj == null) {
-            throw IOException(state.errors.firstOrNull { it.startsWith(FOLDERS) } ?: "$FOLDERS could not be read; Sortie will not overwrite it.")
+    suspend fun removeLegacyFavourites(expected: LibraryConfiguration): LibraryConfiguration = removeFolderEntries(expected) { isLegacyFavourites(it) }
+
+    /**
+     * Removes the folders.json entries with an id in [ids]: folders the device adopted into user.json on their first edit. Every
+     * other entry and unknown key is kept, and it is refused or a no-op exactly like [removeLegacyFavourites].
+     */
+    suspend fun removeFolders(expected: LibraryConfiguration, ids: Set<String>): LibraryConfiguration = removeFolderEntries(expected) { idOf(it) in ids }
+
+    private suspend fun removeFolderEntries(expected: LibraryConfiguration, drop: (JsonElement) -> Boolean): LibraryConfiguration =
+        mutate(expected, complete = false) { state, work ->
+            if (!state.exists) throw IOException("There are no library settings in ${directory.path} to tidy.")
+            if (state.raw[FOLDERS] != null && state.folders.obj == null) {
+                throw IOException(state.errors.firstOrNull { it.startsWith(FOLDERS) } ?: "$FOLDERS could not be read; Sortie will not overwrite it.")
+            }
+            val array = elements(work.folders, "folders")
+            val kept = array.filterNot(drop)
+            if (kept.size != array.size) work.folders = JsonObject(work.folders + ("folders" to JsonArray(kept)))
         }
-        val array = elements(work.folders, "folders")
-        val kept = array.filterNot { isLegacyFavourites(it) }
-        if (kept.size != array.size) work.folders = JsonObject(work.folders + ("folders" to JsonArray(kept)))
-    }
 
     private class Work(var device: JsonObject, var systems: JsonObject, var launchers: JsonObject, var folders: JsonObject)
 
@@ -488,7 +495,6 @@ class LibrarySetupStore internal constructor(
         private val EXTENSION = Regex("[a-z0-9_+-]+")
         private val COLOUR = Regex("#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})")
         private val DISPLAYS = setOf("same", "top", "bottom")
-        private val RESERVED_FOLDER_IDS = setOf(FAVOURITES_FOLDER_ID, WANT_TO_PLAY_FOLDER_ID, FINISHED_FOLDER_ID, SHELVED_FOLDER_ID)
         private val LEGACY_FAVOURITES_KEYS = setOf("id", "label", "rule", "include", "exclude", "apps", "sort", "limit")
 
         /**
