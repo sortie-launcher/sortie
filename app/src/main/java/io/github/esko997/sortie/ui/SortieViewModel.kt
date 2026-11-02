@@ -178,6 +178,8 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     fun setBookmarkInvitation(on: Boolean) = graph.user.setBookmarkInvitation(on)
 
+    fun setGameBookmarkInvitation(id: String, on: Boolean) = graph.user.setGameBookmarkInvitation(id, on)
+
     fun setSystemProfile(systemId: String, profileId: String?) = graph.user.setSystemProfile(systemId, profileId)
 
     fun setHeroRotation(on: Boolean) = graph.user.setHeroRotation(on)
@@ -639,7 +641,8 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
             }
         }
         graph.sessionEnds.observe(tasks, ownTask)?.let { ended ->
-            if (user.value.bookmarkInvitation && dao.byId(ended.gameId) != null) graph.sessionEnds.offer(ended)
+            val u = user.value
+            if (u.bookmarkInvitation && ended.gameId !in u.noBookmarkInvitation && dao.byId(ended.gameId) != null) graph.sessionEnds.offer(ended)
         }
         graph.screenMover.sweepStaleLaunchers()
         graph.screenMover.guardVendorPanel()

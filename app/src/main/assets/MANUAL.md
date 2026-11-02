@@ -449,8 +449,9 @@ keyboard. **Leave a note** (or **L2**) opens that game's bookmark editor; **Not 
 something else or leaving it for 45 seconds. It appears at most once per session, only on the main screen (never on the
 companion screen, a built-in app, the switcher or a quick visit to Home while the game runs) and not when the game closed
 within about three seconds of starting. Telling a closed game from a visit to Home needs Shizuku: without it, or whenever
-Sortie can't be sure the game ended, no card appears and you leave bookmarks from the game's page. Turn the card off with
-**Settings → Bookmarks → Offer a bookmark after playing**.
+Sortie can't be sure the game ended, no card appears and you leave bookmarks from the game's page. **Not for this game** on the
+card stops it for that game only; **Launch with…** on the game's page has **Offer a bookmark after playing** to bring it
+back. Turn the card off for every game with **Settings → Bookmarks → Offer a bookmark after playing**.
 
 ## The built-in curated guide
 

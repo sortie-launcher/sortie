@@ -239,6 +239,8 @@ data class UserData(
     val bookmarks: Map<String, GameBookmark> = emptyMap(),
     /** After a game Sortie saw end, offer (without a dialog or keyboard) to leave its bookmark; Settings turns this off. */
     val bookmarkInvitation: Boolean = true,
+    /** Games whose after-playing bookmark offer is turned off ("Not for this game"), even while [bookmarkInvitation] is on. */
+    val noBookmarkInvitation: Set<String> = emptySet(),
     /** Independent of favourites and Want to play; a game has at most one personal shelf status. */
     val gameProgress: Map<String, GameProgress> = emptyMap(),
     /** Personal excerpts, recommendation clippings and notes; magazine packs stay read-only. */

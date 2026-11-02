@@ -53,6 +53,7 @@ The limits below describe values saved by the app's editors, not a general valid
 | `gameAnnotations` | game id → annotation | `{}` | personal controller requirement (`controller`); entries without one are removed |
 | `bookmarks` | game id → bookmark | `{}` | the one text bookmark per game: where the player is, for when they return; blank bookmarks are removed |
 | `bookmarkInvitation` | bool | true | after a game Sortie saw end, offer to leave its bookmark (see [Bookmarks](#bookmarks)) |
+| `noBookmarkInvitation` | game ids | `[]` | games whose after-playing bookmark card is turned off (**Not for this game**), while `bookmarkInvitation` is on |
 | `gameProgress` | game id → progress | `{}` | explicit Finished/Shelved status, date and verdict; independent of favourites and queue |
 | `referenceCards` | game id → cards[] | `{}` | personal Markdown/image reference cards; image files live separately under `reference/` |
 | `magazineClippings` | clippings[] | `[]` | saved paragraph highlights and article recommendations, including copied excerpts and personal notes |
@@ -72,8 +73,9 @@ truncated. Bookmarks are personal and separate from the guide's authored blurbs,
 the companion screen show the bookmark; the browse lists' ✍ notes filter includes games that have one.
 
 With `bookmarkInvitation` on, a small nonmodal card (*Leave a text note about where you are in the game for when you
-return?* — **Leave a note** / **Not now**, L2 leaves a note) appears over Sortie's navigation after a game Sortie launched has
-really ended. It takes no focus and opens no keyboard until **Leave a note**, which opens that game's bookmark editor. It is
+return?* — **Leave a note** / **Not now** / **Not for this game**, L2 leaves a note) appears over Sortie's navigation after a
+game Sortie launched has really ended, unless the game is in `noBookmarkInvitation`.
+It takes no focus and opens no keyboard until **Leave a note**, which opens that game's bookmark editor. It is
 shown once per ended session, only on the focused, resumed navigation with no switcher open (never on the companion, a
 built-in app or a temporary Home), and counts as **Not now** after 45 seconds on screen or when anything else is launched.
 A later launch Sortie cannot watch (an app, a shortcut, a game opened through Android's chooser) ends the earlier game's watch.

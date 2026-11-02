@@ -118,6 +118,11 @@ fun BoxScope.BookmarkInvitationHost(vm: SortieViewModel, nav: NavHostController)
                     leave()
                     watch.dismiss(current)
                 }
+                GlowButton("Not for this game") {
+                    leave()
+                    vm.setGameBookmarkInvitation(current.gameId, false)
+                    watch.dismiss(current)
+                }
                 Text(
                     "L2 leave a note",
                     style = MaterialTheme.typography.labelSmall,

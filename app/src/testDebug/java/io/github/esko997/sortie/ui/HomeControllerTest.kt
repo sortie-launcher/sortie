@@ -20,6 +20,7 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import io.github.esko997.sortie.SortieApp
+import io.github.esko997.sortie.launch.SessionEndWatch
 import io.github.esko997.sortie.mecha.MechaArcadeGame
 import io.github.esko997.sortie.mecha.MechaFinish
 import io.github.esko997.sortie.mecha.MechaPaint
@@ -795,5 +796,26 @@ class HomeControllerTest {
         assertEquals(complete.equipped, after.equipped)
         assertEquals(5, after.lastSpin!!.stake.stake)
         assertEquals(complete.salvage - 5 + after.lastSpin!!.returnedCredits, after.salvage)
+    }
+
+    /**
+     * "Not for this game" on the after-playing card records the opt-out for that game only and dismisses the card; the setting
+     * for every other game stays on.
+     */
+    @Test
+    fun notForThisGameTurnsTheBookmarkCardOffForThatGameOnly() {
+        awaitHome()
+        val graph = (sortie.activity.application as SortieApp).graph
+        val game = "genesis/Ace Sortie (World).md"
+        graph.sessionEnds.offer(SessionEndWatch.Watched(game, startedAt = 1L, pkg = "test"))
+        // the card shows only on the focused navigation window; Robolectric does not report that focus by itself
+        compose.runOnIdle { sortie.activity.window.decorView.dispatchWindowFocusChanged(true) }
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Not for this game").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Not for this game").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Not for this game").fetchSemanticsNodes().isEmpty() }
+        val user = graph.user.data.value
+        assertEquals(setOf(game), user.noBookmarkInvitation)
+        assertTrue(user.bookmarkInvitation)
+        assertNull(graph.sessionEnds.invite.value)
     }
 }

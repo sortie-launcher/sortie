@@ -279,6 +279,9 @@ class UserStore(
 
     fun setBookmarkInvitation(on: Boolean) = update { it.copy(bookmarkInvitation = on) }
 
+    fun setGameBookmarkInvitation(id: String, on: Boolean) =
+        update { it.copy(noBookmarkInvitation = if (on) it.noBookmarkInvitation - id else it.noBookmarkInvitation + id) }
+
     fun toggleFavourite(id: String) = update { it.copy(favourites = if (id in it.favourites) it.favourites - id else it.favourites + id) }
 
     /**
