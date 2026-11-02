@@ -6,6 +6,8 @@ import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -44,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -1197,6 +1200,8 @@ private fun SetupPageFrame(hints: Array<Pair<String, String>>, content: @Composa
 /**
  * One-line text field a controller can pass through: up/down from a physical pad move the focus instead of the caret, A opens
  * the keyboard, Done closes it. The caller keeps the text (here the screen's saved draft), so closing the keyboard never loses it.
+ * Focus alone (a dialog opening, the D-pad passing by) never raises the keyboard: the field stays read-only, so no input session
+ * starts, until A or a touch activates it, and leaving it makes it read-only again.
  */
 @Composable
 internal fun SetupTextField(
@@ -1209,16 +1214,21 @@ internal fun SetupTextField(
 ) {
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val interaction = remember { MutableInteractionSource() }
+    var active by remember { mutableStateOf(false) }
+    LaunchedEffect(interaction) { interaction.interactions.collect { if (it is PressInteraction.Press) active = true } }
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
         enabled = enabled,
+        readOnly = !active,
         singleLine = true,
         isError = isError,
         placeholder = { Text(placeholder) },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { keyboard?.hide() }),
-        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp).onPreviewKeyEvent { e ->
+        interactionSource = interaction,
+        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp).onFocusChanged { if (!it.hasFocus) active = false }.onPreviewKeyEvent { e ->
             when {
                 !isPhysicalPad(e) -> false
                 e.key == Key.DirectionUp || e.key == Key.DirectionDown -> {
@@ -1229,7 +1239,10 @@ internal fun SetupTextField(
                     true
                 }
                 e.key == Key.ButtonA || e.key == Key.DirectionCenter -> {
-                    if (e.type == KeyEventType.KeyUp) keyboard?.show()
+                    if (e.type == KeyEventType.KeyUp) {
+                        active = true
+                        keyboard?.show()
+                    }
                     true
                 }
                 else -> false
