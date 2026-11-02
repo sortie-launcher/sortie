@@ -16,9 +16,15 @@ includes the database sessions. Optional desktop tools or sync software can cons
 
 On returning to Sortie, a session stays open if the emulator is still visible in Shizuku's task list. Otherwise it ends;
 without that task information, returning can end a session even while the emulator still runs. Completed `minutes` are
-elapsed whole minutes rounded down, not proof of active input. Starting a new session closes any still-open session as
-abandoned, with `minutes: null`. An unavailable configuration folder or failed append can leave gaps in this mirror
-without losing the database history.
+whole minutes of active time, rounded down: the session counts only while the screen is on and unlocked, Sortie's
+navigation is not the activity in front (Android's top resumed activity; its dialogs and the notification shade count as
+in front) and the switcher overlay is not up. Time with the screen off or locked, in Sortie's own screens or in the
+switcher is left out; the companion screen and built-in apps (Magazines, Performance) count as play. Active time is not
+proof of input. If Sortie's process dies mid-session, the interval running at that moment is lost, and the session stays
+paused until the screen, the navigation or the switcher overlay next changes. Starting a new session closes any
+still-open one normally, with its active minutes. Ends written before active time was recorded hold elapsed wall-clock
+minutes, and an `end` with `minutes: null` and no `quickExit` is an older abandoned session. An unavailable configuration
+folder or failed append can leave gaps in this mirror without losing the database history.
 
 A game that returns within 3 seconds, with no Home press after launch and no known running emulator task, is classified
 as a quick exit: its `end` has `minutes: null` and `"quickExit": true`, and Sortie removes that session from its database.

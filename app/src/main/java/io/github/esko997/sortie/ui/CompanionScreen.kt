@@ -78,6 +78,7 @@ import io.github.esko997.sortie.data.apps.ShortcutEntry
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.db.SessionEntity
+import io.github.esko997.sortie.data.db.playedMs
 import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.GameBookmark
@@ -378,7 +379,7 @@ private fun openOnOtherScreen(g: GameEntity): () -> Unit = { Selection.openRoute
 @Composable
 private fun NowPlaying(graph: SortieApp.Graph, session: SessionEntity, clearChip: Boolean) {
     val id = session.gameId
-    val status = "Playing · ${playingMinutes(session.startedAt)} min"
+    val status = "Playing · ${playingMinutes(session)} min"
     if (LibraryItem.isGameId(id)) {
         val game by produceState<GameEntity?>(null, id) { value = graph.db.games().byId(id) }
         val g = game
@@ -428,23 +429,24 @@ private fun NowPlaying(graph: SortieApp.Graph, session: SessionEntity, clearChip
 }
 
 /**
- * Whole minutes since [startedAt], recomposed once a minute (aligned to the session's minute boundary) and never faster, and
- * only while this panel is in front on a lit screen ([rememberShown]): the only periodic work the companion does while
- * something is being played. Shown again, it catches up at once.
+ * Whole minutes of the session's active play ([playedMs]), recomposed once a minute while it runs (aligned to its minute
+ * boundary) and never faster, and only while this panel is in front on a lit screen ([rememberShown]): the only periodic work
+ * the companion does while something is being played. A paused session does not tick; shown again, it catches up at once.
  */
 @Composable
-private fun playingMinutes(startedAt: Long): Long {
+private fun playingMinutes(session: SessionEntity): Long {
     val shown = rememberShown()
-    var now by remember(startedAt) { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(startedAt, shown) {
+    var now by remember(session) { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(session, shown) {
         shown.collectLatest { visible ->
             while (visible) {
                 now = System.currentTimeMillis()
-                delay(MINUTE - (now - startedAt).mod(MINUTE) + 100)
+                if (session.activeSince == null) break
+                delay(MINUTE - session.playedMs(now).mod(MINUTE) + 100)
             }
         }
     }
-    return ((now - startedAt) / MINUTE).coerceAtLeast(0)
+    return session.playedMs(now).coerceAtLeast(0) / MINUTE
 }
 
 /**

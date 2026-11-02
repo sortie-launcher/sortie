@@ -135,6 +135,14 @@ class MechaRulesTest {
         assertEquals(1, backwards.processedSessions.size)
     }
 
+    /** A session's recorded active time earns, not its wall-clock span (an emulator left open overnight). */
+    @Test
+    fun activePlayTimeEarnsRatherThanTheSpan() {
+        val overnight = session("ps2/onimusha.iso", INIT + MINUTE, 555).copy(playedMs = 12 * MINUTE)
+        val n = starter().credited(listOf(overnight)).state
+        assertEquals(12, n.creditedMinutes)
+    }
+
     @Test
     fun careNeverReachesDistressAndRestToggles() {
         var s = starter().copy(salvage = 50)

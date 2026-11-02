@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.data.backup
 
 import io.github.esko997.sortie.data.db.SessionEntity
+import io.github.esko997.sortie.data.db.playedMs
 import io.github.esko997.sortie.data.folders.cleaned
 import io.github.esko997.sortie.data.manifest.BrowseChromeMode
 import io.github.esko997.sortie.data.manifest.UserData
@@ -54,17 +55,21 @@ data class BackupFile(
     }
 }
 
-/** A play session. Its identity is ([gameId], [startedAt]) — database row ids differ between installs and are not exported. */
+/**
+ * A play session. Its identity is ([gameId], [startedAt]) — database row ids differ between installs and are not exported.
+ * [activeMs] is its active play time; absent (older backups and imported history) counts [endedAt] - [startedAt].
+ */
 @Serializable
 data class BackupSession(
     val gameId: String,
     val profileId: String? = null,
     val startedAt: Long,
     val endedAt: Long? = null,
-    val abandoned: Boolean = false
+    val abandoned: Boolean = false,
+    val activeMs: Long? = null
 )
 
-fun SessionEntity.toBackup() = BackupSession(gameId, profileId, startedAt, endedAt, abandoned)
+fun SessionEntity.toBackup() = BackupSession(gameId, profileId, startedAt, endedAt, abandoned, activeMs)
 
 val backupJson = Json {
     ignoreUnknownKeys = true // later minor additions within one version stay readable
@@ -147,6 +152,7 @@ fun parseBackup(text: String): ParsedBackup {
             s.gameId.isBlank() -> "has no game id"
             s.startedAt <= 0 -> "has no start time"
             s.endedAt != null && s.endedAt < s.startedAt -> "ends before it starts"
+            s.activeMs != null && s.activeMs < 0 -> "has a negative play time"
             else -> null
         }
         if (problem != null) return ParsedBackup.Invalid("Session ${i + 1} in the backup $problem; the file is damaged. Nothing was changed.")
@@ -180,14 +186,23 @@ fun planSessionMerge(incoming: List<BackupSession>, existing: List<SessionEntity
     val seen = existing.mapTo(HashSet()) { it.gameId to it.startedAt }
     val toInsert = ArrayList<SessionEntity>()
     var present = 0
+    var addedMs = 0L
     for (s in incoming) {
         val ended = s.endedAt ?: continue
         if (!seen.add(s.gameId to s.startedAt)) {
             present++
             continue
         }
-        toInsert += SessionEntity(gameId = s.gameId, profileId = s.profileId, startedAt = s.startedAt, endedAt = ended, abandoned = s.abandoned)
+        val row = SessionEntity(
+            gameId = s.gameId,
+            profileId = s.profileId,
+            startedAt = s.startedAt,
+            endedAt = ended,
+            abandoned = s.abandoned,
+            activeMs = s.activeMs
+        )
+        toInsert += row
+        if (!row.abandoned) addedMs += row.playedMs(ended)
     }
-    val minutes = toInsert.filter { !it.abandoned }.sumOf { (it.endedAt ?: it.startedAt) - it.startedAt } / 60000
-    return SessionMerge(toInsert, present, minutes)
+    return SessionMerge(toInsert, present, addedMs / 60000)
 }

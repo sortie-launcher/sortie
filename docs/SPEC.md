@@ -73,7 +73,12 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Detail view: hero art, description, hook, tags, play time, last played, launch button, overrides.
 - Launch through profiles with ordered fallbacks; per-game override; "open with" fallback.
 - Favourites folder holding games and apps alike.
-- Play log and "Continue" row.
+- Play log and "Continue" row. Play time is active time (`data/user/PlayLog.kt`): an open session runs only while the
+  screen is on and unlocked (SCREEN_ON without the keyguard locked, or USER_PRESENT), no navigation instance is the top
+  resumed activity (so its dialogs still pause) and the switcher overlay is down (companion and built-in apps count).
+  Each pause folds the running interval into the Room row (`activeMs`, `activeSince`); process death loses at most that
+  interval, and a session found open at startup waits for the next input change. A launch closes an open
+  session normally. Rows from before Room version 5 keep their wall-clock duration.
 - Quick exit: an emulator gone within 3 s of the start, with no Home press since, ends the session uncounted (no Room
   row; `playlog.jsonl` end has `quickExit: true`) and says so beside Play for 12 s (a toast off the page), naming a
   RetroArch core or game switch (`launch/QuickExit.kt`, LAUNCHERS.md). No automatic retry.
@@ -419,7 +424,7 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   the ceiling, but sessions are still consumed and Bond/Charge statistics advance. Spending below 50 permits only new
   play to earn again. Existing balances above 50 are retained; no extra earning until they fall below the ceiling.
   App/shortcut sessions and prior history do not count. Game ID plus start time prevents double credit after reopening
-  or re-importing history. This measures recorded session duration, not active input. Charge drain uses accumulated-minute
+  or re-importing history. This measures active play time (above), not input. Charge drain uses accumulated-minute
   boundaries, independent of how Room batches session notifications.
 - State, inventory and credited-session identities are atomically saved together in app-private `files/mecha/state.json`.
   Versions 1–3 migrate to version 4 before publication, preserving parts, equipment, wallet, themes, paid arcade state and

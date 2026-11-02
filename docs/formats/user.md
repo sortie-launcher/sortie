@@ -158,9 +158,11 @@ restore is offered; a bad one rejects the whole file. Restoring a slot receipt n
 restore until nondestructive retry succeeds, rather than treating the valid old save as absent. The pet rate-limit time
 (`files/mecha/pet.txt`) is not backed up.
 
-Each closed session contains `gameId`, `profileId`, `startedAt`, `endedAt` and `abandoned`. Identity is `(gameId, startedAt)`,
-not a database row ID. Unfinished sessions are never imported. Files over 64 MiB, unsupported formats/versions, missing required
-sections or invalid session timestamps are rejected before any writes; a missing `user` object is never interpreted as defaults.
+Each closed session contains `gameId`, `profileId`, `startedAt`, `endedAt`, `abandoned` and `activeMs`, its active play time
+in milliseconds (see playlog.md); `activeMs` is null or absent for sessions recorded before it existed, which count
+`endedAt - startedAt`. Identity is `(gameId, startedAt)`, not a database row ID. Unfinished sessions are never imported.
+Files over 64 MiB, unsupported formats/versions, missing required sections or invalid session timestamps (or a negative
+`activeMs`) are rejected before any writes; a missing `user` object is never interpreted as defaults.
 
 Restore requires confirmation and no open play session. It first fsyncs the current preferences, history and companion to
 `backups/pre-restore-<yyyyMMdd-HHmmss>.json` beneath the active configuration folder in the same format. Failure to save that copy prevents the restore.

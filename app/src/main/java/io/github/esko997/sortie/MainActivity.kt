@@ -286,9 +286,24 @@ class MainActivity : ComponentActivity() {
         startActivity(intent, options.toBundle())
     }
 
+    /** The activity the user is interacting with; unlike window focus, a dialog or the notification shade does not change it. */
+    private var topResumed = false
+
+    override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
+        super.onTopResumedActivityChanged(isTopResumedActivity)
+        topResumed = isTopResumedActivity
+        reportNavigationInFront()
+    }
+
     override fun onDestroy() {
         instances.remove(this)
+        reportNavigationInFront()
         super.onDestroy()
+    }
+
+    /** Play time pauses while the navigation is in front; an X swap briefly has two instances, so ask them all. */
+    private fun reportNavigationInFront() {
+        (application as SortieApp).graph.playLog.navigationInFront(instances.any { it.topResumed })
     }
 
     private fun displayManager() = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager

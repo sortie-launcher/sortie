@@ -246,7 +246,7 @@ internal fun MechaState.credited(sessions: List<PlaySession>): MechaResult {
         val end = s.endedAt ?: continue
         if (s.abandoned || s.startedAt < initializedAt || !s.isGame) continue
         if (!processed.add(mechaSessionKey(s))) continue
-        val counted = ((end - s.startedAt) / 60_000L).coerceIn(0L, MECHA_SESSION_MINUTES_CAP.toLong()).toInt()
+        val counted = ((s.playedMs ?: (end - s.startedAt)) / 60_000L).coerceIn(0L, MECHA_SESSION_MINUTES_CAP.toLong()).toInt()
         if (counted > 0) played++
         minutes += counted
         if (salvage + credits < MECHA_CREDIT_CEILING) {

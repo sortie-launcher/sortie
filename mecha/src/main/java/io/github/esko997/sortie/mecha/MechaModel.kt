@@ -126,9 +126,16 @@ data class MechaState(
 /**
  * One play session as the host app recorded it, the only input that earns salvage credit. [gameId] with [startedAt] identifies
  * it (`<gameId>@<startedAt>` in [MechaState.processedSessions]); [endedAt] is null while it runs. Only [isGame] sessions count,
- * never apps or shortcuts.
+ * never apps or shortcuts. [playedMs] is the ended session's active play time; null counts [endedAt] - [startedAt].
  */
-data class PlaySession(val gameId: String, val startedAt: Long, val endedAt: Long?, val abandoned: Boolean, val isGame: Boolean)
+data class PlaySession(
+    val gameId: String,
+    val startedAt: Long,
+    val endedAt: Long?,
+    val abandoned: Boolean,
+    val isGame: Boolean,
+    val playedMs: Long? = null
+)
 
 /**
  * What the UI shows. Loading: [state] and [error] both null. [error] with a null [state]: the hangar could not be opened (the
