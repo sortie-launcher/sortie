@@ -62,6 +62,24 @@ fun UserData.withRemovedFromFolder(tileId: String, from: String): UserData = edi
 
 fun UserData.withFolderRenamed(id: String, label: String): UserData = editFolder(id) { it.copy(label = folderLabel(label, id)) }
 
+/** Sort by… choices for a folder Sortie edits: what the sheet shows, and the [FolderDef.sort] it sets ([RuleEngine.comparator]). */
+val FOLDER_SORTS = listOf("Title" to "title:asc", "Recently played" to "lastPlayed:desc", "Recently added" to "added:desc", "Play time" to "playMinutes:desc")
+
+fun UserData.withFolderSort(id: String, sort: String): UserData = editFolder(id) { it.copy(sort = sort) }
+
+/** Sets (null: clears) the game whose cover folder [id]'s tile shows ([FolderView.coverArt]). */
+fun UserData.withFolderCover(id: String, game: String?): UserData = editFolder(id) { it.copy(cover = game) }
+
+/**
+ * The first edit of `folders.json` folders [defs]: each becomes an in-app folder with the same id and every field, unless an
+ * in-app folder has its id already. The caller then removes them from folders.json, or undoes this ([withoutAdopted]) when it
+ * cannot.
+ */
+fun UserData.withAdopted(defs: List<FolderDef>): UserData = copy(folders = folders + defs.filter { d -> folders.none { it.id == d.id } })
+
+/** Undoes [withAdopted]: each of [defs] still unchanged among the in-app folders goes again. */
+fun UserData.withoutAdopted(defs: List<FolderDef>): UserData = copy(folders = folders - defs.toSet())
+
 /**
  * Deletes in-app folder [id]. Its folder and system pointers take its place where it was shown: in each in-app folder among
  * [parents] (its resolved [FolderView.parents]), else on Home (where its tile was, or at the end), so nothing it held becomes
@@ -82,6 +100,43 @@ fun UserData.withoutFolder(id: String, parents: Collection<String>, home: List<S
     }
     // Home's order holds the pointers already (nested tiles keep a saved place): they move into the folder's slot
     return copy(folders = rest, layout = if (held) layout - tile else (home - pointers.toSet()).replaced(tile, pointers))
+}
+
+/**
+ * The editable folders inside [id] that no other folder shows, deepest first: deleting [id] with its folders deletes these too
+ * (each through [withoutFolder], so whatever they held moves up a level and only folders go). A subfolder another folder also
+ * shows stays, reachable there, and so does everything below it; built-in folders are never deleted.
+ */
+fun List<FolderView>.ownedSubfolders(id: String): List<String> {
+    val byId = associateBy { it.def.id }
+    val order = ArrayList<String>()
+    fun walk(f: String) {
+        for (c in byId[f]?.children.orEmpty()) {
+            val child = c.removePrefix(FOLDER_POINTER)
+            if (c.startsWith(FOLDER_POINTER) && byId[child]?.editable == true && child != id && child !in order) {
+                walk(child)
+                order += child
+            }
+        }
+    }
+    walk(id)
+    // owned: every parent goes too; repeated, since keeping one keeps what only it shows
+    var owned = order.toSet()
+    while (true) {
+        val next = owned.filterTo(HashSet()) { f -> byId.getValue(f).parents.all { it == id || it in owned } }
+        if (next.size == owned.size) return order.filter { it in owned }
+        owned = next
+    }
+}
+
+/**
+ * Deletes in-app folder [id] as shown in [views] and, with [withFolders], its [ownedSubfolders] first, deepest first; each goes
+ * through [withoutFolder], so the systems and other folders they held end up where [id] was. Only folders go.
+ */
+fun UserData.withoutFolder(id: String, views: List<FolderView>, home: List<String>, withFolders: Boolean): UserData {
+    val subfolders = if (withFolders) views.ownedSubfolders(id) else emptyList()
+    val order = home - subfolders.map { FOLDER_POINTER + it }.toSet()
+    return (subfolders + id).fold(this) { u, f -> u.withoutFolder(f, views.firstOrNull { it.def.id == f }?.parents.orEmpty(), order) }
 }
 
 /** Backup restore: blank and repeated ids dropped (the first kept), names trimmed and bounded, include/exclude without repeats. */

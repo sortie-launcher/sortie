@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.data.folders
 
+import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.manifest.FAVOURITES_FOLDER_ID
 import io.github.esko997.sortie.data.manifest.FolderDef.Companion.FOLDER_POINTER
 import io.github.esko997.sortie.data.manifest.FolderDef.Companion.SYSTEM_POINTER
@@ -9,8 +10,21 @@ import io.github.esko997.sortie.data.user.Shelf
 /** Folders nest at most this deep: a folder on Home's top level is level 1. Systems may sit in a folder at any level. */
 const val MAX_FOLDER_DEPTH = 4
 
-/** Ids of the built-in folders (Favourites, Want to play, Finished, Shelved); no other folder may use them. */
-val BUILT_IN_FOLDER_IDS: Set<String> = setOf(FAVOURITES_FOLDER_ID, WANT_TO_PLAY_FOLDER_ID) + Shelf.entries.map { it.folderId }
+/** Reserved id of the built-in Hidden folder (tile `folder:hidden`): the games hidden from every other folder. */
+const val HIDDEN_FOLDER_ID = "hidden"
+
+/** Reserved id of the built-in Recently added folder (tile `folder:recently-added`): games added in the last 14 days. */
+const val RECENTLY_ADDED_FOLDER_ID = "recently-added"
+
+/** Ids of the built-in folders (Favourites, Want to play, Finished, Shelved, Hidden, Recently added); no other folder may use them. */
+val BUILT_IN_FOLDER_IDS: Set<String> =
+    setOf(FAVOURITES_FOLDER_ID, WANT_TO_PLAY_FOLDER_ID) + Shelf.entries.map { it.folderId } + setOf(HIDDEN_FOLDER_ID, RECENTLY_ADDED_FOLDER_ID)
+
+/** Built-in folders Custom shows a tile for only while they hold something. */
+private val SHOWN_WHEN_FILLED = setOf(HIDDEN_FOLDER_ID, RECENTLY_ADDED_FOLDER_ID)
+
+/** The folders Custom shows a tile for: all but an empty Hidden or Recently added. */
+fun List<FolderView>.onCustom(): List<FolderView> = filter { it.def.id !in SHOWN_WHEN_FILLED || it.items.isNotEmpty() }
 
 /**
  * Fills in each view's [FolderView.children], [FolderView.parents] and [FolderView.level] from the `folder:<id>` and
@@ -113,4 +127,10 @@ fun List<FolderView>.below(tileId: String): Map<String, Int> {
     }
     walk(tileId.removePrefix(FOLDER_POINTER), 1)
     return depths
+}
+
+/** Ids of the games folder [id] lists and those of every folder shown inside it ([below]): what Search scoped to it looks through. */
+fun List<FolderView>.gamesWithin(id: String): Set<String> {
+    val within = below(FOLDER_POINTER + id).keys
+    return filter { it.def.id in within }.flatMap { it.items }.filterIsInstance<LibraryItem.Game>().mapTo(HashSet()) { it.game.id }
 }

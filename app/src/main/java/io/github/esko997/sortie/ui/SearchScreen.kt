@@ -216,7 +216,11 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
     // is never part of the fold, so it stays usable while typing.
     val chrome = rememberBrowseChrome(user.browseChrome, pinned = !filters.hasCriteria || (fresh && games.isEmpty()))
     val memory = rememberGridMemory()
-    RememberGridPosition(memory, gridState, remember(games) { games.map { it.id } })
+    val gridKeys = remember(games) { games.map { it.id } }
+    RememberGridPosition(memory, gridState, gridKeys)
+    // results lead with title matches, then by fit: letters jump only when that still leaves them in title order
+    val letters = remember(games, grid) { if (grid) null else initials(games.map { it.sortTitle }) }
+    val jumper = rememberLetterJump(memory, gridState)
     LaunchedEffect(gridState) {
         snapshotFlow { (gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1) to result }.collect { (last, r) ->
             val p = r?.takeIf { it.first == (filters to SearchSession.scope) }?.second ?: return@collect
@@ -458,7 +462,12 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
                         refocus(systemChip)
                     }
                 )
-                else -> ItemGrid(grid, user, Modifier.fillMaxSize().padding(top = 4.dp).foldsBrowseChrome(chrome, gridState, systemChip), state = gridState) {
+                else -> ItemGrid(
+                    grid,
+                    user,
+                    Modifier.fillMaxSize().padding(top = 4.dp).foldsBrowseChrome(chrome, gridState, systemChip).letterJump(jumper, letters, gridKeys),
+                    state = gridState
+                ) {
                     items(games, key = { it.id }) { g ->
                         val isEntry by remember(g.id) { derivedStateOf { firstVisible == g.id } }
                         val item = LibraryItem.Game(g)
@@ -481,13 +490,17 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
                     }
                 }
             }
+            LetterFlash(jumper)
         }
         BrowseHintBar(
-            "A" to "open",
-            "hold A" to "favourite / add to home",
-            "R2" to "want to play",
-            "Select" to if (grid) "list view" else "grid view",
-            "B" to "back",
+            *listOfNotNull(
+                "A" to "open",
+                "hold A" to "favourite / add to home",
+                "R2" to "want to play",
+                "Select" to if (grid) "list view" else "grid view",
+                ("←/→" to "letter").takeIf { letters != null },
+                "B" to "back"
+            ).toTypedArray(),
             compact = chrome.foldable
         )
     }

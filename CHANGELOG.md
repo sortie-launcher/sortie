@@ -5,6 +5,18 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
+- **Delete folder…** on a folder that holds folders of your own can delete them with it, or keep them; either way only
+  folders go, never games, systems or files, and the confirmation says so.
+- Folders from the card's folders.json (for example, ones imported from Cocoon) can be renamed, sorted, deleted, given a
+  cover and filed into on the device; the first edit moves the folder into your on-device folders.
+- **Sort by…** (Title, Recently played, Recently added, Play time) on any folder you can edit. Folder tiles show a game's
+  artwork: one inside the folder, or the one picked with **Use as folder cover**.
+- **Y** inside a folder also searches the folders inside it.
+- **Hide from folders** on a game's hold-A sheet; a built-in **Hidden** folder lists hidden games (and apps a Cocoon import
+  hid) with **Unhide**. A built-in **Recently added** folder lists games added in the last 14 days. Both appear on Custom
+  only when they hold something.
+- D-pad **Left/Right** in list view jump to the previous/next starting letter in system lists, folders and search results
+  while they are in title order; the letter shows briefly.
 - Folders inside folders on **Home → Custom**: hold A on a tile → **Move to folder…** (or **New folder…**) files systems,
   games, apps, shortcuts and other folders — Favourites, Want to play, Finished, Shelved and smart folders included — into a
   folder you name; what a folder holds leaves Home's top level and opens from inside it, folders and systems first, Back

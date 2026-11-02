@@ -53,8 +53,9 @@ fun BrowseLayoutHotkey(vm: SortieViewModel, grid: Boolean) {
 
 /**
  * Hold-A / long-press sheet for a game, app or shortcut: Favourite · Add to (Remove from) home · Add to folder…, plus Want to
- * play and, with two screens, Play on the other screen for games, and for shortcuts whether the Apps screen lists them
- * (`user.shortcuts`). [extra] are the screen's own actions (an in-app folder's Remove from folder).
+ * play, Hide from folders and, with two screens, Play on the other screen for games, Unhide for anything hidden (the Hidden
+ * folder lists them), and for shortcuts whether the Apps screen lists them (`user.shortcuts`). [extra] are the screen's own
+ * actions (an in-app folder's Remove from folder).
  */
 @Composable
 fun ItemSheet(item: LibraryItem, vm: SortieViewModel, extra: List<SheetAction> = emptyList(), onDismiss: () -> Unit) {
@@ -70,6 +71,15 @@ fun ItemSheet(item: LibraryItem, vm: SortieViewModel, extra: List<SheetAction> =
             addAll(extra)
             if (item is LibraryItem.Game) add(wantToPlayAction(vm, item.id, item.id in user.wantToPlay, context))
             otherScreen?.let { add(it) }
+            val hidden = item.id in user.hidden
+            if (hidden || item is LibraryItem.Game) {
+                add(
+                    SheetAction(if (hidden) "Unhide" else "Hide from folders") {
+                        vm.hide(item.id, !hidden)
+                        Toast.makeText(context, if (hidden) "Unhidden" else "Hidden from folders; find it in Hidden", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
             if (item is LibraryItem.Shortcut) {
                 val shown = item.id in user.shortcuts
                 add(SheetAction(if (shown) "Hide from Apps" else "Show in Apps") { vm.showShortcut(item.id, !shown) })
@@ -176,9 +186,10 @@ fun GameListScreen(
 /**
  * A folder: first the folders and systems it holds ([FolderView.children]; A opens them, Back comes back here), then its games,
  * which open their detail screen, and apps and shortcuts, which launch directly; hold A for favourite / add to home / add to
- * folder, R2 Want to play, Y Search limited to the folder's games ([onSearch]). In an in-app folder hold A also moves its
- * folders and systems (Move to folder…, its first choice moving them up a level) and takes games, apps and shortcuts out
- * (Remove from folder); an in-app folder held anywhere offers Rename… and Delete folder….
+ * folder, R2 Want to play, Y Search limited to the games of the folder and the folders inside it ([onSearch]). In an editable
+ * folder (any but the built-in ones) hold A also moves its folders and systems (Move to folder…, its first choice moving them
+ * up a level), takes games, apps and shortcuts out (Remove from folder) and picks the game whose cover the folder's tile shows;
+ * an editable folder held anywhere offers Rename…, Sort by… and Delete folder….
  */
 @Composable
 fun FolderScreen(
@@ -213,12 +224,15 @@ fun FolderScreen(
         view.problems.takeIf { it.isNotEmpty() }?.joinToString("; "),
         onSearch = onSearch,
         pointers = pointers,
-        // a folders.json or built-in folder's contents stay as the desktop or its rule made them
-        onPointerLongClick = { t -> if (view.inApp || folders.any { it.inApp && HomeIds.FOLDER + it.def.id == t.id }) held = t },
+        // a built-in folder's contents stay as its rule made them
+        onPointerLongClick = { t -> if (view.editable || folders.any { it.editable && HomeIds.FOLDER + it.def.id == t.id }) held = t },
         itemActions = { item ->
-            listOfNotNull(removeFromFolderAction(vm, item.id, view, context).takeIf { view.inApp && item.id in view.def.include })
+            listOfNotNull(
+                removeFromFolderAction(vm, item.id, view, context).takeIf { view.editable && item.id in view.def.include },
+                folderCoverAction(vm, item, view, context)
+            )
         },
-        holdHint = if (view.inApp) "move / remove" else "favourite / add to home"
+        holdHint = if (view.editable) "move / remove" else "favourite / add to home"
     )
     held?.let { t -> SteppedSheet(t.title, { held = null }) { next -> folderTileActions(vm, folders, t.id, view, context, next) } }
 }
@@ -251,7 +265,8 @@ private fun SearchHereHotkey(onSearch: () -> Unit) {
  * browsing (see [BrowseChrome]) to one line with the count and the filters that are on; a problem [subtitle] stays shown
  * either way. A [parent] header (Home's) folds this one with it, and its strip has the chevron. [onSearch] is Y's scoped Search.
  * [pointers] (a folder's folders and systems) lead the grid, unfiltered; holding one calls [onPointerLongClick]. [itemActions]
- * adds the screen's own actions to an item's hold-A sheet, and [holdHint] says what hold A does.
+ * adds the screen's own actions to an item's hold-A sheet, and [holdHint] says what hold A does. In list view Left/Right jump
+ * by starting letter while the items are in title order ([LetterJump]).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -297,7 +312,11 @@ private fun ItemListScreen(
     }
     val gridState = rememberLazyGridState()
     val memory = rememberGridMemory()
-    RememberGridPosition(memory, gridState, remember(shown, pointers) { pointers.map { it.id } + shown.map { it.id } })
+    val gridKeys = remember(shown, pointers) { pointers.map { it.id } + shown.map { it.id } }
+    RememberGridPosition(memory, gridState, gridKeys)
+    // list view only: in a grid Left/Right move between tiles (pointers lead, unsorted, and take no letter)
+    val letters = remember(shown, grid) { if (grid) null else initials(shown.map { it.sortKey }) }
+    val jumper = rememberLetterJump(memory, gridState)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val open: (LibraryItem) -> Unit = { if (!vm.launchItem(it)) onGame(it.id) }
@@ -378,7 +397,12 @@ private fun ItemListScreen(
             }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            ItemGrid(grid, user, Modifier.fillMaxSize().foldsBrowseChrome(chrome, gridState, pickFocus), state = gridState) {
+            ItemGrid(
+                grid,
+                user,
+                Modifier.fillMaxSize().foldsBrowseChrome(chrome, gridState, pickFocus).letterJump(jumper, letters, gridKeys, pointers.size),
+                state = gridState
+            ) {
                 items(pointers, key = { it.id }) { t ->
                     RememberedItem(memory, t.id) {
                         HomeTileView(
@@ -425,6 +449,7 @@ private fun ItemListScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp)
                 )
             }
+            LetterFlash(jumper)
         }
         BrowseHintBar(
             *listOfNotNull(
@@ -433,6 +458,7 @@ private fun ItemListScreen(
                 ("Y" to "search here").takeIf { onSearch != null },
                 "R2" to "want to play",
                 "Select" to if (grid) "list view" else "grid view",
+                ("←/→" to "letter").takeIf { letters != null },
                 "L1/R1" to "systems",
                 "B" to "back"
             ).toTypedArray(),

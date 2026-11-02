@@ -72,6 +72,7 @@ import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.folders.FolderView
 import io.github.esko997.sortie.data.folders.nestedTileIds
+import io.github.esko997.sortie.data.folders.onCustom
 import io.github.esko997.sortie.data.manifest.FolderDef
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.mecha.MechaProp
@@ -156,7 +157,7 @@ internal class HomeTile(
     val onClick: () -> Unit
 )
 
-/** [f]'s tile in [colour] (the theme's Accent); its count takes in the folders and systems it shows. */
+/** [f]'s tile in [colour] (the theme's Accent) over its [FolderView.coverArt]; its count takes in the folders and systems it shows. */
 internal fun folderTile(f: FolderView, colour: Color, onFolder: (String) -> Unit): HomeTile {
     val count = f.items.size + f.children.size
     return HomeTile(
@@ -166,6 +167,7 @@ internal fun folderTile(f: FolderView, colour: Color, onFolder: (String) -> Unit
         count,
         "",
         colour = colour,
+        cover = f.coverArt,
         random = { f.items.filterIsInstance<LibraryItem.Game>().filter { !it.game.placeholder }.randomOrNull()?.game }
     ) { onFolder(f.def.id) }
 }
@@ -299,7 +301,7 @@ fun HomeScreen(
 
     val appsTile = HomeTile(HomeIds.APPS, "Apps", "${apps.size}", apps.size, "", colour = AppsGrey, onClick = onApps)
     val accent = Accent
-    val folderTiles = folders.map { folderTile(it, accent, onFolder) }
+    val folderTiles = folders.onCustom().map { folderTile(it, accent, onFolder) }
     val systemTileOf = { row: SystemRow ->
         val id = row.def.id
         systemTile(row, if (sort == "generation") row.def.generation else "Systems", biosMissing[id], covers[id], logos[id], vm, onSystem)

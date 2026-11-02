@@ -94,6 +94,8 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 - **Y** on Home: search the whole library. On a system or folder screen: search only there. On a game's page: favourite
 - **L2**: while the after-playing bookmark card shows, leave a note. In a magazine article: browse the picture sequence in view
 - **Select**: list ↔ grid; on a game's page: **Launch with…** (choosing an emulator saves that game's preference and launches it)
+- **Left / Right** in list view: jump to the previous / next starting letter (titles starting with digits or symbols are grouped
+  under #). Works while the list is in title order; in grid view press **Select** for the list first
 - **Home key**: the switcher when Sortie is the default Home app and Shizuku is ready; otherwise Android's usual Home action
 - **Swipe down from the top edge**: the status bar
 - **Controls**: the hint bar shows the current screen's buttons. When it is compact (see Settings → Header and hints) it
@@ -136,12 +138,25 @@ smart folders too) inside a folder of your own. A folder inside a folder is the 
 - Inside one of your folders, hold A on a folder or system it holds → **Move to folder…**: its first choice, **Out to**, moves
   it up to the folder above (or Home). Hold A on a game, app or shortcut it holds → **Remove from folder**, which leaves it in
   your library; **Add to home** and **Add to folder…** put it elsewhere.
-- Hold A on one of your folders → **Rename…** or **Delete folder…**. Deleting never removes games from your library: the
-  folders and systems it held move to where the folder was.
+- Hold A on any folder except the built-in ones (Favourites, Want to play, Finished, Shelved, Hidden, Recently added) →
+  **Rename…**, **Sort by…** (Title, Recently played, Recently added, Play time) or **Delete folder…**, which asks first.
+  A folder is only a set of pointers: deleting one never deletes games, systems or files. What it held moves to where the
+  folder was. When it holds folders of your own, choose **Delete folder, keep its folders** (they move up too) or
+  **Delete folder and the folders inside**, which also deletes those inside it that no other folder shows; the systems and
+  built-in folders they held move up instead.
+- Folders that came with your library's **folders.json**, such as ones imported from Cocoon, work the same way: the first
+  change moves the folder onto the device, into your preferences and backups, and takes it out of folders.json. If that file
+  can't be written, nothing changes and a message says why. Copying an older folders.json from a computer later can bring
+  the original back; the version on the device keeps priority.
+- A folder's tile shows the cover of a game inside it, the first in the folder's order that has one. To choose, hold A on a
+  game inside the folder → **Use as folder cover** (on that game again: **Use automatic folder cover**).
+- **Y** inside a folder searches its games and those of the folders inside it.
 - Folders go at most four deep, and a folder can't be moved into itself or into a folder inside it; those choices are not
-  offered.
-- Folders from a prepared **folders.json** and the built-in ones can be moved into your folders, but their contents are
-  not edited on the device. Your folders are saved in your preferences and included in backups.
+  offered. Your folders are saved in your preferences and included in backups.
+- Hold A on a game → **Hide from folders** takes it out of every folder, Favourites and Want to play included; it stays in
+  its system list and Search. The **Hidden** folder lists hidden games (and apps a Cocoon import hid); hold A → **Unhide**
+  brings one back. **Recently added** lists games added in the last 14 days, newest first. Both folders appear on Custom only
+  when they hold something.
 
 ## Lists and grids
 

@@ -118,6 +118,71 @@ class InAppFoldersTest {
         assertEquals(listOf("continue", "system:snes", "folder:favourites", "apps"), deleted.layout)
     }
 
+    /**
+     * Deleting with its folders takes the in-app folders only it shows, at any depth, and nothing else: systems and built-in
+     * folders they held land where it was, and a subfolder another folder also shows (with what is below it) stays there.
+     */
+    @Test
+    fun deleteWithSubfoldersTakesOnlyFoldersItAloneShows() {
+        val user = UserData(
+            layout = listOf("continue", "folder:consoles", "folder:mine", "apps"),
+            folders = listOf(
+                FolderDef("consoles", include = listOf("folder:nintendo", "folder:shared", trapt)),
+                FolderDef("nintendo", include = listOf("system:snes", "folder:handhelds")),
+                FolderDef("handhelds", include = listOf("folder:favourites")),
+                FolderDef("shared", include = listOf("folder:inner", "system:psx")),
+                FolderDef("inner"),
+                FolderDef("mine", include = listOf("folder:shared"))
+            )
+        )
+        val views = nestFolders(
+            user.folders.map { FolderView(it, emptyList(), emptyList(), inApp = true) } + FolderView(FolderDef("favourites"), emptyList(), emptyList()),
+            setOf("snes", "psx")
+        )
+        assertEquals(listOf("handhelds", "nintendo"), views.ownedSubfolders("consoles"))
+        val home = HomeIds.custom(user.layout, views.map { "folder:" + it.def.id })
+        val deleted = user.withoutFolder("consoles", views, home, withFolders = true)
+        assertEquals(listOf("shared", "inner", "mine"), deleted.folders.map { it.id })
+        // shared and inner stay folders mine shows; their saved places do not show on Home's top level
+        val top = deleted.layout - setOf("folder:shared", "folder:inner")
+        assertEquals(listOf("continue", "system:snes", "folder:favourites", "folder:mine", "apps"), top)
+        assertEquals(listOf("folder:shared"), deleted.folders.first { it.id == "mine" }.include)
+    }
+
+    /**
+     * A folders.json folder's first edit adopts it whole (same id, every field) unless an in-app folder has its id; undoing a
+     * failed adoption takes back only what it added, and only while unchanged. The edit then applies as to any in-app folder.
+     */
+    @Test
+    fun adoptionCopiesTheWholeDefinitionAndUndoesCleanly() {
+        val tools = FolderDef("tools", "Tools", include = listOf("app:org.ppsspp.ppsspp"), exclude = listOf(trapt), apps = true, sort = "added:desc", limit = 9)
+        val mine = FolderDef("mine", include = listOf("folder:tools"))
+        val user = UserData(folders = listOf(mine))
+        val adopted = user.withAdopted(listOf(tools, FolderDef("mine", "Desktop copy")))
+        assertEquals(listOf(mine, tools), adopted.folders)
+        assertEquals(user, adopted.withoutAdopted(listOf(tools)))
+
+        val edited = adopted.withFolderRenamed("tools", "Utilities").withFolderSort("tools", "playMinutes:desc").withFolderCover("tools", trapt)
+        assertEquals(tools.copy(label = "Utilities", sort = "playMinutes:desc", cover = trapt), edited.folders.single { it.id == "tools" })
+        // edited meanwhile: an undo keeps it
+        assertEquals(edited, edited.withoutAdopted(listOf(tools)))
+        assertEquals(null, edited.withFolderCover("tools", null).folders.single { it.id == "tools" }.cover)
+    }
+
+    /** Deleting with its folders also takes a folders.json subfolder only it shows (adopted first); built-in folders never go. */
+    @Test
+    fun ownedSubfoldersIncludeDesktopFoldersButNoBuiltIns() {
+        val views = nestFolders(
+            listOf(
+                FolderView(FolderDef("mine", include = listOf("folder:tools", "folder:favourites")), emptyList(), emptyList(), inApp = true),
+                FolderView(FolderDef("tools"), emptyList(), emptyList()),
+                FolderView(FolderDef("favourites"), emptyList(), emptyList())
+            ),
+            emptySet()
+        )
+        assertEquals(listOf("tools"), views.ownedSubfolders("mine"))
+    }
+
     /** Restoring a hand-edited backup: blank and repeated ids go (the first kept), names are trimmed and bounded. */
     @Test
     fun restoredFoldersAreCleaned() {

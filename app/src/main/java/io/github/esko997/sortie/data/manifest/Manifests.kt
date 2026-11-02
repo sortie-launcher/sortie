@@ -86,7 +86,9 @@ data class FolderDef(
     val exclude: List<String> = emptyList(),
     val apps: Boolean = false,
     val sort: String = "title:asc",
-    val limit: Int = 0
+    val limit: Int = 0,
+    /** The game whose cover the folder's tile shows while it is a member; otherwise (and when null) the first with a cover. */
+    val cover: String? = null
 ) {
     companion object {
         /** `folder:<id>`: a folder inside another folder, and a folder tile on the custom home. */
