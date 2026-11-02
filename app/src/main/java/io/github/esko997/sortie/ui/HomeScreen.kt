@@ -80,7 +80,6 @@ import io.github.esko997.sortie.mecha.ui.LocalMechaStage
 import io.github.esko997.sortie.mecha.ui.mechaObstacle
 import io.github.esko997.sortie.mecha.ui.mechaSpot
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /**
  * Tile ids of the custom home layout (`user.layout`): `system:<id>`, `folder:<id>`, [APPS] for the built-in Apps folder,
@@ -98,20 +97,17 @@ object HomeIds {
     /** Continue, smart folders and Apps are always on Custom (the generated sorts hold systems only), so they cannot be removed. */
     fun isAutomatic(id: String): Boolean = id == CONTINUE || id == APPS || id.startsWith(FOLDER)
 
-    /** Every tile but Continue and Apps, which belong to Home, can be moved into a folder. */
-    fun canFile(id: String): Boolean = id != CONTINUE && id != APPS
-
     /**
      * The Custom home's order: [layout] as saved, plus the automatic entries it does not hold yet — Continue first, then every
-     * smart folder ([folders]: tile ids in manifest order) and Apps last — without the tiles a folder shows instead ([nested]).
-     * Each id appears once; unresolved ids keep their place.
+     * smart folder ([folders]: tile ids in manifest order) and Apps last. Each id appears once; unresolved ids keep their
+     * place. Tiles a folder shows stay in it (Home hides them only when drawing), so a later edit can never drop them.
      */
-    fun custom(layout: List<String>, folders: List<String>, nested: Set<String> = emptySet()): List<String> = buildList {
+    fun custom(layout: List<String>, folders: List<String>): List<String> = buildList {
         if (CONTINUE !in layout) add(CONTINUE)
         addAll(layout)
         addAll(folders)
         add(APPS)
-    }.distinct().filter { it !in nested }
+    }.distinct()
 }
 
 val SORTS = listOf("alpha" to "Alphabetical", "count" to "Game count", "generation" to "Generation", "custom" to "Custom", "console" to "By Console")
@@ -308,7 +304,9 @@ fun HomeScreen(
         val id = row.def.id
         systemTile(row, if (sort == "generation") row.def.generation else "Systems", biosMissing[id], covers[id], logos[id], vm, onSystem)
     }
-    val customIds = HomeIds.custom(user.layout, folderTiles.map { it.id }, folders.nestedTileIds())
+    val customIds = HomeIds.custom(user.layout, folderTiles.map { it.id })
+    // folders and systems a folder shows are drawn there, not here; they keep their saved places for when they come back
+    val nested = folders.nestedTileIds()
     val tiles: List<HomeTile> = if (custom) {
         val systemById = systems.associateBy { it.def.id }
         val folderById = folderTiles.associateBy { it.id }
@@ -316,7 +314,7 @@ fun HomeScreen(
         val shortcutById = shortcuts.associateBy { it.id }
         val appLabels = apps.associate { it.pkg to it.label }
         // ids that no longer resolve (uninstalled app, removed system, nothing played yet) are skipped here but stay in user.json
-        (moving ?: customIds).mapNotNull { id ->
+        (moving ?: customIds).filter { it !in nested }.mapNotNull { id ->
             when {
                 id == HomeIds.CONTINUE -> lastPlayed?.let { g ->
                     HomeTile(id, "Continue", displayTitle(g), 0, "", cover = g.cover ?: g.screenshot, item = LibraryItem.Game(g)) { onGame(g.id) }
@@ -663,18 +661,7 @@ fun HomeScreen(
                                         val now = vm.toggleFavourite(item.id)
                                         Toast.makeText(context, if (now) "Added to favourites" else "Removed from favourites", Toast.LENGTH_SHORT).show()
                                     }
-                                } ?: t.random?.let { pick ->
-                                    {
-                                        scope.launch {
-                                            val g = pick()
-                                            if (g != null) {
-                                                onGame(g.id)
-                                            } else {
-                                                Toast.makeText(context, "Nothing playable in ${t.title}", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                    }
-                                },
+                                } ?: randomPick(t, scope, context, onGame),
                                 // not while a tile is lifted: the grid holds the focus then, and R2 must not edit the queue mid-move
                                 onWantToPlay = (t.item as? LibraryItem.Game)?.takeIf { lifted == null }?.let { g -> { toggleWantToPlay(vm, g.id, context) } },
                                 platform = (t.item as? LibraryItem.Game)?.game?.systemId?.let { systemLabels[it]?.takeIf(String::isNotBlank) ?: it }
@@ -694,7 +681,7 @@ fun HomeScreen(
             custom -> BrowseHintBar(
                 *listOfNotNull(
                     "A" to "open",
-                    "hold A" to "move / remove",
+                    "hold A" to "move / folder",
                     "hold R1" to "random",
                     "Y" to "search",
                     layoutHint,
@@ -724,20 +711,22 @@ fun HomeScreen(
         val game = t.item as? LibraryItem.Game
         val queue = game?.let { wantToPlayAction(vm, it.id, it.id in user.wantToPlay, context) }
         val otherScreen = game?.let { playOnOtherScreenAction(vm, it.game) }
-        val inAppFolder = folders.firstOrNull { it.inApp && HomeIds.FOLDER + it.def.id == t.id }
         SteppedSheet(t.title, { sheet = null }) { next ->
             if (custom) {
-                listOfNotNull(
+                listOf(
                     SheetAction("Move") {
                         moving = customIds
                         lifted = t.id
-                    },
-                    if (HomeIds.canFile(t.id)) moveToFolderAction(vm, folders, t.id, null, context, next) else null,
+                    }
+                ) + folderTileActions(vm, folders, t.id, null, context, next) + listOfNotNull(
                     SheetAction("Remove from home") { vm.removeFromLayout(t.id) }.takeUnless { HomeIds.isAutomatic(t.id) },
-                    newFolderAction(vm, null, t.id, next)
-                ) + inAppFolder?.let { editFolderActions(vm, it, context, next) }.orEmpty() + listOfNotNull(queue, otherScreen)
+                    newFolderAction(vm, null, t.id, next),
+                    queue,
+                    otherScreen
+                )
             } else {
-                listOfNotNull(homeAction(vm, t.id, t.id in user.layout, context), queue, otherScreen)
+                // a system shown inside a folder is already on Custom, just not on its top level
+                listOfNotNull(homeAction(vm, t.id, t.id in user.layout, context).takeUnless { t.id in nested }, queue, otherScreen)
             }
         }
     }

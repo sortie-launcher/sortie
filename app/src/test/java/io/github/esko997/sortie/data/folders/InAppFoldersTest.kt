@@ -2,6 +2,7 @@ package io.github.esko997.sortie.data.folders
 
 import io.github.esko997.sortie.data.manifest.FolderDef
 import io.github.esko997.sortie.data.manifest.UserData
+import io.github.esko997.sortie.ui.HomeIds
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -25,38 +26,51 @@ class InAppFoldersTest {
     fun movingFromHomeIntoANewFolderAndOnward() {
         val home = listOf("continue", "system:snes", trapt, "folder:favourites", "apps")
         val created = UserData(layout = listOf("system:snes", trapt)).withNewFolder("lists", "  Lists ", into = null, beside = "system:snes", home = home)
-        val moved = created.withMovedToFolder("system:snes", from = null, to = "lists", home = created.layout)
+        val moved = created.withMoved("system:snes", from = null, to = "lists", home = created.layout)
         assertEquals(listOf("continue", "folder:lists", trapt, "folder:favourites", "apps"), moved.layout)
         assertEquals(listOf(FolderDef("lists", "Lists", include = listOf("system:snes"))), moved.folders)
 
         val inner = moved.withNewFolder("snes-stuff", "SNES", into = "lists", beside = "system:snes", home = moved.layout)
         assertEquals(listOf("folder:snes-stuff", "system:snes"), inner.folders.single { it.id == "lists" }.include)
-        val onward = inner.withMovedToFolder("system:snes", from = "lists", to = "snes-stuff", home = inner.layout)
+        val onward = inner.withMoved("system:snes", from = "lists", to = "snes-stuff", home = inner.layout)
         assertEquals(listOf("folder:snes-stuff"), onward.folders.single { it.id == "lists" }.include)
         assertEquals(listOf("system:snes"), onward.folders.single { it.id == "snes-stuff" }.include)
         assertEquals(moved.layout, onward.layout)
     }
 
-    /** Move out goes to the parent in-app folder, or to Home, just after the folder it left; Remove only drops the entry. */
+    /** Moving up a level puts the tile just after the folder it left, in the parent folder or on Home; Remove only drops the entry. */
     @Test
-    fun moveOutAndRemove() {
+    fun moveUpAndRemove() {
         val user = UserData(
             layout = listOf("continue", "folder:lists", "apps"),
             folders = listOf(
                 FolderDef("lists", include = listOf("folder:rpgs", "system:psx")),
-                FolderDef("rpgs", include = listOf(trapt, "app:org.ppsspp.ppsspp"))
+                FolderDef("rpgs", include = listOf("folder:jrpgs", "app:org.ppsspp.ppsspp"))
             )
         )
-        val toParent = user.withMovedOut(trapt, from = "rpgs", to = "lists", home = user.layout)
-        assertEquals(listOf("folder:rpgs", trapt, "system:psx"), toParent.folders[0].include)
+        val toParent = user.withMoved("folder:jrpgs", from = "rpgs", to = "lists", home = user.layout)
+        assertEquals(listOf("folder:rpgs", "folder:jrpgs", "system:psx"), toParent.folders[0].include)
         assertEquals(listOf("app:org.ppsspp.ppsspp"), toParent.folders[1].include)
 
-        val toHome = user.withMovedOut("system:psx", from = "lists", to = null, home = user.layout)
+        val toHome = user.withMoved("system:psx", from = "lists", to = null, home = user.layout)
         assertEquals(listOf("continue", "folder:lists", "system:psx", "apps"), toHome.layout)
 
         val removed = user.withRemovedFromFolder("app:org.ppsspp.ppsspp", from = "rpgs")
-        assertEquals(listOf(trapt), removed.folders[1].include)
+        assertEquals(listOf("folder:jrpgs"), removed.folders[1].include)
         assertEquals(user.layout, removed.layout)
+    }
+
+    /**
+     * Home's saved order keeps the tiles a folder shows (Home hides them only when drawing). Here a desktop folders.json folder
+     * points to `system:snes`: an unrelated folder edit must not drop it from the layout, so it is back in its place on Custom
+     * once that pointer goes.
+     */
+    @Test
+    fun folderEditsKeepTilesShownInsideFolders() {
+        val user = UserData(layout = listOf("system:snes", "system:psx", trapt), folders = listOf(FolderDef("lists")))
+        val home = HomeIds.custom(user.layout, listOf("folder:desktop", "folder:lists"))
+        val edited = user.withMoved(trapt, from = null, to = "lists", home = home)
+        assertEquals(listOf("continue", "system:snes", "system:psx", "folder:desktop", "folder:lists", "apps"), edited.layout)
     }
 
     /** Add to folder… keeps the item wherever else it is, lists it once and clears a hand-written exclude that would hide it. */
@@ -96,10 +110,12 @@ class InAppFoldersTest {
         assertEquals(listOf("folder:favourites", "system:snes", trapt, "system:psx"), nested.folders.single().include)
         assertEquals(user.layout, nested.layout)
 
-        // an automatic folder tile has its place in the Custom order even when the saved layout lacks it
-        val automatic = UserData(folders = listOf(FolderDef("lists", include = listOf("system:snes"))))
-        val deleted = automatic.withoutFolder("lists", emptyList(), home = listOf("continue", "folder:lists", "apps"))
-        assertEquals(listOf("continue", "system:snes", "apps"), deleted.layout)
+        // Home's order also holds the pointers themselves (an automatic folder tile is always in it, and nested tiles keep their
+        // saved place): they still land where the deleted folder was
+        val automatic = UserData(folders = listOf(FolderDef("lists", include = listOf("system:snes", "folder:favourites"))))
+        val home = HomeIds.custom(listOf("folder:lists", "system:snes"), listOf("folder:lists", "folder:favourites"))
+        val deleted = automatic.withoutFolder("lists", emptyList(), home = home)
+        assertEquals(listOf("continue", "system:snes", "folder:favourites", "apps"), deleted.layout)
     }
 
     /** Restoring a hand-edited backup: blank and repeated ids go (the first kept), names are trimmed and bounded. */

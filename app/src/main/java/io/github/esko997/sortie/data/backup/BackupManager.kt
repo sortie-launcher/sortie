@@ -315,8 +315,8 @@ class BackupManager(
         }
         val lines = buildList {
             add(
-                "Replaced all preferences and personal records from ${preview.source}, including layout, dock, favourites, Want to play, " +
-                    "Finished/Shelved status, bookmarks, controller entries, reference-card text and magazine clippings."
+                "Replaced all preferences and personal records from ${preview.source}, including layout, in-app folders, dock, favourites, " +
+                    "Want to play, Finished/Shelved status, bookmarks, controller entries, reference-card text and magazine clippings."
             )
             if (archived != null && preview.legacy != null) {
                 add(
@@ -401,8 +401,8 @@ class BackupManager(
         private const val TAG = "SortieBackup"
         private const val MAX_BYTES = 64 * 1024 * 1024
 
-        const val SCOPE = "A backup holds Sortie's own state: every preference in user.json (layout, favourites, hidden entries, launcher choices, dock, " +
-            "Want to play, bookmarks, controller entries, Finished/Shelved verdicts, magazine clippings and reference-card text), " +
+        const val SCOPE = "A backup holds Sortie's own state: every preference in user.json (layout, in-app folders, favourites, hidden entries, " +
+            "launcher choices, dock, Want to play, bookmarks, controller entries, Finished/Shelved verdicts, magazine clippings and reference-card text), " +
             "the play history from the database and the Hangar companion (name, parts, salvage, bond). It does not hold reference images, " +
             "the personal-notes archive (sortie/archive) or old journal screenshots: copy those folders alongside the backup. ROMs, covers, " +
             "emulator saves, the game index (rebuilt from the card), desktop manifests and playlog.jsonl are also excluded."
@@ -422,7 +422,7 @@ class BackupManager(
 }
 
 /** App and shortcut ids referenced anywhere a restore puts them back. */
-fun UserData.launchableIds(): Set<String> = (favourites + layout + dock + shortcuts)
+fun UserData.launchableIds(): Set<String> = (favourites + layout + dock + shortcuts + folders.flatMap { it.include })
     .filterTo(HashSet()) { it.startsWith(LibraryItem.APP_PREFIX) || it.startsWith(LibraryItem.SHORTCUT_PREFIX) }
 
 private fun InputStream.readCapped(limit: Int): ByteArray {

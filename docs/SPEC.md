@@ -98,7 +98,7 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   `folders.json`). `nestFolders` resolves them once per folder evaluation: depth-first from unpointed folders, cycles and
   levels past four not followed (reported), so every folder stays reachable. A pointed-to folder or system leaves Custom's
   top level; the folder screen lists its folders and systems before its games. In-app ids are name slugs unique against
-  built-in, card and in-app ids; an in-app folder wins an id clash with `folders.json`, a built-in id wins over both.
+  built-in, card and in-app ids; an in-app folder wins an id clash with `folders.json` (silently), a built-in id wins over both.
 
 ### Dual screen (M3, revised in feedback round 2)
 - Roles follow the navigation activity's current display, not a fixed top/bottom layout; X exchanges navigation and
@@ -171,8 +171,9 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
   the D-pad moves it one slot per press, A drops, B cancels; touch drops it on the tapped tile.
 - Custom tiles (except Continue and Apps) also offer Move to folder… (in-app folders that create no cycle and stay within
   four levels, or New folder… in the tile's place) and New folder…; in-app folder tiles offer Rename… and Delete folder… (the
-  folders and systems it held return where it was). Inside an in-app folder its entries offer Move to folder…, Move out to
-  the in-app parent or Home and, for games/apps/shortcuts, Remove from folder. Any game, app or shortcut offers Add to folder….
+  folders and systems it held return where it was). Inside an in-app folder its folders and systems offer Move to folder…,
+  whose first choice is Out to the in-app parent or Home; its games, apps and shortcuts offer Remove from folder. Any game,
+  app or shortcut offers Add to folder….
 - Browse screens (system lists, folders, search, Apps) share one list↔grid setting. Grid tiles are 1:1: cropped cover with
   the title over a bottom gradient, ★ when favourited, focus glow in the cover's palette accent; apps and shortcuts show their
   icon on slate with the label below. Columns = `gridColumns`.
@@ -461,7 +462,7 @@ Scraping, cloud sync, RetroAchievements UI, themes marketplace, video previews, 
 A select/launch · hold A context sheet (Favourite · Add to / Remove from home · Add to folder… on games, apps and shortcuts,
 plus Play on the other screen for games on two screens; Add to home on
 Home's systems and folders; Move · Move to folder… · Remove · New folder… on Custom home tiles, Rename… · Delete folder… on
-in-app folders, Move out · Remove from folder inside them) · B back (up one folder level) · X swap screen roles · Y favourite toggle (detail) /
+in-app folders, Remove from folder inside them) · B back (up one folder level) · X swap screen roles · Y favourite toggle (detail) /
 search (whole library on Home; scoped to the list on system and folder screens) / other screen (switcher) · Start search
 (scoped like Y; not available while Sortie is the home app: Android intercepts it) ·
 Select launch-profile sheet (detail) / list↔grid (Home, system and folder lists, search, Apps) / close app (switcher) · L1/R1

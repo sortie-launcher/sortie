@@ -96,45 +96,21 @@ fun List<FolderView>.nestedTileIds(): Set<String> = buildSet {
 }
 
 /**
- * How many folder levels [tileId] spans: 0 for anything but a folder, 1 for a folder holding no folders, and so on. Moving it
- * into a folder at level L keeps within [MAX_FOLDER_DEPTH] when L + span ≤ MAX_FOLDER_DEPTH.
+ * The folders [tileId] holds, itself included at depth 1, each with its depth below the tile (children 2, and so on); empty
+ * for anything but a folder. Moving the tile into folder F makes a cycle when F is a key, and keeps within [MAX_FOLDER_DEPTH]
+ * when F's level plus the deepest depth here is at most [MAX_FOLDER_DEPTH]. Follows the resolved [FolderView.children], which
+ * never lead back up ([nestFolders]); the depth bound ends the walk regardless.
  */
-fun List<FolderView>.span(tileId: String): Int {
-    if (!tileId.startsWith(FOLDER_POINTER)) return 0
+fun List<FolderView>.below(tileId: String): Map<String, Int> {
+    if (!tileId.startsWith(FOLDER_POINTER)) return emptyMap()
     val byId = associateBy { it.def.id }
+    val depths = HashMap<String, Int>()
 
-    // children of a nested view never lead back up (nestFolders), and the depth bound ends the walk regardless
-    fun span(id: String, depth: Int): Int {
-        val v = byId[id] ?: return 1
-        if (depth > MAX_FOLDER_DEPTH) return 1
-        return 1 + (v.children.filter { it.startsWith(FOLDER_POINTER) }.maxOfOrNull { span(it.removePrefix(FOLDER_POINTER), depth + 1) } ?: 0)
+    fun walk(id: String, depth: Int) {
+        if (depth > MAX_FOLDER_DEPTH || (depths[id] ?: 0) >= depth) return
+        depths[id] = depth
+        byId[id]?.children?.filter { it.startsWith(FOLDER_POINTER) }?.forEach { walk(it.removePrefix(FOLDER_POINTER), depth + 1) }
     }
-    return span(tileId.removePrefix(FOLDER_POINTER), 1)
-}
-
-/** True when folder [id] is the folder [tileId] names or is shown somewhere inside it (moving the tile there makes a cycle). */
-fun List<FolderView>.isWithin(id: String, tileId: String): Boolean {
-    if (!tileId.startsWith(FOLDER_POINTER)) return false
-    val byId = associateBy { it.def.id }
-    val seen = HashSet<String>()
-    val queue = ArrayDeque(listOf(tileId.removePrefix(FOLDER_POINTER)))
-    while (queue.isNotEmpty()) {
-        val next = queue.removeFirst()
-        if (next == id) return true
-        if (!seen.add(next)) continue
-        byId[next]?.children?.filter { it.startsWith(FOLDER_POINTER) }?.mapTo(queue) { it.removePrefix(FOLDER_POINTER) }
-    }
-    return false
-}
-
-/** [view]'s label after its first parents' (`Lists › RPGs`), for choosing among folders of the same name. */
-fun List<FolderView>.path(view: FolderView): String {
-    val byId = associateBy { it.def.id }
-    val labels = mutableListOf(view.def.label)
-    var at = view
-    repeat(MAX_FOLDER_DEPTH) {
-        at = at.parents.firstOrNull()?.let(byId::get) ?: return labels.asReversed().joinToString(" › ")
-        labels += at.def.label
-    }
-    return labels.asReversed().joinToString(" › ")
+    walk(tileId.removePrefix(FOLDER_POINTER), 1)
+    return depths
 }

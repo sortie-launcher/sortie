@@ -8,9 +8,10 @@ for published builds.
 - Folders inside folders on **Home → Custom**: hold A on a tile → **Move to folder…** (or **New folder…**) files systems,
   games, apps, shortcuts and other folders — Favourites, Want to play, Finished, Shelved and smart folders included — into a
   folder you name; what a folder holds leaves Home's top level and opens from inside it, folders and systems first, Back
-  going up one level (four levels at most; moves that would loop are not offered). **Add to folder…** on any game, app or
-  shortcut; **Move out**, **Remove from folder**, **Rename…** and **Delete folder…** (nothing leaves the library; what it held
-  returns where it was) inside. Folders made on the device live in user.json (in backups, untouched by a desktop deploy);
+  going up one level (four levels at most; moves that would loop are not offered). Inside a folder, **Move to folder…** on a
+  folder or system starts with **Out to** the folder above or Home. **Add to folder…** on any game, app or shortcut;
+  **Remove from folder**, **Rename…** and **Delete folder…** (nothing leaves the library; what it held returns where it was)
+  inside. Folders made on the device live in user.json (in backups, untouched by a desktop deploy);
   folders.json takes the same `folder:<id>` / `system:<id>` pointers in `include`.
 - Radial keyboard: the D-pad moves the text cursor (Left/Right by character, hold to repeat; Up/Down to the start/end).
 - Search remembers its text and filters until Sortie restarts (never saved to disk), and a **Clear** button empties the box.

@@ -66,23 +66,23 @@ class FolderTreeTest {
         assertEquals(listOf("system:snes"), views.of("l4").children)
         assertEquals(1, views.of("l4").problems.size)
         assertFalse("folder:l5" in views.nestedTileIds())
-        assertEquals(4, views.span("folder:l1"))
-        assertEquals(1, views.span("folder:l4"))
-        assertEquals(0, views.span("system:snes"))
+        assertEquals(mapOf("l1" to 1, "l2" to 2, "l3" to 3, "l4" to 4), views.below("folder:l1"))
+        assertEquals(mapOf("l4" to 1), views.below("folder:l4"))
+        assertEquals(emptyMap<String, Int>(), views.below("system:snes"))
     }
 
-    /** What a move may target: not the folder itself or anything inside it; paths name a folder by its first parents. */
+    /** What a move may target: not the folder itself or anything inside it, at the deepest depth a folder shows up below. */
     @Test
-    fun withinAndPathFollowTheResolvedTree() {
-        val views = nestFolders(listOf(view("lists", "folder:rpgs"), view("rpgs", "folder:jrpgs"), view("jrpgs"), view("other")), emptySet())
-        assertTrue(views.isWithin("jrpgs", "folder:lists"))
-        assertTrue(views.isWithin("lists", "folder:lists"))
-        assertFalse(views.isWithin("other", "folder:lists"))
-        assertFalse(views.isWithin("lists", "ps2/Trapt.iso"))
-        assertEquals("lists › rpgs › jrpgs", views.path(views.of("jrpgs")))
+    fun belowFollowsTheResolvedTree() {
+        val views = nestFolders(
+            listOf(view("lists", "folder:rpgs", "folder:jrpgs"), view("rpgs", "folder:jrpgs"), view("jrpgs"), view("other")),
+            emptySet()
+        )
+        assertEquals(mapOf("lists" to 1, "rpgs" to 2, "jrpgs" to 3), views.below("folder:lists"))
+        assertFalse("other" in views.below("folder:lists"))
     }
 
-    /** An in-app folder keeps an id a folders.json entry also uses (reported on it); one claiming a built-in id is dropped. */
+    /** An in-app folder keeps an id a folders.json entry also uses; one claiming a built-in id is dropped. */
     @Test
     fun inAppFolderWinsOverFoldersJsonAndLosesToBuiltIns() {
         val views = evaluateFolders(
@@ -96,10 +96,10 @@ class FolderTreeTest {
         val rpgs = views.single { it.def.id == "rpgs" }
         assertEquals("My RPGs", rpgs.def.label)
         assertTrue(rpgs.inApp)
-        assertEquals(1, rpgs.problems.size)
+        assertTrue(rpgs.problems.isEmpty())
         assertFalse(views.single { it.def.id == "fighters" }.inApp)
         val favourites = views.single { it.def.id == FAVOURITES_FOLDER_ID }
         assertFalse(favourites.inApp)
-        assertEquals(1, favourites.problems.size)
+        assertTrue(favourites.problems.isEmpty())
     }
 }

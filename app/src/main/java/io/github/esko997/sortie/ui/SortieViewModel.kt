@@ -20,8 +20,13 @@ import io.github.esko997.sortie.data.db.byIds
 import io.github.esko997.sortie.data.db.toRoom
 import io.github.esko997.sortie.data.folders.BUILT_IN_FOLDER_IDS
 import io.github.esko997.sortie.data.folders.FolderView
-import io.github.esko997.sortie.data.folders.nestedTileIds
 import io.github.esko997.sortie.data.folders.newFolderId
+import io.github.esko997.sortie.data.folders.withAddedToFolder
+import io.github.esko997.sortie.data.folders.withFolderRenamed
+import io.github.esko997.sortie.data.folders.withMoved
+import io.github.esko997.sortie.data.folders.withNewFolder
+import io.github.esko997.sortie.data.folders.withRemovedFromFolder
+import io.github.esko997.sortie.data.folders.withoutFolder
 import io.github.esko997.sortie.data.index.Indexer
 import io.github.esko997.sortie.data.manifest.BrowseChromeMode
 import io.github.esko997.sortie.data.manifest.GameAnnotation
@@ -327,11 +332,11 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     fun folder(id: String): Flow<FolderView?> = folders.map { l -> l.firstOrNull { it.def.id == id } }
 
-    /** Custom home's current order without the tiles folders show: what a folder edit that changes Home saves as the layout. */
-    private fun homeOrder(): List<String> {
-        val views = folders.value
-        return HomeIds.custom(user.value.layout, views.map { HomeIds.FOLDER + it.def.id }, views.nestedTileIds())
-    }
+    /**
+     * Custom home's current order, the tiles folders show included (Home only hides them while drawing, so a folder list that
+     * lags user.json cannot drop them): what a folder edit that changes Home saves as the layout.
+     */
+    private fun homeOrder(): List<String> = HomeIds.custom(user.value.layout, folders.value.map { HomeIds.FOLDER + it.def.id })
 
     /**
      * Makes an in-app folder named [label] in [into] (an in-app folder id, or null for Home) just before tile [beside], and
@@ -340,24 +345,32 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     fun createFolder(label: String, into: String?, beside: String?, moving: String? = null): String {
         val taken = BUILT_IN_FOLDER_IDS + manifests.value.folders.map { it.id } + user.value.folders.map { it.id }
         val id = newFolderId(label, taken)
-        graph.user.createFolder(id, label, into, beside, homeOrder(), moving)
+        val home = homeOrder()
+        graph.user.editFolders { u ->
+            val created = u.withNewFolder(id, label, into, beside, home)
+            if (moving == null) created else created.withMoved(moving, into, id, created.layout)
+        }
         return id
     }
 
-    /** Moves tile [tileId] from [from] (an in-app folder, or null for Home) into in-app folder [to]. */
-    fun moveToFolder(tileId: String, from: String?, to: String) = graph.user.moveToFolder(tileId, from, to, homeOrder())
+    /** Moves tile [tileId] from [from] into [to] (each an in-app folder, or null for Home). */
+    fun moveTile(tileId: String, from: String?, to: String?) {
+        val home = homeOrder()
+        graph.user.editFolders { it.withMoved(tileId, from, to, home) }
+    }
 
-    /** Moves tile [tileId] out of in-app folder [from] into [to] (its in-app parent, or null for Home). */
-    fun moveOutOfFolder(tileId: String, from: String, to: String?) = graph.user.moveOutOfFolder(tileId, from, to, homeOrder())
+    fun addToFolder(tileId: String, to: String) = graph.user.editFolders { it.withAddedToFolder(tileId, to) }
 
-    fun addToFolder(tileId: String, to: String) = graph.user.addToFolder(tileId, to)
+    fun removeFromFolder(tileId: String, from: String) = graph.user.editFolders { it.withRemovedFromFolder(tileId, from) }
 
-    fun removeFromFolder(tileId: String, from: String) = graph.user.removeFromFolder(tileId, from)
-
-    fun renameFolder(id: String, label: String) = graph.user.renameFolder(id, label)
+    fun renameFolder(id: String, label: String) = graph.user.editFolders { it.withFolderRenamed(id, label) }
 
     /** Deletes in-app folder [id]; the folders and systems it held take its place where it was shown (see withoutFolder). */
-    fun deleteFolder(id: String) = graph.user.deleteFolder(id, folders.value.firstOrNull { it.def.id == id }?.parents.orEmpty(), homeOrder())
+    fun deleteFolder(id: String) {
+        val parents = folders.value.firstOrNull { it.def.id == id }?.parents.orEmpty()
+        val home = homeOrder()
+        graph.user.editFolders { it.withoutFolder(id, parents, home) }
+    }
 
     fun hide(id: String, hidden: Boolean) = graph.user.hide(id, hidden)
 

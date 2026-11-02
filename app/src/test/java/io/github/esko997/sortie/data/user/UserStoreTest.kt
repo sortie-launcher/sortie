@@ -1,5 +1,9 @@
 package io.github.esko997.sortie.data.user
 
+import io.github.esko997.sortie.data.folders.withAddedToFolder
+import io.github.esko997.sortie.data.folders.withFolderRenamed
+import io.github.esko997.sortie.data.folders.withMoved
+import io.github.esko997.sortie.data.folders.withNewFolder
 import io.github.esko997.sortie.data.manifest.ControllerSupport
 import io.github.esko997.sortie.data.manifest.FolderDef
 import io.github.esko997.sortie.data.manifest.FoldersManifest
@@ -82,11 +86,12 @@ class UserStoreTest {
         val file = fresh()
         val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         val home = listOf("continue", "system:snes", "folder:favourites", "apps")
-        store.createFolder("lists", "Lists", into = null, beside = "system:snes", home = home, moving = "system:snes")
-        store.createFolder("mine", "Mine", into = "lists", beside = null, home = store.data.value.layout)
-        store.moveToFolder("folder:favourites", from = null, to = "mine", home = store.data.value.layout)
-        store.addToFolder("snes/Super Metroid.sfc", "mine")
-        store.renameFolder("mine", "  My lists ")
+        store.editFolders { it.withNewFolder("lists", "Lists", into = null, beside = "system:snes", home = home) }
+        store.editFolders { it.withMoved("system:snes", from = null, to = "lists", home = it.layout) }
+        store.editFolders { it.withNewFolder("mine", "Mine", into = "lists", beside = null, home = it.layout) }
+        store.editFolders { it.withMoved("folder:favourites", from = null, to = "mine", home = it.layout) }
+        store.editFolders { it.withAddedToFolder("snes/Super Metroid.sfc", "mine") }
+        store.editFolders { it.withFolderRenamed("mine", "  My lists ") }
         val expected = store.data.value
         withTimeout(5_000) { store.written.first { it == expected } }
         val reloaded = UserStore(file).data.value

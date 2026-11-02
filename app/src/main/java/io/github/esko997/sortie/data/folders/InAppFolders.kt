@@ -24,8 +24,8 @@ fun newFolderId(label: String, taken: Set<String>): String {
 /*
  * Edits of the in-app folders (UserData.folders) and of Home's custom layout, as pure functions UserStore applies. A tile id is
  * anything a folder include or the layout holds: a game, app or shortcut id, or a folder:/system: pointer. A container is an
- * in-app folder id, or null for Home; [home] is the custom home's current order (HomeIds.custom without nested tiles), saved
- * as the layout whenever Home changes, as a Move on Home does, so automatic tiles keep their places.
+ * in-app folder id, or null for Home; [home] is the custom home's current order (HomeIds.custom, nested tiles included),
+ * saved as the layout whenever Home changes, as a Move on Home does, so automatic tiles keep their places.
  */
 
 /** Adds an empty in-app folder [id] named [label] to [into] (null: Home), just before [beside] when it is there. */
@@ -39,19 +39,13 @@ fun UserData.withNewFolder(id: String, label: String, into: String?, beside: Str
     return placed.copy(folders = placed.folders + FolderDef(id, folderLabel(label, id)))
 }
 
-/** Takes [tileId] out of [from] (null: Home) and appends it to in-app folder [to]. */
-fun UserData.withMovedToFolder(tileId: String, from: String?, to: String, home: List<String>): UserData {
-    val out = if (from == null) copy(layout = home - tileId) else editFolder(from) { it.copy(include = it.include - tileId) }
-    return out.withAddedToFolder(tileId, to)
-}
-
 /**
- * Takes [tileId] out of in-app folder [from] and puts it just after [from]'s own tile in [to] (the parent in-app folder), or on
- * Home (null) after the folder's tile when it is there, else at the end of the layout.
+ * Takes [tileId] out of [from] and puts it in [to] (each an in-app folder, or null for Home): just after [from]'s own tile when
+ * [to] holds it (moving up to the parent or Home), else at the end.
  */
-fun UserData.withMovedOut(tileId: String, from: String, to: String?, home: List<String>): UserData {
-    val out = editFolder(from) { it.copy(include = it.include - tileId) }
-    val anchor = FOLDER_POINTER + from
+fun UserData.withMoved(tileId: String, from: String?, to: String?, home: List<String>): UserData {
+    val out = if (from == null) copy(layout = home - tileId) else editFolder(from) { it.copy(include = it.include - tileId) }
+    val anchor = from?.let { FOLDER_POINTER + it }
     return if (to == null) {
         out.copy(layout = home.placed(tileId, after = anchor))
     } else {
@@ -86,7 +80,8 @@ fun UserData.withoutFolder(id: String, parents: Collection<String>, home: List<S
             else -> f.copy(include = f.include - tile)
         }
     }
-    return copy(folders = rest, layout = if (held) layout - tile else home.replaced(tile, pointers))
+    // Home's order holds the pointers already (nested tiles keep a saved place): they move into the folder's slot
+    return copy(folders = rest, layout = if (held) layout - tile else (home - pointers.toSet()).replaced(tile, pointers))
 }
 
 /** Backup restore: blank and repeated ids dropped (the first kept), names trimmed and bounded, include/exclude without repeats. */

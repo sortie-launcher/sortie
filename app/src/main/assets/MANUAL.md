@@ -133,8 +133,9 @@ smart folders too) inside a folder of your own. A folder inside a folder is the 
 - Hold A on a game, app or shortcut anywhere → **Add to folder…** adds it to one of your folders and leaves it where it is.
 - A folder or system inside a folder leaves Home's top level; open the folder to reach it. Folders and systems come first in
   a folder, then its games. **B** goes back up one level. The other sorts still list every system.
-- Inside one of your folders, hold A on something it holds: **Move to folder…**, **Move out to** the folder above (or Home),
-  and for games, apps and shortcuts **Remove from folder**, which leaves them in your library.
+- Inside one of your folders, hold A on a folder or system it holds → **Move to folder…**: its first choice, **Out to**, moves
+  it up to the folder above (or Home). Hold A on a game, app or shortcut it holds → **Remove from folder**, which leaves it in
+  your library; **Add to home** and **Add to folder…** put it elsewhere.
 - Hold A on one of your folders → **Rename…** or **Delete folder…**. Deleting never removes games from your library: the
   folders and systems it held move to where the folder was.
 - Folders go at most four deep, and a folder can't be moved into itself or into a folder inside it; those choices are not

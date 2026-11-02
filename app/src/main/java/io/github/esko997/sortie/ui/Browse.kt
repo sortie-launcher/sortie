@@ -38,7 +38,6 @@ import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.folders.FolderView
 import io.github.esko997.sortie.data.manifest.GameAnnotation
-import kotlinx.coroutines.launch
 
 /** Select toggles list↔grid on a browse screen; one persisted setting (`user.browseLayout`) for all of them, separate from home. */
 @Composable
@@ -55,7 +54,7 @@ fun BrowseLayoutHotkey(vm: SortieViewModel, grid: Boolean) {
 /**
  * Hold-A / long-press sheet for a game, app or shortcut: Favourite · Add to (Remove from) home · Add to folder…, plus Want to
  * play and, with two screens, Play on the other screen for games, and for shortcuts whether the Apps screen lists them
- * (`user.shortcuts`). [extra] are the screen's own actions (an in-app folder's Move out and Remove from folder).
+ * (`user.shortcuts`). [extra] are the screen's own actions (an in-app folder's Remove from folder).
  */
 @Composable
 fun ItemSheet(item: LibraryItem, vm: SortieViewModel, extra: List<SheetAction> = emptyList(), onDismiss: () -> Unit) {
@@ -177,8 +176,9 @@ fun GameListScreen(
 /**
  * A folder: first the folders and systems it holds ([FolderView.children]; A opens them, Back comes back here), then its games,
  * which open their detail screen, and apps and shortcuts, which launch directly; hold A for favourite / add to home / add to
- * folder, R2 Want to play, Y Search limited to the folder's games ([onSearch]). In an in-app folder hold A also moves what it
- * lists elsewhere; an in-app folder held anywhere offers Rename… and Delete folder….
+ * folder, R2 Want to play, Y Search limited to the folder's games ([onSearch]). In an in-app folder hold A also moves its
+ * folders and systems (Move to folder…, its first choice moving them up a level) and takes games, apps and shortcuts out
+ * (Remove from folder); an in-app folder held anywhere offers Rename… and Delete folder….
  */
 @Composable
 fun FolderScreen(
@@ -204,8 +204,6 @@ fun FolderScreen(
             systems.firstOrNull { it.def.id == systemId }?.let { systemTile(it, "", biosMissing[systemId], covers[systemId], logos[systemId], vm, onSystem) }
         }
     }
-    // the in-app folder a held tile names, if it is one: the only kind renamed or deleted here
-    val inAppFolder = { t: HomeTile -> folders.firstOrNull { it.inApp && HomeIds.FOLDER + it.def.id == t.id } }
     var held by remember { mutableStateOf<HomeTile?>(null) }
     ItemListScreen(
         view.def.label,
@@ -216,26 +214,13 @@ fun FolderScreen(
         onSearch = onSearch,
         pointers = pointers,
         // a folders.json or built-in folder's contents stay as the desktop or its rule made them
-        onPointerLongClick = { t -> if (view.inApp || inAppFolder(t) != null) held = t },
+        onPointerLongClick = { t -> if (view.inApp || folders.any { it.inApp && HomeIds.FOLDER + it.def.id == t.id }) held = t },
         itemActions = { item ->
-            if (view.inApp && item.id in view.def.include) {
-                listOf(moveOutAction(vm, folders, item.id, view, context), removeFromFolderAction(vm, item.id, view, context))
-            } else {
-                emptyList()
-            }
-        }
+            listOfNotNull(removeFromFolderAction(vm, item.id, view, context).takeIf { view.inApp && item.id in view.def.include })
+        },
+        holdHint = if (view.inApp) "move / remove" else "favourite / add to home"
     )
-    held?.let { t ->
-        SteppedSheet(t.title, { held = null }) { next ->
-            buildList {
-                if (view.inApp) {
-                    moveToFolderAction(vm, folders, t.id, view.def.id, context, next)?.let(::add)
-                    add(moveOutAction(vm, folders, t.id, view, context))
-                }
-                inAppFolder(t)?.let { addAll(editFolderActions(vm, it, context, next)) }
-            }
-        }
-    }
+    held?.let { t -> SteppedSheet(t.title, { held = null }) { next -> folderTileActions(vm, folders, t.id, view, context, next) } }
 }
 
 /**
@@ -266,7 +251,7 @@ private fun SearchHereHotkey(onSearch: () -> Unit) {
  * browsing (see [BrowseChrome]) to one line with the count and the filters that are on; a problem [subtitle] stays shown
  * either way. A [parent] header (Home's) folds this one with it, and its strip has the chevron. [onSearch] is Y's scoped Search.
  * [pointers] (a folder's folders and systems) lead the grid, unfiltered; holding one calls [onPointerLongClick]. [itemActions]
- * adds the screen's own actions to an item's hold-A sheet.
+ * adds the screen's own actions to an item's hold-A sheet, and [holdHint] says what hold A does.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -280,7 +265,8 @@ private fun ItemListScreen(
     onSearch: (() -> Unit)? = null,
     pointers: List<HomeTile> = emptyList(),
     onPointerLongClick: (HomeTile) -> Unit = {},
-    itemActions: (LibraryItem) -> List<SheetAction> = { emptyList() }
+    itemActions: (LibraryItem) -> List<SheetAction> = { emptyList() },
+    holdHint: String = "favourite / add to home"
 ) {
     val stats by vm.playStats.collectAsState()
     val saves by vm.saveStems.collectAsState()
@@ -406,13 +392,7 @@ private fun ItemListScreen(
                             onClick = t.onClick,
                             onLongClick = { onPointerLongClick(t) },
                             // hold R1: a random game of that folder or system, as on Home
-                            onFavourite = t.random?.let { pick ->
-                                {
-                                    scope.launch {
-                                        pick()?.let { onGame(it.id) } ?: Toast.makeText(context, "Nothing playable in ${t.title}", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            },
+                            onFavourite = randomPick(t, scope, context, onGame),
                             onWantToPlay = null,
                             platform = null
                         )
@@ -449,7 +429,7 @@ private fun ItemListScreen(
         BrowseHintBar(
             *listOfNotNull(
                 "A" to "open",
-                "hold A" to "favourite / add to home",
+                "hold A" to holdHint,
                 ("Y" to "search here").takeIf { onSearch != null },
                 "R2" to "want to play",
                 "Select" to if (grid) "list view" else "grid view",

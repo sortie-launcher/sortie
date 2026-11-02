@@ -82,8 +82,8 @@ pointer to it stays on Custom Home.
 Folders made on the device (Custom Home's **Move to folder…** and **New folder…**, **Add to folder…** on a game) are stored in
 `folders` in [user.json](user.md) with this same schema, not here, so they are in backups and `deploy.sh` cannot replace
 them. Sortie edits only those; entries in this file can be moved into an in-app folder (as a pointer) but are never changed
-by the app. If an in-app folder and an entry here share an `id`, the in-app folder wins and the entry here is ignored and
-reported on it; an in-app folder with a reserved id is ignored like one here.
+by the app. If an in-app folder and an entry here share an `id`, the in-app folder wins and the entry here is ignored; an
+in-app folder with a reserved id is ignored.
 
 ## Recently played tags (`recentTags`)
 
