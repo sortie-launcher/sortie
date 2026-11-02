@@ -316,6 +316,16 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
                     FocusRow(onClick = { vm.hide(game.id, true) }, colour = accent) {
                         Text("Hide this game from folders", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    if (user.bookmarkInvitation) {
+                        val offered = game.id !in user.noBookmarkInvitation
+                        FocusRow(onClick = { vm.setGameBookmarkInvitation(game.id, !offered) }, colour = accent) {
+                            Text(
+                                if (offered) "Don't offer a bookmark after playing" else "Offer a bookmark after playing",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
             corePicker?.let { build ->
