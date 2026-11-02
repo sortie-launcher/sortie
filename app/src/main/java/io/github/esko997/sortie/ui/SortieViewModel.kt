@@ -365,11 +365,11 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     fun renameFolder(id: String, label: String) = graph.user.editFolders { it.withFolderRenamed(id, label) }
 
-    /** Deletes in-app folder [id]; the folders and systems it held take its place where it was shown (see withoutFolder). */
-    fun deleteFolder(id: String) {
-        val parents = folders.value.firstOrNull { it.def.id == id }?.parents.orEmpty()
+    /** Deletes in-app folder [id], with [withFolders] also the subfolders only it shows (see withoutFolder). */
+    fun deleteFolder(id: String, withFolders: Boolean = false) {
+        val views = folders.value
         val home = homeOrder()
-        graph.user.editFolders { it.withoutFolder(id, parents, home) }
+        graph.user.editFolders { it.withoutFolder(id, views, home, withFolders) }
     }
 
     fun hide(id: String, hidden: Boolean) = graph.user.hide(id, hidden)

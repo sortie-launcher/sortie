@@ -35,6 +35,7 @@ import io.github.esko997.sortie.data.folders.FOLDER_LABEL_MAX
 import io.github.esko997.sortie.data.folders.FolderView
 import io.github.esko997.sortie.data.folders.MAX_FOLDER_DEPTH
 import io.github.esko997.sortie.data.folders.below
+import io.github.esko997.sortie.data.folders.ownedSubfolders
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -180,7 +181,7 @@ fun folderTileActions(
     val movable = (from == null || from.inApp) && tileId != HomeIds.CONTINUE && tileId != HomeIds.APPS
     val move = if (movable) moveToFolderAction(vm, folders, tileId, from, context, next) else null
     val own = folders.firstOrNull { it.inApp && HomeIds.FOLDER + it.def.id == tileId }
-    return listOfNotNull(move) + own?.let { editFolderActions(vm, it, context, next) }.orEmpty()
+    return listOfNotNull(move) + own?.let { editFolderActions(vm, folders, it, context, next) }.orEmpty()
 }
 
 /** "Add to folder…" for game, app or shortcut [id]: an in-app folder that does not list it yet, or a New folder… on Home. */
@@ -224,19 +225,32 @@ internal fun randomPick(t: HomeTile, scope: CoroutineScope, context: Context, on
     }
 }
 
-/** Rename… and Delete folder… for in-app folder [folder]; deleting asks first and never takes anything out of the library. */
-private fun editFolderActions(vm: SortieViewModel, folder: FolderView, context: Context, next: (SheetStep) -> Unit): List<SheetAction> = listOf(
+/**
+ * Rename… and Delete folder… for in-app folder [folder]. Deleting asks first; when it holds folders of its own, the folder can
+ * go with them. Folders are only pointers: no game, system or file ever leaves the library.
+ */
+private fun editFolderActions(
+    vm: SortieViewModel,
+    folders: List<FolderView>,
+    folder: FolderView,
+    context: Context,
+    next: (SheetStep) -> Unit
+): List<SheetAction> = listOf(
     SheetAction("Rename…") { next(SheetStep.Name("Rename folder", folder.def.label) { vm.renameFolder(folder.def.id, it) }) },
     SheetAction("Delete folder…") {
+        val subfolders = folders.ownedSubfolders(folder.def.id).size
+        val only = SheetAction(if (subfolders > 0) "Delete folder, keep its folders" else "Delete folder") {
+            vm.deleteFolder(folder.def.id)
+            toast(context, "Deleted ${folder.def.label}")
+        }
+        val all = SheetAction("Delete folder and ${plural(subfolders, "folder")} inside") {
+            vm.deleteFolder(folder.def.id, withFolders = true)
+            toast(context, "Deleted ${folder.def.label} and ${plural(subfolders, "folder")}")
+        }
         next(
             SheetStep.Choose(
-                "Delete “${folder.def.label}”? Nothing leaves your library.",
-                listOf(
-                    SheetAction("Delete folder") {
-                        vm.deleteFolder(folder.def.id)
-                        toast(context, "Deleted ${folder.def.label}")
-                    }
-                )
+                "Delete “${folder.def.label}”? Games and files are never deleted.",
+                listOfNotNull(only, all.takeIf { subfolders > 0 })
             )
         )
     }

@@ -84,6 +84,43 @@ fun UserData.withoutFolder(id: String, parents: Collection<String>, home: List<S
     return copy(folders = rest, layout = if (held) layout - tile else (home - pointers.toSet()).replaced(tile, pointers))
 }
 
+/**
+ * The in-app folders inside [id] that no other folder shows, deepest first: deleting [id] with its folders deletes these too
+ * (each through [withoutFolder], so whatever they held moves up a level and only folders go). A subfolder another folder also
+ * shows stays, reachable there, and so does everything below it; built-in and `folders.json` folders are never deleted.
+ */
+fun List<FolderView>.ownedSubfolders(id: String): List<String> {
+    val byId = associateBy { it.def.id }
+    val order = ArrayList<String>()
+    fun walk(f: String) {
+        for (c in byId[f]?.children.orEmpty()) {
+            val child = c.removePrefix(FOLDER_POINTER)
+            if (c.startsWith(FOLDER_POINTER) && byId[child]?.inApp == true && child != id && child !in order) {
+                walk(child)
+                order += child
+            }
+        }
+    }
+    walk(id)
+    // owned: every parent goes too; repeated, since keeping one keeps what only it shows
+    var owned = order.toSet()
+    while (true) {
+        val next = owned.filterTo(HashSet()) { f -> byId.getValue(f).parents.all { it == id || it in owned } }
+        if (next.size == owned.size) return order.filter { it in owned }
+        owned = next
+    }
+}
+
+/**
+ * Deletes in-app folder [id] as shown in [views] and, with [withFolders], its [ownedSubfolders] first, deepest first; each goes
+ * through [withoutFolder], so the systems and other folders they held end up where [id] was. Only folders go.
+ */
+fun UserData.withoutFolder(id: String, views: List<FolderView>, home: List<String>, withFolders: Boolean): UserData {
+    val subfolders = if (withFolders) views.ownedSubfolders(id) else emptyList()
+    val order = home - subfolders.map { FOLDER_POINTER + it }.toSet()
+    return (subfolders + id).fold(this) { u, f -> u.withoutFolder(f, views.firstOrNull { it.def.id == f }?.parents.orEmpty(), order) }
+}
+
 /** Backup restore: blank and repeated ids dropped (the first kept), names trimmed and bounded, include/exclude without repeats. */
 fun List<FolderDef>.cleaned(): List<FolderDef> = filter { it.id.isNotBlank() }.distinctBy { it.id }.map {
     it.copy(label = folderLabel(it.label, it.id), include = it.include.distinct(), exclude = it.exclude.distinct(), limit = it.limit.coerceAtLeast(0))

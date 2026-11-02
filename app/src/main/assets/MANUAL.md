@@ -136,8 +136,11 @@ smart folders too) inside a folder of your own. A folder inside a folder is the 
 - Inside one of your folders, hold A on a folder or system it holds → **Move to folder…**: its first choice, **Out to**, moves
   it up to the folder above (or Home). Hold A on a game, app or shortcut it holds → **Remove from folder**, which leaves it in
   your library; **Add to home** and **Add to folder…** put it elsewhere.
-- Hold A on one of your folders → **Rename…** or **Delete folder…**. Deleting never removes games from your library: the
-  folders and systems it held move to where the folder was.
+- Hold A on one of your folders → **Rename…** or **Delete folder…**, which asks first. A folder is only a set of pointers:
+  deleting one never deletes games, systems or files. What it held moves to where the folder was. When it holds folders of
+  your own, choose **Delete folder, keep its folders** (they move up too) or **Delete folder and the folders inside**, which
+  also deletes those of your folders inside it that no other folder shows; the systems, built-in and prepared folders they
+  held move up instead.
 - Folders go at most four deep, and a folder can't be moved into itself or into a folder inside it; those choices are not
   offered.
 - Folders from a prepared **folders.json** and the built-in ones can be moved into your folders, but their contents are

@@ -5,6 +5,8 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
+- **Delete folder…** on a folder that holds folders of your own can delete them with it, or keep them; either way only
+  folders go, never games, systems or files, and the confirmation says so.
 - Folders inside folders on **Home → Custom**: hold A on a tile → **Move to folder…** (or **New folder…**) files systems,
   games, apps, shortcuts and other folders — Favourites, Want to play, Finished, Shelved and smart folders included — into a
   folder you name; what a folder holds leaves Home's top level and opens from inside it, folders and systems first, Back
