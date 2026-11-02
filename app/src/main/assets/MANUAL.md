@@ -411,7 +411,14 @@ place, dimmed with the reason, instead of being replaced. These file checks do n
 Art, fit stars, hook, description, play time, your bookmark and (when supplied) control notes. **Play** launches with the
 first emulator that accepts the request; **A** activates the focused control, initially Play. **Select / Launch with…**
 opens the emulator list: choosing an installed one saves it for this game and launches it immediately. **Clear override**
-returns the game to the normal order without launching.
+returns the game to the normal order without launching. **Hold A** on an emulator in the list offers **Set as default for**
+the game's system, the same choice as **Settings → Default launcher per system**; a game's own choice still comes first.
+**Choose RetroArch core…**, shown when RetroArch is installed (one entry per official RetroArch app: RetroArch, RetroArch
+(AArch64), RetroArch (32-bit)), lists every RetroArch core, not only the ones Sortie pairs with this system, so a newer or
+different core can be tried. Type in the filter at the top (A opens the keyboard) or press **Left / Right** to jump by
+letter. Choosing a core saves it for this game and launches it; hold A on a core to make it the system's default instead.
+Sortie can't see which cores RetroArch has downloaded: get the core in RetroArch's Online Updater first, otherwise
+RetroArch reports it missing.
 The order tried is this game's choice → **Settings → Default launcher per system** → the system's Emulators list in
 Library setup. A per-game or one-off choice never changes the system default. **Open with…** is tried only when explicitly
 chosen or included in that list. If it is the first configured emulator, Android keeps asking. Only a normal launch that
@@ -588,8 +595,9 @@ the battery temperature show. Readings a device does not offer are left out: the
 reading.
 
 **Which emulator starts a game.** A per-game **Launch with…** choice first; then the system's **Default launcher per
-system** choice made here; otherwise the system's Emulators list from Library setup, in order, skipping emulators that
-aren't installed. **Manifest default** clears the Settings choice so the list order applies again.
+system** choice made here (or with hold A in a game's Launch with…); otherwise the system's Emulators list from Library
+setup, in order, skipping emulators that aren't installed. **Manifest default** clears the Settings choice so the list
+order applies again.
 
 **Import from Cocoon…** reads the Cocoon launcher's folder (and, if you pick one, a Cocoon backup) and previews the systems,
 favourites, hidden games, emulator choices, artwork, folders and play sessions it would add; nothing changes until you choose

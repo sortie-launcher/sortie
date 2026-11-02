@@ -5,6 +5,11 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
+- **Launch with… → Choose RetroArch core…** lists every RetroArch core, whatever the game's system, with a filter and
+  letter jump; choosing one saves it for the game and launches it. Shown when an official RetroArch app is installed, once
+  per installed app. **Hold A** on any Launch with… entry, or on a core, sets it as the system's default (the same choice
+  as **Settings → Default launcher per system**). Ids such as `ra-mgba`, `ra64-…` and `ra32-…` in user.json now work
+  without a launchers.json entry; a launchers.json profile of the same id still wins.
 - **Delete folder…** on a folder that holds folders of your own can delete them with it, or keep them; either way only
   folders go, never games, systems or files, and the confirmation says so.
 - Folders from the card's folders.json (for example, ones imported from Cocoon) can be renamed, sorted, deleted, given a

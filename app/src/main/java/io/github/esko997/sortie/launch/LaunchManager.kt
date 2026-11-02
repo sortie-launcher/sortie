@@ -93,10 +93,9 @@ class LaunchManager(
         return profileOrder(game.id, game.systemId, user.data.value, system?.profiles.orEmpty(), snap.profiles)
     }
 
-    fun isInstalled(profile: LaunchProfile): Boolean {
-        val pkg = profile.`package` ?: return true
-        return runCatching { context.packageManager.getPackageInfo(pkg, 0) }.isSuccess
-    }
+    fun isInstalled(profile: LaunchProfile): Boolean = profile.`package`?.let { isInstalled(it) } ?: true
+
+    fun isInstalled(pkg: String): Boolean = runCatching { context.packageManager.getPackageInfo(pkg, 0) }.isSuccess
 
     /**
      * Starts [game] with its first profile that starts ([only]: just that one). [from] is the display of the window that asked
@@ -307,7 +306,7 @@ class LaunchManager(
      */
     fun quickExit(gameId: String, profileId: String?): String {
         val started = lastStarted?.takeIf { it.gameId == gameId }
-        val profile = profileId?.let { manifests.snapshot.value.profiles[it] }
+        val profile = profileId?.let { manifests.snapshot.value.profiles.resolve(it) }
         val pkg = started?.pkg ?: profile?.`package`
         pkg?.let(::appClosed)
         val name = pkg?.let { appLabel("app:$it") } ?: profile?.label ?: "The emulator"

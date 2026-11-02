@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.ui
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -67,6 +68,8 @@ import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.magazine.MagazineFeature
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import io.github.esko997.sortie.data.manifest.LaunchProfile
+import io.github.esko997.sortie.data.setup.LibraryPresets
 import io.github.esko997.sortie.ui.SortieButton as Button
 import io.github.esko997.sortie.ui.SortieOutlinedButton as OutlinedButton
 import kotlinx.coroutines.delay
@@ -86,6 +89,9 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
     val snap by vm.manifests.collectAsState()
     val apps by vm.apps.collectAsState()
     val profiles = remember(game.id, user.profileOverrides[game.id], snap.loadedAt, apps, showProfiles) { vm.profilesFor(game) }
+    val retroArchBuilds = remember(apps, showProfiles) { vm.retroArchBuilds() }
+    var corePicker by remember { mutableStateOf<LibraryPresets.RetroArchBuild?>(null) }
+    var defaultFor by remember { mutableStateOf<LaunchProfile?>(null) }
     val fav = game.id in user.favourites
     val queued = game.id in user.wantToPlay
     val context = LocalContext.current
@@ -268,6 +274,7 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
                                     vm.launch(game, p)
                                 }
                             },
+                            onLongClick = { defaultFor = p },
                             colour = accent
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -296,6 +303,12 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
                             }
                         }
                     }
+                    // any core, whatever the system: one entry per installed official RetroArch build
+                    retroArchBuilds.forEach { build ->
+                        FocusRow(onClick = { corePicker = build }, colour = accent) {
+                            Text("Choose ${build.appLabel} core…", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 24.dp))
+                        }
+                    }
                     Box(Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth().height(1.dp).background(RuleColour))
                     FocusRow(onClick = { vm.setOverride(game.id, null) }, colour = accent) {
                         Text("Clear override", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -304,6 +317,20 @@ fun DetailScreen(game: GameEntity, vm: SortieViewModel, onReference: () -> Unit,
                         Text("Hide this game from folders", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+            }
+            corePicker?.let { build ->
+                RetroArchCorePicker(build, snap.profiles, onPick = { p ->
+                    corePicker = null
+                    vm.setOverride(game.id, p.id)
+                    vm.launch(game, p)
+                }, onHold = { defaultFor = it }, onDismiss = { corePicker = null })
+            }
+            defaultFor?.let { p ->
+                val setDefault = SheetAction("Set as default for $systemLabel") {
+                    vm.setSystemProfile(game.systemId, p.id)
+                    Toast.makeText(context, "${p.label} is the default for $systemLabel", Toast.LENGTH_SHORT).show()
+                }
+                ContextSheet(p.label, listOf(setDefault)) { defaultFor = null }
             }
             // the emulator closed right after Play: said here, next to Play, and gone after a while or the next launch
             exitNotice?.takeIf { it.gameId == game.id }?.let { notice ->

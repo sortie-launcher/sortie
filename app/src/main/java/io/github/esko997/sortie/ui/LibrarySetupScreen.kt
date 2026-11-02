@@ -1196,10 +1196,17 @@ private fun SetupPageFrame(hints: Array<Pair<String, String>>, content: @Composa
 
 /**
  * One-line text field a controller can pass through: up/down from a physical pad move the focus instead of the caret, A opens
- * the keyboard, Done closes it. The text lives in the screen's saved draft, so closing the keyboard never loses it.
+ * the keyboard, Done closes it. The caller keeps the text (here the screen's saved draft), so closing the keyboard never loses it.
  */
 @Composable
-private fun SetupTextField(value: String, onChange: (String) -> Unit, placeholder: String, enabled: Boolean = true, isError: Boolean = false) {
+internal fun SetupTextField(
+    value: String,
+    onChange: (String) -> Unit,
+    placeholder: String,
+    enabled: Boolean = true,
+    isError: Boolean = false,
+    modifier: Modifier = Modifier
+) {
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     OutlinedTextField(
@@ -1211,7 +1218,7 @@ private fun SetupTextField(value: String, onChange: (String) -> Unit, placeholde
         placeholder = { Text(placeholder) },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { keyboard?.hide() }),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp).onPreviewKeyEvent { e ->
+        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp).onPreviewKeyEvent { e ->
             when {
                 !isPhysicalPad(e) -> false
                 e.key == Key.DirectionUp || e.key == Key.DirectionDown -> {

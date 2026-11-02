@@ -68,6 +68,15 @@ unknown IDs are skipped. A one-off launch tries only the selected profile. A pro
 chooser only when explicitly selected or included in that order; it is not appended implicitly. Cancelling the chooser
 does not record a play session.
 
+**RetroArch core ids need no entry here.** An id `ra-<core>`, `ra64-<core>` or `ra32-<core>` that this file does not
+define stands for that libretro core in the official RetroArch build `com.retroarch`, `com.retroarch.aarch64` or
+`com.retroarch.ra32`, built exactly like the library-setup presets: `LIBRETRO` is
+`/data/user/0/<package>/cores/<core>_libretro_android.so` and the other extras use that package's default folders.
+`<core>` is the core's file-name id (letters, digits, `_`, `+`, `-`; for example `ra-mame2003_plus`). Such ids work
+wherever an id is stored: user.json's `profileOverrides` and `systemProfiles` (what **Launch with… → Choose RetroArch
+core…** writes) and a system's `profiles`. A profile defined here with the same id wins, so a customised core profile keeps
+its settings. Sortie cannot see which cores RetroArch has downloaded; a missing core is reported by RetroArch itself.
+
 A normal launch that falls through other configured emulators to Open with… may remember its first selection as the
 system's default. Explicit one-off choices, per-game overrides, a system whose first configured profile is generic, and
 systems with an existing `systemProfiles` choice never trigger this. The callback rechecks the original configuration

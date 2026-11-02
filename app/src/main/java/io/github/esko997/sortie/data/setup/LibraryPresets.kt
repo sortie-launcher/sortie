@@ -31,7 +31,7 @@ object LibraryPresets {
      * differ only by application id; the native frontend reads ROM/LIBRETRO/CONFIGFILE/IME/DATADIR/SDCARD/EXTERNAL extras
      * and looks for cores under `DATADIR/cores`, i.e. each package's own private folder.
      */
-    private class RetroArchBuild(val pkg: String, val idPrefix: String, val appLabel: String)
+    class RetroArchBuild internal constructor(val pkg: String, val idPrefix: String, val appLabel: String)
 
     /** retroarch.com / Google Play build; device-tested. */
     private val RA_TESTED = RetroArchBuild(RETROARCH, "ra", "RetroArch")
@@ -42,18 +42,39 @@ object LibraryPresets {
         RetroArchBuild("$RETROARCH.ra32", "ra32", "RetroArch (32-bit)")
     )
 
+    /** Every official RetroArch build, the device-tested one first. */
+    val retroArchBuilds: List<RetroArchBuild> = listOf(RA_TESTED) + RA_SOURCE_ONLY
+
     /**
      * The RetroArch profile for [core] in the official build with application id [packageName] (`ra-`, `ra64-` or `ra32-`
      * ids); [label] is the core's display name. Shared with importers so a profile they create equals the catalog's.
      */
     internal fun retroArch(core: String, label: String, packageName: String = RETROARCH): LaunchProfile {
-        val build = (listOf(RA_TESTED) + RA_SOURCE_ONLY).firstOrNull { it.pkg == packageName }
+        val build = retroArchBuilds.firstOrNull { it.pkg == packageName }
         requireNotNull(build) { "$packageName is not an official RetroArch build." }
         return retroArchProfile(core, label, build)
     }
 
+    /** A libretro core id as it appears in `<id>_libretro_android.so` (letters, digits, `_`, `+`, `-`): nothing that leaves the cores folder. */
+    private val CORE_ID = Regex("[A-Za-z0-9_+-]+")
+
+    /**
+     * The profile a `ra-`, `ra64-` or `ra32-<core>` id stands for when no manifest defines it, as [retroArch] builds it, so
+     * user.json may name any core without a launchers.json entry. The label is the core's name in [RETROARCH_CORES], or
+     * the core id for one the list lacks; null for any other id.
+     */
+    fun coreProfile(id: String): LaunchProfile? {
+        val build = retroArchBuilds.firstOrNull { id.startsWith("${it.idPrefix}-") } ?: return null
+        val core = id.substring(build.idPrefix.length + 1)
+        if (!CORE_ID.matches(core)) return null
+        return retroArchProfile(core, RETROARCH_CORES.firstOrNull { it.id == core }?.name ?: core, build)
+    }
+
+    /** The id of [core]'s profile in [build]; resolved like any other id (a manifest profile of that id wins). */
+    fun retroArchId(build: RetroArchBuild, core: String) = "${build.idPrefix}-$core"
+
     private fun retroArchProfile(core: String, label: String, build: RetroArchBuild) = LaunchProfile(
-        id = "${build.idPrefix}-$core",
+        id = retroArchId(build, core),
         label = "${build.appLabel} · $label",
         `package` = build.pkg,
         activity = "com.retroarch.browser.retroactivity.RetroActivityFuture",
