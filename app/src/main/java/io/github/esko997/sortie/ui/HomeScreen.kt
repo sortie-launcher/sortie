@@ -70,6 +70,9 @@ import io.github.esko997.sortie.R
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
+import io.github.esko997.sortie.data.folders.FolderView
+import io.github.esko997.sortie.data.folders.nestedTileIds
+import io.github.esko997.sortie.data.manifest.FolderDef
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.mecha.MechaProp
 import io.github.esko997.sortie.mecha.MechaSpotKind
@@ -82,11 +85,11 @@ import kotlinx.coroutines.launch
 /**
  * Tile ids of the custom home layout (`user.layout`): `system:<id>`, `folder:<id>`, [APPS] for the built-in Apps folder,
  * [CONTINUE] for the last game played, a game's index id (`<system>/<file>`), or the LibraryItem ids `app:<pkg>` and
- * `shortcut:<pkg>/<id>`.
+ * `shortcut:<pkg>/<id>`. Folder includes take the same ids, except [APPS] and [CONTINUE].
  */
 object HomeIds {
-    const val SYSTEM = "system:"
-    const val FOLDER = "folder:"
+    const val SYSTEM = FolderDef.SYSTEM_POINTER
+    const val FOLDER = FolderDef.FOLDER_POINTER
     const val APPS = "apps"
     const val CONTINUE = "continue"
 
@@ -95,16 +98,20 @@ object HomeIds {
     /** Continue, smart folders and Apps are always on Custom (the generated sorts hold systems only), so they cannot be removed. */
     fun isAutomatic(id: String): Boolean = id == CONTINUE || id == APPS || id.startsWith(FOLDER)
 
+    /** Every tile but Continue and Apps, which belong to Home, can be moved into a folder. */
+    fun canFile(id: String): Boolean = id != CONTINUE && id != APPS
+
     /**
      * The Custom home's order: [layout] as saved, plus the automatic entries it does not hold yet — Continue first, then every
-     * smart folder ([folders]: tile ids in manifest order) and Apps last. Each id appears once; unresolved ids keep their place.
+     * smart folder ([folders]: tile ids in manifest order) and Apps last — without the tiles a folder shows instead ([nested]).
+     * Each id appears once; unresolved ids keep their place.
      */
-    fun custom(layout: List<String>, folders: List<String>): List<String> = buildList {
+    fun custom(layout: List<String>, folders: List<String>, nested: Set<String> = emptySet()): List<String> = buildList {
         if (CONTINUE !in layout) add(CONTINUE)
         addAll(layout)
         addAll(folders)
         add(APPS)
-    }.distinct()
+    }.distinct().filter { it !in nested }
 }
 
 val SORTS = listOf("alpha" to "Alphabetical", "count" to "Game count", "generation" to "Generation", "custom" to "Custom", "console" to "By Console")
@@ -135,8 +142,9 @@ private const val WRAP_ACTIONS_MIN_WIDTH_DP = 720
 /**
  * One home entry: a system, or on Custom only, a smart folder, the Apps folder, Continue, a game, app or shortcut. [colour]
  * marks systems and folders, [item] the launchable entries. [id] is the custom-layout tile id; [section] groups the generated sorts.
+ * A folder screen shows the folders and systems it holds as these tiles too.
  */
-private class HomeTile(
+internal class HomeTile(
     val id: String,
     val title: String,
     val subtitle: String,
@@ -151,6 +159,41 @@ private class HomeTile(
     val random: (suspend () -> GameEntity?)? = null,
     val onClick: () -> Unit
 )
+
+/** [f]'s tile in [colour] (the theme's Accent); its count takes in the folders and systems it shows. */
+internal fun folderTile(f: FolderView, colour: Color, onFolder: (String) -> Unit): HomeTile {
+    val count = f.items.size + f.children.size
+    return HomeTile(
+        HomeIds.FOLDER + f.def.id,
+        f.def.label,
+        "$count" + if (f.problems.isNotEmpty()) " · rule problems" else "",
+        count,
+        "",
+        colour = colour,
+        random = { f.items.filterIsInstance<LibraryItem.Game>().filter { !it.game.placeholder }.randomOrNull()?.game }
+    ) { onFolder(f.def.id) }
+}
+
+/** [row]'s tile in [section]; [missing] names BIOS files it lacks. */
+internal fun systemTile(
+    row: SystemRow,
+    section: String,
+    missing: List<String>?,
+    cover: String?,
+    logo: String?,
+    vm: SortieViewModel,
+    onSystem: (String) -> Unit
+) = HomeTile(
+    HomeIds.SYSTEM + row.def.id,
+    row.def.label,
+    "${row.count} · ${row.def.generation}" + (missing?.let { " · BIOS missing: ${it.joinToString()}" } ?: ""),
+    row.count,
+    section,
+    colour = parseColour(row.def.colour),
+    cover = cover,
+    logo = logo,
+    random = { vm.randomGameOf(row.def.id) }
+) { onSystem(row.def.id) }
 
 /**
  * Home: systems in one of three generated, fixed orders (alphabetical, game count, generation) or the custom layout, which
@@ -259,32 +302,13 @@ fun HomeScreen(
     }
 
     val appsTile = HomeTile(HomeIds.APPS, "Apps", "${apps.size}", apps.size, "", colour = AppsGrey, onClick = onApps)
-    val folderTiles = folders.map { f ->
-        HomeTile(
-            HomeIds.FOLDER + f.def.id,
-            f.def.label,
-            "${f.items.size}" + if (f.problems.isNotEmpty()) " · rule problems" else "",
-            f.items.size,
-            "",
-            colour = Accent,
-            random = { f.items.filterIsInstance<LibraryItem.Game>().filter { !it.game.placeholder }.randomOrNull()?.game }
-        ) { onFolder(f.def.id) }
+    val accent = Accent
+    val folderTiles = folders.map { folderTile(it, accent, onFolder) }
+    val systemTileOf = { row: SystemRow ->
+        val id = row.def.id
+        systemTile(row, if (sort == "generation") row.def.generation else "Systems", biosMissing[id], covers[id], logos[id], vm, onSystem)
     }
-    val systemTile = { row: SystemRow ->
-        val missing = biosMissing[row.def.id]
-        HomeTile(
-            HomeIds.SYSTEM + row.def.id,
-            row.def.label,
-            "${row.count} · ${row.def.generation}" + (missing?.let { " · BIOS missing: ${it.joinToString()}" } ?: ""),
-            row.count,
-            if (sort == "generation") row.def.generation else "Systems",
-            colour = parseColour(row.def.colour),
-            cover = covers[row.def.id],
-            logo = logos[row.def.id],
-            random = { vm.randomGameOf(row.def.id) }
-        ) { onSystem(row.def.id) }
-    }
-    val customIds = HomeIds.custom(user.layout, folderTiles.map { it.id })
+    val customIds = HomeIds.custom(user.layout, folderTiles.map { it.id }, folders.nestedTileIds())
     val tiles: List<HomeTile> = if (custom) {
         val systemById = systems.associateBy { it.def.id }
         val folderById = folderTiles.associateBy { it.id }
@@ -298,7 +322,7 @@ fun HomeScreen(
                     HomeTile(id, "Continue", displayTitle(g), 0, "", cover = g.cover ?: g.screenshot, item = LibraryItem.Game(g)) { onGame(g.id) }
                 }
                 id == HomeIds.APPS -> appsTile
-                id.startsWith(HomeIds.SYSTEM) -> systemById[id.removePrefix(HomeIds.SYSTEM)]?.let(systemTile)
+                id.startsWith(HomeIds.SYSTEM) -> systemById[id.removePrefix(HomeIds.SYSTEM)]?.let(systemTileOf)
                 id.startsWith(HomeIds.FOLDER) -> folderById[id]
                 id.startsWith(LibraryItem.APP_PREFIX) -> appById[id]?.let { a ->
                     HomeTile(id, a.label, "app · ${a.pkg}", 0, "", item = LibraryItem.App(a)) { vm.launchApp(a) }
@@ -314,7 +338,7 @@ fun HomeScreen(
         }
     } else {
         // the generated sorts list systems only; Continue, folders and Apps live on Custom
-        val systemTiles = systems.map(systemTile)
+        val systemTiles = systems.map(systemTileOf)
         when (sort) {
             "count" -> systemTiles.sortedByDescending { it.count }
             "generation" -> systemTiles.groupBy { it.section }.entries.sortedBy { generationRank(it.key) }.flatMap { it.value }
@@ -700,20 +724,22 @@ fun HomeScreen(
         val game = t.item as? LibraryItem.Game
         val queue = game?.let { wantToPlayAction(vm, it.id, it.id in user.wantToPlay, context) }
         val otherScreen = game?.let { playOnOtherScreenAction(vm, it.game) }
-        val actions = if (custom) {
-            listOfNotNull(
-                SheetAction("Move") {
-                    moving = customIds
-                    lifted = t.id
-                },
-                SheetAction("Remove from home") { vm.removeFromLayout(t.id) }.takeUnless { HomeIds.isAutomatic(t.id) },
-                queue,
-                otherScreen
-            )
-        } else {
-            listOfNotNull(homeAction(vm, t.id, t.id in user.layout, context), queue, otherScreen)
+        val inAppFolder = folders.firstOrNull { it.inApp && HomeIds.FOLDER + it.def.id == t.id }
+        SteppedSheet(t.title, { sheet = null }) { next ->
+            if (custom) {
+                listOfNotNull(
+                    SheetAction("Move") {
+                        moving = customIds
+                        lifted = t.id
+                    },
+                    if (HomeIds.canFile(t.id)) moveToFolderAction(vm, folders, t.id, null, context, next) else null,
+                    SheetAction("Remove from home") { vm.removeFromLayout(t.id) }.takeUnless { HomeIds.isAutomatic(t.id) },
+                    newFolderAction(vm, null, t.id, next)
+                ) + inAppFolder?.let { editFolderActions(vm, it, context, next) }.orEmpty() + listOfNotNull(queue, otherScreen)
+            } else {
+                listOfNotNull(homeAction(vm, t.id, t.id in user.layout, context), queue, otherScreen)
+            }
         }
-        ContextSheet(t.title, actions) { sheet = null }
     }
 
     if (extrasOpen) {
@@ -752,7 +778,7 @@ private fun SortieMark(height: Dp) {
 
 /** Renders a [HomeTile] as a square tile (grid) or a row (list); [lifted] marks the tile being moved. */
 @Composable
-private fun HomeTileView(
+internal fun HomeTileView(
     t: HomeTile,
     grid: Boolean,
     vm: SortieViewModel,

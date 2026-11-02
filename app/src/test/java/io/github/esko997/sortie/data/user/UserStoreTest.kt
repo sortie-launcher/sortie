@@ -1,6 +1,8 @@
 package io.github.esko997.sortie.data.user
 
 import io.github.esko997.sortie.data.manifest.ControllerSupport
+import io.github.esko997.sortie.data.manifest.FolderDef
+import io.github.esko997.sortie.data.manifest.FoldersManifest
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.GameBookmark
 import io.github.esko997.sortie.data.manifest.UserData
@@ -16,6 +18,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertArrayEquals
@@ -71,6 +74,32 @@ class UserStoreTest {
         assertEquals("auto", store.data.value.browseChrome)
         withTimeout(5_000) { store.written.first { it.browseChrome == "auto" } }
         assertEquals("auto", UserStore(file).data.value.browseChrome)
+    }
+
+    /** In-app folders and the moves into them are saved to user.json and come back on the next start, in the same schema. */
+    @Test
+    fun inAppFoldersPersist() = runBlocking {
+        val file = fresh()
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val home = listOf("continue", "system:snes", "folder:favourites", "apps")
+        store.createFolder("lists", "Lists", into = null, beside = "system:snes", home = home, moving = "system:snes")
+        store.createFolder("mine", "Mine", into = "lists", beside = null, home = store.data.value.layout)
+        store.moveToFolder("folder:favourites", from = null, to = "mine", home = store.data.value.layout)
+        store.addToFolder("snes/Super Metroid.sfc", "mine")
+        store.renameFolder("mine", "  My lists ")
+        val expected = store.data.value
+        withTimeout(5_000) { store.written.first { it == expected } }
+        val reloaded = UserStore(file).data.value
+        assertEquals(listOf("continue", "folder:lists", "apps"), reloaded.layout)
+        assertEquals(
+            listOf(
+                FolderDef("lists", "Lists", include = listOf("system:snes", "folder:mine")),
+                FolderDef("mine", "My lists", include = listOf("folder:favourites", "snes/Super Metroid.sfc"))
+            ),
+            reloaded.folders
+        )
+        val onDisk = Json.parseToJsonElement(file.readText()).jsonObject.getValue("folders")
+        assertEquals(reloaded.folders, Json.decodeFromJsonElement(FoldersManifest.serializer(), JsonObject(mapOf("folders" to onDisk))).folders)
     }
 
     /** A durable save is on disk when it returns and published only then. */

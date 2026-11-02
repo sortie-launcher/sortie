@@ -26,12 +26,26 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
-/** A smart folder evaluated against the current library, installed apps, launcher shortcuts, play data and favourites. */
-data class FolderView(val def: FolderDef, val items: List<LibraryItem>, val problems: List<String>)
+/**
+ * A folder evaluated against the current library, installed apps, launcher shortcuts, play data and favourites. [items] are its
+ * games, apps and shortcuts; [children] the `folder:<id>` and `system:<id>` pointers it shows ahead of them, in include order,
+ * and [parents] the folders that show it, with [level] its depth (1 on Home's top level); see [nestFolders].
+ * [inApp] marks a folder made on the device (user.json `folders`): the only kind Sortie renames, deletes or files things into.
+ */
+data class FolderView(
+    val def: FolderDef,
+    val items: List<LibraryItem>,
+    val problems: List<String>,
+    val inApp: Boolean = false,
+    val children: List<String> = emptyList(),
+    val parents: List<String> = emptyList(),
+    val level: Int = 1
+)
 
 /**
- * Evaluates every folder in `folders.json`, plus the built-in Favourites, Want to play, Finished and Shelved folders, whenever
- * the library, apps, shortcuts, play stats, favourites, the queue, the shelves or the manifests change.
+ * Evaluates every folder in `folders.json` and user.json's in-app folders, plus the built-in Favourites, Want to play, Finished
+ * and Shelved folders, and nests them ([nestFolders]) whenever the library, apps, shortcuts, play stats, favourites, the queue,
+ * the shelves, the in-app folders or the manifests change.
  * The full-table read runs inside a transaction so the indexer cannot change rows under the cursor (that race crashed the
  * process once with "Couldn't read row N from CursorWindow"), inputs are debounced while an index pass is writing, and any
  * failure degrades to the previous result instead of propagating.
@@ -57,7 +71,8 @@ class FolderRepository(
             val items = folderCandidates(games, appList, shortcutList, u)
             val byId = items.associateBy { it.id }
             val subjects = items.map { subjectOf(it, stats[it.id], it.id in u.favourites, now) }
-            evaluateFolders(snap.folders, u.wantToPlay, u.gameProgress, subjects, byId)
+            val views = evaluateFolders(snap.folders, u.wantToPlay, u.gameProgress, subjects, byId, u.folders)
+            nestFolders(views, snap.systems.mapTo(HashSet()) { it.id })
         }.catch { e ->
             Log.w(TAG, "folder evaluation failed", e)
             emit(emptyList())
@@ -127,20 +142,22 @@ private const val WANT_TO_PLAY_LABEL = "Want to play"
 private class BuiltInFolder(val def: FolderDef, val gamesOnly: Boolean)
 
 /**
- * The manifest folders, then the built-in folders: Favourites (every favourited game, app and shortcut in [subjects]),
- * Want to play ([wantToPlay]), Finished and Shelved (games whose [progress] names that shelf; these three list games only).
- * Each lists its members found in [subjects] (already limited to indexed games, installed apps and chosen shortcuts, none
- * hidden), in title order, through the same [RuleEngine] include path as any folder. They are always present — empty when
- * nothing resolves — so their home tiles keep working after the last removal; unresolved ids are skipped here and stay in
- * user.json. A `folders.json` entry claiming a reserved id is dropped (reported on that built-in folder) so `folder:<id>`
- * names one folder only.
+ * The manifest folders, then the in-app folders ([inApp], user.json), then the built-in folders: Favourites (every favourited
+ * game, app and shortcut in [subjects]), Want to play ([wantToPlay]), Finished and Shelved (games whose [progress] names that
+ * shelf; these three list games only). Each lists its members found in [subjects] (already limited to indexed games, installed
+ * apps and chosen shortcuts, none hidden), in title order, through the same [RuleEngine] include path as any folder. They are
+ * always present — empty when nothing resolves — so their home tiles keep working after the last removal; unresolved ids are
+ * skipped here and stay in user.json. So that `folder:<id>` names one folder only, a `folders.json` entry or in-app folder
+ * claiming a reserved id is dropped (reported on that built-in folder), an in-app folder wins over a `folders.json` entry with
+ * its id (reported on the in-app folder), and of in-app folders sharing an id the first is kept.
  */
 internal fun evaluateFolders(
     defs: List<FolderDef>,
     wantToPlay: Set<String>,
     progress: Map<String, GameProgress>,
     subjects: List<Subject>,
-    byId: Map<String, LibraryItem>
+    byId: Map<String, LibraryItem>,
+    inApp: List<FolderDef> = emptyList()
 ): List<FolderView> {
     val favourites = subjects.filter { it.favourite }.map { it.id }
     val builtIn = listOf(
@@ -149,19 +166,28 @@ internal fun evaluateFolders(
     ) + Shelf.entries.map {
         BuiltInFolder(FolderDef(it.folderId, it.label, include = progress.idsOn(it).toList(), sort = "title:asc"), gamesOnly = true)
     }
-    val reservedIds = builtIn.mapTo(HashSet()) { it.def.id }
-    val (reserved, manifest) = defs.partition { it.id in reservedIds }
-    val views = manifest.map { def ->
+    val (reserved, manifest) = defs.partition { it.id in BUILT_IN_FOLDER_IDS }
+    val (reservedInApp, own) = inApp.distinctBy { it.id }.partition { it.id in BUILT_IN_FOLDER_IDS }
+    val ownIds = own.mapTo(HashSet()) { it.id }
+    val shadowed = manifest.filter { it.id in ownIds }.mapTo(HashSet()) { it.id }
+    val evaluate = { def: FolderDef, isInApp: Boolean, extra: List<String> ->
         val result = RuleEngine.evaluate(def, subjects)
-        FolderView(def, result.subjects.mapNotNull { byId[it.id] }, result.problems)
+        FolderView(def, result.subjects.mapNotNull { byId[it.id] }, result.problems + extra, inApp = isInApp)
+    }
+    val views = manifest.filter { it.id !in ownIds }.map { evaluate(it, false, emptyList()) } + own.map { def ->
+        val problems = if (def.id in shadowed) {
+            listOf("folders.json also defines \"${def.id}\"; this in-app folder keeps the id and that entry is ignored")
+        } else {
+            emptyList()
+        }
+        evaluate(def, true, problems)
     }
     return views + builtIn.map { folder ->
         val def = folder.def
         val members = RuleEngine.evaluate(def, subjects).subjects.filter { !folder.gamesOnly || it.kind == Subject.Kind.GAME }
-        val problems = if (reserved.none { it.id == def.id }) {
-            emptyList()
-        } else {
-            listOf("folders.json defines \"${def.id}\", which is reserved for this built-in folder; that entry is ignored")
+        val problems = buildList {
+            if (reserved.any { it.id == def.id }) add("folders.json defines \"${def.id}\", which is reserved for this built-in folder; that entry is ignored")
+            if (reservedInApp.any { it.id == def.id }) add("user.json has an in-app folder \"${def.id}\", reserved for this built-in folder; it is ignored")
         }
         FolderView(def, members.mapNotNull { byId[it.id] }, problems)
     }

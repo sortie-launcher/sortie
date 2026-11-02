@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.data.backup
 
 import io.github.esko997.sortie.data.db.SessionEntity
+import io.github.esko997.sortie.data.folders.cleaned
 import io.github.esko997.sortie.data.manifest.BrowseChromeMode
 import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.data.user.LegacyNotes
@@ -163,7 +164,8 @@ private fun UserData.clamped() = copy(
     perfInterval = perfInterval(perfInterval),
     companionView = CompanionView.of(companionView).id,
     browseChrome = BrowseChromeMode.of(browseChrome).id,
-    layout = layout.distinct()
+    layout = layout.distinct(),
+    folders = folders.cleaned()
 )
 
 /** What a restore would add to the sessions table. [addedMinutes] counts only the completed, non-abandoned sessions it adds. */

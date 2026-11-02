@@ -26,6 +26,16 @@ class HomeIdsTest {
         assertEquals(listOf("continue", "folder:fighters", "folder:want-to-play", "apps"), HomeIds.custom(emptyList(), folders))
     }
 
+    /** Folders and systems a folder shows leave Custom's top level, also when the saved layout still lists them. */
+    @Test
+    fun customLeavesOutNestedTiles() {
+        val layout = listOf("system:snes", "system:psx", "folder:fighters")
+        assertEquals(
+            listOf("continue", "system:psx", "folder:want-to-play", "apps"),
+            HomeIds.custom(layout, folders, nested = setOf("system:snes", "folder:fighters"))
+        )
+    }
+
     @Test
     fun automaticEntriesAreNotGamesOrRemovable() {
         assertTrue(HomeIds.isAutomatic("continue"))

@@ -104,8 +104,9 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 **L1/R1** cycle the sorts: *Alphabetical*, *Game count*, *Generation* (grouped 8-bit → modern), *Custom* and *By Console*
 (a strip of consoles with that console's games underneath). The first three sorts show emulation systems only.
 
-- **Custom** always includes every smart folder and **Apps**, alongside your pinned systems, games, apps and shortcuts.
-- **Favourites** is always in **Custom**, even when empty. It includes your favourited games, installed apps and shortcuts;
+- **Custom** always includes every smart folder and **Apps**, alongside your pinned systems, games, apps and shortcuts; a folder
+  or system you put inside a folder is shown there instead (see Folders on Custom).
+- **Favourites** is always in **Custom** (on Home or inside one of your folders), even when empty. It includes your favourited games, installed apps and shortcuts;
   hidden items stay hidden. A star before a list-row title marks a favourite; **Fit 4+** is a separate guide-rating filter.
 - **Continue** shows the last game you played and starts first on Custom; it can be moved like any other tile.
 - Hold A on a system, game, app or shortcut and choose *Add to home*. On Custom, hold A → *Move* lifts a tile; the D-pad moves
@@ -119,6 +120,27 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 - **Settings** holds **Library and emulators** and, under Help, **Sortie manual** (this manual).
 - With no games yet, Home shows **Set up library** (or **Manage library** when systems are set up but no games were found).
   Apps, Magazines and the manual work without any games.
+
+### Folders on Custom
+
+Folders tidy **Custom**: put systems, games, apps, shortcuts and other folders (Favourites, Want to play, Finished, Shelved and
+smart folders too) inside a folder of your own. A folder inside a folder is the same folder, not a copy: Favourites inside
+*My lists* is still Favourites.
+
+- On Custom, hold A on a tile → **Move to folder…** and pick one of your folders, or **New folder…** to name one; the new
+  folder takes the tile's place and the tile goes inside. **New folder…** in the same sheet makes an empty folder next to the
+  tile. Continue and Apps stay on Home.
+- Hold A on a game, app or shortcut anywhere → **Add to folder…** adds it to one of your folders and leaves it where it is.
+- A folder or system inside a folder leaves Home's top level; open the folder to reach it. Folders and systems come first in
+  a folder, then its games. **B** goes back up one level. The other sorts still list every system.
+- Inside one of your folders, hold A on something it holds: **Move to folder…**, **Move out to** the folder above (or Home),
+  and for games, apps and shortcuts **Remove from folder**, which leaves them in your library.
+- Hold A on one of your folders → **Rename…** or **Delete folder…**. Deleting never removes games from your library: the
+  folders and systems it held move to where the folder was.
+- Folders go at most four deep, and a folder can't be moved into itself or into a folder inside it; those choices are not
+  offered.
+- Folders from a prepared **folders.json** and the built-in ones can be moved into your folders, but their contents are
+  not edited on the device. Your folders are saved in your preferences and included in backups.
 
 ## Lists and grids
 
@@ -528,8 +550,8 @@ RAM and the battery temperature show. FPS and power draw are not shown.
 have a system), layouts (home/browse grid, sideways grids, rows and columns, app tile density, header and hints), hero rotation,
 the overlay switcher, **Bookmarks** (whether to offer a bookmark after playing; on by default), device stats, a default
 launcher per system, the optional **Radial keyboard**, and under Help **Sortie manual** (this manual), **Backup and restore**,
-**Import from Cocoon…** and Diagnostics. Custom smart folders, **guide.json**, logos and launch profiles use prepared files;
-they do not require a computer, but have no in-app editor. The curated guide is built in.
+**Import from Cocoon…** and Diagnostics. Rule-based smart folders, **guide.json**, logos and launch profiles use prepared files;
+they do not require a computer, but have no in-app editor (your own folders are made on Custom, see Folders on Custom). The curated guide is built in.
 
 **Header and hints (Home and browse)** sets how much room Home, system lists, folders, search and Apps give their header
 and button hints: *Auto* (the default), *Expanded* or *Compact*; **A** cycles. *Auto* is compact when the window is short or
@@ -597,7 +619,7 @@ permission. For other languages or a conventional layout, tap **Switch keyboard*
 ## Backup and restore
 
 **Settings → Backup and restore → Export backup…** saves your preferences (including the bookmark setting), favourites, Want to play queue,
-Finished/Shelved status and verdicts, custom home, dock, bookmarks, controller assessments (*What it needs*), reference-card
+Finished/Shelved status and verdicts, custom home, your folders, dock, bookmarks, controller assessments (*What it needs*), reference-card
 text, magazine clippings, completed play history and the Hangar companion (name, parts, salvage, bond) to a JSON file in a
 location you choose. An unfinished session is not included.
 

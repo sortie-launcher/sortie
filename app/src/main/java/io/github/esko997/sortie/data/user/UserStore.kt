@@ -2,6 +2,13 @@ package io.github.esko997.sortie.data.user
 
 import android.util.Log
 import io.github.esko997.sortie.data.apps.LibraryItem
+import io.github.esko997.sortie.data.folders.withAddedToFolder
+import io.github.esko997.sortie.data.folders.withFolderRenamed
+import io.github.esko997.sortie.data.folders.withMovedOut
+import io.github.esko997.sortie.data.folders.withMovedToFolder
+import io.github.esko997.sortie.data.folders.withNewFolder
+import io.github.esko997.sortie.data.folders.withRemovedFromFolder
+import io.github.esko997.sortie.data.folders.withoutFolder
 import io.github.esko997.sortie.data.manifest.BOOKMARK_MAX_CHARS
 import io.github.esko997.sortie.data.manifest.BrowseChromeMode
 import io.github.esko997.sortie.data.manifest.DOCK_SLOTS
@@ -323,6 +330,29 @@ class UserStore(
     fun removeFromLayout(id: String) = update { it.copy(layout = it.layout - id) }
 
     fun setLayout(ids: List<String>) = update { it.copy(layout = ids.distinct()) }
+
+    /*
+     * In-app folders (UserData.folders): the edits are pure functions in data/folders/InAppFolders.kt; [home] is the custom
+     * home's current order, saved as the layout when Home changes.
+     */
+
+    /** A new empty in-app folder in [into] (null: Home) beside [beside]; with [moving], that tile is moved into it. */
+    fun createFolder(id: String, label: String, into: String?, beside: String?, home: List<String>, moving: String? = null) = update { u ->
+        val created = u.withNewFolder(id, label, into, beside, home)
+        if (moving == null) created else created.withMovedToFolder(moving, into, id, created.layout)
+    }
+
+    fun moveToFolder(tileId: String, from: String?, to: String, home: List<String>) = update { it.withMovedToFolder(tileId, from, to, home) }
+
+    fun moveOutOfFolder(tileId: String, from: String, to: String?, home: List<String>) = update { it.withMovedOut(tileId, from, to, home) }
+
+    fun addToFolder(tileId: String, to: String) = update { it.withAddedToFolder(tileId, to) }
+
+    fun removeFromFolder(tileId: String, from: String) = update { it.withRemovedFromFolder(tileId, from) }
+
+    fun renameFolder(id: String, label: String) = update { it.withFolderRenamed(id, label) }
+
+    fun deleteFolder(id: String, parents: Collection<String>, home: List<String>) = update { it.withoutFolder(id, parents, home) }
 
     fun setSystemProfile(systemId: String, profileId: String?) =
         update { it.copy(systemProfiles = if (profileId == null) it.systemProfiles - systemId else it.systemProfiles + (systemId to profileId)) }

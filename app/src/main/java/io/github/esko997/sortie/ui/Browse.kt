@@ -21,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -37,6 +38,7 @@ import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.folders.FolderView
 import io.github.esko997.sortie.data.manifest.GameAnnotation
+import kotlinx.coroutines.launch
 
 /** Select toggles list↔grid on a browse screen; one persisted setting (`user.browseLayout`) for all of them, separate from home. */
 @Composable
@@ -51,25 +53,30 @@ fun BrowseLayoutHotkey(vm: SortieViewModel, grid: Boolean) {
 }
 
 /**
- * Hold-A / long-press sheet for a game, app or shortcut: Favourite · Add to (Remove from) home, plus Want to play and, with two
- * screens, Play on the other screen for games, and for shortcuts whether the Apps screen lists them (`user.shortcuts`).
+ * Hold-A / long-press sheet for a game, app or shortcut: Favourite · Add to (Remove from) home · Add to folder…, plus Want to
+ * play and, with two screens, Play on the other screen for games, and for shortcuts whether the Apps screen lists them
+ * (`user.shortcuts`). [extra] are the screen's own actions (an in-app folder's Move out and Remove from folder).
  */
 @Composable
-fun ItemSheet(item: LibraryItem, vm: SortieViewModel, onDismiss: () -> Unit) {
+fun ItemSheet(item: LibraryItem, vm: SortieViewModel, extra: List<SheetAction> = emptyList(), onDismiss: () -> Unit) {
     val user by vm.user.collectAsState()
+    val folders by vm.folders.collectAsState()
     val context = LocalContext.current
     val otherScreen = (item as? LibraryItem.Game)?.let { playOnOtherScreenAction(vm, it.game) }
-    val actions = buildList {
-        add(SheetAction(if (item.id in user.favourites) "Remove from favourites" else "Favourite") { vm.toggleFavourite(item.id) })
-        add(homeAction(vm, item.id, item.id in user.layout, context))
-        if (item is LibraryItem.Game) add(wantToPlayAction(vm, item.id, item.id in user.wantToPlay, context))
-        otherScreen?.let { add(it) }
-        if (item is LibraryItem.Shortcut) {
-            val shown = item.id in user.shortcuts
-            add(SheetAction(if (shown) "Hide from Apps" else "Show in Apps") { vm.showShortcut(item.id, !shown) })
+    SteppedSheet(item.label, onDismiss) { next ->
+        buildList {
+            add(SheetAction(if (item.id in user.favourites) "Remove from favourites" else "Favourite") { vm.toggleFavourite(item.id) })
+            add(homeAction(vm, item.id, item.id in user.layout, context))
+            add(addToFolderAction(vm, folders, item.id, context, next))
+            addAll(extra)
+            if (item is LibraryItem.Game) add(wantToPlayAction(vm, item.id, item.id in user.wantToPlay, context))
+            otherScreen?.let { add(it) }
+            if (item is LibraryItem.Shortcut) {
+                val shown = item.id in user.shortcuts
+                add(SheetAction(if (shown) "Hide from Apps" else "Show in Apps") { vm.showShortcut(item.id, !shown) })
+            }
         }
     }
-    ContextSheet(item.label, actions, onDismiss)
 }
 
 /** One game, app or shortcut on a browse screen: a square tile in grid view, a row in list view. */
@@ -168,12 +175,67 @@ fun GameListScreen(
 }
 
 /**
- * A smart folder: games open their detail screen, apps and shortcuts launch directly; hold A for favourite / add to home, R2
- * Want to play, Y Search limited to the folder's games ([onSearch]).
+ * A folder: first the folders and systems it holds ([FolderView.children]; A opens them, Back comes back here), then its games,
+ * which open their detail screen, and apps and shortcuts, which launch directly; hold A for favourite / add to home / add to
+ * folder, R2 Want to play, Y Search limited to the folder's games ([onSearch]). In an in-app folder hold A also moves what it
+ * lists elsewhere; an in-app folder held anywhere offers Rename… and Delete folder….
  */
 @Composable
-fun FolderScreen(view: FolderView, vm: SortieViewModel, onGame: (String) -> Unit, onSearch: () -> Unit) {
-    ItemListScreen(view.def.label, view.items, vm, onGame, view.problems.takeIf { it.isNotEmpty() }?.joinToString("; "), onSearch = onSearch)
+fun FolderScreen(
+    view: FolderView,
+    vm: SortieViewModel,
+    onGame: (String) -> Unit,
+    onFolder: (String) -> Unit,
+    onSystem: (String) -> Unit,
+    onSearch: () -> Unit
+) {
+    val folders by vm.folders.collectAsState()
+    val systems by vm.systems.collectAsState()
+    val biosMissing by vm.biosMissing.collectAsState()
+    val covers by vm.tileCovers.collectAsState()
+    val logos by vm.systemLogos.collectAsState()
+    val context = LocalContext.current
+    val accent = Accent
+    val pointers = view.children.mapNotNull { id ->
+        if (id.startsWith(HomeIds.FOLDER)) {
+            folders.firstOrNull { it.def.id == id.removePrefix(HomeIds.FOLDER) }?.let { folderTile(it, accent, onFolder) }
+        } else {
+            val systemId = id.removePrefix(HomeIds.SYSTEM)
+            systems.firstOrNull { it.def.id == systemId }?.let { systemTile(it, "", biosMissing[systemId], covers[systemId], logos[systemId], vm, onSystem) }
+        }
+    }
+    // the in-app folder a held tile names, if it is one: the only kind renamed or deleted here
+    val inAppFolder = { t: HomeTile -> folders.firstOrNull { it.inApp && HomeIds.FOLDER + it.def.id == t.id } }
+    var held by remember { mutableStateOf<HomeTile?>(null) }
+    ItemListScreen(
+        view.def.label,
+        view.items,
+        vm,
+        onGame,
+        view.problems.takeIf { it.isNotEmpty() }?.joinToString("; "),
+        onSearch = onSearch,
+        pointers = pointers,
+        // a folders.json or built-in folder's contents stay as the desktop or its rule made them
+        onPointerLongClick = { t -> if (view.inApp || inAppFolder(t) != null) held = t },
+        itemActions = { item ->
+            if (view.inApp && item.id in view.def.include) {
+                listOf(moveOutAction(vm, folders, item.id, view, context), removeFromFolderAction(vm, item.id, view, context))
+            } else {
+                emptyList()
+            }
+        }
+    )
+    held?.let { t ->
+        SteppedSheet(t.title, { held = null }) { next ->
+            buildList {
+                if (view.inApp) {
+                    moveToFolderAction(vm, folders, t.id, view.def.id, context, next)?.let(::add)
+                    add(moveOutAction(vm, folders, t.id, view, context))
+                }
+                inAppFolder(t)?.let { addAll(editFolderActions(vm, it, context, next)) }
+            }
+        }
+    }
 }
 
 /**
@@ -203,6 +265,8 @@ private fun SearchHereHotkey(onSearch: () -> Unit) {
  * A system's or folder's games, apps and shortcuts with Pick one and the filter chips above them. The header folds while
  * browsing (see [BrowseChrome]) to one line with the count and the filters that are on; a problem [subtitle] stays shown
  * either way. A [parent] header (Home's) folds this one with it, and its strip has the chevron. [onSearch] is Y's scoped Search.
+ * [pointers] (a folder's folders and systems) lead the grid, unfiltered; holding one calls [onPointerLongClick]. [itemActions]
+ * adds the screen's own actions to an item's hold-A sheet.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -213,7 +277,10 @@ private fun ItemListScreen(
     onGame: (String) -> Unit,
     subtitle: String?,
     parent: BrowseChrome? = null,
-    onSearch: (() -> Unit)? = null
+    onSearch: (() -> Unit)? = null,
+    pointers: List<HomeTile> = emptyList(),
+    onPointerLongClick: (HomeTile) -> Unit = {},
+    itemActions: (LibraryItem) -> List<SheetAction> = { emptyList() }
 ) {
     val stats by vm.playStats.collectAsState()
     val saves by vm.saveStems.collectAsState()
@@ -244,7 +311,9 @@ private fun ItemListScreen(
     }
     val gridState = rememberLazyGridState()
     val memory = rememberGridMemory()
-    RememberGridPosition(memory, gridState, remember(shown) { shown.map { it.id } })
+    RememberGridPosition(memory, gridState, remember(shown, pointers) { pointers.map { it.id } + shown.map { it.id } })
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val open: (LibraryItem) -> Unit = { if (!vm.launchItem(it)) onGame(it.id) }
     // filters that hide everything keep the header open, so they can be turned off again
     val chrome = parent ?: rememberBrowseChrome(user.browseChrome, pinned = items.isNotEmpty() && shown.isEmpty())
@@ -260,7 +329,7 @@ private fun ItemListScreen(
             if (!chrome.expanded) {
                 FoldedHeader(chrome, toggle = parent == null) {
                     Text(
-                        "$title · ${shown.size}",
+                        "$title · ${pointers.size + shown.size}",
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -300,7 +369,7 @@ private fun ItemListScreen(
                         modifier = Modifier.weight(1f, fill = false).alignByBaseline()
                     )
                     Text(
-                        "${shown.size}",
+                        "${pointers.size + shown.size}",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -324,6 +393,31 @@ private fun ItemListScreen(
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             ItemGrid(grid, user, Modifier.fillMaxSize().foldsBrowseChrome(chrome, gridState, pickFocus), state = gridState) {
+                items(pointers, key = { it.id }) { t ->
+                    RememberedItem(memory, t.id) {
+                        HomeTileView(
+                            t,
+                            grid,
+                            vm,
+                            lifted = false,
+                            favourite = false,
+                            minutes = null,
+                            annotation = null,
+                            onClick = t.onClick,
+                            onLongClick = { onPointerLongClick(t) },
+                            // hold R1: a random game of that folder or system, as on Home
+                            onFavourite = t.random?.let { pick ->
+                                {
+                                    scope.launch {
+                                        pick()?.let { onGame(it.id) } ?: Toast.makeText(context, "Nothing playable in ${t.title}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            onWantToPlay = null,
+                            platform = null
+                        )
+                    }
+                }
                 items(shown, key = { it.id }) { item ->
                     RememberedItem(memory, item.id) {
                         ItemCell(
@@ -343,7 +437,7 @@ private fun ItemListScreen(
                 }
             }
             // an empty grid says why: the filters above (kept open) hide everything, or there is nothing here yet
-            if (shown.isEmpty()) {
+            if (shown.isEmpty() && pointers.isEmpty()) {
                 Text(
                     if (items.isEmpty()) "Nothing here yet." else "Nothing matches these filters. Turn one off above to see more.",
                     style = MaterialTheme.typography.bodyLarge,
@@ -365,5 +459,5 @@ private fun ItemListScreen(
             compact = chrome.foldable
         )
     }
-    sheet?.let { ItemSheet(it, vm) { sheet = null } }
+    sheet?.let { ItemSheet(it, vm, itemActions(it)) { sheet = null } }
 }
