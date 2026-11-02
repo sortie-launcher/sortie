@@ -169,24 +169,19 @@ interface GameDao {
     @Query("DELETE FROM sessions WHERE rowId IN (:rowIds)")
     suspend fun deleteSessionsChunk(rowIds: List<Long>): Int
 
-    @Query(
-        "SELECT gameId, CAST(SUM(CASE WHEN abandoned = 0 AND endedAt IS NOT NULL THEN endedAt - startedAt ELSE 0 END) / 60000 AS INTEGER) AS minutes, " +
-            "MAX(startedAt) AS lastPlayed, COUNT(*) AS sessions FROM sessions GROUP BY gameId"
-    )
+    @Query("$PLAY_STATS GROUP BY gameId")
     fun playStats(): Flow<List<PlayStat>>
 
-    @Query(
-        "SELECT gameId, CAST(SUM(CASE WHEN abandoned = 0 AND endedAt IS NOT NULL THEN endedAt - startedAt ELSE 0 END) / 60000 AS INTEGER) AS minutes, " +
-            "MAX(startedAt) AS lastPlayed, COUNT(*) AS sessions FROM sessions WHERE gameId = :id GROUP BY gameId"
-    )
+    @Query("$PLAY_STATS WHERE gameId = :id GROUP BY gameId")
     suspend fun playStat(id: String): PlayStat?
 
-    @Query(
-        "SELECT gameId, CAST(SUM(CASE WHEN abandoned = 0 AND endedAt IS NOT NULL THEN endedAt - startedAt ELSE 0 END) / 60000 AS INTEGER) AS minutes, " +
-            "MAX(startedAt) AS lastPlayed, COUNT(*) AS sessions FROM sessions GROUP BY gameId ORDER BY lastPlayed DESC LIMIT :limit"
-    )
+    @Query("$PLAY_STATS GROUP BY gameId ORDER BY lastPlayed DESC LIMIT :limit")
     fun recentlyPlayed(limit: Int = 30): Flow<List<PlayStat>>
 }
+
+/** Per game: whole minutes of completed play ([PLAYED_MS]), last start and session count. */
+private const val PLAY_STATS = "SELECT gameId, CAST(SUM(CASE WHEN abandoned = 0 AND endedAt IS NOT NULL THEN $PLAYED_MS ELSE 0 END) / 60000 AS INTEGER) " +
+    "AS minutes, MAX(startedAt) AS lastPlayed, COUNT(*) AS sessions FROM sessions"
 
 suspend fun GameDao.byIds(ids: Collection<String>): List<GameEntity> = chunked(ids) { byIdsChunk(it) }
 

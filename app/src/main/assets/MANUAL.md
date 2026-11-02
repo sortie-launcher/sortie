@@ -265,10 +265,10 @@ only one of him.
 - **Workshop → Launcher** applies owned **Themes / Folders / Buttons**. Preview a choice, then Apply or Cancel;
   switching owned styles costs nothing. Saved appearance persists even with the companion hidden.
   Reader paper, artwork-derived accents and custom folder artwork remain independent. Button styles preserve interaction and focus.
-- New completed game sessions earn a credit per five accumulated whole minutes (up to 120 minutes from one session).
-  **Earning stops at 50 credits.** Extra play still counts toward your companion's stats, but no credits or partial credit
-  are banked while full. Spending below 50 lets new play earn again. Existing balances above 50 are kept, not cut down.
-  Earlier play, abandoned sessions, apps and launcher shortcuts do not count. Recorded time is not a measure of active input.
+- New completed game sessions earn a credit per five accumulated whole minutes of play time (see Play log and saves; up to
+  120 minutes from one session). **Earning stops at 50 credits.** Extra play still counts toward your companion's stats,
+  but no credits or partial credit are banked while full. Spending below 50 lets new play earn again. Existing balances
+  above 50 are kept, not cut down. Earlier play, abandoned sessions, apps and launcher shortcuts do not count.
 - In **Workshop → Bot → Care**, turn **Animate companion** off and he stays put at one spot, or **Hide companion** and he
   goes away entirely. **Show companion** brings him back without losing parts. Arcade gameplay still moves when you
   explicitly play; the animation preference controls optional companion flourishes.
@@ -661,8 +661,12 @@ refuses an update: ask whoever sent you the APK.
 
 Starting a game, app or shortcut from the main launcher starts a session; cancelling the app chooser does not.
 Opening a built-in app or an app beside a game from the companion does not replace that game's session.
-When you return to Sortie, Shizuku lets it keep timing while the emulator's task remains; without Shizuku, or when the task
-list can't be read, returning ends the session. A return within about three seconds without a Home press is treated as a
-failed launch unless Sortie can see the emulator still running, and that attempt is not counted as played.
-Recorded time includes idle time, not just active play. Minutes, session counts and "last played" feed Continue and Tonight.
+When you return to Sortie, Shizuku lets it keep the session open while the emulator's task remains; without Shizuku, or when
+the task list can't be read, returning ends the session. A return within about three seconds without a Home press is treated
+as a failed launch unless Sortie can see the emulator still running, and that attempt is not counted as played.
+Play time counts only while the screen is on and Sortie's own screens and switcher are not in front: sleep, browsing Sortie
+and the switcher pause it, and waking the device straight into the game resumes it. The companion screen and the built-in
+apps count as play. Starting another game closes the open one with the time it was played. If Android stops Sortie in the
+background, the stretch running at that moment is lost. Time recorded before this change is kept as it was.
+Minutes, session counts and "last played" feed Continue and Tonight; Now playing shows the same minutes.
 The **💾 started** chip instead checks matching files in **Library setup → BIOS and save folders**; re-index to refresh it.

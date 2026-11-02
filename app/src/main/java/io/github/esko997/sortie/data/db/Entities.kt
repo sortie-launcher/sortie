@@ -63,6 +63,20 @@ data class SessionEntity(
     val profileId: String?,
     val startedAt: Long,
     val endedAt: Long?,
-    // abandoned: Sortie never saw the session end (process killed, device slept); its duration is not counted
-    val abandoned: Boolean = false
+    // abandoned (rows before active time only): Sortie never saw the session end; its duration is not counted
+    val abandoned: Boolean = false,
+    // active play time of the finished intervals; null on rows from before it was recorded, which count endedAt - startedAt
+    val activeMs: Long? = null,
+    // start of the running active interval; null while paused or closed (see PlayLog)
+    val activeSince: Long? = null
 )
+
+/**
+ * Active play time at [now]: the finished intervals plus the running one. Rows from before active time was recorded count
+ * their whole span (to [now] while open). SQL equivalent for closed rows: [PLAYED_MS].
+ */
+fun SessionEntity.playedMs(now: Long): Long =
+    activeMs?.let { it + (activeSince?.let { since -> (now - since).coerceAtLeast(0) } ?: 0) } ?: ((endedAt ?: now) - startedAt)
+
+/** [playedMs] of a closed session in SQL. */
+const val PLAYED_MS = "COALESCE(activeMs, endedAt - startedAt)"

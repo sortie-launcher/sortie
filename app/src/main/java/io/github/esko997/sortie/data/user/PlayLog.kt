@@ -2,14 +2,18 @@ package io.github.esko997.sortie.data.user
 
 import io.github.esko997.sortie.data.db.GameDao
 import io.github.esko997.sortie.data.db.SessionEntity
+import io.github.esko997.sortie.data.db.playedMs
 import java.io.File
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -20,33 +24,92 @@ import kotlinx.serialization.json.buildJsonObject
 
 /**
  * Sessions in Room for queries, mirrored as JSON lines to `<root>/sortie/playlog.jsonl` (docs/formats/playlog.md).
- * A session Sortie never saw end (process killed, device slept) is closed as abandoned with `minutes: null` and not counted.
+ * A session's time is its *active* time: the open session runs only while the screen is on and neither Sortie's navigation
+ * window has focus nor its switcher overlay is up ([active]). Each change folds the running interval into
+ * [SessionEntity.activeMs] ([timed]), so the row always holds every finished interval; a process death loses at most the
+ * running one, and a session found open at startup stays paused until the next input change.
  * [current] mirrors the open session (null when nothing is being played) for the companion's "now playing" panel.
  */
-class PlayLog(private val dao: GameDao, private val file: File, private val device: String) {
+class PlayLog(
+    private val dao: GameDao,
+    private val file: File,
+    private val device: String,
+    screenOn: Boolean = true,
+    private val clock: () -> Long = System::currentTimeMillis,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+) {
     private val mutex = Mutex()
 
     private val _current = MutableStateFlow<SessionEntity?>(null)
 
-    /** The open session, or null. Seeded from the database once, then updated by [start] and [end]. */
+    /** The open session, or null. Seeded from the database once, then updated by [start], [end] and every pause or resume. */
     val current: StateFlow<SessionEntity?> = _current
 
+    private data class Inputs(val screenOn: Boolean, val navigationFocused: Boolean = false, val switcherOverlay: Boolean = false)
+
+    private val inputs = MutableStateFlow(Inputs(screenOn))
+
+    // a session found open at startup: what happened while Sortie was gone is unknown, so it waits for an input change or [start]
+    private var awaitingSignal = false
+
     init {
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            mutex.withLock { runCatching { _current.value = dao.openSession() } }
+        // undispatched: the lock is taken before the constructor returns, so nothing can start or end a session before this
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            mutex.withLock {
+                runCatching {
+                    _current.value = dao.openSession()?.let { open ->
+                        awaitingSignal = true
+                        // the running interval's end is unknown: drop it (never add time); older rows start counting from here
+                        open.copy(activeMs = open.activeMs ?: 0, activeSince = null).also { if (it != open) dao.updateSession(it) }
+                    }
+                }
+            }
         }
     }
 
+    /** The screen turned on or off (SortieApp's receiver). The returned job is for tests; callers need not wait. */
+    fun screenOn(on: Boolean): Job? = input { it.copy(screenOn = on) }
+
+    /** Whether one of Sortie's navigation windows has window focus (MainActivity). */
+    fun navigationFocused(focused: Boolean): Job? = input { it.copy(navigationFocused = focused) }
+
+    /** Whether the switcher overlay is up over the running app (SortieApp, from TaskSwitcher's state). */
+    fun switcherOverlay(open: Boolean): Job? = input { it.copy(switcherOverlay = open) }
+
+    private fun input(change: (Inputs) -> Inputs): Job? {
+        val before = inputs.getAndUpdate(change)
+        if (change(before) == before) return null
+        return scope.launch {
+            mutex.withLock {
+                awaitingSignal = false
+                runCatching { retime() }
+            }
+        }
+    }
+
+    /** The single rule: the open session is being played. */
+    private fun active(): Boolean = !awaitingSignal && inputs.value.let { it.screenOn && !it.navigationFocused && !it.switcherOverlay }
+
+    private suspend fun retime() {
+        val open = dao.openSession() ?: return
+        val timed = open.timed(clock(), active())
+        if (timed != open) dao.updateSession(timed)
+        _current.value = timed
+    }
+
+    /** Opens a session for [gameId], closing any open one with the time it was played. */
     suspend fun start(gameId: String, profileId: String?, display: String) = mutex.withLock {
-        closeOpen(abandoned = true)
-        val session = SessionEntity(gameId = gameId, profileId = profileId, startedAt = System.currentTimeMillis(), endedAt = null)
+        closeOpen()
+        awaitingSignal = false
+        val now = clock()
+        val session = SessionEntity(gameId = gameId, profileId = profileId, startedAt = now, endedAt = null, activeMs = 0).timed(now, active())
         val rowId = dao.insertSession(session)
         _current.value = session.copy(rowId = rowId)
         append("start", gameId, mapOf("profile" to JsonPrimitive(profileId ?: ""), "display" to JsonPrimitive(display)))
     }
 
-    /** Called when Sortie regains the foreground. */
-    suspend fun end() = mutex.withLock { closeOpen(abandoned = false) }
+    /** Called when Sortie regains the foreground and the session's app is gone. */
+    suspend fun end() = mutex.withLock { closeOpen() }
 
     /**
      * The open session's app closed right after starting ([io.github.esko997.sortie.launch.SessionReturn.QUICK_EXIT]): nothing
@@ -67,14 +130,14 @@ class PlayLog(private val dao: GameDao, private val file: File, private val devi
      */
     suspend fun <T> paused(block: suspend (open: SessionEntity?) -> T): T = mutex.withLock { block(dao.openSession()) }
 
-    private suspend fun closeOpen(abandoned: Boolean) {
+    private suspend fun closeOpen() {
         val open = dao.openSession()
         _current.value = null
         if (open == null) return
-        val now = System.currentTimeMillis()
-        dao.updateSession(open.copy(endedAt = now, abandoned = abandoned))
-        val minutes = if (abandoned) JsonNull else JsonPrimitive(((now - open.startedAt) / 60000).toInt())
-        append("end", open.gameId, mapOf("minutes" to minutes))
+        val now = clock()
+        val closed = open.timed(now, active = false).copy(endedAt = now)
+        dao.updateSession(closed)
+        append("end", open.gameId, mapOf("minutes" to JsonPrimitive(closed.playedMs(now) / 60000)))
     }
 
     private suspend fun append(event: String, id: String, fields: Map<String, kotlinx.serialization.json.JsonElement>) = withContext(Dispatchers.IO) {
@@ -91,4 +154,11 @@ class PlayLog(private val dao: GameDao, private val file: File, private val devi
             file.appendText(obj.toString() + "\n")
         }
     }
+}
+
+/** [this] with an active interval running from [now] exactly when [active]; stopping one adds it to [SessionEntity.activeMs]. */
+internal fun SessionEntity.timed(now: Long, active: Boolean): SessionEntity = when {
+    active == (activeSince != null) -> this
+    active -> copy(activeSince = now)
+    else -> copy(activeMs = playedMs(now), activeSince = null)
 }

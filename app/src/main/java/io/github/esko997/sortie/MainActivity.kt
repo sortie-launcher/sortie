@@ -286,9 +286,20 @@ class MainActivity : ComponentActivity() {
         startActivity(intent, options.toBundle())
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        reportNavigationFocus()
+    }
+
     override fun onDestroy() {
         instances.remove(this)
+        reportNavigationFocus()
         super.onDestroy()
+    }
+
+    /** Play time pauses while the navigation has focus; an X swap briefly has two instances, so ask them all. */
+    private fun reportNavigationFocus() {
+        (application as SortieApp).graph.playLog.navigationFocused(instances.any { it.hasWindowFocus() })
     }
 
     private fun displayManager() = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager

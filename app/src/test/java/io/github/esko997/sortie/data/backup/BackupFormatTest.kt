@@ -123,6 +123,20 @@ class BackupFormatTest {
         assertEquals(listOf("b"), planSessionMerge(parsed.backup.sessions, emptyList()).toInsert.map { it.gameId })
     }
 
+    /** Active time travels with the session and counts on restore; a session from an older backup counts its whole span. */
+    @Test
+    fun activeTimeRoundTripsAndOlderSessionsKeepTheirSpan() {
+        val played = closed("a", 1_000, 600).copy(activeMs = 25 * 60_000L)
+        val parsed = valid(encodeBackup(buildBackup(user, listOf(played), null, 1, "thor", "0.0.1")))
+        assertEquals(25 * 60_000L, parsed.backup.sessions.single().activeMs)
+        fun file(session: String) = """{"format": "sortie-backup", "version": 1, "createdAt": 1, "user": {}, "sessions": [$session]}"""
+        val older = valid(file("""{"gameId": "b", "startedAt": 5000, "endedAt": 605000}"""))
+        val merge = planSessionMerge(parsed.backup.sessions + older.backup.sessions, emptyList())
+        assertEquals(listOf(25 * 60_000L, null), merge.toInsert.map { it.activeMs })
+        assertEquals(35L, merge.addedMinutes)
+        assertTrue(parseBackup(file("""{"gameId": "a", "startedAt": 5000, "endedAt": 6000, "activeMs": -1}""")) is ParsedBackup.Invalid)
+    }
+
     @Test
     fun malformedTruncatedForeignAndNewerFilesAreRejected() {
         val good = encodeBackup(buildBackup(user, listOf(closed("a", 1_000, 1)), null, 1, "thor", "0.0.1"))

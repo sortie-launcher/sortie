@@ -13,6 +13,10 @@ for published builds.
   **Remove from folder**, **Rename…** and **Delete folder…** (nothing leaves the library; what it held returns where it was)
   inside. Folders made on the device live in user.json (in backups, untouched by a desktop deploy);
   folders.json takes the same `folder:<id>` / `system:<id>` pointers in `include`.
+- Play time counts only active play: sleep, Sortie's own screens and the switcher pause a session, and waking straight
+  into the game resumes it, so an emulator left open overnight no longer logs hours. Starting another game closes the open
+  one with its played minutes instead of dropping them. Now playing, playlog.jsonl, backups and Hangar credit use the same
+  time; history recorded earlier keeps its minutes.
 - Radial keyboard: the D-pad moves the text cursor (Left/Right by character, hold to repeat; Up/Down to the start/end).
 - Search remembers its text and filters until Sortie restarts (never saved to disk), and a **Clear** button empties the box.
 - **Y** on a system or folder searches only inside it, shown as a removable **In: …** chip; Home's search stays library-wide.

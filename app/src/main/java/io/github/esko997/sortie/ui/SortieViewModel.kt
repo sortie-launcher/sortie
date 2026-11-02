@@ -545,9 +545,9 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
     /**
      * Back in the foreground ([ownTask]: the navigation's own task id). The open play session ends only if its app is gone:
      * Home summons the switcher by resuming this HOME activity while the game keeps running underneath (and is raised again),
-     * which must not stop the timer or replace Now playing. The app's package comes from the session's profile (games) or its id
-     * (apps); without Shizuku, or when the task list cannot be read, as before, resuming ends the session. Save and BIOS state
-     * stay as scanned until the next re-index.
+     * which must not end the session or replace Now playing (its time only pauses meanwhile, see PlayLog). The app's package
+     * comes from the session's profile (games) or its id (apps); without Shizuku, or when the task list cannot be read, as
+     * before, resuming ends the session. Save and BIOS state stay as scanned until the next re-index.
      * A game whose emulator closed within [io.github.esko997.sortie.launch.QUICK_EXIT_MS] without a Home press (see
      * [sessionReturn]) did not start: its session is dropped and its page (or a toast elsewhere) says so.
      * Separately, the same task list tells [io.github.esko997.sortie.launch.SessionEndWatch] whether a watched game really
