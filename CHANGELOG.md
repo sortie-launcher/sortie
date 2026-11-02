@@ -5,6 +5,8 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
+- **Choose RetroArch core…** no longer opens the keyboard by itself: the filter (and Library setup's text fields) open it
+  only on A or a touch, and the D-pad passes over them without raising it.
 - **Launch with… → Choose RetroArch core…** lists every RetroArch core, whatever the game's system, with a filter and
   letter jump; choosing one saves it for the game and launches it. Shown when an official RetroArch app is installed, once
   per installed app. **Hold A** on any Launch with… entry, or on a core, sets it as the system's default (the same choice
