@@ -664,9 +664,10 @@ Opening a built-in app or an app beside a game from the companion does not repla
 When you return to Sortie, Shizuku lets it keep the session open while the emulator's task remains; without Shizuku, or when
 the task list can't be read, returning ends the session. A return within about three seconds without a Home press is treated
 as a failed launch unless Sortie can see the emulator still running, and that attempt is not counted as played.
-Play time counts only while the screen is on and Sortie's own screens and switcher are not in front: sleep, browsing Sortie
-and the switcher pause it, and waking the device straight into the game resumes it. The companion screen and the built-in
-apps count as play. Starting another game closes the open one with the time it was played. If Android stops Sortie in the
-background, the stretch running at that moment is lost. Time recorded before this change is kept as it was.
+Play time counts only while the screen is on and unlocked and Sortie's own screens and switcher are not in front: sleep,
+the lock screen, browsing Sortie and the switcher pause it, and waking the device straight into the game resumes it. The
+companion screen and the built-in apps count as play. Starting another game closes the open one with the time it was
+played. If Android stops Sortie in the background, the stretch running at that moment is lost. Time recorded before this
+change is kept as it was.
 Minutes, session counts and "last played" feed Continue and Tonight; Now playing shows the same minutes.
 The **💾 started** chip instead checks matching files in **Library setup → BIOS and save folders**; re-index to refresh it.

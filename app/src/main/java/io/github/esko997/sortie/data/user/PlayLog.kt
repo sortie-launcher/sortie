@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.data.user
 
+import android.content.Intent
 import io.github.esko997.sortie.data.db.GameDao
 import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.db.playedMs
@@ -24,10 +25,10 @@ import kotlinx.serialization.json.buildJsonObject
 
 /**
  * Sessions in Room for queries, mirrored as JSON lines to `<root>/sortie/playlog.jsonl` (docs/formats/playlog.md).
- * A session's time is its *active* time: the open session runs only while the screen is on and neither Sortie's navigation
- * window has focus nor its switcher overlay is up ([active]). Each change folds the running interval into
- * [SessionEntity.activeMs] ([timed]), so the row always holds every finished interval; a process death loses at most the
- * running one, and a session found open at startup stays paused until the next input change.
+ * A session's time is its *active* time: the open session runs only while the screen is on and unlocked, and neither is
+ * Sortie's navigation the top resumed activity nor its switcher overlay up ([active]). Each change folds the running
+ * interval into [SessionEntity.activeMs] ([timed]), so the row always holds every finished interval; a process death loses
+ * at most the running one, and a session found open at startup stays paused until the next input change.
  * [current] mirrors the open session (null when nothing is being played) for the companion's "now playing" panel.
  */
 class PlayLog(
@@ -35,9 +36,9 @@ class PlayLog(
     private val file: File,
     private val device: String,
     screenOn: Boolean = true,
-    private val clock: () -> Long = System::currentTimeMillis,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val clock: () -> Long = System::currentTimeMillis
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutex = Mutex()
 
     private val _current = MutableStateFlow<SessionEntity?>(null)
@@ -45,12 +46,9 @@ class PlayLog(
     /** The open session, or null. Seeded from the database once, then updated by [start], [end] and every pause or resume. */
     val current: StateFlow<SessionEntity?> = _current
 
-    private data class Inputs(val screenOn: Boolean, val navigationFocused: Boolean = false, val switcherOverlay: Boolean = false)
+    private data class Inputs(val screenOn: Boolean, val navigationInFront: Boolean = false, val switcherOverlay: Boolean = false)
 
     private val inputs = MutableStateFlow(Inputs(screenOn))
-
-    // a session found open at startup: what happened while Sortie was gone is unknown, so it waits for an input change or [start]
-    private var awaitingSignal = false
 
     init {
         // undispatched: the lock is taken before the constructor returns, so nothing can start or end a session before this
@@ -58,7 +56,6 @@ class PlayLog(
             mutex.withLock {
                 runCatching {
                     _current.value = dao.openSession()?.let { open ->
-                        awaitingSignal = true
                         // the running interval's end is unknown: drop it (never add time); older rows start counting from here
                         open.copy(activeMs = open.activeMs ?: 0, activeSince = null).also { if (it != open) dao.updateSession(it) }
                     }
@@ -67,11 +64,11 @@ class PlayLog(
         }
     }
 
-    /** The screen turned on or off (SortieApp's receiver). The returned job is for tests; callers need not wait. */
+    /** The screen is on and past the lock screen, or not ([screenInUse]; SortieApp's receiver). The job is for tests. */
     fun screenOn(on: Boolean): Job? = input { it.copy(screenOn = on) }
 
-    /** Whether one of Sortie's navigation windows has window focus (MainActivity). */
-    fun navigationFocused(focused: Boolean): Job? = input { it.copy(navigationFocused = focused) }
+    /** Whether one of Sortie's navigation windows is the top resumed activity (MainActivity). */
+    fun navigationInFront(inFront: Boolean): Job? = input { it.copy(navigationInFront = inFront) }
 
     /** Whether the switcher overlay is up over the running app (SortieApp, from TaskSwitcher's state). */
     fun switcherOverlay(open: Boolean): Job? = input { it.copy(switcherOverlay = open) }
@@ -79,16 +76,11 @@ class PlayLog(
     private fun input(change: (Inputs) -> Inputs): Job? {
         val before = inputs.getAndUpdate(change)
         if (change(before) == before) return null
-        return scope.launch {
-            mutex.withLock {
-                awaitingSignal = false
-                runCatching { retime() }
-            }
-        }
+        return scope.launch { mutex.withLock { runCatching { retime() } } }
     }
 
     /** The single rule: the open session is being played. */
-    private fun active(): Boolean = !awaitingSignal && inputs.value.let { it.screenOn && !it.navigationFocused && !it.switcherOverlay }
+    private fun active(): Boolean = inputs.value.let { it.screenOn && !it.navigationInFront && !it.switcherOverlay }
 
     private suspend fun retime() {
         val open = dao.openSession() ?: return
@@ -100,7 +92,6 @@ class PlayLog(
     /** Opens a session for [gameId], closing any open one with the time it was played. */
     suspend fun start(gameId: String, profileId: String?, display: String) = mutex.withLock {
         closeOpen()
-        awaitingSignal = false
         val now = clock()
         val session = SessionEntity(gameId = gameId, profileId = profileId, startedAt = now, endedAt = null, activeMs = 0).timed(now, active())
         val rowId = dao.insertSession(session)
@@ -162,3 +153,10 @@ internal fun SessionEntity.timed(now: Long, active: Boolean): SessionEntity = wh
     active -> copy(activeSince = now)
     else -> copy(activeMs = playedMs(now), activeSince = null)
 }
+
+/**
+ * Whether a screen broadcast leaves the screen in use for play: unlocked ([Intent.ACTION_USER_PRESENT]), or lit without the
+ * lock screen up (a wake within the lock delay sends no USER_PRESENT). Screen off, or lit on the lock screen, is not.
+ */
+internal fun screenInUse(action: String?, keyguardLocked: Boolean): Boolean =
+    action == Intent.ACTION_USER_PRESENT || (action == Intent.ACTION_SCREEN_ON && !keyguardLocked)

@@ -2,6 +2,7 @@ package io.github.esko997.sortie
 
 import android.app.Activity
 import android.app.Application
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -36,6 +37,7 @@ import io.github.esko997.sortie.data.tonight.Tonight
 import io.github.esko997.sortie.data.tonight.TonightStore
 import io.github.esko997.sortie.data.user.PlayLog
 import io.github.esko997.sortie.data.user.UserStore
+import io.github.esko997.sortie.data.user.screenInUse
 import io.github.esko997.sortie.launch.LaunchManager
 import io.github.esko997.sortie.launch.SessionEndWatch
 import io.github.esko997.sortie.mecha.MechaStore
@@ -75,7 +77,7 @@ class SortieApp :
             db.games(),
             File(sortieDir, "playlog.jsonl"),
             manifests.snapshot.value.device.device,
-            screenOn = app.getSystemService(PowerManager::class.java).isInteractive
+            screenOn = app.getSystemService(PowerManager::class.java).isInteractive && !keyguardLocked()
         )
         val mecha = MechaStore(app) { from -> db.games().completedSessionsFrom(from).map { rows -> rows.map { it.toPlaySession() } } }
         val indexer = Indexer(db.games(), manifests, CuratedGuide.forApp(app))
@@ -124,22 +126,30 @@ class SortieApp :
         }
 
         /**
-         * The play log's inputs that no activity can report: the screen (a game keeps running unseen while it is off, and
-         * waking usually returns straight to it without Sortie) and the switcher overlay, which never takes focus. Registered
-         * here, once per process, so they keep arriving while every Sortie activity is stopped behind a game.
+         * The play log's inputs that no activity can report: the screen (a game keeps running unseen while it is off or on
+         * the lock screen, and waking usually returns straight to it without Sortie) and the switcher overlay, which never
+         * takes focus. Registered here, once per process, so they keep arriving while every Sortie activity is stopped
+         * behind a game.
          */
         private fun watchActivePlay() {
             val screen = object : BroadcastReceiver() {
                 override fun onReceive(context: Context, intent: Intent) {
-                    playLog.screenOn(intent.action != Intent.ACTION_SCREEN_OFF)
+                    playLog.screenOn(screenInUse(intent.action, keyguardLocked()))
                 }
             }
-            val filter = IntentFilter(Intent.ACTION_SCREEN_ON).apply { addAction(Intent.ACTION_SCREEN_OFF) }
-            ContextCompat.registerReceiver(app, screen, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+            val filter = IntentFilter(Intent.ACTION_SCREEN_ON).apply {
+                addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_USER_PRESENT)
+            }
+            // exported: USER_PRESENT comes from SystemUI, not the system uid, and a not-exported receiver may drop it. All
+            // three are protected broadcasts, so no app can send them.
+            ContextCompat.registerReceiver(app, screen, filter, ContextCompat.RECEIVER_EXPORTED)
             CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
                 switcher.state.map { it.open && it.overlay }.distinctUntilChanged().collect { playLog.switcherOverlay(it) }
             }
         }
+
+        private fun keyguardLocked() = app.getSystemService(KeyguardManager::class.java).isKeyguardLocked
 
         /**
          * Each new game session is watched, and its own task identified from the task list in the seconds after its launch

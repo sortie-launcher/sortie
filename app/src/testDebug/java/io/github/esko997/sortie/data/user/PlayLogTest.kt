@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.data.user
 
 import android.app.Application
+import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import io.github.esko997.sortie.data.db.SessionEntity
@@ -62,33 +63,40 @@ class PlayLogTest {
         .map { it["minutes"]!!.jsonPrimitive.longOrNull }
 
     @Test
-    fun sleepSwitcherAndNavigationPauseWhileWakingStraightIntoTheGameCounts() = runBlocking {
+    fun sleepLockScreenSwitcherAndNavigationPauseWhileWakingStraightIntoTheGameCounts() = runBlocking {
         val log = log()
-        log.navigationFocused(true)?.join()
-        log.start(GAME, "armsx2", "same") // started from the focused navigation: paused until the game takes focus
+        fun screen(action: String, locked: Boolean) = log.screenOn(screenInUse(action, locked))
+        log.navigationInFront(true)?.join()
+        log.start(GAME, "armsx2", "same") // started from the navigation in front: paused until the game comes forward
         minutes(1)
-        log.navigationFocused(false)?.join()
+        log.navigationInFront(false)?.join()
         minutes(30)
-        log.screenOn(false)?.join()
+        screen(Intent.ACTION_SCREEN_OFF, locked = false)?.join()
         minutes(8 * 60) // the device sleeps overnight with the emulator open
-        log.screenOn(true)?.join() // waking returns straight to the game; Sortie never comes forward
+        screen(Intent.ACTION_SCREEN_ON, locked = true)?.join() // lit, but on the lock screen
+        minutes(2)
+        screen(Intent.ACTION_USER_PRESENT, locked = false)?.join() // unlocked straight into the game; Sortie never comes forward
         minutes(15)
+        screen(Intent.ACTION_SCREEN_OFF, locked = false)?.join()
+        minutes(2)
+        screen(Intent.ACTION_SCREEN_ON, locked = false)?.join() // woken within the lock delay: no lock screen, no USER_PRESENT
+        minutes(3)
         log.switcherOverlay(true)?.join() // Home: the switcher overlay over the running game
         minutes(5)
         log.switcherOverlay(false)?.join()
         minutes(4)
-        log.navigationFocused(true)?.join() // back in Sortie with the game still running
-        assertEquals(49 * MINUTE, log.current.value!!.playedMs(now)) // what the companion shows
+        log.navigationInFront(true)?.join() // back in Sortie with the game still running
+        assertEquals(52 * MINUTE, log.current.value!!.playedMs(now)) // what the companion shows
         minutes(20)
         log.end()
-        assertEquals(listOf<Long?>(49), ends())
-        assertEquals(49, db.games().playStat(GAME)!!.minutes)
+        assertEquals(listOf<Long?>(52), ends())
+        assertEquals(52, db.games().playStat(GAME)!!.minutes)
     }
 
     @Test
     fun aLaunchWhileAnotherRunsClosesItWithItsPlayedTime() = runBlocking {
         val log = log()
-        log.start(GAME, "armsx2", "same") // from the companion: no navigation has focus, so it counts at once
+        log.start(GAME, "armsx2", "same") // from the companion: the navigation is not in front, so it counts at once
         minutes(40)
         log.start(OTHER, "ppsspp", "same")
         minutes(10)

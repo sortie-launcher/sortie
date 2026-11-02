@@ -186,13 +186,14 @@ fun planSessionMerge(incoming: List<BackupSession>, existing: List<SessionEntity
     val seen = existing.mapTo(HashSet()) { it.gameId to it.startedAt }
     val toInsert = ArrayList<SessionEntity>()
     var present = 0
+    var addedMs = 0L
     for (s in incoming) {
         val ended = s.endedAt ?: continue
         if (!seen.add(s.gameId to s.startedAt)) {
             present++
             continue
         }
-        toInsert += SessionEntity(
+        val row = SessionEntity(
             gameId = s.gameId,
             profileId = s.profileId,
             startedAt = s.startedAt,
@@ -200,7 +201,8 @@ fun planSessionMerge(incoming: List<BackupSession>, existing: List<SessionEntity
             abandoned = s.abandoned,
             activeMs = s.activeMs
         )
+        toInsert += row
+        if (!row.abandoned) addedMs += row.playedMs(ended)
     }
-    val minutes = toInsert.filter { !it.abandoned }.sumOf { it.playedMs(it.endedAt ?: it.startedAt) } / 60000
-    return SessionMerge(toInsert, present, minutes)
+    return SessionMerge(toInsert, present, addedMs / 60000)
 }

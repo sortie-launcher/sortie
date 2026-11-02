@@ -74,9 +74,10 @@ a launchable), Folder (a system folder, a smart folder, or a manual folder), Lau
 - Launch through profiles with ordered fallbacks; per-game override; "open with" fallback.
 - Favourites folder holding games and apps alike.
 - Play log and "Continue" row. Play time is active time (`data/user/PlayLog.kt`): an open session runs only while the
-  screen is on, no navigation window has focus and the switcher overlay is down (companion and built-in apps count).
+  screen is on and unlocked (SCREEN_ON without the keyguard locked, or USER_PRESENT), no navigation instance is the top
+  resumed activity (so its dialogs still pause) and the switcher overlay is down (companion and built-in apps count).
   Each pause folds the running interval into the Room row (`activeMs`, `activeSince`); process death loses at most that
-  interval, and a session found open at startup waits for the next screen or focus change. A launch closes an open
+  interval, and a session found open at startup waits for the next input change. A launch closes an open
   session normally. Rows from before Room version 5 keep their wall-clock duration.
 - Quick exit: an emulator gone within 3 s of the start, with no Home press since, ends the session uncounted (no Room
   row; `playlog.jsonl` end has `quickExit: true`) and says so beside Play for 12 s (a toast off the page), naming a
