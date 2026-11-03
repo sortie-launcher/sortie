@@ -5,7 +5,7 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
-- Document optional Pocket DMG accessibility-service tuning, its measured limits and the possible impact on AYANEO controls.
+- Document the Pocket DMG Eco-profile check and optional accessibility-service tuning, including measured limits and AYANEO-control caveats.
 - The after-playing bookmark card gains **Not for this game**, which stops the card for that game only; the game page's
   Launch with… list turns it back on (**Offer a bookmark after playing**). Kept in user.json and backups.
 - **Choose RetroArch core…** no longer opens the keyboard by itself: the filter (and Library setup's text fields) open it
