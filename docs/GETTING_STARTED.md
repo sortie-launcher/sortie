@@ -511,6 +511,36 @@ imported. Your game files can stay where they are and be used by several apps at
 
 ## Troubleshooting
 
+### AYANEO Pocket DMG: device-specific performance tuning
+
+**Check the AYANEO performance profile first.** Eco can substantially reduce CPU clocks and make the launcher feel sluggish.
+Use the AYA quick-settings panel or AYASetting to check the profile before reducing Sortie's visuals. On the investigated
+DMG, the owner confirmed Eco was selected; traces showed very low CPU clocks even while navigating. Choose the profile
+that suits your responsiveness/battery-life tradeoff, rather than assuming a 60 Hz display needs a lightweight UI.
+
+The DMG's built-in display runs at 60 Hz, but that alone does not explain long UI stalls. On Android 13 with Sortie
+build 2172 and AYAWindow 1.5.66, repeated D-pad navigation missed frame deadlines; traces showed expensive accessibility
+updates. Temporarily disabling **AYAWindow's accessibility service** reduced the longer stalls in on/off/on comparisons,
+but did not eliminate the stutter. This is a device-specific workaround, not a general recommendation to disable accessibility.
+
+**Optional additional tuning:** if you do not rely on AYANEO's vendor controls, try **Android Settings → Accessibility →
+AYAWindow → Use AYAWindow → Off**, then compare the same navigation in Sortie. Turn it back **On** in the same place to
+undo the change. Do not disable a screen reader or another service you need, uninstall AYAWindow, or disable the entire app.
+
+**Tradeoff:** [AYANEO's manual](https://wiki.ayaneo.com.cn/docs/LknNwvUPqiHPGDky0H1cohkqnrJ) describes AYAWindow as the
+AYA-button quick-settings panel for performance, fan and controller controls. Its accessibility service requests key
+filtering and access to window content. Disabling the service may affect vendor shortcuts or controls; their operation
+with it disabled has not been verified. Check the controls you use before leaving it off. Sortie's injected D-pad and
+touch navigation worked during the trials; this does not verify physical-button latency or in-game mappings.
+If the AYA button no longer opens the panel, use AYASetting to change the performance profile, or re-enable AYAWindow
+in Android's Accessibility settings.
+
+Forcing full ahead-of-time compilation instead of Android's existing profile-guided compilation did not clearly improve
+the same navigation workload. Neither experiment changed the display's refresh rate. No equivalent tuning has been
+validated on Nova or Thor.
+
+### Library, launching and setup
+
 **"Can't start *game*: its file isn't on this device right now."** The memory card or folder is missing. Reinsert it, then
 **Library setup → Re-index every system**.
 
