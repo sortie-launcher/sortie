@@ -412,6 +412,12 @@ may offer fewer picks; a file being present is not proof its emulator is ready.
 **X / Other screen** then moves just that window, not the launcher or the other app. **Close** closes only that window.
 **B** closes Performance; in Magazines it first goes back through the article, contents and shelf.
 
+**Apps → Keyboard** opens Sortie's touch QWERTY panel to type into the app on the other screen. It needs two displays and
+Shizuku. Focus the destination's field, open the panel on the other screen, then touch its keys; the controller stays with
+the destination app. Use its touch **Other screen** and **Close** buttons. This is not Gboard and does not change your
+selected Android keyboard or the radial keyboard. It provides US letters, digits, punctuation and editing keys, not
+predictions or composed-language input.
+
 **On short or narrow screens** Home and the browse screens (systems, folders, search, Apps) fold that header into a strip
 while you browse: tap or pull it down, or press **Up** on the first row, to bring it back. The button hints shrink to one
 row, and its **Controls** button lists every command. **Settings → Header and hints** chooses *Auto* (the default),
@@ -443,9 +449,10 @@ enable only the extras you want. No Shizuku, Home role, overlay permission or se
 | **Home key opens the switcher** | Default Home app role **and** Shizuku | Both of the above |
 | **Switcher drawn over a running game** | Shizuku, plus *Display over other apps*; without that grant, the switcher opens as a normal Sortie screen | **Settings → Overlay over running games (optional)** |
 | **Companion bell** (opens the notification shade) | Shizuku | — |
-| **Device stats** and the **Perf** page: CPU and GPU load and clocks, RAM, temperatures, fan | Nothing for RAM and battery temperature; Shizuku for the rest | **Settings → Device stats** (strips off by default). The same Perf view is in **Apps → Performance**, the switcher overlay (**R1**) or, on two screens, the companion |
+| **Device stats** and the **Perf** page: CPU and GPU load and clocks, RAM, temperatures, fan; free internal and removable-storage space in GB in the switcher header and full Perf views | Nothing extra for RAM, battery temperature or storage; Shizuku for the rest | **Settings → Device stats** (strips off by default). The same Perf view is in **Apps → Performance**, the switcher overlay (**R1**) or, on two screens, the companion |
 | **Automatic fixes**: the play session stays open when Home only brings up the switcher over a game (its time pauses while the switcher shows); other launchers' leftover windows are closed so a finished game returns to Sortie; on the AYN Thor, the Thor button's panel is restarted before it jams | Shizuku | Automatic |
 | **Radial keyboard** for typing with the sticks | Enabling it as an Android keyboard | **Settings → Enable radial keyboard…**, then **Choose keyboard…** |
+| **Cross-screen touch QWERTY keyboard** | Two displays and Shizuku; no Android keyboard selection changes | **Apps → Keyboard**, the companion's **+**, or the switcher's **Open app…** |
 | **Box art, screenshots, game descriptions** | ES-DE-style `gamelist.xml` and media folders on storage, linked by hand in `systems.json`; Cocoon import copies artwork only, not descriptions | Prepared files: [systems.md](formats/systems.md), or [Coming from Cocoon](#coming-from-cocoon) |
 | **Your own fit stars, tags, hooks, cautions and control notes** | An optional `guide.json` can override bundled notes and add your own ratings and tags | Prepared file: [guide.md](formats/guide.md) |
 | **Smart folders** (rule-based shelves such as "added this month, never played") | A `folders.json` file | Prepared file: [folders.md](formats/folders.md) |
@@ -457,9 +464,9 @@ enable only the extras you want. No Shizuku, Home role, overlay permission or se
 **Shizuku in brief.** Shizuku is a separate app with its own setup guide at [shizuku.rikka.app](https://shizuku.rikka.app/).
 On a device without root it is started through Android's *Wireless debugging* (Sortie's **Settings → Diagnostics → Wireless
 debugging** opens that page) and usually has to be started again after every reboot. If you skip it, the basics still
-work; you lose the switcher, moving other apps between screens, the bell, device stats beyond RAM and battery temperature,
-the bookmark card after playing and the automatic fixes above. Returning to Sortie's main screen ends the current play
-session without it. **X** still swaps Sortie's own screens.
+work; you lose the switcher, moving other apps between screens, the cross-screen touch keyboard, the bell, device stats
+beyond RAM, battery temperature and storage, the bookmark card after playing and the automatic fixes above. Returning to
+Sortie's main screen ends the current play session without it. **X** still swaps Sortie's own screens.
 
 **"Prepared files" means exactly that.** The bundled guide and release magazines need no preparation. For your own
 additions, there is no in-app editor or download for artwork, guides, smart folders, logos or custom emulators. Tools such

@@ -50,6 +50,16 @@
             android:launchMode="singleTask"
             android:taskAffinity="${applicationId}.performance"
             android:autoRemoveFromRecents="true" />
+        <!-- Touch-only keyboard: leaves input focus with the app on the other screen and types through Shizuku.
+             The ordinary radial IME below is independent and unchanged. -->
+        <activity
+            android:name=".QwertyKeyboardActivity"
+            android:label="@string/builtin_keyboard"
+            android:icon="@drawable/ic_builtin_keyboard"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity="${applicationId}.keyboard"
+            android:autoRemoveFromRecents="true" />
         <activity
             android:name=".CompanionActivity"
             android:exported="false"

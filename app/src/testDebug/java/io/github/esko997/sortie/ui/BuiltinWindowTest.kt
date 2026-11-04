@@ -53,6 +53,9 @@ class BuiltinWindowTest {
     @get:Rule(order = 4)
     val performance = BuiltinActivityRule(BuiltinApp.PERFORMANCE)
 
+    @get:Rule(order = 5)
+    val qwerty = BuiltinActivityRule(BuiltinApp.QWERTY_KEYBOARD)
+
     private val pad = Controller()
 
     private fun shown(text: String, substring: Boolean = true) = compose.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty()
@@ -131,6 +134,19 @@ class BuiltinWindowTest {
         assertFalse("climbing does not close the reader", magazines.activity.isFinishing)
         pad.press(B)
         assertTrue("B on the shelf closes the reader", magazines.activity.isFinishing)
+        assertFalse("the navigation stays", sortie.activity.isFinishing)
+    }
+
+    @Test
+    fun qwertyKeyboardOnOneScreenExplainsInsteadOfTyping() {
+        awaitHome()
+        qwerty.open()
+        compose.waitUntil(5_000) { shown("No other screen to type into") }
+        assertFalse("no keys pretend to type", compose.onAllNodes(hasContentDescription("percent")).fetchSemanticsNodes().isNotEmpty())
+        assertFalse("one screen: nothing to move to", shown("Other screen"))
+        compose.onNodeWithText("Close").performClick()
+        compose.waitForIdle()
+        assertTrue(qwerty.activity.isFinishing)
         assertFalse("the navigation stays", sortie.activity.isFinishing)
     }
 }

@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.stats
 
+import android.view.KeyEvent
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -50,6 +51,8 @@ class DeviceStatsMonitorTest {
         }
 
         override fun restorePinnedTask(rootTaskId: Int): String = "0\n"
+
+        override fun injectKeyEvents(displayId: Int, events: Array<KeyEvent>): String = error("the stats monitor never types")
     }
     private val ticks = Channel<Unit>()
     private val waiting = AtomicInteger()

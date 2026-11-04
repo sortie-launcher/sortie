@@ -21,6 +21,7 @@ fun BuiltinApp.icon(context: Context): Drawable? = context.getDrawable(
     when (this) {
         BuiltinApp.MAGAZINES -> R.drawable.ic_builtin_magazines
         BuiltinApp.PERFORMANCE -> R.drawable.ic_builtin_performance
+        BuiltinApp.QWERTY_KEYBOARD -> R.drawable.ic_builtin_keyboard
     }
 )
 
@@ -29,6 +30,7 @@ val BuiltinApp.summary: String
     get() = when (this) {
         BuiltinApp.MAGAZINES -> "Offline magazines and your scrapbook"
         BuiltinApp.PERFORMANCE -> "Live load, clocks, memory and temperatures"
+        BuiltinApp.QWERTY_KEYBOARD -> "Type into the app on the other screen"
     }
 
 /**
@@ -53,11 +55,15 @@ fun rememberBuiltinOpener(): (BuiltinApp) -> Unit {
     val here = { view.display?.displayId ?: Display.DEFAULT_DISPLAY }
     choosing?.let { app ->
         val other = BuiltinApps.otherDisplay(context, here())
+        // a keyboard types into the screen it is not on: say which, so "here" is not mistaken for where the text goes
+        val keyboard = app.typesOnOtherScreen
         ContextSheet(
             "Open ${app.label}",
             listOfNotNull(
-                SheetAction("Open here") { openBuiltin(context, app, here()) },
-                other?.let { SheetAction("Open on the other screen") { openBuiltin(context, app, it) } }
+                SheetAction(if (keyboard) "Open here, type on the other screen" else "Open here") { openBuiltin(context, app, here()) },
+                other?.let {
+                    SheetAction(if (keyboard) "Open on the other screen, type here" else "Open on the other screen") { openBuiltin(context, app, it) }
+                }
             )
         ) { choosing = null }
     }

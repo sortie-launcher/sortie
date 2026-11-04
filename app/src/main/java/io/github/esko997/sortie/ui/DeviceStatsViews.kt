@@ -46,8 +46,9 @@ import kotlinx.coroutines.flow.map
 
 /**
  * The companion screen with device stats down both sides when `user.deviceStats` asks for them: load (CPU, GPU, RAM) in a
- * thin strip on the left, heat (temperatures, fan) on the right. The panel is narrowed by the strips rather than covered, so
- * its corner controls move in with it. Strips keep their width while a reading is missing; cells appear as readings arrive.
+ * thin strip on the left, heat (temperatures, fan) on the right. The panel is narrowed by the strips rather than covered,
+ * so its corner controls move in with it. Strips keep their width while a reading is missing; cells appear as
+ * readings arrive.
  * [content] stays at the same place in the composition whether the strips are shown or not, so toggling the setting on the
  * other screen keeps the panel's state.
  */
@@ -64,22 +65,25 @@ fun DeviceStatsSides(content: @Composable () -> Unit) {
     }
 }
 
-/** One line of device stats for the switcher overlay's header; nothing unless `user.deviceStats` includes the overlay. */
+/**
+ * Device stats for the switcher overlay's header; nothing unless `user.deviceStats` includes the overlay. The readings take
+ * one line that ends in an ellipsis when the window is narrow; free storage has a line of its own below, which wraps between
+ * volumes rather than being cut, so it shows on a small screen too.
+ */
 @Composable
 fun DeviceStatsHeader(modifier: Modifier = Modifier) {
     val graph = (LocalContext.current.applicationContext as SortieApp).graph
     if (!rememberStatsMode(graph).overlay) return
     val stats = liveDeviceStats(graph) ?: return
     val line = remember(stats) { StatsText.line(stats) }
-    if (line.isEmpty()) return
-    Text(
-        line,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier
-    )
+    val storage = remember(stats.storage) { StatsText.storageLine(stats) }
+    if (line.isEmpty() && storage.isEmpty()) return
+    val style = MaterialTheme.typography.labelMedium
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(modifier) {
+        if (line.isNotEmpty()) Text(line, style = style, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (storage.isNotEmpty()) Text(storage, style = style, color = color, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
 }
 
 @Composable

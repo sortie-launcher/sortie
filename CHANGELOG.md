@@ -5,6 +5,11 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
+- **Performance** and the switcher's compact stats show free internal and mounted SD/USB storage in GB. Full Perf views
+  also show total capacity. Storage needs no Shizuku and refreshes only while a stats surface is visible.
+- **Apps → Keyboard** opens a touch QWERTY panel that types into the app on the other screen through Shizuku. It can move
+  between screens and close independently; the destination keeps controller focus. Includes US punctuation, Shift lock,
+  arrows and repeating Delete. The selected Android keyboard and existing radial keyboard are unchanged.
 - The after-playing bookmark card gains **Not for this game**, which stops the card for that game only; the game page's
   Launch with… list turns it back on (**Offer a bookmark after playing**). Kept in user.json and backups.
 - **Choose RetroArch core…** no longer opens the keyboard by itself: the filter (and Library setup's text fields) open it

@@ -152,8 +152,8 @@ class MainActivity : ComponentActivity() {
      * The Home button lands on the switcher whenever Shizuku is ready (see [TaskSwitcher.summonable]): Sortie is HOME, so the
      * system delivers the HOME intent here when the top screen had the controller; the secondary home summons us with
      * [TaskSwitcher.EXTRA_SWITCHER] when the bottom screen had it and there is no overlay. Debug builds also accept
-     * `--es launch <id> [--es profile <id>]` / `--es open <route>` / `--es builtin magazines|performance [--ei display <id>]`
-     * from adb.
+     * `--es launch <id> [--es profile <id>]` / `--es open <route>` /
+     * `--es builtin magazines|performance|qwerty_keyboard [--ei display <id>]` from adb.
      */
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
