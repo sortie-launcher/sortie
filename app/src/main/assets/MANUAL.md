@@ -74,10 +74,10 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 - When a game can't start, Sortie says why: file not present, emulator not installed, no emulator set up, or the emulator
   refused the request. **Settings → Diagnostics** keeps the exact launch attempts.
 - Only All files access is required. Everything else is optional and requested only where you turn that feature on:
-  Shizuku (the switcher and moving apps between screens, the companion's bell, device stats beyond RAM and battery
-  temperature, and a few automatic fixes such as timing play while Home only shows the switcher), *Display over other
-  apps* (the overlay switcher), the default Home role and the radial keyboard. If Android can't open the right settings
-  page, Sortie tells you where to find it.
+  Shizuku (the switcher and moving apps between screens, the cross-screen touch keyboard, the companion's bell, device stats
+  beyond RAM, battery temperature and storage, and a few automatic fixes such as timing play while Home only shows the
+  switcher), *Display over other apps* (the overlay switcher), the default Home role and the radial keyboard. If Android
+  can't open the right settings page, Sortie tells you where to find it.
 
 ## Controls
 
@@ -113,7 +113,7 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
 - **Continue** shows the last game you played and starts first on Custom; it can be moved like any other tile.
 - Hold A on a system, game, app or shortcut and choose *Add to home*. On Custom, hold A → *Move* lifts a tile; the D-pad moves
   it, A drops it, B cancels. Existing pins keep their order. Smart folders, Apps and Continue can be moved but not removed.
-- **Apps** includes Sortie's built-in **Magazines** and **Performance**, installed apps and the shortcuts you have opted
+- **Apps** includes Sortie's built-in **Magazines**, **Performance** and **Keyboard**, installed apps and the shortcuts you have opted
   in to ("Browse all shortcuts…"). When another app offers to add a shortcut, Sortie names it and asks first: **Add** or **Cancel**.
 - The header starts with the amber Split-S mark (a screen reader reads it as "Sortie"; it is not a button), the clock and the
   game count. Its buttons are **Apps**, **Search**, **Extras** and **Settings**.
@@ -293,21 +293,30 @@ This update migrates the companion save to version 4; older builds cannot read i
 
 ## Built-in apps
 
-**Apps → Magazines** and **Apps → Performance** open as separate app windows, not pages inside the switcher.
-**Extras → Magazines** on Home opens the same reader. With two screens, choose **Open here** or **Open on the other screen**;
-on one screen it opens directly. The companion's **+** and the switcher's **Open app…** also list both built-ins and already
-know which screen you chose.
+**Apps → Magazines**, **Apps → Performance** and **Apps → Keyboard** open as separate app windows, not pages inside the switcher.
+**Extras → Magazines** on Home opens the same reader. With two screens, choose which screen opens the window; Magazines and
+Performance open directly on a single-screen device. The companion's **+** and the switcher's **Open app…** also list all
+three built-ins and already know which screen you chose.
 
-- Reopening a built-in brings back its existing window. **X / Other screen** moves only that built-in, keeping the reader's
+- Reopening a built-in brings back its existing window. **Other screen** moves only that built-in, keeping the reader's
   page and position; it does not swap the launcher or move the app on the other screen.
-  On a single-screen device, **X** does nothing; it never opens the selected item instead.
+  **X** does the same in Magazines and Performance; on one screen it does nothing, rather than opening the selected item.
 - **Close** closes only that built-in. **B** closes Performance immediately; in Magazines it first goes back through the
   article, contents and shelf. An article opened from a game page's **Featured in** returns to that game page with B.
-- The switcher lists **Magazines** and **Performance** separately, so each can be brought forward, moved or closed.
-  Opening a built-in needs no Shizuku; the switcher's task-management features still do.
+- The switcher lists **Magazines**, **Performance** and **Keyboard** separately, so each can be brought forward, moved or closed.
+  Opening their windows needs no Shizuku; the keyboard's typing and the switcher's task-management features do.
 - Performance uses the same live readings as the switcher's Perf page and the optional companion Perf mode, with the battery
   charge (⚡ while charging) beside its title. Its polling pauses when the window is hidden or its display is asleep. It does
   not add an always-on overlay.
+
+**Keyboard** is Sortie's touch QWERTY panel for typing into the app on the other screen. It needs two displays and Shizuku
+running and allowing Sortie. Focus the destination's field, then open Keyboard on the other screen and touch its keys.
+The launch choices say which screen you will type into. The controller stays with the destination app; use the panel's
+touch **Other screen** and **Close** buttons rather than controller shortcuts.
+
+It has US letters, digits, punctuation, arrows and editing keys. **Shift** affects the next character; tap twice to lock
+it, then tap again to unlock. Hold Delete or an arrow to repeat. It has no predictions or composed-language input, and
+does not move an installed keyboard such as Gboard. Your selected Android keyboard and Sortie's radial keyboard stay unchanged.
 
 ## Offline magazines
 
@@ -558,15 +567,21 @@ turn off **Overlay over running games (optional)** in Settings. Granting overlay
 Choosing or moving a picture-in-picture player restores its existing task to fullscreen. Internal controller-focus changes
 do not ask the player to enter PiP again. If you do not want an app to use PiP at all, disable its **Picture-in-picture**
 permission in Android's app settings.
-With **Device stats** set to *Switcher overlay* or *Both*, the overlay's title line also shows the same readings in one row.
+With **Device stats** set to *Switcher overlay* or *Both*, the overlay's title line shows live readings, with free internal
+and removable-storage space in GB on a separate line below.
 
 **Perf page.** In the overlay switcher, **R1** (or **L1**, or the **Perf** chip on either screen) shows live performance
 numbers instead of the app list: CPU load and clock, GPU load and clock, RAM, CPU, GPU and battery temperatures and the
-fan, each large with a line of the last two minutes, then every core's clock and every thermal zone, grouped. It needs no
-Device stats setting; the normal-screen switcher has no Perf page. **Up/Down** scrolls; **B**, **L1/R1** or the
+fan, each large with a line of the last two minutes, then free storage, every core's clock and every thermal zone, grouped.
+It needs no Device stats setting; the normal-screen switcher has no Perf page. **Up/Down** scrolls; **B**, **L1/R1** or the
 **Apps** chip return to the app list with the same app selected. While a Perf page is shown Sortie reads every 2 seconds
-(or every second, Settings → *Perf view refresh*); readings a device does not offer get no tile, and without Shizuku only
-RAM and the battery temperature show. FPS and power draw are not shown.
+(or every second, Settings → *Perf view refresh*); readings a device does not offer get no tile. RAM, battery temperature
+and storage work without Shizuku. FPS and power draw are not shown.
+
+**Free storage** shows available and total space for internal storage and each mounted SD card or USB drive, in decimal GB.
+It does not count emulated shared storage as another disk. Ejected drives disappear; an unreadable mounted drive shows a
+dash, not zero. These are filesystem-available bytes, not Android Settings' estimate that can include reclaimable cache.
+Storage uses the existing visible-only refresh; there is no separate background scan.
 
 ## Settings
 
@@ -591,9 +606,9 @@ default) or 10 seconds, only while they are on a screen that is on: hidden, paus
 **Perf view refresh** (1 or 2 seconds, default 2) is the pace while a Perf page is shown, and on two-screen handhelds
 **Companion screen shows** switches the other screen between its usual panel, **Auto** (Perf while a Sortie-launched game
 runs) and the Perf page. CPU and GPU load,
-clocks, temperatures and the fan need Shizuku (Sortie reads them as the shell user, read-only); without it only RAM and
-the battery temperature show. Readings a device does not offer are left out: the AYANEO Pocket DMG, for one, has no fan
-reading.
+clocks, temperatures and the fan need Shizuku (Sortie reads them as the shell user, read-only); RAM and the battery
+temperature do not. Free storage also works without Shizuku, in the switcher header and full Perf views, not the narrow
+companion strips. Readings a device does not offer are left out: the AYANEO Pocket DMG, for one, has no fan reading.
 
 **Which emulator starts a game.** A per-game **Launch with…** choice first; then the system's **Default launcher per
 system** choice made here (or with hold A in a game's Launch with…); otherwise the system's Emulators list from Library

@@ -3,8 +3,9 @@ package io.github.esko997.sortie.stats
 import java.util.Locale
 
 /**
- * One poll's readings; every field is optional and a surface shows only what is there. RAM and the battery temperature are
- * readable by any app; the rest needs the shell user (Shizuku) and nodes that only some devices have (see DeviceStatsProbe).
+ * One poll's readings; every field is optional and a surface shows only what is there. RAM, the battery temperature and free
+ * storage are readable by any app; the rest needs the shell user (Shizuku) and nodes that only some devices have (see
+ * DeviceStatsProbe).
  */
 data class DeviceStats(
     val cpuPercent: Int? = null,
@@ -21,7 +22,9 @@ data class DeviceStats(
     /** Every online core's clock, by core number; read only while a Perf view is shown. */
     val coreKhz: List<CoreClock>? = null,
     /** Every thermal zone that reads as a temperature; read only while a Perf view is shown. */
-    val zones: List<ThermalZone>? = null
+    val zones: List<ThermalZone>? = null,
+    /** Free space on the internal storage, then each mounted removable volume ([Storage.spaces]); null when not read. */
+    val storage: List<StorageSpace>? = null
 )
 
 /** One core's current clock; [core] is the kernel's CPU number (`cpu3` → 3). */
@@ -129,7 +132,23 @@ object StatsText {
 
     fun celsius(c: Int?): String? = c?.let { "$it°C" }
 
-    /** The companion's left strip: load. CPU and GPU with their clocks, then RAM used of total (`6.2G`, `of 16G`). */
+    /**
+     * The switcher's second line, free storage: `Free: Internal 41 GB · SD 212 GB`, `—` for a mounted volume that could not
+     * be read; empty when storage was not read. Only the separators are breakable spaces, so a narrow window wraps it between
+     * volumes, never inside one.
+     */
+    fun storageLine(s: DeviceStats): String = s.storage?.takeIf { it.isNotEmpty() }?.joinToString("$NBSP· ", prefix = "Free:$NBSP") {
+        val name = if (it.kind == StorageKind.OTHER) it.label else it.kind.word
+        val free = gb(it.freeBytes)?.let { n -> "$n${NBSP}GB" } ?: UNREADABLE
+        "$name$NBSP$free".replace(' ', NBSP)
+    }.orEmpty()
+
+    private const val NBSP = '\u00A0'
+
+    /** A mounted volume whose size could not be read. */
+    const val UNREADABLE = "—"
+
+    /** The companion's left strip: load. CPU and GPU with their clocks, RAM used of total (`6.2G`, `of 16G`). */
     fun usageCells(s: DeviceStats): List<StatCell> = listOfNotNull(
         percent(s.cpuPercent)?.let { StatCell("CPU", it, ghz(s.cpuMaxKhz)) },
         percent(s.gpuPercent)?.let { StatCell("GPU", it, mhz(s.gpuHz)) },

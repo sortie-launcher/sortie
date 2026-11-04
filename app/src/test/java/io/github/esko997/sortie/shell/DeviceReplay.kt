@@ -1,6 +1,7 @@
 package io.github.esko997.sortie.shell
 
 import android.content.ContextWrapper
+import android.view.KeyEvent
 import java.io.File
 import java.nio.file.Files
 import java.util.Collections
@@ -52,6 +53,9 @@ internal class ReplayShell(private val stackList: String, private val probes: Li
         issued += "restorePinnedTask $rootTaskId"
         return "0\n"
     }
+
+    /** Typing is not recorded device output: replays never type. */
+    override fun injectKeyEvents(displayId: Int, events: Array<KeyEvent>): String = error("replays never type")
 
     /** What the device was asked to change: everything but the reads (stack list, panel probe). */
     val actions: List<String> get() = synchronized(issued) { issued.filter { it != STACK_LIST && it != ScreenMover.PANEL_PROBE } }

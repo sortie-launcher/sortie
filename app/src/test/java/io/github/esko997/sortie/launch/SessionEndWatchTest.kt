@@ -1,5 +1,6 @@
 package io.github.esko997.sortie.launch
 
+import android.view.KeyEvent
 import io.github.esko997.sortie.shell.DeviceCaptures
 import io.github.esko997.sortie.shell.ScreenMover
 import io.github.esko997.sortie.shell.ShellExec
@@ -157,6 +158,7 @@ class SessionEndWatchTest {
             object : ShellExec {
                 override fun exec(cmd: String) = reply
                 override fun restorePinnedTask(rootTaskId: Int) = "0\n"
+                override fun injectKeyEvents(displayId: Int, events: Array<KeyEvent>): String = error("never types")
             },
             DeviceCaptures.homes("thor")
         )

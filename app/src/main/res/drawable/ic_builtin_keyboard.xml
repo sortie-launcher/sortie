@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sortie's Keyboard: a QWERTY keyboard's outline, three rows of keys and the space bar. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:strokeColor="#F2B134" android:strokeWidth="2.5" android:strokeLineJoin="round"
+        android:pathData="M7,13 L41,13 Q44,13 44,16 L44,34 Q44,37 41,37 L7,37 Q4,37 4,34 L4,16 Q4,13 7,13 Z" />
+    <path android:fillColor="#F2B134" android:fillAlpha="0.55"
+        android:pathData="M9,18 h3 v3 h-3 Z M15,18 h3 v3 h-3 Z M21,18 h3 v3 h-3 Z M27,18 h3 v3 h-3 Z M33,18 h3 v3 h-3 Z M39,18 h1 v3 h-1 Z
+            M11,24 h3 v3 h-3 Z M17,24 h3 v3 h-3 Z M23,24 h3 v3 h-3 Z M29,24 h3 v3 h-3 Z M35,24 h3 v3 h-3 Z" />
+    <path android:strokeColor="#F2B134" android:strokeWidth="2.5" android:strokeLineCap="round"
+        android:pathData="M15,32 L33,32" />
+</vector>

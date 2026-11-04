@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.os.IBinder
 import android.os.SystemClock
 import android.util.Log
+import android.view.KeyEvent
 import io.github.esko997.sortie.BuiltinApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +24,7 @@ import rikka.shizuku.Shizuku
 internal interface ShellExec {
     fun exec(cmd: String): String
     fun restorePinnedTask(rootTaskId: Int): String
+    fun injectKeyEvents(displayId: Int, events: Array<KeyEvent>): String
 }
 
 /**
@@ -57,10 +59,11 @@ class ScreenMover internal constructor(
     private val shell: ShellExec = replay ?: object : ShellExec {
         override fun exec(cmd: String): String = service?.exec(cmd) ?: NOT_BOUND
         override fun restorePinnedTask(rootTaskId: Int): String = service?.restorePinnedTask(rootTaskId) ?: NOT_BOUND
+        override fun injectKeyEvents(displayId: Int, events: Array<KeyEvent>): String = service?.injectKeyEvents(displayId, events) ?: NOT_BOUND
     }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val args = Shizuku.UserServiceArgs(ComponentName(context.packageName, ShellService::class.java.name))
-        .daemon(false).processNameSuffix("shell").version(2)
+        .daemon(false).processNameSuffix("shell").version(3)
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
             service = IShellService.Stub.asInterface(binder)
@@ -170,6 +173,25 @@ class ScreenMover internal constructor(
             runCatching { shell.restorePinnedTask(task.rootId) }.getOrElse { "-1\n${it.message}" }
         }
         return ok(reply, "restore PiP ${task.id}")
+    }
+
+    /**
+     * Types [events] (key presses, each released) into the focused window of [displayId] through the shell service, which sets
+     * that display on every event and refuses the batch outright while that display has no focused window ([KeyInjector]).
+     * Null once all were dispatched, else why not; nothing is retried or queued for a later connection. What the user types is
+     * never logged nor kept in [lastResult].
+     */
+    internal suspend fun injectKeyEvents(displayId: Int, events: Array<KeyEvent>): String? {
+        when (_status.value) {
+            Status.READY -> Unit
+            Status.NOT_RUNNING -> return "Shizuku isn't running"
+            Status.PERMISSION_NEEDED -> return "Sortie needs Shizuku permission"
+            Status.UNAVAILABLE -> return "Shizuku isn't available"
+        }
+        val reply = withContext(Dispatchers.IO) {
+            runCatching { shell.injectKeyEvents(displayId, events) }.getOrElse { "-1\n${it.message ?: it.javaClass.simpleName}" }
+        }
+        return if (reply.substringBefore('\n').trim() == "0") null else reply.substringAfter('\n').trim().ifEmpty { "Typing failed" }
     }
 
     /** `am stack remove` takes any task id, leaf tasks included (ActivityTaskManager.removeTask). */

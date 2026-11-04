@@ -70,6 +70,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,6 +79,7 @@ import io.github.esko997.sortie.stats.PerfFrame
 import io.github.esko997.sortie.stats.PerfMetric
 import io.github.esko997.sortie.stats.Sparkline
 import io.github.esko997.sortie.stats.StatsText
+import io.github.esko997.sortie.stats.StorageSpace
 import io.github.esko997.sortie.stats.ZoneGroup
 import java.util.Locale
 import kotlinx.coroutines.delay
@@ -230,8 +232,9 @@ fun CompanionPerfPage(frame: PerfFrame?) {
 }
 
 /**
- * Large numbers with a two-minute sparkline each, then the details: every core's clock and every thermal zone, grouped. A
- * metric the device never reported in the window gets no tile; the details appear once the first detailed poll is in.
+ * Large numbers with a two-minute sparkline each, free storage per volume, then the details: every core's clock and every
+ * thermal zone, grouped. A metric the device never reported in the window gets no tile; the details appear once the first
+ * detailed poll is in.
  * Stateless: everything comes from [frame], so it renders the same for the same frame (screenshot tests). A lazy list, so a
  * poll recomposes only what is on screen: the Thor reports some 60 zones, mostly below the fold.
  */
@@ -260,6 +263,16 @@ fun PerfPage(
                 Row(Modifier.padding(top = if (i > 0) TILE_GAP else 0.dp), horizontalArrangement = Arrangement.spacedBy(TILE_GAP)) {
                     for (m in row) MetricTile(frame, m, Modifier.weight(1f))
                     repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+            // no sparkline: free space barely moves within the two minutes, so these are plain readings in the same grid
+            frame.stats.storage?.takeIf { it.isNotEmpty() }?.let { spaces ->
+                item(key = "storage") { SectionLabel("Free storage") }
+                itemsIndexed(spaces.chunked(columns), key = { i, _ -> "storage-$i" }) { i, row ->
+                    Row(Modifier.padding(top = if (i > 0) TILE_GAP else 0.dp), horizontalArrangement = Arrangement.spacedBy(TILE_GAP)) {
+                        for (s in row) StorageTile(s, Modifier.weight(1f))
+                        repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
                 }
             }
             if (PerfMetric.CPU_LOAD !in metrics && frame.stats.zones == null) {
@@ -324,6 +337,48 @@ private fun MetricTile(frame: PerfFrame, metric: PerfMetric, modifier: Modifier)
         }
         Spacer(Modifier.height(4.dp))
         SparklineView(line, Modifier.fillMaxWidth().height(30.dp))
+    }
+}
+
+/**
+ * One volume's free space: Android's name for it, the free amount large, and the volume's size under it. A mounted volume
+ * that could not be read says so instead of showing zero.
+ */
+@Composable
+private fun StorageTile(space: StorageSpace, modifier: Modifier) {
+    val free = StatsText.gb(space.freeBytes)
+    val shape = RoundedCornerShape(10.dp)
+    Column(
+        modifier.clip(shape).background(PanelColour).border(1.dp, RuleColour, shape).padding(horizontal = 10.dp, vertical = 8.dp)
+            .semantics(mergeDescendants = true) {}
+    ) {
+        Text(
+            space.label,
+            style = MaterialTheme.typography.labelMedium,
+            color = Accent.copy(alpha = 0.85f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                free ?: StatsText.UNREADABLE,
+                style = LocalTextStyle.current.merge(Tabular),
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
+            Text(
+                if (free != null) "GB free" else "unreadable",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier.padding(bottom = 5.dp)
+            )
+        }
+        space.totalBytes?.let { total ->
+            Text("of ${StatsText.gb(total)} GB", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
     }
 }
 

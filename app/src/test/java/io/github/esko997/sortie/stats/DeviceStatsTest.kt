@@ -76,6 +76,33 @@ class DeviceStatsTest {
     }
 
     @Test
+    fun storageLineWrapsBetweenVolumes() {
+        val s = DeviceStats(
+            storage = listOf(
+                StorageSpace(StorageKind.INTERNAL, "Internal storage", 41_200_000_000, 128_000_000_000),
+                StorageSpace(StorageKind.SD, "SanDisk SD card", 212_400_000_000, 256_000_000_000),
+                StorageSpace(StorageKind.USB, "USB drive", 1_500_000_000_000, 2_000_000_000_000)
+            )
+        )
+        // only the space after each separator breaks: a narrow switcher wraps between volumes
+        assertEquals("Free: Internal 41 GB · SD 212 GB · USB 1500 GB", StatsText.storageLine(s).replace('\u00A0', ' '))
+        assertEquals(listOf(' ', ' '), StatsText.storageLine(s).filter { it == ' ' }.toList())
+    }
+
+    @Test
+    fun unreadableStorageIsADashNotZeroAndUnreadStorageIsNothing() {
+        val s = DeviceStats(
+            storage = listOf(
+                StorageSpace(StorageKind.INTERNAL, "Internal storage", 41_200_000_000, 128_000_000_000),
+                StorageSpace(StorageKind.OTHER, "Portable disk", null, null)
+            )
+        )
+        assertEquals("Free: Internal 41 GB · Portable disk —", StatsText.storageLine(s).replace('\u00A0', ' '))
+        assertEquals("", StatsText.storageLine(DeviceStats()))
+        assertEquals("", StatsText.storageLine(DeviceStats(storage = emptyList())))
+    }
+
+    @Test
     fun modeCyclesAndUnknownIsOff() {
         assertEquals(DeviceStatsMode.OFF, DeviceStatsMode.of("off"))
         assertEquals(DeviceStatsMode.OFF, DeviceStatsMode.of("sideways"))

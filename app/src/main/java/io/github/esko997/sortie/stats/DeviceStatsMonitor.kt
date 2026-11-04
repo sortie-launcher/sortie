@@ -40,9 +40,9 @@ class PerfFrame(val stats: DeviceStats, val history: StatsHistory.Snapshot)
 /**
  * Polls device stats while at least one surface collects them, and not at all otherwise: surfaces collect through
  * [whileShown] or [perfWhileShown], so with nothing shown there is no timer, no shell and no work. One batched shell probe
- * per poll through [ScreenMover] (Shizuku) plus two app-side reads (RAM from ActivityManager, the battery temperature from
- * the sticky battery broadcast) that work everywhere. The value resets to null when the last surface goes, so a returning
- * surface never shows numbers from minutes ago.
+ * per poll through [ScreenMover] (Shizuku) plus app-side reads that work everywhere: RAM from ActivityManager, the battery
+ * temperature from the sticky battery broadcast, and free storage from StorageManager and StatFs ([Storage.read]). The value
+ * resets to null when the last surface goes, so a returning surface never shows numbers from minutes ago.
  *
  * While a Perf view is shown, polls come every [perfIntervalSeconds] and run the detail probe (every core, every thermal zone);
  * a Perf view that opens during a longer wait cuts it short. Every poll goes into a [StatsHistory] that belongs to the
@@ -52,7 +52,7 @@ class DeviceStatsMonitor internal constructor(
     private val mover: ScreenMover,
     private val intervalSeconds: () -> Int,
     private val perfIntervalSeconds: () -> Int,
-    /** RAM and battery temperature, readable without the shell. */
+    /** RAM, battery temperature and free storage, readable without the shell. */
     private val appStats: () -> DeviceStats,
     scope: CoroutineScope,
     /** Monotonic milliseconds for the history's time axis. */
@@ -153,7 +153,8 @@ class DeviceStatsMonitor internal constructor(
                 DeviceStats(
                     ramUsedBytes = (memory.totalMem - memory.availMem).takeIf { memory.totalMem > 0 },
                     ramTotalBytes = memory.totalMem.takeIf { it > 0 },
-                    batteryTempC = batteryTempC(context)
+                    batteryTempC = batteryTempC(context),
+                    storage = Storage.read(context)
                 )
             }
         }

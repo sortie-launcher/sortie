@@ -13,11 +13,20 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * Sortie's built-in apps: screens that run as ordinary app tasks of their own, beside Sortie's navigation and whatever plays on
  * the other screen, rather than as navigation routes. Each has exactly one task ([activity] is singleTask with its own affinity),
- * a name for the switcher, and can be opened, reopened and moved on either screen without resetting what it shows.
+ * a name for the switcher, and can be opened, reopened and moved on either screen without resetting what it shows. The
+ * Keyboard ([typesOnOtherScreen]) types into the app on the other screen.
  */
 enum class BuiltinApp(val label: String, internal val activity: Class<out Activity>) {
     MAGAZINES("Magazines", MagazinesActivity::class.java),
-    PERFORMANCE("Performance", PerformanceActivity::class.java);
+    PERFORMANCE("Performance", PerformanceActivity::class.java),
+    QWERTY_KEYBOARD("Keyboard", QwertyKeyboardActivity::class.java);
+
+    /** The touch keyboard types into the app on the other screen (see [QwertyKeyboardActivity]). */
+    val typesOnOtherScreen: Boolean
+        get() = when (this) {
+            MAGAZINES, PERFORMANCE -> false
+            QWERTY_KEYBOARD -> true
+        }
 
     /** The task's root component as `cmd activity stack list` prints it (`package/class`). */
     internal fun component(packageName: String): String = "$packageName/${activity.name}"

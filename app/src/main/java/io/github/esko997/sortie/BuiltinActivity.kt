@@ -56,6 +56,9 @@ abstract class BuiltinActivity(private val app: BuiltinApp) : ComponentActivity(
 
     private val origin: () -> Int = { displayId() }
 
+    /** A keyboard's link to the app it types into; null for the other built-ins. */
+    internal open val keyboard: KeyboardWindow? get() = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // a move: carry on with the state the instance on the other screen saved, as if this were a recreation
         val state = savedInstanceState ?: handoffs.getValue(app).take(intent)
@@ -78,8 +81,13 @@ abstract class BuiltinActivity(private val app: BuiltinApp) : ComponentActivity(
                         color = Color.Transparent,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     ) {
-                        // recomputed when a recreation brings a new configuration (another display)
-                        val other = remember(LocalConfiguration.current) { BuiltinApps.otherDisplay(this, displayId()) }
+                        // Keyboard targets also follow display hotplug while this activity stays on its current screen.
+                        val keyboardWindow = keyboard
+                        val other = if (keyboardWindow != null) {
+                            keyboardWindow.target
+                        } else {
+                            remember(LocalConfiguration.current) { BuiltinApps.otherDisplay(this, displayId()) }
+                        }
                         val onMove = other?.let { target ->
                             {
                                 relocate(target, null)
@@ -87,7 +95,7 @@ abstract class BuiltinActivity(private val app: BuiltinApp) : ComponentActivity(
                             }
                         }
                         CompositionLocalProvider(LocalHotkeys provides hotkeys) {
-                            BuiltinContent(app, vm, request, onMove, onClose = ::finishAndRemoveTask)
+                            BuiltinContent(app, vm, request, onMove, onClose = ::finishAndRemoveTask, keyboard = keyboardWindow)
                         }
                     }
                 }
@@ -118,6 +126,9 @@ abstract class BuiltinActivity(private val app: BuiltinApp) : ComponentActivity(
         super.onPause()
     }
 
+    /** Stops a keyboard's queued input before moving this window to the other display. */
+    protected open fun leaving() {}
+
     override fun onDestroy() {
         if (live[app] === this) live.remove(app)
         if (vm.launchOrigin === origin) vm.launchOrigin = null
@@ -140,6 +151,7 @@ abstract class BuiltinActivity(private val app: BuiltinApp) : ComponentActivity(
         val saved = Bundle()
         onSaveInstanceState(saved)
         val intent = handoffs.getValue(app).offer(BuiltinApps.intent(this, app, opened), saved)
+        leaving()
         finishAndRemoveTask()
         return BuiltinApps.start(this, intent, target)
     }

@@ -40,27 +40,37 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.esko997.sortie.BuiltinApp
 import io.github.esko997.sortie.BuiltinRequest
+import io.github.esko997.sortie.KeyboardWindow
 import io.github.esko997.sortie.SortieApp
 import io.github.esko997.sortie.data.magazine.ReaderLocation
 
 /**
  * A built-in app's window actions: move it to the other screen ([movable] only when there is one) and close it. The hint bars of
- * that window offer them by touch ([HintBar]); [root] tells the window's own bars from the bars of its dialogs.
+ * that window offer them by touch ([HintBar]); [root] tells the window's own bars from the bars of its dialogs. [moveKey] is the
+ * controller button the move chip names, null for a touch-only keyboard that leaves controller focus with the other app.
  */
 @Stable
-class WindowActions(val root: View, val movable: Boolean, val move: () -> Unit, val close: () -> Unit)
+class WindowActions(val root: View, val movable: Boolean, val move: () -> Unit, val close: () -> Unit, val moveKey: String? = "X")
 
 /** Set inside a built-in app's window ([BuiltinContent]); null everywhere else, so other screens' hint bars are unchanged. */
 val LocalWindowActions = staticCompositionLocalOf<WindowActions?> { null }
 
 /**
  * A built-in app's whole content, inside its host window: Magazines (the reader, with the game and reference pages its links
- * open) or Performance. X moves the window to the other screen through [onMove] (null on one screen); [onClose] closes only
- * this window. B climbs back through the app and closes it from its first screen (the host finishes once nothing takes B).
- * [request] is a fresh "open this" from outside (a game page's "Featured in"), never repeated after recreation or a move.
+ * open), Performance, or a keyboard typing into the other screen through [keyboard]. X moves the window to the other screen
+ * through [onMove] (null on one screen); [onClose] closes only this window. B climbs back through the app and closes it from its
+ * first screen (the host finishes once nothing takes B). [request] is a fresh "open this" from outside (a game page's
+ * "Featured in"), never repeated after recreation or a move.
  */
 @Composable
-fun BuiltinContent(app: BuiltinApp, vm: SortieViewModel, request: BuiltinRequest?, onMove: (() -> Unit)?, onClose: () -> Unit) {
+internal fun BuiltinContent(
+    app: BuiltinApp,
+    vm: SortieViewModel,
+    request: BuiltinRequest?,
+    onMove: (() -> Unit)?,
+    onClose: () -> Unit,
+    keyboard: KeyboardWindow? = null
+) {
     val hotkeys = LocalHotkeys.current
     val move by rememberUpdatedState(onMove)
     val close by rememberUpdatedState(onClose)
@@ -73,11 +83,14 @@ fun BuiltinContent(app: BuiltinApp, vm: SortieViewModel, request: BuiltinRequest
     }
     LaunchedEffect(hotkeys) { hotkeys.events.collect { if (it == Hotkeys.Key.SWAP_SCREENS) move?.invoke() } }
     val root = LocalView.current.rootView
-    val actions = remember(root, movable) { WindowActions(root, movable, move = { move?.invoke() }, close = { close() }) }
+    val actions = remember(root, movable, app) {
+        WindowActions(root, movable, move = { move?.invoke() }, close = { close() }, moveKey = if (app.typesOnOtherScreen) null else "X")
+    }
     CompositionLocalProvider(LocalWindowActions provides actions) {
         when (app) {
             BuiltinApp.MAGAZINES -> MagazinesApp(vm, request)
             BuiltinApp.PERFORMANCE -> PerformanceApp()
+            BuiltinApp.QWERTY_KEYBOARD -> QwertyKeyboardApp(checkNotNull(keyboard))
         }
     }
 }
@@ -130,7 +143,7 @@ private const val READER = "reader"
 @Composable
 internal fun WindowActionChips(actions: WindowActions) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (actions.movable) WindowChip("Other screen", "X", actions.move)
+        if (actions.movable) WindowChip("Other screen", actions.moveKey, actions.move)
         WindowChip("Close", null, actions.close)
     }
 }
