@@ -171,7 +171,8 @@ private fun UserData.clamped() = copy(
     companionView = CompanionView.of(companionView).id,
     browseChrome = BrowseChromeMode.of(browseChrome).id,
     layout = layout.distinct(),
-    folders = folders.cleaned()
+    folders = folders.cleaned(),
+    folderViews = folderViews.cleaned()
 )
 
 /** What a restore would add to the sessions table. [addedMinutes] counts only the completed, non-abandoned sessions it adds. */

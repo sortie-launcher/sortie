@@ -64,7 +64,7 @@ fun AppsScreen(vm: SortieViewModel) {
     var showAll by rememberSaveable { mutableStateOf(false) }
     var sheet by remember { mutableStateOf<LibraryItem?>(null) }
     val grid = user.browseLayout == "grid"
-    BrowseLayoutHotkey(vm, grid)
+    BrowseLayoutHotkey(grid, vm::setBrowseLayout)
     val openBuiltinApp = rememberBuiltinOpener()
     val creators by produceState(emptyList<ShortcutCreator>(), showCreators) { if (showCreators) value = vm.shortcutCreators() }
     val createShortcut = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->

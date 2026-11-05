@@ -1,11 +1,15 @@
 package io.github.esko997.sortie.data.user
 
+import io.github.esko997.sortie.data.folders.folderLayout
 import io.github.esko997.sortie.data.folders.withAddedToFolder
+import io.github.esko997.sortie.data.folders.withFolderLayout
 import io.github.esko997.sortie.data.folders.withFolderRenamed
+import io.github.esko997.sortie.data.folders.withFolderSort
 import io.github.esko997.sortie.data.folders.withMoved
 import io.github.esko997.sortie.data.folders.withNewFolder
 import io.github.esko997.sortie.data.manifest.ControllerSupport
 import io.github.esko997.sortie.data.manifest.FolderDef
+import io.github.esko997.sortie.data.manifest.FolderPreferences
 import io.github.esko997.sortie.data.manifest.FoldersManifest
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.GameBookmark
@@ -105,6 +109,29 @@ class UserStoreTest {
         )
         val onDisk = Json.parseToJsonElement(file.readText()).jsonObject.getValue("folders")
         assertEquals(reloaded.folders, Json.decodeFromJsonElement(FoldersManifest.serializer(), JsonObject(mapOf("folders" to onDisk))).folders)
+    }
+
+    /**
+     * Display choices for a built-in folder and a folders.json one come back on the next start, each its own, without the
+     * folders.json one becoming an in-app folder; one reset in between leaves that folder following the browse layout.
+     */
+    @Test
+    fun folderViewChoicesPersistPerFolder() = runBlocking {
+        val file = fresh()
+        val store = UserStore(file, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        store.setBrowseLayout("grid")
+        store.editFolders { it.withFolderSort("favourites", "lastPlayed:desc").withFolderLayout("favourites", "list") }
+        store.editFolders { it.withFolderSort("desk", "playMinutes:desc").withFolderLayout("desk", "list") }
+        store.editFolders { it.withFolderLayout("desk", null) }
+        val expected = store.data.value
+        withTimeout(5_000) { store.written.first { it == expected } }
+        val reloaded = UserStore(file).data.value
+        assertEquals(
+            mapOf("favourites" to FolderPreferences("lastPlayed:desc", "list"), "desk" to FolderPreferences(sort = "playMinutes:desc")),
+            reloaded.folderViews
+        )
+        assertEquals("grid", reloaded.folderLayout("desk"))
+        assertEquals(emptyList<FolderDef>(), reloaded.folders)
     }
 
     /** A durable save is on disk when it returns and published only then. */

@@ -3,6 +3,7 @@ package io.github.esko997.sortie.data.folders
 import io.github.esko997.sortie.data.manifest.FolderDef
 import io.github.esko997.sortie.data.manifest.FolderDef.Companion.FOLDER_POINTER
 import io.github.esko997.sortie.data.manifest.FolderDef.Companion.SYSTEM_POINTER
+import io.github.esko997.sortie.data.manifest.FolderPreferences
 import io.github.esko997.sortie.data.manifest.UserData
 
 /** Longest in-app folder name, in characters. */
@@ -28,7 +29,10 @@ fun newFolderId(label: String, taken: Set<String>): String {
  * saved as the layout whenever Home changes, as a Move on Home does, so automatic tiles keep their places.
  */
 
-/** Adds an empty in-app folder [id] named [label] to [into] (null: Home), just before [beside] when it is there. */
+/**
+ * Adds an empty in-app folder [id] named [label] to [into] (null: Home), just before [beside] when it is there. It starts with
+ * the default view: display choices left under its id by a folder no longer here are not inherited.
+ */
 fun UserData.withNewFolder(id: String, label: String, into: String?, beside: String?, home: List<String>): UserData {
     val tile = FOLDER_POINTER + id
     val placed = if (into == null) {
@@ -36,7 +40,7 @@ fun UserData.withNewFolder(id: String, label: String, into: String?, beside: Str
     } else {
         editFolder(into) { it.copy(include = it.include.placed(tile, before = beside)) }
     }
-    return placed.copy(folders = placed.folders + FolderDef(id, folderLabel(label, id)))
+    return placed.copy(folders = placed.folders + FolderDef(id, folderLabel(label, id)), folderViews = placed.folderViews - id)
 }
 
 /**
@@ -62,10 +66,46 @@ fun UserData.withRemovedFromFolder(tileId: String, from: String): UserData = edi
 
 fun UserData.withFolderRenamed(id: String, label: String): UserData = editFolder(id) { it.copy(label = folderLabel(label, id)) }
 
-/** Sort by… choices for a folder Sortie edits: what the sheet shows, and the [FolderDef.sort] it sets ([RuleEngine.comparator]). */
+/**
+ * Sort by… choices for any folder: what the chooser shows, and the order it saves in [UserData.folderViews]
+ * ([RuleEngine.comparator]). The folder's own [FolderDef.sort] stays its default.
+ */
 val FOLDER_SORTS = listOf("Title" to "title:asc", "Recently played" to "lastPlayed:desc", "Recently added" to "added:desc", "Play time" to "playMinutes:desc")
 
-fun UserData.withFolderSort(id: String, sort: String): UserData = editFolder(id) { it.copy(sort = sort) }
+/** What the chooser calls [sort]'s order: the Sort by… choice its first key matches, else "Folder default". */
+fun folderSortLabel(sort: String): String {
+    val first = sort.substringBefore(',').split(':').map { it.trim() }
+    val key = "${first[0]}:${first.getOrNull(1)?.ifEmpty { null } ?: "asc"}"
+    return FOLDER_SORTS.firstOrNull { it.second == key }?.first ?: "Folder default"
+}
+
+/** [sort] when it is a Sort by… choice, else null: an unknown or old value never reorders a folder. */
+internal fun folderSort(sort: String?): String? = sort?.takeIf { s -> FOLDER_SORTS.any { it.second == s } }
+
+/** [layout] when a folder may keep it apart from the browse layout ("list" or "grid"), else null. */
+private fun folderLayoutOf(layout: String?): String? = layout?.takeIf { it == "list" || it == "grid" }
+
+/**
+ * Folder [id] (any folder, built-in ones included) shows its members in [sort] order, a [FOLDER_SORTS] value; null or any
+ * other value goes back to the folder's own order. Only the view changes: the definition, and so its members, stay.
+ */
+fun UserData.withFolderSort(id: String, sort: String?): UserData = withFolderView(id) { it.copy(sort = folderSort(sort)) }
+
+/** Folder [id] shows as [layout] ("list" or "grid"); null or any other value goes back to the browse layout. */
+fun UserData.withFolderLayout(id: String, layout: String?): UserData = withFolderView(id) { it.copy(layout = folderLayoutOf(layout)) }
+
+/** The layout folder [id] shows: its own choice, else [UserData.browseLayout]. */
+fun UserData.folderLayout(id: String): String = folderLayoutOf(folderViews[id]?.layout) ?: browseLayout
+
+/** Backup restore: blank ids and values this build does not know dropped, and with them entries left choosing nothing. */
+fun Map<String, FolderPreferences>.cleaned(): Map<String, FolderPreferences> = filterKeys { it.isNotBlank() }
+    .mapValues { (_, p) -> FolderPreferences(folderSort(p.sort), folderLayoutOf(p.layout)) }
+    .filterValues { !it.isEmpty() }
+
+private fun UserData.withFolderView(id: String, f: (FolderPreferences) -> FolderPreferences): UserData {
+    val next = f(folderViews[id] ?: FolderPreferences())
+    return copy(folderViews = if (next.isEmpty()) folderViews - id else folderViews + (id to next))
+}
 
 /** Sets (null: clears) the game whose cover folder [id]'s tile shows ([FolderView.coverArt]). */
 fun UserData.withFolderCover(id: String, game: String?): UserData = editFolder(id) { it.copy(cover = game) }
@@ -84,7 +124,7 @@ fun UserData.withoutAdopted(defs: List<FolderDef>): UserData = copy(folders = fo
  * Deletes in-app folder [id]. Its folder and system pointers take its place where it was shown: in each in-app folder among
  * [parents] (its resolved [FolderView.parents]), else on Home (where its tile was, or at the end), so nothing it held becomes
  * unreachable; any other pointer to it (a cycle that was not followed) just goes. The games, apps and shortcuts it listed stay
- * in the library; only this folder's list of them goes.
+ * in the library; only this folder's list of them, and its display choices, go.
  */
 fun UserData.withoutFolder(id: String, parents: Collection<String>, home: List<String>): UserData {
     val def = folders.firstOrNull { it.id == id } ?: return this
@@ -99,7 +139,11 @@ fun UserData.withoutFolder(id: String, parents: Collection<String>, home: List<S
         }
     }
     // Home's order holds the pointers already (nested tiles keep a saved place): they move into the folder's slot
-    return copy(folders = rest, layout = if (held) layout - tile else (home - pointers.toSet()).replaced(tile, pointers))
+    return copy(
+        folders = rest,
+        layout = if (held) layout - tile else (home - pointers.toSet()).replaced(tile, pointers),
+        folderViews = folderViews - id
+    )
 }
 
 /**

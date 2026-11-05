@@ -10,6 +10,7 @@ import io.github.esko997.sortie.data.db.PlayStat
 import io.github.esko997.sortie.data.db.SortieDb
 import io.github.esko997.sortie.data.manifest.FAVOURITES_FOLDER_ID
 import io.github.esko997.sortie.data.manifest.FolderDef
+import io.github.esko997.sortie.data.manifest.FolderPreferences
 import io.github.esko997.sortie.data.manifest.ManifestStore
 import io.github.esko997.sortie.data.manifest.UserData
 import io.github.esko997.sortie.data.manifest.WANT_TO_PLAY_FOLDER_ID
@@ -30,10 +31,11 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * A folder evaluated against the current library, installed apps, launcher shortcuts, play data and favourites. [items] are its
- * games, apps and shortcuts; [children] the `folder:<id>` and `system:<id>` pointers it shows ahead of them, in include order,
- * and [parents] the folders that show it, with [level] its depth (1 on Home's top level); see [nestFolders].
+ * games, apps and shortcuts, in [displaySort] order; [children] the `folder:<id>` and `system:<id>` pointers it shows ahead of
+ * them, in include order, and [parents] the folders that show it, with [level] its depth (1 on Home's top level); see
+ * [nestFolders].
  * [inApp] marks a folder made on the device (user.json `folders`); [editable] ones are what Sortie renames, deletes or files
- * things into.
+ * things into. [displaySort] is the order shown: the user's Sort by… choice for it ([UserData.folderViews]), else [def]'s own.
  */
 data class FolderView(
     val def: FolderDef,
@@ -42,7 +44,8 @@ data class FolderView(
     val inApp: Boolean = false,
     val children: List<String> = emptyList(),
     val parents: List<String> = emptyList(),
-    val level: Int = 1
+    val level: Int = 1,
+    val displaySort: String = def.sort
 ) {
     /** Every folder but the built-in ones: a `folders.json` folder moves into user.json on its first edit (see SortieViewModel). */
     val editable: Boolean get() = inApp || def.id !in BUILT_IN_FOLDER_IDS
@@ -88,7 +91,7 @@ class FolderRepository(
             val items = folderCandidates(games, appList, shortcutList, u)
             val byId = items.associateBy { it.id }
             val subjects = items.map { subjectOf(it, stats[it.id], it.id in u.favourites, now) }
-            val views = evaluateFolders(snap.folders, u.wantToPlay, u.gameProgress, subjects, byId, u.folders, u.hidden)
+            val views = evaluateFolders(snap.folders, u.wantToPlay, u.gameProgress, subjects, byId, u.folders, u.hidden, u.folderViews)
             nestFolders(views, snap.systems.mapTo(HashSet()) { it.id })
         }.catch { e ->
             Log.w(TAG, "folder evaluation failed", e)
@@ -178,6 +181,8 @@ private class BuiltInFolder(val def: FolderDef, val gamesOnly: Boolean)
  * skipped here and stay in user.json. So that `folder:<id>` names one folder only, a `folders.json` entry claiming a reserved
  * id is dropped (reported on that built-in folder); an in-app folder with a reserved id is dropped, one sharing a
  * `folders.json` entry's id wins over that entry, and of in-app folders sharing an id the first is kept.
+ * A folder's Sort by… choice in [folderViews] only reorders the members its own definition chose (sort, limit and all); an
+ * unknown choice is ignored.
  */
 internal fun evaluateFolders(
     defs: List<FolderDef>,
@@ -186,8 +191,14 @@ internal fun evaluateFolders(
     subjects: List<Subject>,
     byId: Map<String, LibraryItem>,
     inApp: List<FolderDef> = emptyList(),
-    hidden: Set<String> = emptySet()
+    hidden: Set<String> = emptySet(),
+    folderViews: Map<String, FolderPreferences> = emptyMap()
 ): List<FolderView> {
+    fun view(def: FolderDef, members: List<Subject>, problems: List<String>, isInApp: Boolean = false): FolderView {
+        val sort = folderSort(folderViews[def.id]?.sort)
+        val ordered = if (sort == null || sort == def.sort) members else members.sortedWith(RuleEngine.comparator(sort))
+        return FolderView(def, ordered.mapNotNull { byId[it.id] }, problems, inApp = isInApp, displaySort = sort ?: def.sort)
+    }
     val shown = subjects.filter { it.id !in hidden }
     val favourites = shown.filter { it.favourite }.map { it.id }
     val builtIn = listOf(
@@ -205,7 +216,7 @@ internal fun evaluateFolders(
     val views = manifest.filter { it.id !in ownIds }.map { it to false } + own.map { it to true }
     return views.map { (def, isInApp) ->
         val result = RuleEngine.evaluate(def, shown)
-        FolderView(def, result.subjects.mapNotNull { byId[it.id] }, result.problems, inApp = isInApp)
+        view(def, result.subjects, result.problems, isInApp)
     } + builtIn.map { folder ->
         val def = folder.def
         val pool = if (def.id == HIDDEN_FOLDER_ID) subjects else shown
@@ -215,6 +226,6 @@ internal fun evaluateFolders(
         } else {
             listOf("folders.json defines \"${def.id}\", which is reserved for this built-in folder; that entry is ignored")
         }
-        FolderView(def, members.mapNotNull { byId[it.id] }, problems)
+        view(def, members, problems)
     }
 }

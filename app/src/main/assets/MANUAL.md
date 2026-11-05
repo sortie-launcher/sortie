@@ -93,7 +93,7 @@ Repeat **Add a system…** for each kind of game. You can leave Library while it
   from favourites. The *Want to play* folder is always on **Home → Custom**; launching a game keeps it queued
 - **Y** on Home: search the whole library. On a system or folder screen: search only there. On a game's page: favourite
 - **L2**: while the after-playing bookmark card shows, leave a note. In a magazine article: browse the picture sequence in view
-- **Select**: list ↔ grid; on a game's page: **Launch with…** (choosing an emulator saves that game's preference and launches it)
+- **Select**: list ↔ grid, saved for this folder when inside one; on a game's page: **Launch with…** (choosing an emulator saves that game's preference and launches it)
 - **Left / Right** in list view: jump to the previous / next starting letter (titles starting with digits or symbols are grouped
   under #). Works while the list is in title order; in grid view press **Select** for the list first
 - **Home key**: the switcher when Sortie is the default Home app and Shizuku is ready; otherwise Android's usual Home action
@@ -129,6 +129,14 @@ Folders tidy **Custom**: put systems, games, apps, shortcuts and other folders (
 smart folders too) inside a folder of your own. A folder inside a folder is the same folder, not a copy: Favourites inside
 *My lists* is still Favourites.
 
+- Inside any folder, **Sort: …** shows and changes its order: **Title**, **Recently played**, **Recently added** or **Play time**.
+  Each folder remembers its choice, including Favourites and the other built-in shelves. **Folder default** restores its
+  configured order. Hold A on a folder tile → **Sort by…** offers the same choices. Sorting changes the order, not which
+  games a smart folder's rules and limit include; folders and systems still come first.
+- **View: List/Grid** changes only that folder's layout; **Select** toggles it too. **Browse default** returns to following
+  Settings → Browse layout, shared by system lists, search and Apps. With the header folded, tap its chevron or press Up
+  from the first row to reveal Sort and View.
+
 - On Custom, hold A on a tile → **Move to folder…** and pick one of your folders, or **New folder…** to name one; the new
   folder takes the tile's place and the tile goes inside. **New folder…** in the same sheet makes an empty folder next to the
   tile. Continue and Apps stay on Home.
@@ -139,13 +147,14 @@ smart folders too) inside a folder of your own. A folder inside a folder is the 
   it up to the folder above (or Home). Hold A on a game, app or shortcut it holds → **Remove from folder**, which leaves it in
   your library; **Add to home** and **Add to folder…** put it elsewhere.
 - Hold A on any folder except the built-in ones (Favourites, Want to play, Finished, Shelved, Hidden, Recently added) →
-  **Rename…**, **Sort by…** (Title, Recently played, Recently added, Play time) or **Delete folder…**, which asks first.
+  **Rename…** or **Delete folder…**, which asks first.
   A folder is only a set of pointers: deleting one never deletes games, systems or files. What it held moves to where the
   folder was. When it holds folders of your own, choose **Delete folder, keep its folders** (they move up too) or
   **Delete folder and the folders inside**, which also deletes those inside it that no other folder shows; the systems and
   built-in folders they held move up instead.
 - Folders that came with your library's **folders.json**, such as ones imported from Cocoon, work the same way: the first
-  change moves the folder onto the device, into your preferences and backups, and takes it out of folders.json. If that file
+  edit to their definition moves the folder onto the device, into your preferences and backups, and takes it out of
+  folders.json. Sort and View save separate display choices without moving or changing that definition. If a definition
   can't be written, nothing changes and a message says why. Copying an older folders.json from a computer later can bring
   the original back; the version on the device keeps priority.
 - A folder's tile shows the cover of a game inside it, the first in the folder's order that has one. To choose, hold A on a

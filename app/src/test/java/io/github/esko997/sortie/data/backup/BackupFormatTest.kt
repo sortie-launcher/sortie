@@ -4,6 +4,7 @@ import io.github.esko997.sortie.data.db.SessionEntity
 import io.github.esko997.sortie.data.magazine.MagazineClipping
 import io.github.esko997.sortie.data.manifest.ControllerSupport
 import io.github.esko997.sortie.data.manifest.FolderDef
+import io.github.esko997.sortie.data.manifest.FolderPreferences
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 import io.github.esko997.sortie.data.manifest.GameBookmark
 import io.github.esko997.sortie.data.manifest.UserData
@@ -35,6 +36,11 @@ class BackupFormatTest {
         folders = listOf(
             FolderDef("lists", "Lists", include = listOf("folder:want-to-play", "folder:mechs")),
             FolderDef("mechs", "Mechs", include = listOf("system:ps2", "ps2/Armored Core 3 (USA).chd"))
+        ),
+        // display choices for a built-in folder and an in-app one, kept apart
+        folderViews = mapOf(
+            "favourites" to FolderPreferences(sort = "playMinutes:desc"),
+            "mechs" to FolderPreferences(sort = "added:desc", layout = "grid")
         ),
         dock = listOf("app:org.ppsspp.ppsspp", "", "", "", ""),
         gameAnnotations = mapOf("ps2/Armored Core 3 (USA).chd" to GameAnnotation(ControllerSupport.GAMEPAD)),
@@ -172,7 +178,8 @@ class BackupFormatTest {
     @Test
     fun outOfRangePreferencesAreClamped() {
         val text = """{"format": "sortie-backup", "version": 1, "createdAt": 1, "sessions": [],""" +
-            """ "user": {"gridColumns": 99, "gridRows": 0, "layout": ["x", "x"], "browseChrome": "sideways"}}"""
+            """ "user": {"gridColumns": 99, "gridRows": 0, "layout": ["x", "x"], "browseChrome": "sideways",""" +
+            """ "folderViews": {"favourites": {"sort": "sideways", "layout": "grid"}, "mechs": {"sort": "fit:desc"}, "": {"layout": "list"}}}}"""
         val u = valid(text).backup.user
         assertEquals(10, u.gridColumns)
         assertEquals(2, u.gridRows)
@@ -181,6 +188,8 @@ class BackupFormatTest {
         assertNull(valid(text).backup.openSessionExcluded)
         // a backup from before in-app folders restores none, so Custom home shows every folder and system again
         assertEquals(emptyList<FolderDef>(), u.folders)
+        // display choices no build offers go; a folder's other choice stays
+        assertEquals(mapOf("favourites" to FolderPreferences(layout = "grid")), u.folderViews)
     }
 
     /** Hand-edited in-app folders are cleaned on restore: a repeated id keeps the first, a blank name falls back to the id. */

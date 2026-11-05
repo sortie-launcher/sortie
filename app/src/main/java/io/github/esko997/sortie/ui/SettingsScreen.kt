@@ -110,7 +110,7 @@ fun SettingsScreen(
                         "Browse layout",
                         LAYOUTS,
                         if (grid) 1 else 0,
-                        detail = "System lists, folders, search and Apps",
+                        detail = "System lists, search, Apps, and folders without their own View",
                         onCycle = { vm.setBrowseLayout(if (grid) "list" else "grid") }
                     ) { vm.setBrowseLayout(if (it == 1) "grid" else "list") }
                 }
