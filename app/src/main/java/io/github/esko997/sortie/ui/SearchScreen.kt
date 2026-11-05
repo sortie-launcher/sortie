@@ -211,7 +211,7 @@ fun SearchScreen(vm: SortieViewModel, onGame: (String) -> Unit) {
     }?.let { "In: $it" }
     var sheet by remember { mutableStateOf<LibraryItem?>(null) }
     val grid = user.browseLayout == "grid"
-    BrowseLayoutHotkey(vm, grid)
+    BrowseLayoutHotkey(grid, vm::setBrowseLayout)
     // Nothing asked or nothing found: the filters stay open (the ways out of an empty result need them). The search box itself
     // is never part of the fold, so it stays usable while typing.
     val chrome = rememberBrowseChrome(user.browseChrome, pinned = !filters.hasCriteria || (fresh && games.isEmpty()))

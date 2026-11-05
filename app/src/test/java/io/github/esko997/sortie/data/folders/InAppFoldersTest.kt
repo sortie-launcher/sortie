@@ -162,8 +162,8 @@ class InAppFoldersTest {
         assertEquals(listOf(mine, tools), adopted.folders)
         assertEquals(user, adopted.withoutAdopted(listOf(tools)))
 
-        val edited = adopted.withFolderRenamed("tools", "Utilities").withFolderSort("tools", "playMinutes:desc").withFolderCover("tools", trapt)
-        assertEquals(tools.copy(label = "Utilities", sort = "playMinutes:desc", cover = trapt), edited.folders.single { it.id == "tools" })
+        val edited = adopted.withFolderRenamed("tools", "Utilities").withFolderCover("tools", trapt)
+        assertEquals(tools.copy(label = "Utilities", cover = trapt), edited.folders.single { it.id == "tools" })
         // edited meanwhile: an undo keeps it
         assertEquals(edited, edited.withoutAdopted(listOf(tools)))
         assertEquals(null, edited.withFolderCover("tools", null).folders.single { it.id == "tools" }.cover)

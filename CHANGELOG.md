@@ -5,6 +5,10 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
+- Every folder, including built-in shelves, remembers its own **Sort** and **View** (list/grid). Change them from inside the
+  folder; **Select** changes only that folder's view. Choose **Folder default** or **Browse default** to inherit again.
+  Sort offers Title, Recently played, Recently added and Play time. It reorders existing members without changing a smart
+  folder's rules or limit, and display choices never move a folders.json definition into user.json.
 - **Performance** and the switcher's compact stats show free internal and mounted SD/USB storage in GB. Full Perf views
   also show total capacity. Storage needs no Shizuku and refreshes only while a stats surface is visible.
 - **Apps → Keyboard** opens a touch QWERTY panel that types into the app on the other screen through Shizuku. It can move
@@ -21,10 +25,9 @@ for published builds.
   without a launchers.json entry; a launchers.json profile of the same id still wins.
 - **Delete folder…** on a folder that holds folders of your own can delete them with it, or keep them; either way only
   folders go, never games, systems or files, and the confirmation says so.
-- Folders from the card's folders.json (for example, ones imported from Cocoon) can be renamed, sorted, deleted, given a
-  cover and filed into on the device; the first edit moves the folder into your on-device folders.
-- **Sort by…** (Title, Recently played, Recently added, Play time) on any folder you can edit. Folder tiles show a game's
-  artwork: one inside the folder, or the one picked with **Use as folder cover**.
+- Folders from the card's folders.json (for example, ones imported from Cocoon) can be renamed, deleted, given a cover
+  and filed into on the device; the first edit to their definition moves them into your on-device folders.
+- Folder tiles show a game's artwork: one inside the folder, or the one picked with **Use as folder cover**.
 - **Y** inside a folder also searches the folders inside it.
 - **Hide from folders** on a game's hold-A sheet; a built-in **Hidden** folder lists hidden games (and apps a Cocoon import
   hid) with **Unhide**. A built-in **Recently added** folder lists games added in the last 14 days. Both appear on Custom

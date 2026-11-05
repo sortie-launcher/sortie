@@ -50,6 +50,11 @@ Sort keys: `fit`, `title`, `year`, `lastPlayed`, `playMinutes`, `added`, `system
 `:desc`, comma-separated. `random` shuffles the members each time the folder is re-evaluated (library, play
 data, favourites or manifests changed); next to other keys it is the final tiebreaker (`fit:desc,random`).
 
+The folder's `sort` remains its default and determines which members a positive `limit` selects. In the app, **Sort**
+chooses a display order saved separately in [user.json](user.md)'s `folderViews`: it reorders those members **after**
+rule evaluation, the configured sort and the limit. **Folder default** clears that override. Built-in folders support
+the same display choices, and **View** saves a separate per-folder list/grid choice.
+
 The ids `favourites`, `want-to-play`, `finished`, `shelved`, `hidden` and `recently-added` are reserved for Sortie's built-in
 folders. The first four use `favourites`, `wantToPlay` and `gameProgress` in [user.json](user.md), not rules from this file;
 `hidden` lists everything in `user.hidden`, and `recently-added` the games added in the last 14 days, newest first. A
@@ -86,11 +91,12 @@ pointer to it stays on Custom Home.
 
 Folders made on the device (Custom Home's **Move to folder…** and **New folder…**, **Add to folder…** on a game) are stored in
 `folders` in [user.json](user.md) with this same schema, so they are in backups and `deploy.sh` cannot replace them. An entry
-from this file becomes such a folder the first time it is edited on the device (renamed, sorted, given a cover, deleted,
+from this file becomes such a folder the first time its definition is edited on the device (renamed, given a cover, deleted,
 filed into or out of, or when a folder it shows is deleted): its definition, with the same `id` and every field above, moves
 into user.json and is removed from this file; keys this page does not list (such as a note) are not carried over. A later
 copy of an older file can bring the entry back here; if an in-app folder and an entry here share an `id`, the in-app folder
 wins and the entry here is ignored. An in-app folder with a reserved id is ignored.
+Changing **Sort** or **View** does not adopt a folder: this file and its rule, includes, configured sort and limit stay unchanged.
 
 ## Recently played tags (`recentTags`)
 

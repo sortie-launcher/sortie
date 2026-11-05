@@ -26,6 +26,7 @@ import io.github.esko997.sortie.data.folders.ownedSubfolders
 import io.github.esko997.sortie.data.folders.withAddedToFolder
 import io.github.esko997.sortie.data.folders.withAdopted
 import io.github.esko997.sortie.data.folders.withFolderCover
+import io.github.esko997.sortie.data.folders.withFolderLayout
 import io.github.esko997.sortie.data.folders.withFolderRenamed
 import io.github.esko997.sortie.data.folders.withFolderSort
 import io.github.esko997.sortie.data.folders.withMoved
@@ -258,7 +259,7 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     fun setAppColumns(n: Int) = graph.user.setAppColumns(n)
 
-    /** List or grid for every browse screen (system, folder, search, apps); one setting, separate from home. */
+    /** List or grid for the browse screens (system, search, apps, and folders without their own choice); separate from home. */
     fun setBrowseLayout(layout: String) = graph.user.setBrowseLayout(layout)
 
     /** Header and hint density for Home and every browse screen; one setting for all of them. */
@@ -413,7 +414,14 @@ class SortieViewModel(app: Application, private val saved: SavedStateHandle) : A
 
     fun renameFolder(id: String, label: String) = editFolders(listOf(id), {}) { it.withFolderRenamed(id, label) }
 
-    fun sortFolder(id: String, sort: String) = editFolders(listOf(id), {}) { it.withFolderSort(id, sort) }
+    /**
+     * Shows folder [id] in order [sort] (one of FOLDER_SORTS; null: the folder's own order again). Only how it is shown, saved for
+     * any folder, built-in ones too: unlike the edits above it never adopts a folders.json folder, nor changes what is in it.
+     */
+    fun sortFolder(id: String, sort: String?) = graph.user.editFolders { it.withFolderSort(id, sort) }
+
+    /** Shows folder [id] as a "list" or "grid" (null: as the browse layout again); saved for that folder only, like [sortFolder]. */
+    fun setFolderLayout(id: String, layout: String?) = graph.user.editFolders { it.withFolderLayout(id, layout) }
 
     /** Folder [id]'s tile shows game [game]'s cover (null: the first game's with one again). */
     fun setFolderCover(id: String, game: String?, ok: () -> Unit = {}) = editFolders(listOf(id), ok) { it.withFolderCover(id, game) }

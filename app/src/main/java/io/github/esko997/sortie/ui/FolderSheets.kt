@@ -37,7 +37,10 @@ import io.github.esko997.sortie.data.folders.FOLDER_SORTS
 import io.github.esko997.sortie.data.folders.FolderView
 import io.github.esko997.sortie.data.folders.MAX_FOLDER_DEPTH
 import io.github.esko997.sortie.data.folders.below
+import io.github.esko997.sortie.data.folders.folderSort
+import io.github.esko997.sortie.data.folders.folderSortLabel
 import io.github.esko997.sortie.data.folders.ownedSubfolders
+import io.github.esko997.sortie.data.manifest.UserData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -167,8 +170,8 @@ private fun moveToFolderAction(
 
 /**
  * Hold-A filing actions for tile [tileId] on Home ([from] null; any tile but Continue and Apps) or for a folder or system
- * shown in folder [from]: Move to folder… when it sits on Home or in an editable folder, and Rename… / Sort by… / Delete
- * folder… when it is an editable folder itself.
+ * shown in folder [from]: Move to folder… when it sits on Home or in an editable folder, Sort by… when it is a folder (built-in
+ * ones too), and Rename… / Delete folder… when it is an editable folder.
  */
 fun folderTileActions(
     vm: SortieViewModel,
@@ -180,9 +183,46 @@ fun folderTileActions(
 ): List<SheetAction> {
     val movable = (from == null || from.editable) && tileId != HomeIds.CONTINUE && tileId != HomeIds.APPS
     val move = if (movable) moveToFolderAction(vm, folders, tileId, from, context, next) else null
-    val own = folders.firstOrNull { it.editable && HomeIds.FOLDER + it.def.id == tileId }
-    return listOfNotNull(move) + own?.let { editFolderActions(vm, folders, it, context, next) }.orEmpty()
+    val folder = folders.firstOrNull { HomeIds.FOLDER + it.def.id == tileId } ?: return listOfNotNull(move)
+    val sort = SheetAction("Sort by…") {
+        next(SheetStep.Choose(folderSortTitle(folder), folderSortChoices(vm, folder, vm.user.value.folderSortChoice(folder.def.id))))
+    }
+    return listOfNotNull(move) + if (folder.editable) editFolderActions(vm, folders, folder, sort, context, next) else listOf(sort)
 }
+
+/** A folder's own Sort by… choice ([UserData.folderViews]) when it is one of [FOLDER_SORTS]; null: the folder's own order. */
+fun UserData.folderSortChoice(id: String): String? = folderSort(folderViews[id]?.sort)
+
+/** A folder's own list or grid choice ([UserData.folderViews]); null: the browse layout. */
+fun UserData.folderLayoutChoice(id: String): String? = folderViews[id]?.layout?.takeIf { it == "list" || it == "grid" }
+
+fun folderSortTitle(folder: FolderView): String = "Sort “${folder.def.label}” by"
+
+/**
+ * The orders [folder] can be shown in, [chosen] ([folderSortChoice]) ticked: first its own ([FolderDef.sort], named when it is
+ * one of [FOLDER_SORTS]), then each of [FOLDER_SORTS]. Only the order changes, never what the folder holds or its definition.
+ */
+fun folderSortChoices(vm: SortieViewModel, folder: FolderView, chosen: String?): List<SheetAction> {
+    val id = folder.def.id
+    val ownName = folderSortLabel(folder.def.sort)
+    val own = if (FOLDER_SORTS.any { it.first == ownName }) "Folder default ($ownName)" else ownName
+    return listOf(SheetAction(ticked(own, chosen == null)) { vm.sortFolder(id, null) }) +
+        FOLDER_SORTS.map { (label, sort) -> SheetAction(ticked(label, chosen == sort)) { vm.sortFolder(id, sort) } }
+}
+
+/** List or grid for [folder], [chosen] ([folderLayoutChoice]) ticked; the first follows the browse layout [browse] (Settings). */
+fun folderLayoutChoices(vm: SortieViewModel, folder: FolderView, chosen: String?, browse: String): List<SheetAction> {
+    val id = folder.def.id
+    return listOf(
+        SheetAction(ticked("Browse default (${layoutName(browse)})", chosen == null)) { vm.setFolderLayout(id, null) },
+        SheetAction(ticked("List", chosen == "list")) { vm.setFolderLayout(id, "list") },
+        SheetAction(ticked("Grid", chosen == "grid")) { vm.setFolderLayout(id, "grid") }
+    )
+}
+
+fun layoutName(layout: String): String = if (layout == "grid") "Grid" else "List"
+
+private fun ticked(label: String, on: Boolean) = if (on) "✓ $label" else label
 
 /** "Add to folder…" for game, app or shortcut [id]: an editable folder that does not list it yet, or a New folder… on Home. */
 fun addToFolderAction(vm: SortieViewModel, folders: List<FolderView>, id: String, context: Context, next: (SheetStep) -> Unit): SheetAction =
@@ -236,23 +276,19 @@ internal fun randomPick(t: HomeTile, scope: CoroutineScope, context: Context, on
 }
 
 /**
- * Rename…, Sort by… and Delete folder… for editable folder [folder]. Deleting asks first; when it holds folders of its own, the
+ * Rename…, [sort] and Delete folder… for editable folder [folder]. Deleting asks first; when it holds folders of its own, the
  * folder can go with them. Folders are only pointers: no game, system or file ever leaves the library.
  */
 private fun editFolderActions(
     vm: SortieViewModel,
     folders: List<FolderView>,
     folder: FolderView,
+    sort: SheetAction,
     context: Context,
     next: (SheetStep) -> Unit
 ): List<SheetAction> = listOf(
     SheetAction("Rename…") { next(SheetStep.Name("Rename folder", folder.def.label) { vm.renameFolder(folder.def.id, it) }) },
-    SheetAction("Sort by…") {
-        val sorts = FOLDER_SORTS.map { (label, sort) ->
-            SheetAction(if (sort == folder.def.sort) "✓ $label" else label) { vm.sortFolder(folder.def.id, sort) }
-        }
-        next(SheetStep.Choose("Sort “${folder.def.label}” by", sorts))
-    },
+    sort,
     SheetAction("Delete folder…") {
         val subfolders = folders.ownedSubfolders(folder.def.id).size
         val only = SheetAction(if (subfolders > 0) "Delete folder, keep its folders" else "Delete folder") {

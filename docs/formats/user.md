@@ -17,6 +17,7 @@ The limits below describe values saved by the app's editors, not a general valid
   "homeLayout": "grid",
   "gridColumns": 5,
   "browseLayout": "list",
+  "folderViews": {"favourites": {"sort": "lastPlayed:desc", "layout": "grid"}},
   "browseChrome": "auto",
   "homeSort": "custom",
   "layout": ["system:snes", "folder:unplayed-4", "apps", "ps2/Armored Core 3 (USA).chd", "app:org.ppsspp.ppsspp",
@@ -27,8 +28,8 @@ The limits below describe values saved by the app's editors, not a general valid
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `favourites` | ids | `[]` | favourited games (`<system>/<file>`), apps (`app:<pkg>`) and shortcuts (`shortcut:<pkg>/<id>`), shown by the built-in `favourites` folder (title order, hidden entries left out; always on the custom home). Ids not in the index or not installed are kept and show once available |
-| `wantToPlay` | game ids | `[]` | the Want to play queue shown by the built-in `want-to-play` folder (title order, hidden games left out), independent of `favourites` and kept after launching. Ids not in the index are kept and show once indexed. The folder is always on the custom home (see `layout`); toggling the queue never changes `layout` |
+| `favourites` | ids | `[]` | favourited games (`<system>/<file>`), apps (`app:<pkg>`) and shortcuts (`shortcut:<pkg>/<id>`), shown by the built-in `favourites` folder (title order by default, hidden entries left out; always on the custom home). Ids not in the index or not installed are kept and show once available |
+| `wantToPlay` | game ids | `[]` | the Want to play queue shown by the built-in `want-to-play` folder (title order by default, hidden games left out), independent of `favourites` and kept after launching. Ids not in the index are kept and show once indexed. The folder is always on the custom home (see `layout`); toggling the queue never changes `layout` |
 | `hidden` | ids | `[]` | entries kept out of smart folders |
 | `profileOverrides` | id → profile id | `{}` | per-game launch profile chosen in "Launch with…"; RetroArch core ids such as `ra-mgba` need no launchers.json entry (see [launchers.json](launchers.md)) |
 | `homeLayout` | `"list"` \| `"grid"` | `"list"` | home view; Select toggles it on Home |
@@ -37,7 +38,8 @@ The limits below describe values saved by the app's editors, not a general valid
 | `gridRows` | int | 3 | preferred rows in a sideways grid (2–6); more rows = smaller tiles |
 | `appColumns` | int | 8 | Apps screen tiles per row (4–14) |
 | `gridColumns` | 2..10 | `5` | columns in vertical home/game grids; Apps uses `appColumns`, sideways grids use `gridRows` |
-| `browseLayout` | `"list"` \| `"grid"` | `"list"` | view of the browse screens (system lists, folders, search, Apps); Select toggles it there. One setting for all of them, separate from `homeLayout` |
+| `browseLayout` | `"list"` \| `"grid"` | `"list"` | shared view of system lists, search and Apps; Select toggles it there. Folders inherit it until they have their own layout in `folderViews`. Separate from `homeLayout` |
+| `folderViews` | folder id → display choices | `{}` | independent choices for any folder, including built-ins: optional `sort` (`"title:asc"`, `"lastPlayed:desc"`, `"added:desc"` or `"playMinutes:desc"`) and `layout` (`"list"` or `"grid"`). Missing, null or unknown values inherit the folder's configured sort or `browseLayout`. In-folder Sort/View and Select save here; Sort applies after the folder's rules and limit, without changing its definition. Resetting both choices removes the entry; deleting a folder removes only its own choices, not those of surviving subfolders. Included in backups |
 | `browseChrome` | `"auto"` \| `"expanded"` \| `"compact"` | `"auto"` | header and controller hints on Home and every browse screen (system lists, folders, search, Apps); one setting for all of them, cycled in Settings → Header and hints. `auto` is compact when the window itself is under 600 dp tall or wide, divided by a font scale above 1 (measured, whatever the device), otherwise expanded. Compact folds the header into a strip while browsing (tap, pull down or Up from the first row reveals it) and shows one row of hints with a Controls button listing every command. A missing or unknown value reads as `auto`; Sortie and backup restore save only the three known values |
 | `homeSort` | `"alpha"` \| `"count"` \| `"generation"` \| `"custom"` \| `"console"` | `"alpha"` | home order. The first three are generated and fixed and list systems only: by label, by game count (descending) or grouped by the system's `generation` (`8-bit` … `128-bit` ascending, then the rest in `systems.json` order). `custom` shows `layout`; `console` is By Console (a console strip, that console's games below). Unknown values read as `alpha` |
 | `layout` | tile ids, in order | `[]` | the custom home. Ids: `system:<systemId>`, `folder:<folderId>`, `apps` (the built-in Apps folder), `continue` (the last game played), a game id, `app:<pkg>`, `shortcut:<pkg>/<shortcutId>`. Continue, every smart folder (including Want to play) and Apps always show on Custom and cannot be removed: those missing here are shown anyway, Continue first and the rest after the saved ids (folders in `folders.json` order, then in-app folders, then Apps). A folder or system that a folder shows (see `folders`) is left off Custom's top level even when listed here. Moving any tile, and any folder edit that changes Home, saves the full displayed order here. Ids that no longer resolve are skipped when rendering but kept here |
@@ -138,6 +140,8 @@ describes a running session omitted from export.
 Restore applies the same bounds as the settings: grid sizes and intervals are clamped, repeated `layout` ids collapse, and
 `folders` loses entries with a blank or repeated `id` (the first is kept), with names trimmed to 60 characters (blank: the
 id) and repeated `include`/`exclude` ids removed. A backup made before in-app folders has no `folders` and restores none.
+Restore also drops unknown `folderViews` values, blank ids and entries left with neither choice. Older backups without
+`folderViews` restore the inherited folder sort and shared browse layout.
 
 Version 2 adds `mecha`: the Hangar companion's whole save (`files/mecha/state.json`), or absent when no companion save exists.
 The nested save has its **own version, now 4**: name, enabled/motion, fitted and owned parts, salvage, bond, charge,

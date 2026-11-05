@@ -32,23 +32,30 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.esko997.sortie.data.apps.LibraryItem
 import io.github.esko997.sortie.data.db.GameEntity
 import io.github.esko997.sortie.data.folders.FolderView
+import io.github.esko997.sortie.data.folders.folderLayout
+import io.github.esko997.sortie.data.folders.folderSortLabel
 import io.github.esko997.sortie.data.manifest.GameAnnotation
 
-/** Select toggles list↔grid on a browse screen; one persisted setting (`user.browseLayout`) for all of them, separate from home. */
+/**
+ * Select toggles list↔grid on a browse screen now showing [grid]; [onLayout] saves the other one ("list" or "grid") where that
+ * screen keeps it: `user.browseLayout`, shared by systems, Apps and Search, or a folder's own choice. Separate from home.
+ */
 @Composable
-fun BrowseLayoutHotkey(vm: SortieViewModel, grid: Boolean) {
+fun BrowseLayoutHotkey(grid: Boolean, onLayout: (String) -> Unit) {
     val current by rememberUpdatedState(grid)
+    val save by rememberUpdatedState(onLayout)
     val hotkeys = LocalHotkeys.current
     DisposableEffect(hotkeys) {
         hotkeys.handle(setOf(Hotkeys.Key.CONTEXT))
         onDispose { hotkeys.release(setOf(Hotkeys.Key.CONTEXT)) }
     }
-    LaunchedEffect(hotkeys) { hotkeys.events.collect { if (it == Hotkeys.Key.CONTEXT) vm.setBrowseLayout(if (current) "list" else "grid") } }
+    LaunchedEffect(hotkeys) { hotkeys.events.collect { if (it == Hotkeys.Key.CONTEXT) save(if (current) "list" else "grid") } }
 }
 
 /**
@@ -179,8 +186,9 @@ fun GameListScreen(
     chrome: BrowseChrome? = null,
     onSearch: (() -> Unit)? = null
 ) {
+    val user by vm.user.collectAsState()
     val items = remember(games) { games.map { LibraryItem.Game(it) } }
-    ItemListScreen(title, items, vm, onGame, subtitle, chrome, onSearch)
+    ItemListScreen(title, items, vm, onGame, subtitle, grid = user.browseLayout == "grid", onLayout = vm::setBrowseLayout, parent = chrome, onSearch = onSearch)
 }
 
 /**
@@ -189,7 +197,10 @@ fun GameListScreen(
  * folder, R2 Want to play, Y Search limited to the games of the folder and the folders inside it ([onSearch]). In an editable
  * folder (any but the built-in ones) hold A also moves its folders and systems (Move to folder…, its first choice moving them
  * up a level), takes games, apps and shortcuts out (Remove from folder) and picks the game whose cover the folder's tile shows;
- * an editable folder held anywhere offers Rename…, Sort by… and Delete folder….
+ * a folder held anywhere offers Sort by…, an editable one also Rename… and Delete folder….
+ *
+ * Every folder, built-in ones too, keeps its own order and list or grid: the header's Sort and View show and change them, and
+ * Select toggles this folder's view. Until chosen it shows its own order ([FolderView.displaySort]) and the browse layout.
  */
 @Composable
 fun FolderScreen(
@@ -200,6 +211,7 @@ fun FolderScreen(
     onSystem: (String) -> Unit,
     onSearch: () -> Unit
 ) {
+    val user by vm.user.collectAsState()
     val folders by vm.folders.collectAsState()
     val systems by vm.systems.collectAsState()
     val biosMissing by vm.biosMissing.collectAsState()
@@ -216,26 +228,41 @@ fun FolderScreen(
         }
     }
     var held by remember { mutableStateOf<HomeTile?>(null) }
+    val id = view.def.id
+    val layout = user.folderLayout(id)
     ItemListScreen(
         view.def.label,
         view.items,
         vm,
         onGame,
         view.problems.takeIf { it.isNotEmpty() }?.joinToString("; "),
+        grid = layout == "grid",
+        onLayout = { vm.setFolderLayout(id, it) },
         onSearch = onSearch,
         pointers = pointers,
-        // a built-in folder's contents stay as its rule made them
-        onPointerLongClick = { t -> if (view.editable || folders.any { it.editable && HomeIds.FOLDER + it.def.id == t.id }) held = t },
+        // a built-in folder's contents stay as its rule made them; any folder in it can still be sorted
+        onPointerLongClick = { t -> if (view.editable || folders.any { HomeIds.FOLDER + it.def.id == t.id }) held = t },
         itemActions = { item ->
             listOfNotNull(
                 removeFromFolderAction(vm, item.id, view, context).takeIf { view.editable && item.id in view.def.include },
                 folderCoverAction(vm, item, view, context)
             )
         },
-        holdHint = if (view.editable) "move / remove" else "favourite / add to home"
+        holdHint = if (view.editable) "move / remove" else "favourite / add to home",
+        menus = listOf(
+            HeaderMenu("Sort: ${folderSortLabel(view.displaySort)}", folderSortTitle(view), folderSortChoices(vm, view, user.folderSortChoice(id))),
+            HeaderMenu(
+                "View: ${layoutName(layout)}",
+                "Show “${view.def.label}” as",
+                folderLayoutChoices(vm, view, user.folderLayoutChoice(id), user.browseLayout)
+            )
+        )
     )
     held?.let { t -> SteppedSheet(t.title, { held = null }) { next -> folderTileActions(vm, folders, t.id, view, context, next) } }
 }
+
+/** A header button showing a current choice ([label]) that opens a [ContextSheet] of [choices] titled [title]. */
+private class HeaderMenu(val label: String, val title: String, val choices: List<SheetAction>)
 
 /**
  * Y on a system or folder list: [onSearch] opens Search limited to it (Home's Y searches the whole library). Pressed on the
@@ -263,10 +290,11 @@ private fun SearchHereHotkey(onSearch: () -> Unit) {
 /**
  * A system's or folder's games, apps and shortcuts with Pick one and the filter chips above them. The header folds while
  * browsing (see [BrowseChrome]) to one line with the count and the filters that are on; a problem [subtitle] stays shown
- * either way. A [parent] header (Home's) folds this one with it, and its strip has the chevron. [onSearch] is Y's scoped Search.
- * [pointers] (a folder's folders and systems) lead the grid, unfiltered; holding one calls [onPointerLongClick]. [itemActions]
- * adds the screen's own actions to an item's hold-A sheet, and [holdHint] says what hold A does. In list view Left/Right jump
- * by starting letter while the items are in title order ([LetterJump]).
+ * either way. A [parent] header (Home's) folds this one with it, and its strip has the chevron. [grid] is the layout shown,
+ * which Select toggles through [onLayout]. [onSearch] is Y's scoped Search. [pointers] (a folder's folders and systems) lead
+ * the grid, unfiltered; holding one calls [onPointerLongClick]. [itemActions] adds the screen's own actions to an item's
+ * hold-A sheet, and [holdHint] says what hold A does. [menus] follow the chips in the full header. In list view Left/Right
+ * jump by starting letter while the items are in title order ([LetterJump]).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -276,12 +304,15 @@ private fun ItemListScreen(
     vm: SortieViewModel,
     onGame: (String) -> Unit,
     subtitle: String?,
+    grid: Boolean,
+    onLayout: (String) -> Unit,
     parent: BrowseChrome? = null,
     onSearch: (() -> Unit)? = null,
     pointers: List<HomeTile> = emptyList(),
     onPointerLongClick: (HomeTile) -> Unit = {},
     itemActions: (LibraryItem) -> List<SheetAction> = { emptyList() },
-    holdHint: String = "favourite / add to home"
+    holdHint: String = "favourite / add to home",
+    menus: List<HeaderMenu> = emptyList()
 ) {
     val stats by vm.playStats.collectAsState()
     val saves by vm.saveStems.collectAsState()
@@ -295,8 +326,7 @@ private fun ItemListScreen(
     var notesOnly by rememberSaveable { mutableStateOf(false) }
     var startedOnly by rememberSaveable { mutableStateOf(false) } // games with a save or state on the card
     var sheet by remember { mutableStateOf<LibraryItem?>(null) }
-    val grid = user.browseLayout == "grid"
-    BrowseLayoutHotkey(vm, grid)
+    BrowseLayoutHotkey(grid, onLayout)
     onSearch?.let { SearchHereHotkey(it) }
     val shown = remember(items, minFit, onDeviceOnly, notesOnly, startedOnly, saves, user.bookmarks) {
         items.filter { item ->
@@ -323,6 +353,20 @@ private fun ItemListScreen(
     // filters that hide everything keep the header open, so they can be turned off again
     val chrome = parent ?: rememberBrowseChrome(user.browseChrome, pinned = items.isNotEmpty() && shown.isEmpty())
     val pickFocus = remember { FocusRequester() }
+    var menuOpen by remember { mutableStateOf<Int?>(null) }
+    // the menu whose button takes the controller focus back once its sheet has closed and the window has the focus again
+    var menuReturn by remember { mutableStateOf<Int?>(null) }
+    val menuFocus = remember(menus.size) { List(menus.size) { FocusRequester() } }
+    val inputModes = LocalInputModeManager.current
+    val windowFocused = LocalWindowInfo.current.isWindowFocused
+    LaunchedEffect(menuOpen, windowFocused) {
+        val back = menuReturn ?: return@LaunchedEffect
+        if (menuOpen != null || !windowFocused) return@LaunchedEffect
+        menuReturn = null
+        val target = menuFocus.getOrNull(back) ?: return@LaunchedEffect
+        // the header may have folded meanwhile: open it on that button
+        if (chrome.expanded) runCatching { target.requestFocus() } else chrome.reveal(target)
+    }
     val activeFilters = listOfNotNull(
         "Fit 4+".takeIf { minFit >= 4 },
         "✍ notes".takeIf { notesOnly },
@@ -392,6 +436,12 @@ private fun ItemListScreen(
                     GlowChip("✍ notes", notesOnly) { notesOnly = !notesOnly }
                     GlowChip("💾 started", startedOnly) { startedOnly = !startedOnly }
                     GlowChip("on device", onDeviceOnly) { onDeviceOnly = !onDeviceOnly }
+                    menus.forEachIndexed { i, m ->
+                        GlowButton(m.label, Modifier.focusRequester(menuFocus[i])) {
+                            menuReturn = i.takeIf { inputModes.inputMode == InputMode.Keyboard }
+                            menuOpen = i
+                        }
+                    }
                     if (parent == null) HideHeaderButton(chrome)
                 }
             }
@@ -466,4 +516,5 @@ private fun ItemListScreen(
         )
     }
     sheet?.let { ItemSheet(it, vm, itemActions(it)) { sheet = null } }
+    menuOpen?.let { i -> menus.getOrNull(i)?.let { m -> ContextSheet(m.title, m.choices) { menuOpen = null } } }
 }

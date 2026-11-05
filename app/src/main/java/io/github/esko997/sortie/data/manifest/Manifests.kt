@@ -165,6 +165,18 @@ data class GameBookmark(
 /** Longest bookmark text accepted, in characters; longer drafts are refused, not truncated. */
 const val BOOKMARK_MAX_CHARS = 2_000
 
+/**
+ * How one folder is shown, chosen on the device for any folder (built-in, in-app or `folders.json`) and kept in
+ * [UserData.folderViews] apart from its definition. [sort] is a Sort by… order (`FOLDER_SORTS`) applied to the folder's
+ * members after its rule, includes and limit chose them; [layout] is "list" or "grid". Null, or a value this build does not
+ * know, inherits: the folder's own [FolderDef.sort], and [UserData.browseLayout].
+ */
+@Serializable
+data class FolderPreferences(val sort: String? = null, val layout: String? = null) {
+    /** Nothing chosen: the entry is dropped from [UserData.folderViews] rather than stored. */
+    fun isEmpty(): Boolean = sort == null && layout == null
+}
+
 /** Slots in the companion dock. */
 const val DOCK_SLOTS = 5
 
@@ -194,7 +206,7 @@ data class UserData(
     val gridRows: Int = 3,
     /** Apps screen grid: tiles per row (app icons are small, so denser than the game grid). */
     val appColumns: Int = 8,
-    /** Browse screens (system, folder, apps, search): "list" or "grid". */
+    /** Shared browse layout ("list" or "grid"); folders inherit it unless [folderViews] supplies their own layout. */
     val browseLayout: String = "list",
     /**
      * Header and hints on Home and the browse screens: "auto" (compact when the window is short or narrow), "expanded" or
@@ -215,6 +227,11 @@ data class UserData(
      * them. An id that a `folders.json` entry also uses belongs to this folder (that entry is ignored).
      */
     val folders: List<FolderDef> = emptyList(),
+    /**
+     * Per-folder display choices (folder id → [FolderPreferences]), for built-in, in-app and `folders.json` folders alike; empty
+     * entries are absent. They never change a folder's definition or members, and go when that folder is deleted.
+     */
+    val folderViews: Map<String, FolderPreferences> = emptyMap(),
     /** Shortcuts the user opted in to (ids `shortcut:<pkg>/<id>`); every other launcher shortcut stays out of the lists. */
     val shortcuts: Set<String> = emptySet(),
     /** Per-system default launch profile chosen on the device (system id → profile id); overrides the manifest's first choice. */
