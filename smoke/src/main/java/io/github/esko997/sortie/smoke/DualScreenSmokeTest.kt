@@ -50,7 +50,12 @@ class DualScreenSmokeTest {
         if (mainTasks().any { it.display == second && it.visible }) {
             await("the controller with navigation on display $second") { focusedDisplay() == second }
             pressX()
-            await("navigation back on the primary display") { mainTasks().any { it.display == PRIMARY && it.visible } }
+            // The destination task becomes visible before the source finishes and input follows it. Home in that gap
+            // races the move and can create a second navigation task; setup must complete the handoff first.
+            await("one navigation task back on the primary display") {
+                mainTasks().let { it.size == 1 && it[0].display == PRIMARY && it[0].visible }
+            }
+            await("the controller back on the primary display before Home") { focusedDisplay() == PRIMARY }
         }
         shell("input -d $PRIMARY keyevent KEYCODE_HOME")
         // Home keeps the current route; Back walks it back to Home, where Back does nothing.
