@@ -1,7 +1,10 @@
 package io.github.esko997.sortie.ui
 
 import android.net.Uri
+import android.util.TypedValue
+import android.view.Gravity
 import android.widget.ImageView
+import android.widget.TextClock
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -55,9 +58,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
@@ -158,84 +163,113 @@ fun CompanionScreen(displayId: Int) {
         dockSlot = -1
     }
     Surface(Modifier.fillMaxSize(), color = CanvasColour) {
-        MechaStageHost(stage, quiet = magazine != null || picking || switcher.open) {
-            when {
-                switcher.open && !switcher.overlay -> TouchSwitcher(graph.switcher, switcher, displayId)
-                launcher -> TouchLauncher(graph, displayId, scope, onClose = { launcher = false })
-                dockSlot >= 0 -> AppPicker(graph, "Add to the dock", onClose = { dockSlot = -1 }) {
-                    graph.user.setDockSlot(dockSlot, it.id)
-                    dockSlot = -1
-                }
-                // a started reader (in the navigation or the Magazines app), never one stopped behind a game
-                magazine != null -> {
-                    val panel = magazine!!
-                    val contentsKey = remember(panel.issue.id, panel.articleId) { "${panel.issue.id}/${panel.articleId.orEmpty()}" }
-                    contents.SaveableStateProvider(contentsKey) {
-                        MagazineCompanion(panel) { CornerPlus(Modifier) { launcher = true } }
+        Column(Modifier.fillMaxSize()) {
+            CompanionClock()
+            MechaStageHost(stage, modifier = Modifier.weight(1f), quiet = magazine != null || picking || switcher.open) {
+                when {
+                    switcher.open && !switcher.overlay -> TouchSwitcher(graph.switcher, switcher, displayId)
+                    launcher -> TouchLauncher(graph, displayId, scope, onClose = { launcher = false })
+                    dockSlot >= 0 -> AppPicker(graph, "Add to the dock", onClose = { dockSlot = -1 }) {
+                        graph.user.setDockSlot(dockSlot, it.id)
+                        dockSlot = -1
                     }
-                }
-                else -> Box(Modifier.fillMaxSize()) {
-                    // Exactly one of these is composed: the hero ticker only runs while nothing is being played. Browsing another
-                    // game with the navigation visible takes the panel without ending the session; once the navigation is gone (the
-                    // game is in front again) or nothing else is selected, the session's panel returns ([companionPanel]).
-                    val s = session
-                    val autoNowPlaying by AutoCompanionChoice.nowPlaying.collectAsState()
-                    val panel = companionPanel(rememberCompanionView(graph), s, selected?.id, navigationVisible, autoNowPlaying)
-                    when (panel) {
-                        // Perf (Settings → Companion screen shows), or Auto while a game is played: live device stats in place of the
-                        // game panel. Auto's chip sits over the bottom row, so its list ends above the chip instead of scrolling under it.
-                        CompanionPanel.PERF -> CompanionPerf()
-                        CompanionPanel.AUTO_PERF -> Box(Modifier.fillMaxSize().padding(bottom = AUTO_CHIP_CLEARANCE)) { CompanionPerf() }
-                        CompanionPanel.NOW_PLAYING, CompanionPanel.AUTO_NOW_PLAYING ->
-                            if (s != null) NowPlaying(graph, s, clearChip = panel == CompanionPanel.AUTO_NOW_PLAYING)
-                        CompanionPanel.HERO -> HeroPanel(graph)
-                    }
-                    // the companion's way in and out of this screen: the screen edges just above the bottom inset
-                    Spacer(
-                        Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(16.dp)
-                            .mechaSpot("companion:edge-start", MechaSpotKind.EDGE_START)
-                            .mechaSpot("companion:edge-end", MechaSpotKind.EDGE_END)
-                    )
-                    // Auto's flip for this session, between Perf and Now playing (which hosts the reference cards): a touch chip
-                    // between the dock and '+', since the controller stays with the game; the next session opens on Perf again
-                    if (s != null && (panel == CompanionPanel.AUTO_PERF || panel == CompanionPanel.AUTO_NOW_PLAYING)) {
-                        val toNowPlaying = panel == CompanionPanel.AUTO_PERF
-                        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp).mechaObstacle("companion:auto", interactive = true)) {
-                            TouchChip(
-                                if (toNowPlaying) "Now playing" else "Perf",
-                                onClickLabel = if (toNowPlaying) "Show Now playing" else "Show Perf"
-                            ) { AutoCompanionChoice.nowPlaying.value = if (toNowPlaying) s.startedAt else null }
+                    // a started reader (in the navigation or the Magazines app), never one stopped behind a game
+                    magazine != null -> {
+                        val panel = magazine!!
+                        val contentsKey = remember(panel.issue.id, panel.articleId) { "${panel.issue.id}/${panel.articleId.orEmpty()}" }
+                        contents.SaveableStateProvider(contentsKey) {
+                            MagazineCompanion(panel) { CornerPlus(Modifier) { launcher = true } }
                         }
                     }
-                    CornerPlus(Modifier.align(Alignment.BottomEnd).padding(16.dp).mechaSpot("companion:plus", MechaSpotKind.BESIDE_START, interactive = true)) {
-                        launcher = true
+                    else -> Box(Modifier.fillMaxSize()) {
+                        // Exactly one of these is composed: the hero ticker only runs while nothing is being played. Browsing another
+                        // game with the navigation visible takes the panel without ending the session; once the navigation is gone (the
+                        // game is in front again) or nothing else is selected, the session's panel returns ([companionPanel]).
+                        val s = session
+                        val autoNowPlaying by AutoCompanionChoice.nowPlaying.collectAsState()
+                        val panel = companionPanel(rememberCompanionView(graph), s, selected?.id, navigationVisible, autoNowPlaying)
+                        when (panel) {
+                            // Perf (Settings → Companion screen shows), or Auto while a game is played: live device stats in place of the
+                            // game panel. Auto's chip sits over the bottom row, so its list ends above the chip instead of scrolling under it.
+                            CompanionPanel.PERF -> CompanionPerf()
+                            CompanionPanel.AUTO_PERF -> Box(Modifier.fillMaxSize().padding(bottom = AUTO_CHIP_CLEARANCE)) { CompanionPerf() }
+                            CompanionPanel.NOW_PLAYING, CompanionPanel.AUTO_NOW_PLAYING ->
+                                if (s != null) NowPlaying(graph, s, clearChip = panel == CompanionPanel.AUTO_NOW_PLAYING)
+                            CompanionPanel.HERO -> HeroPanel(graph)
+                        }
+                        // the companion's way in and out of this screen: the screen edges just above the bottom inset
+                        Spacer(
+                            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(16.dp)
+                                .mechaSpot("companion:edge-start", MechaSpotKind.EDGE_START)
+                                .mechaSpot("companion:edge-end", MechaSpotKind.EDGE_END)
+                        )
+                        // Auto's flip for this session, between Perf and Now playing (which hosts the reference cards): a touch chip
+                        // between the dock and '+', since the controller stays with the game; the next session opens on Perf again
+                        if (s != null && (panel == CompanionPanel.AUTO_PERF || panel == CompanionPanel.AUTO_NOW_PLAYING)) {
+                            val toNowPlaying = panel == CompanionPanel.AUTO_PERF
+                            Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp).mechaObstacle("companion:auto", interactive = true)) {
+                                TouchChip(
+                                    if (toNowPlaying) "Now playing" else "Perf",
+                                    onClickLabel = if (toNowPlaying) "Show Now playing" else "Show Perf"
+                                ) { AutoCompanionChoice.nowPlaying.value = if (toNowPlaying) s.startedAt else null }
+                            }
+                        }
+                        CornerPlus(
+                            Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                                .mechaSpot("companion:plus", MechaSpotKind.BESIDE_START, interactive = true)
+                        ) {
+                            launcher = true
+                        }
+                        Dock(
+                            graph,
+                            displayId,
+                            scope,
+                            dock,
+                            Modifier.align(Alignment.BottomStart).padding(16.dp).mechaObstacle("companion:dock", interactive = true),
+                            onToggle = { dock = !dock }
+                        ) { dockSlot = it }
+                        // one element per corner, all on the same 44 dp inset: battery · bell / dock · '+'
+                        // he may poke the battery from beside it, or stand under it and lift it (decorative, never a control)
+                        BatteryGauge(
+                            Modifier.align(Alignment.TopStart).padding(16.dp)
+                                .mechaSpot("companion:battery", MechaSpotKind.BESIDE_END, props = setOf(MechaProp.POKE, MechaProp.LIFT))
+                                .height(CORNER)
+                        )
+                        Bell(graph, Modifier.align(Alignment.TopEnd).padding(16.dp).mechaSpot("companion:bell", MechaSpotKind.BESIDE_START, interactive = true))
+                        // his home base: right under the bell, beside the picture (Panel keeps the picture clear of it)
+                        Spacer(
+                            Modifier.align(Alignment.TopEnd).padding(top = BASE_TOP, end = 8.dp)
+                                .size(mechaBaseSize())
+                                .mechaHomeBase("companion:base")
+                        )
                     }
-                    Dock(
-                        graph,
-                        displayId,
-                        scope,
-                        dock,
-                        Modifier.align(Alignment.BottomStart).padding(16.dp).mechaObstacle("companion:dock", interactive = true),
-                        onToggle = { dock = !dock }
-                    ) { dockSlot = it }
-                    // one element per corner, all on the same 44 dp inset: battery · bell / dock · '+'
-                    // he may poke the battery from beside it, or stand under it and lift it (decorative, never a control)
-                    BatteryGauge(
-                        Modifier.align(Alignment.TopStart).padding(16.dp)
-                            .mechaSpot("companion:battery", MechaSpotKind.BESIDE_END, props = setOf(MechaProp.POKE, MechaProp.LIFT))
-                            .height(CORNER)
-                    )
-                    Bell(graph, Modifier.align(Alignment.TopEnd).padding(16.dp).mechaSpot("companion:bell", MechaSpotKind.BESIDE_START, interactive = true))
-                    // his home base: right under the bell, beside the picture (Panel keeps the picture clear of it)
-                    Spacer(
-                        Modifier.align(Alignment.TopEnd).padding(top = BASE_TOP, end = 8.dp)
-                            .size(mechaBaseSize())
-                            .mechaHomeBase("companion:base")
-                    )
                 }
             }
         }
     }
+}
+
+/** Android owns minute ticks, time-zone/12-hour changes and stopping updates while the clock is hidden. */
+@Composable
+private fun CompanionClock() {
+    val colour = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
+    val size = with(LocalDensity.current) { MaterialTheme.typography.bodyMedium.fontSize.toPx() }
+    AndroidView(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        factory = { context ->
+            TextClock(context).apply {
+                gravity = Gravity.CENTER
+                isFocusable = false
+                includeFontPadding = false
+                fontFeatureSettings = "tnum"
+                setSingleLine()
+            }
+        },
+        update = {
+            it.setTextColor(colour)
+            it.setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
+        }
+    )
 }
 
 /** Room Auto's chip takes at the bottom centre (18 dp inset + its 40 dp height + a gap): panels stop above it. */

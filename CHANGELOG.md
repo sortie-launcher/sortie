@@ -5,6 +5,8 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
+- The companion screen has a small, top-centred clock. It follows Android's 12/24-hour setting and text size, updates by
+  the minute, and stays above the companion's panels and app list without covering their controls.
 - Every folder, including built-in shelves, remembers its own **Sort** and **View** (list/grid). Change them from inside the
   folder; **Select** changes only that folder's view. Choose **Folder default** or **Browse default** to inherit again.
   Sort offers Title, Recently played, Recently added and Play time. It reorders existing members without changing a smart

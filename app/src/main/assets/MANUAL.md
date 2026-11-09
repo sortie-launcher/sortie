@@ -546,6 +546,8 @@ The curated blurb is a two-line preview here, with an ellipsis when it runs long
 - **Dot** (bottom-left): the dock. Tap to unfurl five slots up the left edge; the controller moves to them. A / tap an empty
   slot to pin an app, A / tap a pinned app to start it there, hold A / long-press to unpin, B folds it away.
 - **Battery** (top-left) and, when Shizuku is ready, **bell** (top-right): tap the bell to open the notification shade.
+- **Clock** (top-centre): the local time, following Android's 12/24-hour setting and text size. It stays above the companion
+  panels and app list, with no seconds or flashing colon.
 - **Device stats** (if turned on in Settings): a thin strip down each side. Left: CPU and GPU load with their clocks, and
   RAM in use of the total. Right: CPU, GPU and battery temperatures in °C and the fan speed (AYN Thor; its sensor gives no
   unit, Sortie shows it as rpm). The panel narrows to make room, so nothing is covered.
