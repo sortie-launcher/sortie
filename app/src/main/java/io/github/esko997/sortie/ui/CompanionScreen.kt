@@ -265,11 +265,15 @@ fun CompanionScreen(displayId: Int) {
 
 /** One centered header above the panel; corner controls share the clock's centerline without narrowing its centering area. */
 @Composable
-private fun ClockedCompanionContent(corners: @Composable BoxScope.() -> Unit = {}, content: @Composable () -> Unit) {
+private fun ClockedCompanionContent(corners: (@Composable BoxScope.() -> Unit)? = null, content: @Composable () -> Unit) {
     Column(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).heightIn(min = CORNER), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                .then(if (corners != null) Modifier.heightIn(min = CORNER) else Modifier),
+            contentAlignment = Alignment.Center
+        ) {
             CompanionClock()
-            corners()
+            corners?.invoke(this)
         }
         Box(Modifier.weight(1f)) { content() }
     }
