@@ -87,6 +87,34 @@ class DualScreenSmokeTest {
     }
 
     @Test
+    fun companionCornersStayAnchoredWhenTheClockGrows() {
+        val clock = By.pkg(PKG).text(Regex("\\d{1,2}:\\d{2}.*").toPattern()).displayId(second)
+        fun corners() = screenNodes(second).filter { it.text?.endsWith("%") == true || it.text == "🔔" }
+            .associate { it.text!! to it.centerY }
+        await("the companion clock and battery", detail = { "companion texts: ${texts(second)}" }) {
+            device.hasObject(clock) && corners().keys.any { it.endsWith("%") }
+        }
+        val before = corners()
+        val clockHeight = device.findObject(clock).visibleBounds.height()
+        val originalScale = shell("settings get system font_scale").trim()
+        val changedScale = if ((originalScale.toFloatOrNull() ?: 1f) < 1.5f) "2.0" else "1.0"
+        try {
+            shell("settings put system font_scale $changedScale")
+            await("the clock responding to the changed text size") {
+                device.findObject(clock)?.visibleBounds?.height()?.let { it != clockHeight } == true
+            }
+            val after = corners()
+            assertTrue("corner controls remain visible", after.keys.containsAll(before.keys))
+            for ((label, y) in before) {
+                assertEquals("$label stays at the window edge when the clock changes height", y.toDouble(), after.getValue(label).toDouble(), 1.0)
+            }
+        } finally {
+            if (originalScale == "null") shell("settings delete system font_scale") else shell("settings put system font_scale $originalScale")
+            await("the original clock text size restored") { device.findObject(clock)?.visibleBounds?.height() == clockHeight }
+        }
+    }
+
+    @Test
     fun swapMovesNavigationToTheOtherDisplayAndBack() {
         shell("input keyevent KEYCODE_BUTTON_X")
         awaitNavigationOn(second)
