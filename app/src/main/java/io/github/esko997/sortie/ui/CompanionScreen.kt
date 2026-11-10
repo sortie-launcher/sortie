@@ -15,6 +15,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -194,7 +196,20 @@ fun CompanionScreen(displayId: Int) {
                     val s = session
                     val autoNowPlaying by AutoCompanionChoice.nowPlaying.collectAsState()
                     val panel = companionPanel(rememberCompanionView(graph), s, selected?.id, navigationVisible, autoNowPlaying)
-                    ClockedCompanionContent {
+                    ClockedCompanionContent(
+                        corners = {
+                            // Rivet may poke the battery from beside it, or stand under it and lift it.
+                            BatteryGauge(
+                                Modifier.align(Alignment.CenterStart)
+                                    .mechaSpot("companion:battery", MechaSpotKind.BESIDE_END, props = setOf(MechaProp.POKE, MechaProp.LIFT))
+                                    .height(CORNER)
+                            )
+                            Bell(
+                                graph,
+                                Modifier.align(Alignment.CenterEnd).mechaSpot("companion:bell", MechaSpotKind.BESIDE_START, interactive = true)
+                            )
+                        }
+                    ) {
                         when (panel) {
                             // Perf (Settings → Companion screen shows), or Auto while a game is played: live device stats in place of the
                             // game panel. Auto's chip sits over the bottom row, so its list ends above the chip instead of scrolling under it.
@@ -236,14 +251,6 @@ fun CompanionScreen(displayId: Int) {
                         Modifier.align(Alignment.BottomStart).padding(16.dp).mechaObstacle("companion:dock", interactive = true),
                         onToggle = { dock = !dock }
                     ) { dockSlot = it }
-                    // Anchor corners to the window, not the content below the clock.
-                    // he may poke the battery from beside it, or stand under it and lift it (decorative, never a control)
-                    BatteryGauge(
-                        Modifier.align(Alignment.TopStart).padding(16.dp)
-                            .mechaSpot("companion:battery", MechaSpotKind.BESIDE_END, props = setOf(MechaProp.POKE, MechaProp.LIFT))
-                            .height(CORNER)
-                    )
-                    Bell(graph, Modifier.align(Alignment.TopEnd).padding(16.dp).mechaSpot("companion:bell", MechaSpotKind.BESIDE_START, interactive = true))
                     // his home base: right under the bell, beside the picture (Panel keeps the picture clear of it)
                     Spacer(
                         Modifier.align(Alignment.TopEnd).padding(top = BASE_TOP, end = 8.dp)
@@ -256,11 +263,14 @@ fun CompanionScreen(displayId: Int) {
     }
 }
 
-/** Reserve space for the clock without moving the companion's corner controls or Rivet's stage. */
+/** One centered header above the panel; corner controls share the clock's centerline without narrowing its centering area. */
 @Composable
-private fun ClockedCompanionContent(content: @Composable () -> Unit) {
+private fun ClockedCompanionContent(corners: @Composable BoxScope.() -> Unit = {}, content: @Composable () -> Unit) {
     Column(Modifier.fillMaxSize()) {
-        CompanionClock()
+        Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).heightIn(min = CORNER), contentAlignment = Alignment.Center) {
+            CompanionClock()
+            corners()
+        }
         Box(Modifier.weight(1f)) { content() }
     }
 }
@@ -271,7 +281,7 @@ private fun CompanionClock() {
     val colour = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
     val size = with(LocalDensity.current) { MaterialTheme.typography.bodyMedium.fontSize.toPx() }
     AndroidView(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).mechaObstacle("companion:clock"),
+        modifier = Modifier.padding(vertical = 4.dp).mechaObstacle("companion:clock"),
         factory = { context ->
             TextClock(context).apply {
                 gravity = Gravity.CENTER
@@ -701,7 +711,7 @@ private fun Bell(graph: SortieApp.Graph, modifier: Modifier) {
 /** Size of the four corner controls; the dock dot and battery centre themselves in it so every corner lines up. */
 private val CORNER = 44.dp
 
-/** Top of the companion's home base on the idle panel: under the bell's corner (16 dp inset + [CORNER] + a gap). */
+/** Top of the companion's home base on the idle panel: below the header, beside the game picture. */
 private val BASE_TOP = 68.dp
 
 /**

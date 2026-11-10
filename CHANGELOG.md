@@ -5,8 +5,8 @@ Use the [manual](app/src/main/assets/MANUAL.md) for current behavior and [GitHub
 for published builds.
 
 ## Unreleased
-- Restore the companion's battery and notification bell to their top corners. The clock reserves space for panel content
-  without pushing the corner controls or Rivet's home base down, including when Android's text size changes.
+- Align the companion's battery, clock and notification bell on one symmetrical header row. The clock stays centred
+  on the screen regardless of the indicators' widths, including with enlarged Android text.
 - The companion screen has a small, top-centred clock. It follows Android's 12/24-hour setting and text size, updates by
   the minute, and stays above the companion's panels and app list without covering their controls.
 - Every folder, including built-in shelves, remembers its own **Sort** and **View** (list/grid). Change them from inside the
