@@ -87,14 +87,25 @@ class DualScreenSmokeTest {
     }
 
     @Test
-    fun companionCornersStayAnchoredWhenTheClockGrows() {
+    fun companionHeaderStaysAlignedWhenTheClockGrows() {
         val clock = By.pkg(PKG).text(Regex("\\d{1,2}:\\d{2}.*").toPattern()).displayId(second)
         fun corners() = screenNodes(second).filter { it.text?.endsWith("%") == true || it.text == "🔔" }
             .associate { it.text!! to it.centerY }
+        fun assertHeaderAligned() {
+            val clockBounds = device.findObject(clock).visibleBounds
+            val windowBounds = Rect()
+            instrumentation.uiAutomation.windowsOnAllDisplays[second]
+                .first { it.root?.packageName?.toString() == PKG }.getBoundsInScreen(windowBounds)
+            assertEquals("the clock stays horizontally centered on the screen", windowBounds.centerX().toDouble(), clockBounds.centerX().toDouble(), 1.0)
+            for ((label, y) in corners()) {
+                assertEquals("$label shares the clock's vertical centerline", clockBounds.centerY().toDouble(), y.toDouble(), 1.0)
+            }
+        }
         await("the companion clock and battery", detail = { "companion texts: ${texts(second)}" }) {
             device.hasObject(clock) && corners().keys.any { it.endsWith("%") }
         }
         val before = corners()
+        assertHeaderAligned()
         val clockHeight = device.findObject(clock).visibleBounds.height()
         val originalScale = shell("settings get system font_scale").trim()
         val changedScale = if ((originalScale.toFloatOrNull() ?: 1f) < 1.5f) "2.0" else "1.0"
@@ -105,9 +116,7 @@ class DualScreenSmokeTest {
             }
             val after = corners()
             assertTrue("corner controls remain visible", after.keys.containsAll(before.keys))
-            for ((label, y) in before) {
-                assertEquals("$label stays at the window edge when the clock changes height", y.toDouble(), after.getValue(label).toDouble(), 1.0)
-            }
+            assertHeaderAligned()
         } finally {
             if (originalScale == "null") shell("settings delete system font_scale") else shell("settings put system font_scale $originalScale")
             await("the original clock text size restored") { device.findObject(clock)?.visibleBounds?.height() == clockHeight }
