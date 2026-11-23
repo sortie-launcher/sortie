@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "9305eb6ba349d16501f91d8fae0407639d5031d26c2ba6da924a1df2ca7aa5ba",
+  "revision": "9835e38f0babde4d2f09878e33794c89a9eddc8b9f5c6182ddf9c617db4121a9",
   "entries": [
     {
       "id": "15a9a4f0-45ea-5494-ade6-95ca1293051c",
@@ -119668,6 +119668,31 @@
       }
     },
     {
+      "id": "00a1b08d-d890-508b-9197-35278da90864",
+      "system": "gba",
+      "title": "All Things It Devours (v1.1)",
+      "aliases": [
+        "All Things It Devours (v1.1)",
+        "All Things It Devours (v1.1).gba"
+      ],
+      "hook": "Five viewpoints piece together a cursed realm through environmental puzzles rather than a gym circuit. The immortality story and body horror make this a deliberately unsettling short detour; version 1.1 also revises the original jam build's puzzle bugs and final-boss balance.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://eeveeexpo.com/threads/8376/"
+        }
+      ]
+    },
+    {
       "id": "012a2afa-53d5-5526-9742-0d59398bad2c",
       "system": "gba",
       "title": "Pokemon Scorched Silver (v1.3)",
@@ -119811,6 +119836,36 @@
         "sortie-legacy-work": "final-fantasy-i-and-ii-dawn-of-souls",
         "sortie-legacy-variant": "gba-final-fantasy-i-and-ii-dawn-of-souls"
       }
+    },
+    {
+      "id": "02c255f8-1e54-5555-b345-595b38cf756f",
+      "system": "gba",
+      "title": "Let It Slide! (v1.0.0)",
+      "aliases": [
+        "Let It Slide! (v1.0.0)",
+        "Let It Slide! (v1.0.0).gba"
+      ],
+      "hook": "Climb Braining Palace by arranging 4×4 sliding-block pictures, with rotating pieces and immovable blocks complicating the routes. Pokémon battles are only a small diversion here: choose it for a compact puzzle tower, not another catching-and-gym campaign.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/let-it-slide"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/the-results-for-the-third-team-aqua-romhacking-competition-have-been-announced.544052/"
+        }
+      ]
     },
     {
       "id": "04221b41-b24c-576b-bfd9-eed5f1c44a52",
@@ -120266,6 +120321,46 @@
       }
     },
     {
+      "id": "117513b2-2818-5de4-b5ab-c13d20179b16",
+      "system": "gba",
+      "title": "Pokemon Battle Theater (v3.0)",
+      "aliases": [
+        "Pokemon Battle Theater (v3.0)",
+        "Pokemon Battle Theater (v3.0).gba"
+      ],
+      "hook": "Build custom teams or pit familiar trainers against each other in AI-run singles, doubles and tournament brackets, then take one side yourself in Pilot Mode. This is a battle sandbox rather than a regional adventure; version 3.0 adds matchup-aware opening leads and an optional mGBA-only log for inspecting the AI’s decisions.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/logdog2325/pokemon-battle-theater"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/logdog2325/pokemon-battle-theater/releases/tag/v3.0.0"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "7c21551d",
+          "size": 33554432,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
+    },
+    {
       "id": "12b9c330-6cae-53f3-a106-9ca48ed64e46",
       "system": "gba",
       "title": "Pokemon Synthesis (v0.1.1)",
@@ -120356,6 +120451,66 @@
         "sortie-legacy-work": "fire-emblem-vision-quest",
         "sortie-legacy-variant": "gba-fire-emblem-vision-quest"
       }
+    },
+    {
+      "id": "13d10c70-7627-583a-8f23-4a2aabd705b1",
+      "system": "gba",
+      "title": "Pokemon Project Pi (v1.3.4)",
+      "aliases": [
+        "Pokemon Project Pi (v1.3.4)",
+        "Pokemon Project Pi (v1.3.4).gba"
+      ],
+      "hook": "Rebuild a Kanto team around a deliberately limited 175-species roster, with reworked typings and learnsets, no EV training and badge-based level caps shifting attention toward team composition. It keeps FireRed's journey rather than replacing it with a new region; choose normal mode for the author's intended balanced run, since the optional Nuzlocke rules are explicitly described as much harsher.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/jinxshinx/Project-Pi"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://jinxshinx.github.io/Project-Pi/Pi_Pokedex.html"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://raw.githubusercontent.com/jinxshinx/Project-Pi/main/Proj_Pi.ups"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://raw.githubusercontent.com/jinxshinx/Project-Pi/main/Proj_Pi_BoxArt.png"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-project-pi"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.reddit.com/r/PokemonROMhacks/comments/1uflafp/pok%C3%A9mon_project_pi_v10_completed/"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "cbed0c70",
+          "size": 33554432,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
     },
     {
       "id": "141a58f2-9e47-5aac-9a71-296db55d1b32",
@@ -120670,6 +120825,44 @@
       }
     },
     {
+      "id": "20dabdf2-45bf-5fe6-9612-4a62e9d8893d",
+      "system": "gba",
+      "title": "Pokemon Emerald Azure (v0.5.4)",
+      "aliases": [
+        "Pokemon Emerald Azure (v0.5.4)",
+        "Pokemon Emerald Azure (v0.5.4).gba"
+      ],
+      "hook": "Rebuild teams around custom forms, field effects and Radical Red-style balance changes while tackling capped battles with readily adjustable EVs and IVs. The convenience tools remove much of the preparation grind, not the tactical demands: Set mode and trainer-battle item restrictions are enforced, and this beta’s story currently stops after Gym10.",
+      "flags": [
+        "Unfinished"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://eeveeexpo.com/threads/9270/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-emerald-azure"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pok%C3%A9mon-emerald-azure.539574/"
+        }
+      ]
+    },
+    {
       "id": "24ac5819-c09d-5329-95c0-caf5cc7e3eed",
       "system": "gba",
       "title": "Pokemon Clover (v1.3.3)",
@@ -120712,6 +120905,61 @@
         "sortie-legacy-work": "pokemon-clover",
         "sortie-legacy-variant": "gba-pokemon-clover"
       }
+    },
+    {
+      "id": "24be97ad-ba2e-5784-8e08-0d6b18d08b47",
+      "system": "gba",
+      "title": "Pokemon CC - Operation Masquerade (v1.1)",
+      "aliases": [
+        "Pokemon CC - Operation Masquerade (v1.1)",
+        "Pokemon CC - Operation Masquerade (v1.1).gba"
+      ],
+      "hook": "Tune a team for six four-trainer gauntlets, adding optional battle risks to chase higher scores against custom Arknights-themed opponents. Earned credits feed a Pokémon-and-item gacha, so the appeal is repeatedly refining a limited roster under chosen restrictions rather than exploring a region or grinding levels.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/hedara90/contingency-contract"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/hedara90/contingency-contract/releases/tag/Release-1.1"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-cc-operation-masquerade"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokesmith.com/hacks/pokemon-cc-operation-masquerade"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.reddit.com/r/PokemonROMhacks/comments/1wak1bq/a_new_battle_hack_pokemon_cc_operation_masquerade/"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "8d547165",
+          "size": 33554432,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
     },
     {
       "id": "25cb5650-41a0-55fa-9c05-17cbf353bb6a",
@@ -120757,6 +121005,64 @@
         "sortie-legacy-work": "pokemon-inkwell",
         "sortie-legacy-variant": "gba-pokemon-inkwell"
       }
+    },
+    {
+      "id": "28540e7f-fd56-57c9-8655-ced0cd98e381",
+      "system": "gba",
+      "title": "Pokemon Sirius (English Translation) (2020-09-04)",
+      "aliases": [
+        "Pokemon Sirius (English Translation) (2020-09-04)",
+        "Pokemon Sirius (English Translation) (2020-09-04).gba"
+      ],
+      "hook": "Sirius revisits a meteor-struck Hoenn with new creatures and altered evolution paths, making team discovery unfamiliar even when the route through the region resembles Emerald. Its demanding gym battles are a major part of the appeal and friction; this is the English-translated original, not the separate Minus revision that smooths the difficulty and reduces tedium.",
+      "flags": [
+        "English translation"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://cdromance.com/translations/pokemon-altair-and-sirius-english-translation"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.gamebrew.org/wiki/Pokemon_Altair_and_Sirius_GBA"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/showthread.php?t=365959"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2021/05/pokemon-altair-sirius-rom-download/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.tapatalk.com/groups/nuzlocke_forum/pokemon-altair-sirius-english-translation-t10252.html"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "4404dcb3",
+          "size": 16777216,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Official 2020-09-04 IPS applied to a clean Emerald USA/Europe base verified against No-Intro (CRC32 1f1c08fb); resulting raw cartridge inspected."
+        }
+      ]
     },
     {
       "id": "2898e056-aefd-57ff-ac7b-dbcd0e0d082b",
@@ -120847,6 +121153,61 @@
       }
     },
     {
+      "id": "2be03a50-1a78-56f7-b4d9-576ff698cf8b",
+      "system": "gba",
+      "title": "Pokemon Tourmaline (v1.1.1)",
+      "aliases": [
+        "Pokemon Tourmaline (v1.1.1)",
+        "Pokemon Tourmaline (v1.1.1).gba"
+      ],
+      "hook": "Explore Issho with a reworked regional Pokédex, new status effects and an Echo type designed to counter Fairy and Ghost, so familiar teams need fresh matchup planning. The main adventure reaches the Hall of Fame and includes the Hoenn Battle Frontier, but the planned Hoenn story continuation was cut and the narrative ends on a cliffhanger.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-tourmaline"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.mediafire.com/file/yhy1lgfpjvpt1ve/tourmaline_v1.1.1.zip/file"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/527425/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pok%C3%A9mon-tourmaline-v1-1-1-released-02-09-2026.527425/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/wp-content/uploads/2024/07/a-note-from-the-dev.pdf"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "24e7220c",
+          "size": 33554432,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
+    },
+    {
       "id": "2c39f760-ba07-515d-9b34-16b0120c12d1",
       "system": "gba",
       "title": "Pokemon Saiph (2020 Final)",
@@ -120883,6 +121244,71 @@
         "sortie-legacy-work": "pokemon-saiph",
         "sortie-legacy-variant": "gba-pokemon-saiph-2020-final"
       }
+    },
+    {
+      "id": "2c4c6da2-5e60-593a-94bd-cccd379727da",
+      "system": "gba",
+      "title": "National History Museum (v1.0.4)",
+      "aliases": [
+        "National History Museum (v1.0.4)",
+        "National History Museum (v1.0.4).gba"
+      ],
+      "hook": "Escape a three-floor museum by treating trainer battles and the exhibits around them as interlocking puzzles, moving from Egyptian displays through fossils to the Ice Age. Some clues are deliberately hidden; a Game Master can supply hints or resolve potential soft locks, but adds to your in-game time.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/national-history-museum"
+        }
+      ]
+    },
+    {
+      "id": "2d50492f-7a0a-5e2e-9103-7be07991cbf7",
+      "system": "gba",
+      "title": "Jurassic PokePark (v1.1.1)",
+      "aliases": [
+        "Jurassic PokePark (v1.1.1)",
+        "Jurassic PokePark (v1.1.1).gba"
+      ],
+      "hook": "Guide Larvy and friends through a prehistoric island park, solving both overworld and battle puzzles rather than building a team for the usual badge circuit. Your actions change the story, and achievements give this short adventure a reason for a second visit.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://hashtagmarky.com/productions/jurassic-pokepark/resources"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://hashtagmarky.com/productions/jurassic-pokepark/walkthrough"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/jurassic-pokepark"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/the-results-for-the-third-team-aqua-romhacking-competition-have-been-announced.544052/"
+        }
+      ]
     },
     {
       "id": "2f39d798-7056-5ed8-9eb4-30b17912aa3c",
@@ -121430,6 +121856,64 @@
       }
     },
     {
+      "id": "45a216d4-e1ef-503e-b5a4-5d409d831eb5",
+      "system": "gba",
+      "title": "Pokemon Project Nova (v2.7.0)",
+      "aliases": [
+        "Pokemon Project Nova (v2.7.0)",
+        "Pokemon Project Nova (v2.7.0).gba"
+      ],
+      "hook": "Project Nova rebuilds Kanto around harder trainers, battle-item restrictions and altered Nova species, while a Pocket PC, move services and shop Rare Candies reduce the work of changing teams. Version 2.7.0 remains an unfinished adventure ending at the Seafoam Islands, so choose it for the battles and new areas rather than a complete campaign.",
+      "flags": [
+        "Unfinished"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/GilkoGaming/Project-Nova"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/GilkoGaming/Project-Nova/releases/download/2.7.0/Project.nova.2.7.0.bps"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/GilkoGaming/Project-Nova/releases/tag/2.7.0"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2026/01/pokemon-project-nova/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.romhackhub.com/hacks/pokemon-project-nova/"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "bd16aec6",
+          "size": 33554432,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
+    },
+    {
       "id": "45c44ace-6fa2-5cf3-99a4-8cf1d2962cc6",
       "system": "gba",
       "title": "Pokemon Unbound (v2.1.1.1)",
@@ -121595,6 +122079,39 @@
         "sortie-legacy-work": "pokemon-monster-hunter",
         "sortie-legacy-variant": "gba-pokemon-monster-hunter"
       }
+    },
+    {
+      "id": "4b98d8d5-89e8-5e99-821a-887235385758",
+      "system": "gba",
+      "title": "The Porygon Trail (v0.2.1)",
+      "aliases": [
+        "The Porygon Trail (v0.2.1)",
+        "The Porygon Trail (v0.2.1).gba"
+      ],
+      "hook": "Set out for Orchid City through procedurally generated maps, with a layered overworld and a new six-on-six battle system that changes how a whole party occupies the fight. The unusual journey is still a beta: later areas await cleanup, and overlapping battlers may need to be moved into an empty position.",
+      "flags": [
+        "Unfinished"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/the-porygon-trail"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.youtube.com/watch?v=sadm2Vqsfqg"
+        }
+      ]
     },
     {
       "id": "4b9fcda7-9f60-50f8-809c-ec5ea7246e1d",
@@ -121836,6 +122353,41 @@
       }
     },
     {
+      "id": "56227144-b166-59f2-828f-56c3fd97b07f",
+      "system": "gba",
+      "title": "Weird Type Fun (v2.0.3)",
+      "aliases": [
+        "Weird Type Fun (v2.0.3)",
+        "Weird Type Fun (v2.0.3).gba"
+      ],
+      "hook": "Kanto becomes unfamiliar when all 18 types are replaced and the Pokémon, moves and items are redesigned around a new matchup chart. Version 2.0 adds a larger roster and Sevii post-game challenges, but it calls for a fresh save rather than carrying over a pre-2.0 collection.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/weird-type-fun"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/weird-type-fun-v2-0-complete-type-swap-hack-2026-update.529212/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2024/07/pokemon-weird-type-fun/"
+        }
+      ]
+    },
+    {
       "id": "58fb2593-405c-5139-abb4-ecb42ff55e91",
       "system": "gba",
       "title": "Pokemon Snakewood",
@@ -121916,6 +122468,41 @@
         "sortie-legacy-work": "pokemon-sors",
         "sortie-legacy-variant": "gba-pokemon-sors"
       }
+    },
+    {
+      "id": "5be0a0b9-089c-526c-9aca-c5f66f0ac495",
+      "system": "gba",
+      "title": "Pokemon RiverTeal (2026-11-09)",
+      "aliases": [
+        "Pokemon RiverTeal (2026-11-09)",
+        "Pokemon RiverTeal (2026-11-09).gba"
+      ],
+      "hook": "RiverTeal makes completing the Pokédex the route through its new region: Collector's Vaults award badges for catching milestones instead of beating gym leaders, with trainer rewards helping replenish your Poké Balls. Choose it for map exploration and finding all 386 species rather than a plot-driven campaign; the November update also repairs the physical/special split and reduces early leveling friction.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://veturian.github.io/pokemon/riverteal/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-riverteal"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.reddit.com/r/PokemonROMhacks/comments/1xrorvk/pok%C3%A9mon_riverteal_update_20261109"
+        }
+      ]
     },
     {
       "id": "5ca39aa7-3a04-5861-adcc-a0d01f2f0643",
@@ -122061,6 +122648,41 @@
       }
     },
     {
+      "id": "5f1a532f-5c48-500b-ae24-666a183f9056",
+      "system": "gba",
+      "title": "Pokemon Uncanny (v1.0.0)",
+      "aliases": [
+        "Pokemon Uncanny (v1.0.0)",
+        "Pokemon Uncanny (v1.0.0).gba"
+      ],
+      "hook": "Catch oddities from Pokémon's anime, manga and other side material—such as Crystal Onix, clone starters and creatures that were never ordinary catchable species—then build a team around their custom stats and evolutions. The familiar FireRed route structure remains, so this is a fresh roster for a Kanto replay rather than a new campaign; save before the Game Corner, where a jackpot crash is documented.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://gbacodes.com/pokemon-uncanny/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2025/04/pokemon-uncanny/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.youtube.com/watch?v=KzqLDvbpVFw"
+        }
+      ]
+    },
+    {
       "id": "622b5c59-efbf-59f3-b0e9-98d07a891179",
       "system": "gba",
       "title": "Pokemon Light and Shadow (v2.0.4)",
@@ -122098,6 +122720,69 @@
         "sortie-legacy-work": "pokemon-light-and-shadow",
         "sortie-legacy-variant": "gba-pokemon-light-and-shadow"
       }
+    },
+    {
+      "id": "62cb5793-466b-55d4-9af3-1fd3bb0dd2b9",
+      "system": "gba",
+      "title": "Pokemon Altair (English Translation) (2020-09-04)",
+      "aliases": [
+        "Pokemon Altair (English Translation) (2020-09-04)",
+        "Pokemon Altair (English Translation) (2020-09-04).gba"
+      ],
+      "hook": "Revisit a meteor-scarred Hoenn with new creatures, changed evolution paths and a postgame that leads into Vega, while the familiar Emerald structure keeps the new roster grounded in recognizable places. This is the demanding original Altair in English, not the gentler Minus rebalance, so expect tougher bosses and more training than in stock Emerald.",
+      "flags": [
+        "English translation"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://w.atwiki.jp/altair1/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.gamebrew.org/wiki/Pokemon_Altair_and_Sirius_GBA"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.mediafire.com/file/jpvwiik0z7szpc8/Altair_Sirius_20200904.zip/file"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pok%C3%A9mon-altair-sirius-minus.442542/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pok%C3%A9mon-vega-and-altair-sirius-english-version.365959/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2021/05/pokemon-altair-sirius-rom-download/"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "fd6eb54c",
+          "size": 16777216,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Official 2020-09-04 IPS applied to a clean Emerald USA/Europe base verified against No-Intro (CRC32 1f1c08fb); resulting raw cartridge inspected."
+        }
+      ]
     },
     {
       "id": "67803052-f660-5647-bec3-086b5bcd6a04",
@@ -122151,6 +122836,66 @@
         "sortie-legacy-work": "fire-emblem-the-last-promise",
         "sortie-legacy-variant": "gba-fire-emblem-the-last-promise"
       }
+    },
+    {
+      "id": "68234833-1945-54d1-b5a5-ac5e2274decf",
+      "system": "gba",
+      "title": "Pokemon FireRed and LeafGreen Plus (v1.5.1)",
+      "aliases": [
+        "Pokemon FireRed and LeafGreen Plus (v1.5.1)",
+        "Pokemon FireRed and LeafGreen Plus (v1.5.1).gba"
+      ],
+      "hook": "Switch between FireRed and LeafGreen exclusives within one save, then use adjustable challenge rules, reusable TMs and a larger postgame to make a familiar Kanto run less cumbersome. It deliberately keeps Generation III battles and link compatibility rather than adding the physical/special split or a modern Pokédex; stock FireRed and LeafGreen saves cannot be imported.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Deokishisu/FRLG-Plus"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Deokishisu/FRLG-Plus/releases/download/v1.5.1/frlgPlus.bps"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Deokishisu/FRLG-Plus/releases/tag/v1.5.1"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://raw.githubusercontent.com/Deokishisu/FRLG-Plus/master/FEATURES.md"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://raw.githubusercontent.com/Deokishisu/FRLG-Plus/v1.5.1/FAQ.md"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2021/06/pokemon-firered-leafgreen/"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "964763c0",
+          "size": 16777216,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
     },
     {
       "id": "686ea2f3-3876-50d8-80b7-7e92253e96dc",
@@ -122291,6 +123036,61 @@
       }
     },
     {
+      "id": "695f94d3-3984-5019-9da9-0feab327a51e",
+      "system": "gba",
+      "title": "Pokemon The Unown King (v1.1.0)",
+      "aliases": [
+        "Pokemon The Unown King (v1.1.0)",
+        "Pokemon The Unown King (v1.1.0).gba"
+      ],
+      "hook": "Collect the alphabet’s 26 Unown to turn unreadable temple inscriptions into a story, opening new paths through HM-gated exploration and boss fights. Version 1.1.0 mainly polishes art and fixes the original adventure; it does not yet include the planned true ending or expanded post-game.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/green-tee/pokeemerald-expansion-unown-king/releases/tag/v1.0.0"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/green-tee/pokeemerald-expansion-unown-king/releases/tag/v1.1.0"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/the-unown-king"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2025/11/pokemon-the-unown-king/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.reddit.com/r/PokemonROMhacks/comments/1qa6jnu/pok%C3%A9mon_the_unown_king_v110_is_here/"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "a7602a86",
+          "size": 33554432,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
+    },
+    {
       "id": "6aeecd9d-e898-5d1f-b412-8cf1367e622d",
       "system": "gba",
       "title": "Pokemon Petalburg Dynasty (v1.0.2)",
@@ -122421,6 +123221,36 @@
         "sortie-legacy-work": "final-fantasy-iv-advance",
         "sortie-legacy-variant": "gba-final-fantasy-iv-advance"
       }
+    },
+    {
+      "id": "6d92dfe7-0c21-59b1-b126-ab5f40797884",
+      "system": "gba",
+      "title": "Pokemon Phoenix Red (v2.0)",
+      "aliases": [
+        "Pokemon Phoenix Red (v2.0)",
+        "Pokemon Phoenix Red (v2.0).gba"
+      ],
+      "hook": "Revisit a reworked Kanto where major fights are double battles against full gym teams, choosing two starters and drawing from a reshuffled 386-Pokémon roster. Reusable TMs, repeatable training battles and an HM-free main story make experimenting easier, but the alternate-universe war storyline and adult language are a deliberate break from FireRed's tone.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pokemon-phoenix-red-complete-v2-0.541255/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.reddit.com/r/PokemonROMhacks/comments/1voag6g/pokemon_phoenix_red_v20_release/"
+        }
+      ]
     },
     {
       "id": "6dce558d-b477-5215-8b67-cba63e4c4dab",
@@ -122610,6 +123440,64 @@
       }
     },
     {
+      "id": "6efb1072-4fe5-5a11-92c7-4f87e33d8a9a",
+      "system": "gba",
+      "title": "Pokemon Mystique (v1.1.1)",
+      "aliases": [
+        "Pokemon Mystique (v1.1.1)",
+        "Pokemon Mystique (v1.1.1).gba"
+      ],
+      "hook": "Investigate abnormal weather in a short adventure built around weather-powered wild bosses, starting with several Pokémon and early access to free move relearning and evolution supplies so you can rebuild your team around each fight. Trainers only battle when spoken to, and the story includes a Pokémon Horizons spoiler; use the 1.1.1 post-jam revision for the repaired ending.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://drive.google.com/drive/folders/12xg6GdxSMPHC6wTWTWtCh2i4MZ8o5noX"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://eeveeexpo.com/threads/9032/"
+        }
+      ]
+    },
+    {
+      "id": "6f52309a-9389-5ebf-9abe-a9408f5444f2",
+      "system": "gba",
+      "title": "Pokemon Path (v0.1.12)",
+      "aliases": [
+        "Pokemon Path (v0.1.12)",
+        "Pokemon Path (v0.1.12).gba"
+      ],
+      "hook": "Build a team from three-choice random Pokémon bags and collect charms through a four-path run, turning a Nuzlocke into a compact sequence of roster and resource decisions rather than another full Hoenn journey. Permanent fainting and unlockable difficulty modifiers give it replay value, but this is still a beta with documented interface and summary-screen bugs.",
+      "flags": [
+        "Unfinished"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-path"
+        }
+      ]
+    },
+    {
       "id": "7179744e-14bb-5630-a1b4-c9c64e29229e",
       "system": "gba",
       "title": "Bookworm",
@@ -122783,6 +123671,31 @@
         "sortie-legacy-work": "shining-soul-ii",
         "sortie-legacy-variant": "gba-shining-soul-ii"
       }
+    },
+    {
+      "id": "773fbd20-5088-5d6d-8f16-62f12c4d5a8d",
+      "system": "gba",
+      "title": "Pokemon Saiph 2 (English) (v1.5.0)",
+      "aliases": [
+        "Pokemon Saiph 2 (English) (v1.5.0)",
+        "Pokemon Saiph 2 (English) (v1.5.0).gba"
+      ],
+      "hook": "Saiph 2 pairs a new-region campaign with DexNav hunting, logged side quests and field moves that do not consume party moveslots, then offers a Battle Frontier beyond the story. Its mix-and-match scaling and randomizer settings support repeat runs, but Hero and Vigilante modes deliberately trade convenient saving for a harsher campaign, with Vigilante resetting after a defeat.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://eeveeexpo.com/threads/8702/"
+        }
+      ]
     },
     {
       "id": "7a306345-53f3-57b7-9320-cd8490457388",
@@ -123028,6 +123941,46 @@
       }
     },
     {
+      "id": "8ba46852-b3bf-5e26-b511-c19b294c1e47",
+      "system": "gba",
+      "title": "Pokemon Contemporary Emerald (v1.1)",
+      "aliases": [
+        "Pokemon Contemporary Emerald (v1.1)",
+        "Pokemon Contemporary Emerald (v1.1).gba"
+      ],
+      "hook": "An ORAS-inspired tileset, following Pokémon and modern battle rules refresh the familiar Hoenn journey. Free candies and editable natures and abilities reduce team-building chores, while gym level caps prevent simply outlevelling every fight; this is a refreshed Emerald run rather than a new-region adventure.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.mediafire.com/file/n3dp92txy4adn64/Contemporary_Emerald_v1.1.zip/file"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pok%C3%A9mon-contemporary-emerald-v1-0.537419/"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "6e59dde7",
+          "size": 33554432,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
+    },
+    {
       "id": "8bff900f-fd34-5c52-b259-8986125af7ce",
       "system": "gba",
       "title": "Pokemon The Unown King",
@@ -123119,6 +124072,114 @@
         "sortie-legacy-work": "chuchu-rocket",
         "sortie-legacy-variant": "gba-chuchu-rocket"
       }
+    },
+    {
+      "id": "934367b0-1b5c-5809-94a1-33f470be05c8",
+      "system": "gba",
+      "title": "Pokemon BugLime Version (v1.2)",
+      "aliases": [
+        "Pokemon BugLime Version (v1.2)",
+        "Pokemon BugLime Version (v1.2).gba"
+      ],
+      "hook": "Build a Bug-only team through Kanto using insects from all nine generations, with redesigned typings, stats and moves that give more than the usual Bug/Flying and Bug/Poison choices. Reworked opposing teams, reusable TMs and modern battle mechanics make the restriction the attraction, rather than trying to turn FireRed into a punishing difficulty hack.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://romhackguides.com/hacks/buglime/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/buglime"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.mediafire.com/file/95duwox7bpk4bsa/Pokemon_BugLime_v1.2_Patch_%2526_Docs.zip/file"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/544221/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pok%C3%A9mon-buglime-version-v1-2.544221/"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "3ed760f7",
+          "size": 33554432,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "All target-window Adler32 checksums in the author-distributed v1.2 VCDIFF patch matched the complete raw cartridge payload."
+        }
+      ]
+    },
+    {
+      "id": "934eb854-062c-5c7c-a6a4-b2747e59fe3c",
+      "system": "gba",
+      "title": "Pokemon Vega (English Translation) (2020-08-23)",
+      "aliases": [
+        "Pokemon Vega (English Translation) (2020-08-23)",
+        "Pokemon Vega (English Translation) (2020-08-23).gba"
+      ],
+      "hook": "Vega builds its demanding Tohoak campaign around 181 original Pokémon, new moves and an extensive postgame, making team discovery more than a familiar-Kanto exercise. This is the full English translation of the original adventure, not the Fairy Edition EX reworking; reading the Altair/Sirius synopsis first helps its continuing story make sense.",
+      "flags": [
+        "English translation"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.gamebrew.org/wiki/Pokemon_Vega_GBA"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-vega-english-translation"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.mediafire.com/file/aqa32fsqq2c4gmp/Vega_20200823_pd.zip/file"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/365959/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pok%C3%A9mon-vega-and-altair-sirius-english-version.365959/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2022/06/pokemon-vega-fairy-edition-ex/"
+        }
+      ]
     },
     {
       "id": "9378b0b5-8f8b-57d1-9fc2-fe568d3d16cf",
@@ -123256,6 +124317,44 @@
         "sortie-legacy-work": "pokemon-mystery-dungeon-red-rescue-team",
         "sortie-legacy-variant": "gba-pokemon-mystery-dungeon-red-rescue-team"
       }
+    },
+    {
+      "id": "9482d7df-5cdb-5368-bec0-ba49ed009ed0",
+      "system": "gba",
+      "title": "PokeGotchi (v1.0.1)",
+      "aliases": [
+        "PokeGotchi (v1.0.1)",
+        "PokeGotchi (v1.0.1).gba"
+      ],
+      "hook": "Care for one Fomantis as a real-time virtual pet: feed it, clean its room, explore town and earn furniture money through food-serving and pachinko minigames. This is a short Tamagotchi-inspired competition tech demo rather than a monster-catching adventure, so choose it for a small pet-care routine and make sure the emulator's real-time clock works.",
+      "flags": [
+        "Unfinished"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://tumundohackrom.com/pokegotchi-gba/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokegotchi"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.reddit.com/r/PokemonROMhacks/comments/1wbj2q1/pok%C3%A9gotchi_pok%C3%A9mon_x_tamagotchi/"
+        }
+      ]
     },
     {
       "id": "964086e1-2e81-52da-a1cb-197e19ae915b",
@@ -123489,6 +124588,39 @@
       }
     },
     {
+      "id": "9a162683-6e81-5e21-b43a-42403f39c905",
+      "system": "gba",
+      "title": "Pokemon Soulstice (v0.2.8.5)",
+      "aliases": [
+        "Pokemon Soulstice (v0.2.8.5)",
+        "Pokemon Soulstice (v0.2.8.5).gba"
+      ],
+      "hook": "Soulstice turns an Absol into a human and sends you through a reworked Kanto to investigate, mixing custom Pokémon with modern CFRU battles and a mystery about Mega energy. Treat it as a short, unfinished story sample rather than a full replacement for FireRed: the 0.2.8.5 demo is listed at roughly two to four hours and focuses on repairing early progression softlocks.",
+      "flags": [
+        "Unfinished"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.dspoketuber.com/2026/10/pokemon-soulstice.html"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-soulstice"
+        }
+      ]
+    },
+    {
       "id": "9bae335b-ab78-5509-8f08-30a72fc2f6c7",
       "system": "gba",
       "title": "Pokemon Ultra Violet",
@@ -123582,6 +124714,51 @@
       }
     },
     {
+      "id": "9eba49b8-2dd5-5f86-8373-edc0820eee28",
+      "system": "gba",
+      "title": "Pokemon Wild Indigo (v1.0.2)",
+      "aliases": [
+        "Pokemon Wild Indigo (v1.0.2)",
+        "Pokemon Wild Indigo (v1.0.2).gba"
+      ],
+      "hook": "Explore an alien planet as a stranded space-trucker, learning its ecology and using Pokémon interactions to unravel environmental puzzles instead of following a gym checklist. The Outer Wilds influence makes reading and experimentation central to progress, while the compact competition-project framing offers a different reason to revisit Emerald's engine than another battle-focused overhaul.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://api.github.com/repos/JosephNied/pokeemerald-expansion/releases"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/JosephNied/pokeemerald-expansion/releases/download/Pokemon-Wild-Indigo-v1.0.1/Pokemon_.Wild.Indigo.v1.0.1.ups"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/JosephNied/pokeemerald-expansion/releases/tag/Pokemon-Wild-Indigo-v1.0.1"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/JosephNied/pokeemerald-expansion/releases/tag/expansion%2F1.13.4"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-wild-indigo"
+        }
+      ]
+    },
+    {
       "id": "9fdfa300-d6fa-53c3-863d-b6b42f8e8b45",
       "system": "gba",
       "title": "Pokemon TRE Johto (2025-04-30)",
@@ -123627,6 +124804,44 @@
       }
     },
     {
+      "id": "a1f96372-e861-55a5-817c-7d27d980d920",
+      "system": "gba",
+      "title": "Regius (v0.1)",
+      "aliases": [
+        "Regius (v0.1)",
+        "Regius (v0.1).gba"
+      ],
+      "hook": "Explore an island chain of deserts, jungles and ruins, finding 48 original Pokémon and building teams for optional-by-default double battles. This is a self-directed exploration beta rather than a finished story campaign, and a few areas remain blocked by unobtainable HMs.",
+      "flags": [
+        "Unfinished"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/regius"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/regius-an-island-adventure-full-game-beta.531729/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2024/10/regius-an-island-adventure/"
+        }
+      ]
+    },
+    {
       "id": "a3121924-ab6a-5df1-b00a-858f6d987ad9",
       "system": "gba",
       "title": "Pokemon Ghost Grey Version (v1.0.2)",
@@ -123670,6 +124885,129 @@
         "sortie-legacy-work": "pokemon-ghost-grey-version",
         "sortie-legacy-variant": "gba-pokemon-ghost-grey-version"
       }
+    },
+    {
+      "id": "a5c26ac8-6407-5862-8852-edb3b69c61f3",
+      "system": "gba",
+      "title": "Castlevania - Aria of Sorrow - Reprise (v1.0)",
+      "aliases": [
+        "Castlevania - Aria of Sorrow - Reprise (v1.0)",
+        "Castlevania - Aria of Sorrow - Reprise (v1.0).gba"
+      ],
+      "hook": "Reprise turns Aria's soul collecting into a seeded roguelike: boss victories reshuffle the castle, while hazards and reworked equipment demand improvised builds. Four difficulties and optional save deletion on death let you choose the stakes, but this combat-and-loot remix replaces the original's carefully mapped exploration.",
+      "flags": [
+        "Optional permadeath"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Xanthus1/aos_patches"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://vimm.net/romhacking/hacks/8425"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.mediafire.com/file/zidr6w06ypy69sx/AoS_Reprise_v1_0.zip/file"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.romhack.ing/database/content/entry/odNu5JQBNs8FWu0CcF6q/aria-of-sorrow-reprise"
+        }
+      ]
+    },
+    {
+      "id": "a73eaf4a-9c32-58d7-bd1c-c0d1717510aa",
+      "system": "gba",
+      "title": "Accept Defeat (v2.0)",
+      "aliases": [
+        "Accept Defeat (v2.0)",
+        "Accept Defeat (v2.0).gba"
+      ],
+      "hook": "Escape an island as an underpowered fisherman by exploiting familiar Pokémon rules instead of grinding past its trainers. Three endings and deliberately possible softlocks make this a compact logic experiment, not another long badge campaign.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/completed-accept-defeat-version-2-0.483804/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2022/10/pokemon-accept-defeat/"
+        }
+      ]
+    },
+    {
+      "id": "a8097568-29a0-564d-8469-6e63afc717ec",
+      "system": "gba",
+      "title": "Pokemon Crestfall (v2.1.0)",
+      "aliases": [
+        "Pokemon Crestfall (v2.1.0)",
+        "Pokemon Crestfall (v2.1.0).gba"
+      ],
+      "hook": "Build a team from a 300-species regional roster while exploring Enpale, a new region with mining, Pokémon-free HM use and a rock-and-metal soundtrack. The 2.x update adds overworld encounters, a quest journal and a broader post-game battle loop; use a compatible emulator, since the creator specifically warns of MyBoy problems.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/grandmatuffits/pokeemerald-crestfall"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/grandmatuffits/pokeemerald-crestfall/releases/tag/v1.1.1"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/grandmatuffits/pokeemerald-crestfall/releases/tag/v2.0.0"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/grandmatuffits/pokeemerald-crestfall/releases/tag/v2.1.0"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "88eee2c6",
+          "size": 33554432,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
     },
     {
       "id": "a8355961-8cd1-5553-976c-7396e88908c2",
@@ -123718,6 +125056,44 @@
         "sortie-legacy-work": "poke47",
         "sortie-legacy-variant": "gba-poke47-more-with-followers"
       }
+    },
+    {
+      "id": "a8ed2d58-2d5b-5fff-a170-ce1f3e6fe30c",
+      "system": "gba",
+      "title": "Pokemon Phantom Order (Beta 2.0.2)",
+      "aliases": [
+        "Pokemon Phantom Order (Beta 2.0.2)",
+        "Pokemon Phantom Order (Beta 2.0.2).gba"
+      ],
+      "hook": "Reworked gym puzzles, permanent Mega evolutions and optional level scaling turn this Hoenn-and-Sevii story into a harder team-building exercise. A BST-based luck system can let slower Pokémon act first, so speed alone is not a guarantee; Beta 2.0.2 remains an unfinished four-gym adventure with a separate Beta Land challenge area.",
+      "flags": [
+        "Unfinished"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://sites.google.com/view/thestradragonkingdom/main-page"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/phantom-order"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2025/12/pokemon-phantom-order/"
+        }
+      ]
     },
     {
       "id": "a96f8486-89b9-5d8c-aecb-001173eb068a",
@@ -124515,6 +125891,41 @@
       }
     },
     {
+      "id": "bae57a78-9d05-55fe-99e0-499ed026efdb",
+      "system": "gba",
+      "title": "Thirst Trap (v2.0)",
+      "aliases": [
+        "Thirst Trap (v2.0)",
+        "Thirst Trap (v2.0).gba"
+      ],
+      "hook": "Refusing to buy overpriced water becomes a compact, completely SFW comedy about escaping a predatory tourist town, with money management and Pokémon mechanics feeding its puzzles. Expect about two hours of exploration rather than a badge quest, and keep a reserve of cash: the author warns that careless spending can leave you unable to finish.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/thirst-trap"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/completed-thirst-trap-v2-0.532626/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2024/11/pokemon-thirst-trap/"
+        }
+      ]
+    },
+    {
       "id": "baee6c23-0959-5014-bab7-13d07c9123be",
       "system": "gba",
       "title": "Pokemon Ash Gray (Newerest Edition) (v1.0)",
@@ -124644,6 +126055,41 @@
       }
     },
     {
+      "id": "c1d5c7d2-3827-59d1-94e4-bff1572d6710",
+      "system": "gba",
+      "title": "Pokemon Tag Team Trials (v2.0.3)",
+      "aliases": [
+        "Pokemon Tag Team Trials (v2.0.3)",
+        "Pokemon Tag Team Trials (v2.0.3).gba"
+      ],
+      "hook": "Swap between an Aqua grunt and a Magma grunt, combining their tools to solve rooms and battles with guaranteed catches, perfect move accuracy and no critical hits. This is a short, logic-first puzzle outing rather than a badge quest; solo switching is built in, while cooperative play needs linked mGBA windows.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Viperio19/pokemon-tag-team-trials"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-tag-team-trials"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.romhackhub.com/hacks/pokemon-tag-team-trials/"
+        }
+      ]
+    },
+    {
       "id": "c20d1fb2-3e72-5e27-9b23-219aa0810e3b",
       "system": "gba",
       "title": "Pokemon Liquid Crystal",
@@ -124727,6 +126173,99 @@
       }
     },
     {
+      "id": "c5cce1b9-07ee-5eec-a682-be3012ce0225",
+      "system": "gba",
+      "title": "Pokemon WaveBlue (v1.9.5)",
+      "aliases": [
+        "Pokemon WaveBlue (v1.9.5)",
+        "Pokemon WaveBlue (v1.9.5).gba"
+      ],
+      "hook": "WaveBlue keeps Kanto recognizable while turning major battles into team-planning tests, with optimized opponents, 3v3 Gym fights, modern moves and no Bag access during Trainer battles. Reusable TMs, portable boxes and optional level caps support experimentation, while v1.9.5 adds Gym rematches and doubles rematches against the League rather than a new region or story.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Raduziel/Project-WaveBlue"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://romhackguides.com/hacks/waveblue/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.emulatorhacks.com/2026/01/pokemon-waveblue-gba.html"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-waveblue"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pok%C3%A9mon-waveblue.539394/"
+        }
+      ]
+    },
+    {
+      "id": "c5fa546c-3ea7-5582-a97c-a8a5f386b7c6",
+      "system": "gba",
+      "title": "Pokemon Legends Delta (v2.2.5)",
+      "aliases": [
+        "Pokemon Legends Delta (v2.2.5)",
+        "Pokemon Legends Delta (v2.2.5).gba"
+      ],
+      "hook": "Explore an industrial-era Hoenn with Ancient Hoenn regional forms and modern battle mechanics, following ranger and explorer perspectives instead of FireRed’s Gym tour. Version 2.2.5 is still a demo, so its historical setting and custom Pokémon are reasons to sample an unfinished adventure, not to expect a complete campaign.",
+      "flags": [
+        "Unfinished"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-legends-delta"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-legends-delta/changelog"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-legends-delta/versions"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2026/03/pokemon-legends-delta/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.reddit.com/r/PokemonROMhacks/comments/1m7db7h/pokemon_legends_delta_is_now_recruiting/"
+        }
+      ]
+    },
+    {
       "id": "c7a039a3-6e47-5413-aa71-1481820dac22",
       "system": "gba",
       "title": "Fire Emblem - The Sun God's Wrath (v1.63)",
@@ -124784,6 +126323,56 @@
       }
     },
     {
+      "id": "c7f305d0-3364-5386-bbe3-8e9b9e25c472",
+      "system": "gba",
+      "title": "Pokemon Classic (v1.5.1)",
+      "aliases": [
+        "Pokemon Classic (v1.5.1)",
+        "Pokemon Classic (v1.5.1).gba"
+      ],
+      "hook": "Revisit Yellow’s Kanto with a partner Pikachu, the original 151 and Emerald-engine conveniences, with extra quests, daily events and post-game content layered onto the familiar journey. This is the maintained DaniRainbow fork rather than the original release, aimed at a more comfortable Kanto return instead of a huge modern-species roster.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/DaniRainbow/pokeclassic"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/DaniRainbow/pokeclassic/releases/tag/v1.5.1"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/danenders/pokeclassic"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-classic"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "e4deb9be",
+          "size": 18677224,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
+    },
+    {
       "id": "cd42edb7-6cec-549a-a20d-a98026572f40",
       "system": "gba",
       "title": "Fire Emblem - Shackled Power (v1.334)",
@@ -124824,6 +126413,79 @@
         "sortie-legacy-work": "fire-emblem-shackled-power",
         "sortie-legacy-variant": "gba-fire-emblem-shackled-power"
       }
+    },
+    {
+      "id": "ce488da4-f12a-5307-bcb1-4d184e60a39c",
+      "system": "gba",
+      "title": "Poke47 (v1.2.3) (Collectathon Postgame)",
+      "aliases": [
+        "Poke47 (v1.2.3) (Collectathon Postgame)",
+        "Poke47 (v1.2.3) (Collectathon Postgame).gba"
+      ],
+      "hook": "Explore a familiar Hoenn with rebalanced later-generation Pokémon, roaming partners that can autobattle, and new puzzle routes; Gauntlet Island adds a separate roguelite built around escalating loot and repeated attempts. The Collectathon Postgame expands the roster again, but this revision’s real-time-clock changes can prevent older saves from loading, so it must not be treated as a drop-in continuation of v1.1.0.",
+      "flags": [
+        "Pre-v1.2.1 saves incompatible"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/luuma/poke47"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://menace791.github.io/poke47-docs/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/poke47"
+        }
+      ]
+    },
+    {
+      "id": "cf894c7d-7fc6-5b50-a247-3d8852c5262b",
+      "system": "gba",
+      "title": "Spirits of the Storm (v1.2.01)",
+      "aliases": [
+        "Spirits of the Storm (v1.2.01)",
+        "Spirits of the Storm (v1.2.01).gba"
+      ],
+      "hook": "Looker and Anabel investigate a port-city mystery in a short, doubles-only adventure where helping residents builds your team. Seeing enemy moves and targets in advance turns battles into tactical puzzles, while full healing after each fight and sharply limited move PP reward solving the encounter rather than grinding through a long route.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/spirits-of-the-storm"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pok%C3%A9mon-spirits-of-the-storm-a-bite-sized-doubles-experience.538262/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2025/09/pokemon-spirits-of-the-storm/"
+        }
+      ]
     },
     {
       "id": "d54bbc10-0399-5340-a954-f69c7859b855",
@@ -124874,6 +126536,56 @@
         "sortie-legacy-work": "pokemon-mystery-dungeon-rogue-rescue-team",
         "sortie-legacy-variant": "gba-pokemon-mystery-dungeon-rogue-rescue-team"
       }
+    },
+    {
+      "id": "d710e410-a440-5e13-a89a-0fe52a93cf53",
+      "system": "gba",
+      "title": "Pokemon Modern Emerald (v3.6)",
+      "aliases": [
+        "Pokemon Modern Emerald (v3.6)",
+        "Pokemon Modern Emerald (v3.6).gba"
+      ],
+      "hook": "Replay Hoenn with a configurable mix of original and modern rules: choose encounter tables, optional physical/special split, reusable TMs, randomizer and Nuzlocke restrictions, then use faster battles and expanded Frontier rematches to keep the run moving. It remains an Emerald-focused, third-generation game rather than an all-generation overhaul, and many setup choices stay fixed for that save.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://api.github.com/repos/resetes12/pokeemerald/releases/tags/Release3.6"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/resetes12/pokeemerald"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/resetes12/pokeemerald/releases/tag/Release3.6"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pok%C3%A9mon-modern-emerald-3-6-open-source-double-speed-battles-following-pok%C3%A9mon-better-battle-frontier-and-more.494005/"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "263a1187",
+          "size": 33554432,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
     },
     {
       "id": "d7429e18-5601-5196-b502-abb5bd45d787",
@@ -124998,6 +126710,44 @@
       }
     },
     {
+      "id": "dc33da8b-deb4-52e9-b3c6-cebe3a4684c4",
+      "system": "gba",
+      "title": "Pokemon Fluvio (v0.1.10)",
+      "aliases": [
+        "Pokemon Fluvio (v0.1.10)",
+        "Pokemon Fluvio (v0.1.10).gba"
+      ],
+      "hook": "Explore a Dutch-inspired region of canals and polders as a field researcher, using a PokéNav quest log to track community jobs and an investigation alongside the gym challenge. Campsites trade consumable briquettes for visits from specialists offering eggs, tutors and team editing; this is still a four-gym beta, so choose it for a substantial sample of a new region rather than a finished campaign.",
+      "flags": [
+        "Unfinished"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://pokemonfluvio.org/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-fluvio"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokeharbor.com/2026/07/pokemon-fluvio/"
+        }
+      ]
+    },
+    {
       "id": "defdfe15-7b82-5f5c-8fa7-585fa7944e87",
       "system": "gba",
       "title": "Fire Emblem - Dream of Five (Definitive Edition v1.7.6)",
@@ -125044,6 +126794,51 @@
         "sortie-legacy-work": "fire-emblem-dream-of-five",
         "sortie-legacy-variant": "gba-fire-emblem-dream-of-five-definitive-edition-v1-7-6"
       }
+    },
+    {
+      "id": "e0984861-e818-551d-88ed-39173305f40a",
+      "system": "gba",
+      "title": "Pokemon Sword and Shield Ultimate Plus (v1.2.1.2)",
+      "aliases": [
+        "Pokemon Sword and Shield Ultimate Plus (v1.2.1.2)",
+        "Pokemon Sword and Shield Ultimate Plus (v1.2.1.2).gba"
+      ],
+      "hook": "A FireRed-based Galar demake that carries the Sword and Shield story through the Gym Challenge and into Isle of Armor and Crown Tundra post-game material. Its battle toybox includes Dynamax, Gigantamax, Mega Evolution and Z-moves; this is the standard English Ultimate Plus edition, not the optional cheap-item or reduced-sprite variants.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Ddaretrogamer/Sword-and-Shield-Ultimate-Plus"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Ddaretrogamer/Sword-and-Shield-Ultimate-Plus/releases/tag/1.2.1.2"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/sword-and-shield-ultimate-plus"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "d854eb09",
+          "size": 33554432,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
     },
     {
       "id": "e17603fb-655a-509f-b202-edc5403ed19b",
@@ -125327,6 +127122,87 @@
       }
     },
     {
+      "id": "ef4e178e-7441-54fc-93ab-462aa9133334",
+      "system": "gba",
+      "title": "Pokemon Bingo Blitz (v1.1)",
+      "aliases": [
+        "Pokemon Bingo Blitz (v1.1)",
+        "Pokemon Bingo Blitz (v1.1).gba"
+      ],
+      "hook": "Explore a miniature Realgam Tower to find and buy nine Battle Bingo cards, then work through boards that mix Pokémon encounters, healing and team choices. It turns XD’s side activity into a short standalone challenge, but remains a technical demo rather than an adventure with a full Gym circuit.",
+      "flags": [
+        "Unfinished"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-bingo-blitz"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.reddit.com/r/PokemonROMhacks/comments/1w9uthx/tarc3_hack_pokemon_bingo_blitz/"
+        }
+      ]
+    },
+    {
+      "id": "f04db519-ec78-5adc-a2f8-ca1167cc8ab9",
+      "system": "gba",
+      "title": "Pokemon Let's Go Pikachu (English Translation)",
+      "aliases": [
+        "Pokemon Let's Go Pikachu (English Translation)",
+        "Pokemon Let's Go Pikachu (English Translation).gba"
+      ],
+      "hook": "Revisit Kanto with a partner Pikachu and Let’s Go-style visible encounters in this FireRed demake, now with almost all dialogue and menu text in English. This edition includes the translator’s small battle fixes, but Spanish graphical labels and the original hack’s broken or missing Pokédex data remain; it is not a fully repaired remake.",
+      "flags": [
+        "Partial English translation"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/lets-go-pikachu-eevee-english-translation"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.reddit.com/r/PokemonROMhacks/comments/1x6oj7p/releasing_my_english_translation_for_pok%C3%A9mon_lets/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.youtube.com/@KevinPokeFan1/videos"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "25c3d89f",
+          "size": 33554432,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
+    },
+    {
       "id": "f206de10-f192-53b4-9288-dce19b1ef8cf",
       "system": "gba",
       "title": "Pokemon - FireRed Version (USA, Europe)",
@@ -125501,6 +127377,59 @@
         "sortie-legacy-work": "fire-emblem-project-ember",
         "sortie-legacy-variant": "gba-fire-emblem-project-ember"
       }
+    },
+    {
+      "id": "f9f5caad-8afe-58bc-ad24-9e2f831c4f57",
+      "system": "gba",
+      "title": "Pokemon Hoenn's Last Wish (v0.4.7)",
+      "aliases": [
+        "Pokemon Hoenn's Last Wish (v0.4.7)",
+        "Pokemon Hoenn's Last Wish (v0.4.7).gba"
+      ],
+      "hook": "Travel from a devastated Hoenn into its past, with new Pokémon forms and a rewritten cast replacing a straightforward Emerald replay. Disabled EVs and configurable difficulty shift attention away from training chores, but version 0.4.7 is an unfinished beta rather than a complete campaign.",
+      "flags": [
+        "Unfinished"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/rafaelsanna/HOENN-S-LAST-WISH-project/tree/main/rom-patcher-js"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://rafaelsanna.github.io/HOENN-S-LAST-WISH-project/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://raw.githubusercontent.com/rafaelsanna/HOENN-S-LAST-WISH-project/main/rom-patcher-js/HLW%20v0.4.7.bps"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pok%C3%A9mon-hoenns-last-wish-version-0-4-7.541242/"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "da5e2f5b",
+          "size": 33554432,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
     },
     {
       "id": "fc2bbf1f-ba1e-5ee9-9eaf-48e22fe9b8a7",
@@ -125765,6 +127694,56 @@
       ]
     },
     {
+      "id": "228447dd-00e2-5cb5-88fd-b9c8b67c1967",
+      "system": "gbc",
+      "title": "Pokemon Silver Mirror (v1.2.1)",
+      "aliases": [
+        "Pokemon Silver Mirror (v1.2.1)",
+        "Pokemon Silver Mirror (v1.2.1).gbc"
+      ],
+      "hook": "Silver Mirror rebuilds Red's Kanto journey inside Crystal, then reverses Gold and Silver's structure with a Johto postgame and another eight badges. Reusable TMs and a Pokégear pager remove much of the old HM-party housekeeping, while the choice between a 151-first Classic mode and early Gen2 encounters changes how familiar Kanto feels; its revised roster also swaps several original species for later evolutions.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://api.github.com/repos/Th3Element05/silvermirror/releases/tags/v1.2.1"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Th3Element05/silvermirror/releases/download/v1.2.1/silvermirror-1.2.1.bps"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Th3Element05/silvermirror/releases/tag/v1.2.1"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://raw.githubusercontent.com/Th3Element05/silvermirror/master/README.md"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "6090a4bc",
+          "size": 2097152,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
+        }
+      ]
+    },
+    {
       "id": "2ee64354-bff9-58ae-92ee-9ac6182178a5",
       "system": "gbc",
       "title": "Super Robot Pinball (English v1.0)",
@@ -125912,6 +127891,61 @@
           "kind": "research",
           "name": "Public reference consulted for original editorial research",
           "url": "https://raw.githubusercontent.com/ElectroDeoxys/Pokemon-TCG-Extended/master/DEVLOG.md"
+        }
+      ]
+    },
+    {
+      "id": "57c328e0-08ba-5de5-8a26-e4f88d10ff71",
+      "system": "gbc",
+      "title": "Pokemon Crystal Inheritance (v1.1.1)",
+      "aliases": [
+        "Pokemon Crystal Inheritance (v1.1.1)",
+        "Pokemon Crystal Inheritance (v1.1.1).gbc"
+      ],
+      "hook": "Move between modern and historic Johto to solve overworld puzzles, craft specialised Poké Balls and assemble a team with new Ancestor forms. Two endings and three difficulty modes support different approaches to the story, but this is a reworked western-Johto adventure rather than the complete retail Johto-and-Kanto itinerary.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/dwg-and-dogs/PLC_Polished"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://raw.githubusercontent.com/dwg-and-dogs/PLC_Polished/main/CHANGELOG.md"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://raw.githubusercontent.com/dwg-and-dogs/PLC_Polished/main/FAQ.md"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://raw.githubusercontent.com/dwg-and-dogs/PLC_Polished/main/README.md"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://raw.githubusercontent.com/dwg-and-dogs/PLC_Polished/main/screenshots/documentation/v110/FaithfulModeChanges_CrystalInheritance_Changes_v110.txt"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.hackdex.app/hack/pokemon-crystal-inheritance"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/crystal-inheritance.542431/"
         }
       ]
     },
@@ -126512,6 +128546,36 @@
       ]
     },
     {
+      "id": "e180836f-6d60-5ef9-9258-77132f0aa848",
+      "system": "gbc",
+      "title": "Legend of Zelda, The - Link's Awakening DX - Another Restoration Hack (v1.0) (Localized Title)",
+      "aliases": [
+        "Legend of Zelda, The - Link's Awakening DX - Another Restoration Hack (v1.0) (Localized Title)",
+        "Legend of Zelda, The - Link's Awakening DX - Another Restoration Hack (v1.0) (Localized Title).gbc"
+      ],
+      "hook": "Masaru's near-original DX restoration brings back B-button text skipping, the KEKE naming-screen tune, and dialogue drawn from early English material. It restores censored details without Redux's broader convenience overhaul: an alternative presentation of Koholint, not a new quest.",
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Masaru2/LADX-Disassembly"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://romhack.ing/database/content/entry/NOK-Iow9TMiJ80QHrEHZUQ/another-link-s-awakening-dx-restoration-hack"
+        }
+      ]
+    },
+    {
       "id": "e5c2c288-0c8c-5a2a-8b89-644d0f927a00",
       "system": "gbc",
       "title": "Legend of Zelda, The - Oracle of Seasons (USA, Australia)",
@@ -126611,6 +128675,54 @@
           "kind": "research",
           "name": "Public reference consulted for original editorial research",
           "url": "https://github.com/PiaCarrot/pokeorange/releases/tag/2026-patch"
+        }
+      ]
+    },
+    {
+      "id": "f5bb8517-b2e6-5f90-94ea-4e9dfd23cea3",
+      "system": "gbc",
+      "title": "Pokemon Orange - Island Walker (Demo)",
+      "aliases": [
+        "Pokemon Orange - Island Walker (Demo)",
+        "Pokemon Orange - Island Walker (Demo).gbc"
+      ],
+      "hook": "This rebuilt Orange Islands adventure brings abilities, the physical/special split and customizable challenges to Crystal, alongside a Magikarp Jump minigame and functioning Pinkan Berries. The demo stops at Pinkan Island rather than delivering the planned full archipelago and Kanto postgame, and its creator warns that fun-first balancing leaves some strategies overpowered.",
+      "flags": [
+        "Unfinished"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/hack-of-the-year-2017-pok%C3%A9mon-orange-gbc-suloku-patch-2026.387653/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pok%C3%A9mon-orange-island-walker-demo-released.496209/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://www.pokecommunity.com/threads/pok%C3%A9mon-orange-island-walker-demo-released.496209/page-8"
+        }
+      ],
+      "fingerprints": [
+        {
+          "algorithm": "crc32",
+          "value": "79fe8e23",
+          "size": 2097152,
+          "representation": "raw",
+          "verification": "payload-verified",
+          "source": "Author-distributed release patch target checksum matched the inspected raw cartridge payload; public release references are listed on this entry."
         }
       ]
     },
@@ -301078,6 +303190,74 @@
         "sortie-legacy-work": "rapid-reload",
         "sortie-legacy-variant": "psx-rapid-reload"
       }
+    },
+    {
+      "id": "88700049-2e02-551d-a1ea-be1d2dbc2f94",
+      "system": "psx",
+      "title": "Gunners Heaven (Japan) (En) (Darkechibi Translation)",
+      "aliases": [
+        "Gunners Heaven (Japan) (En) (Darkechibi Translation)",
+        "Gunners Heaven (Japan) (En) (Darkechibi Translation).chd"
+      ],
+      "hook": "Four weapons and a constantly draining power-up timer make this a run-and-gun about switching tools and pressing forward; the grappling wire adds evasive acrobatics, but there is no co-op. Darkechibi's English dialogue patch offers the Japanese NTSC-J edition as an alternative to PAL Rapid Reload, with credits and some UI artwork still untranslated.",
+      "flags": [
+        "Partial English translation"
+      ],
+      "sources": [
+        {
+          "kind": "alias",
+          "name": "Exact authored release basename; not a local checksum verification"
+        },
+        {
+          "kind": "editorial",
+          "name": "Sortie contributors: original AI-assisted editorial note"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://cdromance.com/translations/gunners-heaven-english-translation"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://classic-games.net/playstation/rapid-reload/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Darkechibi/gunners-heaven-english"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Darkechibi/gunners-heaven-english/commit/4bb61b76f5c7b1047509778a9110e27016503027"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://github.com/Darkechibi/gunners-heaven-english/issues/1"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://kimimithegameeatingshemonster.com/2020/12/15/inspired-by-is-not-a-dirty-term/"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://psxdatacenter.com/games/J/G/SCPS-10006.html"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://psxdatacenter.com/games/P/R/SCES-00004.html"
+        },
+        {
+          "kind": "research",
+          "name": "Editorial research",
+          "url": "https://vimm.net/romhacking/translations/6626"
+        }
+      ]
     },
     {
       "id": "89b1d48d-0713-5fa2-a629-c54060a89b5d",
